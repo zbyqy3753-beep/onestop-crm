@@ -1,0 +1,266 @@
+@import "tailwindcss";
+
+/* ══════════════════════════════════════════════════════════════════════
+   ONE STOP CRM — מערכת עיצוב
+
+   נבנית על צבעי המותג הרשמיים:
+     Dark Navy #0D1F37 · Brand Blue #0B709D · Cyan Accent #14A6D8
+     Metallic Silver #A4AEB4 · Light Gray #DCE4EA
+     Dark Background #081421 · Card Background #10263F · Glow Blue #1DADE3
+
+   התמה הכהה היא התמה ה"טבעית" של המותג — Dark Background ו-Card
+   Background מוגדרים בפלטה עצמה. התמה הבהירה נגזרת: Dark Navy הופך
+   לצבע הטקסט, Brand Blue לצבע הפעולה, ו-Light Gray לקווים.
+
+   למותג אין צבע חם. לכן טוני האזהרה והשגיאה נבחרו כך שיישבו טוב
+   מול נייבי וציאן, ולא נלקחו מהפלטה.
+
+   כל צבע מוגדר כאן פעם אחת. אין hex בקומפוננטות.
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root,
+[data-theme="light"] {
+  /* משטחים */
+  --c-bg: #eef3f7;
+  --c-surface: #ffffff;
+  --c-surface-2: #f6f9fb;
+  --c-surface-3: #e8eff4;
+  --c-line: #dce4ea; /* Light Gray */
+  --c-line-strong: #bdcad5;
+
+  /* טקסט — Dark Navy למעלה, Metallic Silver למטה */
+  --c-ink-1: #0d1f37; /* Dark Navy */
+  --c-ink-2: #33465c;
+  --c-ink-3: #5c7086;
+  --c-ink-4: #94a1ac;
+
+  /* מותג */
+  --c-brand: #0b709d; /* Brand Blue */
+  --c-brand-hover: #095a7e;
+  --c-on-brand: #ffffff;
+  --c-brand-soft: #e0eff6;
+
+  /* אות — ציאן, לרגעים שצריכים להבליט בלי להיות שגיאה */
+  --c-signal: #0f89b4;
+  --c-signal-soft: #dff1f8;
+
+  /* סמנטי */
+  --c-good: #1c7f63;
+  --c-good-soft: #dcf0ea;
+  --c-warn: #9a6a12;
+  --c-warn-soft: #faedd3;
+  --c-bad: #bb3f36;
+  --c-bad-soft: #fae2e0;
+  --c-info: #0b709d;
+  --c-info-soft: #e0eff6;
+  --c-neutral: #5c7086;
+  --c-neutral-soft: #e8eff4;
+
+  --c-focus: #14a6d8; /* Cyan Accent */
+  --sh-card: 0 1px 2px rgb(13 31 55 / 0.06), 0 1px 3px rgb(13 31 55 / 0.05);
+  --sh-pop: 0 16px 36px -10px rgb(13 31 55 / 0.22);
+  --sh-lift: 0 4px 12px -3px rgb(13 31 55 / 0.12);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --c-bg: #081421; /* Dark Background */
+  --c-surface: #10263f; /* Card Background */
+  --c-surface-2: #16304c;
+  --c-surface-3: #1d3a59;
+  --c-line: #1f3b58;
+  --c-line-strong: #2f5175;
+
+  --c-ink-1: #dce4ea; /* Light Gray */
+  --c-ink-2: #b6c5d1;
+  --c-ink-3: #a4aeb4; /* Metallic Silver */
+  --c-ink-4: #6e8194;
+
+  --c-brand: #1dade3; /* Glow Blue */
+  --c-brand-hover: #45c1ee;
+  --c-on-brand: #04192b;
+  --c-brand-soft: #0d3450;
+
+  --c-signal: #14a6d8; /* Cyan Accent */
+  --c-signal-soft: #0b2f42;
+
+  --c-good: #3fbf97;
+  --c-good-soft: #0e2f28;
+  --c-warn: #dfa94b;
+  --c-warn-soft: #34290f;
+  --c-bad: #ec7b71;
+  --c-bad-soft: #3a1f1d;
+  --c-info: #14a6d8;
+  --c-info-soft: #0b2f42;
+  --c-neutral: #a4aeb4;
+  --c-neutral-soft: #1d3a59;
+
+  --c-focus: #1dade3; /* Glow Blue */
+  --sh-card: 0 1px 2px rgb(0 0 0 / 0.45), 0 1px 3px rgb(0 0 0 / 0.35);
+  --sh-pop: 0 16px 36px -10px rgb(0 0 0 / 0.65);
+  --sh-lift: 0 4px 12px -3px rgb(0 0 0 / 0.45);
+  color-scheme: dark;
+}
+
+/* הגרדיאנט הרשמי של המותג — זהה בשתי התמות */
+:root {
+  --g-brand: linear-gradient(90deg, #0d1f37 0%, #0b709d 50%, #14a6d8 100%);
+}
+
+@theme inline {
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-surface-2: var(--c-surface-2);
+  --color-surface-3: var(--c-surface-3);
+  --color-line: var(--c-line);
+  --color-line-strong: var(--c-line-strong);
+
+  --color-ink-1: var(--c-ink-1);
+  --color-ink-2: var(--c-ink-2);
+  --color-ink-3: var(--c-ink-3);
+  --color-ink-4: var(--c-ink-4);
+
+  --color-brand: var(--c-brand);
+  --color-brand-hover: var(--c-brand-hover);
+  --color-on-brand: var(--c-on-brand);
+  --color-brand-soft: var(--c-brand-soft);
+
+  --color-signal: var(--c-signal);
+  --color-signal-soft: var(--c-signal-soft);
+
+  --color-good: var(--c-good);
+  --color-good-soft: var(--c-good-soft);
+  --color-warn: var(--c-warn);
+  --color-warn-soft: var(--c-warn-soft);
+  --color-bad: var(--c-bad);
+  --color-bad-soft: var(--c-bad-soft);
+  --color-info: var(--c-info);
+  --color-info-soft: var(--c-info-soft);
+  --color-neutral: var(--c-neutral);
+  --color-neutral-soft: var(--c-neutral-soft);
+
+  --font-display: var(--font-frank), Georgia, serif;
+  --font-sans: var(--font-assistant), system-ui, sans-serif;
+
+  --radius-card: 0.75rem;
+
+  --shadow-card: var(--sh-card);
+  --shadow-pop: var(--sh-pop);
+  --shadow-lift: var(--sh-lift);
+}
+
+/* ── בסיס ─────────────────────────────────────────────────────────────── */
+
+body {
+  background: var(--c-bg);
+  color: var(--c-ink-1);
+  font-family: var(--font-assistant), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--c-brand-soft);
+  color: var(--c-ink-1);
+}
+
+.nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* מספרים וטקסט לטיני נשארים LTR בתוך הקשר עברי */
+.ltr-num {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── הגרדיאנט כחתימת מותג ─────────────────────────────────────────────── */
+
+/** רצועה דקה בראש האפליקציה. הנוכחות היחידה של הגרדיאנט המלא. */
+.brand-rule {
+  background: var(--g-brand);
+}
+
+/** הלוגו — הגרדיאנט חתוך לתוך הטקסט. */
+.brand-word {
+  background: var(--g-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* בתמה הכהה הנייבי שבקצה הגרדיאנט נבלע ברקע, אז מתחילים מהכחול */
+[data-theme="dark"] .brand-word {
+  background: linear-gradient(90deg, #0b709d 0%, #14a6d8 55%, #1dade3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* ── פס הסטטוס ────────────────────────────────────────────────────────
+   רצועת צבע בקצה המוביל של כל שורה. סוכן שסורק עשרות שורות קורא
+   ממנה את המצב בראייה היקפית, בלי לפענח תגיות. */
+
+.spine {
+  position: relative;
+}
+
+.spine::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: 0;
+  width: var(--spine-w, 3px);
+  background: var(--spine-c, transparent);
+}
+
+/* ── גלילה ────────────────────────────────────────────────────────────── */
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-line-strong) transparent;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--c-line-strong);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* ── תנועה ────────────────────────────────────────────────────────────── */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-rise {
+  animation: rise 0.18s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

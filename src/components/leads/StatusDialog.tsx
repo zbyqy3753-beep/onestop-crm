@@ -1,0 +1,80 @@
+"use client";
+
+import { useState } from "react";
+import type { LeadStatus } from "@/lib/domain/types";
+import { STATUS_CONFIG } from "@/lib/domain/types";
+import { Button, Modal, inputClass } from "@/components/ui/primitives";
+
+/**
+ * נפתח כשסטטוס דורש פירוט.
+ *
+ * זו הנקודה שבה נוצרת היסטוריית הליד: בלי הפירוט, "לא מעוניין"
+ * הוא מילה אחת שאי אפשר ללמוד ממנה כלום.
+ */
+export function StatusDialog({
+  target,
+  onCancel,
+  onConfirm,
+  busy,
+}: {
+  target: { leadIds: string[]; to: LeadStatus } | null;
+  onCancel: () => void;
+  onConfirm: (detail: string) => void;
+  busy: boolean;
+}) {
+  // מתאפס בין פתיחות דרך ה-key שההורה נותן, לא דרך effect
+  const [detail, setDetail] = useState("");
+
+  if (!target) return null;
+
+  const meta = STATUS_CONFIG[target.to];
+  const prompt = meta.prompt;
+  const many = target.leadIds.length > 1;
+  const blocked = Boolean(prompt?.required) && !detail.trim();
+
+  return (
+    <Modal
+      open
+      onClose={onCancel}
+      title={many ? `עדכון ${target.leadIds.length} לידים` : "עדכון סטטוס"}
+    >
+      <p className="mb-3 text-sm text-ink-2">
+        הסטטוס ישתנה ל
+        <strong className="font-semibold text-ink-1">״{meta.label}״</strong>
+        {many && ` עבור ${target.leadIds.length} לידים`}.
+      </p>
+
+      {prompt && (
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-ink-2">
+            {prompt.question}
+            {!prompt.required && (
+              <span className="font-normal text-ink-4"> (אופציונלי)</span>
+            )}
+          </span>
+          <textarea
+            value={detail}
+            onChange={(e) => setDetail(e.target.value)}
+            placeholder={prompt.placeholder}
+            rows={3}
+            autoFocus
+            className={`${inputClass} resize-y`}
+          />
+        </label>
+      )}
+
+      <div className="mt-4 flex justify-end gap-2">
+        <Button onClick={onCancel} disabled={busy}>
+          ביטול
+        </Button>
+        <Button
+          variant="primary"
+          onClick={() => onConfirm(detail)}
+          disabled={busy || blocked}
+        >
+          {busy ? "שומר…" : "עדכון"}
+        </Button>
+      </div>
+    </Modal>
+  );
+}

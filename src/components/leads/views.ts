@@ -1,0 +1,81 @@
+import type { Filters } from "./FilterBar";
+import { EMPTY_FILTERS } from "./FilterBar";
+
+/**
+ * תצוגות מהירות.
+ *
+ * סוכן לא חושב במונחי "סנן לפי סטטוס ואז לפי עובד" — הוא חושב
+ * "מה אני צריך לעשות עכשיו". כל תצוגה כאן היא שאלה כזו, מתורגמת
+ * לצירוף מסננים.
+ */
+export interface QuickView {
+  key: string;
+  label: string;
+  /** מה התצוגה קובעת. השאר נשאר ריק. */
+  patch: (userId: string) => Filters;
+}
+
+export const QUICK_VIEWS: QuickView[] = [
+  {
+    key: "all",
+    label: "הכל",
+    patch: () => EMPTY_FILTERS,
+  },
+  {
+    key: "mine",
+    label: "שלי",
+    patch: (userId) => ({ ...EMPTY_FILTERS, assignee: [userId], openOnly: true }),
+  },
+  {
+    key: "due",
+    label: "לחזור היום",
+    patch: () => ({ ...EMPTY_FILTERS, dueToday: true, openOnly: true }),
+  },
+  {
+    key: "new",
+    label: "חדשים",
+    patch: () => ({ ...EMPTY_FILTERS, status: ["new"] }),
+  },
+  {
+    key: "urgent",
+    label: "דחוף",
+    patch: () => ({
+      ...EMPTY_FILTERS,
+      priority: ["urgent", "high"],
+      openOnly: true,
+    }),
+  },
+  {
+    key: "unassigned",
+    label: "ללא שיוך",
+    patch: () => ({
+      ...EMPTY_FILTERS,
+      assignee: ["unassigned"],
+      openOnly: true,
+    }),
+  },
+];
+
+/** האם המסננים הנוכחיים זהים לתצוגה. משמש לסימון הצ׳יפ הפעיל. */
+export function isViewActive(
+  view: QuickView,
+  filters: Filters,
+  userId: string,
+): boolean {
+  const target = view.patch(userId);
+
+  return (
+    filters.query === target.query &&
+    filters.openOnly === target.openOnly &&
+    filters.dueToday === target.dueToday &&
+    sameSet(filters.status, target.status) &&
+    sameSet(filters.kind, target.kind) &&
+    sameSet(filters.priority, target.priority) &&
+    sameSet(filters.category, target.category) &&
+    sameSet(filters.assignee, target.assignee)
+  );
+}
+
+function sameSet(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((v) => b.includes(v));
+}

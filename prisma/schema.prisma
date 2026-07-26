@@ -1,0 +1,355 @@
+// סכמת ONE STOP CRM.
+//
+// Prisma ORM 7. חיבור מבוסס driver adapter (@prisma/adapter-mariadb) —
+// עובד מול כל MySQL/MariaDB שמקבל connection string רגיל: MySQL של
+// כל ספק אירוח, PlanetScale, RDS, או שרת MySQL רגיל.
+//
+// כדי לחבר MySQL חיצוני:
+//   1. הגדר DATABASE_URL ב-.env בפורמט:
+//        mysql://user:password@host:3306/dbname
+//      (ראה .env.example)
+//   2. npx prisma migrate dev --name init   (בונה את כל הטבלאות)
+//   3. הגדר DATA_SOURCE=prisma ב-.env
+//
+// שלב 3 הוא היחיד שמשפיע על קוד האפליקציה — הוא מחליף את המימוש
+// שמוחזר מ-src/server/repositories/index.ts. שום קומפוננטה לא משתנה.
+// המערכת מתחילה ריקה; אין נתוני seed.
+//
+// חיבור ה-URL עצמו יושב ב-prisma.config.ts, לא כאן — כך דורש Prisma 7.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+/* ── משתמשים ────────────────────────────────────────────────────────── */
+
+enum Role {
+  owner
+  manager
+  bizManager
+  shopOwner
+  operator
+  agent
+  employee
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  name               String
+  email              String    @unique
+  phone              String?
+  role               Role      @default(agent)
+  active             Boolean   @default(true)
+  /// שם העסק/החנות המשויכת, אם יש. שדה חופשי — אין ישות Store נפרדת.
+  store              String?
+  subscriptionEndsAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedLeads       Lead[]            @relation("LeadAssignee")
+  createdLeads        Lead[]            @relation("LeadCreator")
+  notes               LeadNote[]
+  statusEvents        LeadStatusEvent[]
+  deals               Deal[]
+  dealStageEvents     DealStageEvent[]
+  referredRegistrations   Registration[] @relation("RegistrationReferrer")
+  handledRegistrations    Registration[] @relation("RegistrationHandler")
+
+  @@index([role, active])
+}
+
+/* ── לידים ──────────────────────────────────────────────────────────── */
+
+/// סדר ההצהרה תואם בכוונה לסדר האמיתי (STATUS_ORDER ב-types.ts) —
+/// MySQL ממיין enum-ים לפי סדר ההצהרה (האינדקס הפנימי), וה-repository נשען על כך.
+enum LeadStatus {
+  new
+  inProgress
+  contacted
+  quoteSent
+  awaitingClient
+  followUp
+  futureTracking
+  won
+  notRelevant
+  notInterested
+  noAnswer
+  returning
+  soldByCompetitor
+  denies
+  lost
+}
+
+enum LeadKind {
+  hot
+  data
+}
+
+enum Priority {
+  normal
+  high
+  urgent
+}
+
+enum LeadSource {
+  manual
+  import
+  form
+  campaign
+  referral
+}
+
+/// קטגוריית חבילה בקטלוג. שונה מ-LeadCategory (ראה למטה).
+enum Category {
+  internet
+  mobile
+  tv
+  triple
+  fiber
+  electricity
+}
+
+/// קטגוריית עניין של ליד. שונה מ-Category — יש "general", אין "fiber".
+enum LeadCategory {
+  mobile
+  internet
+  tv
+  triple
+  electricity
+  general
+}
+
+enum Provider {
+  bezeq
+  hot
+  yes
+  cellcom
+  partner
+  pelephone
+  golan
+  ibc
+}
+
+model Lead {
+  id       String  @id @default(cuid())
+  name     String
+  phone    String
+  email    String?
+  city     String?
+
+  kind     LeadKind   @default(data)
+  status   LeadStatus @default(new)
+  priority Priority   @default(normal)
+  source   LeadSource @default(manual)
+
+  category        LeadCategory?
+  currentProvider Provider?
+
+  assigneeId String?
+  assignee   User?   @relation("LeadAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  createdById String
+  createdBy   User   @relation("LeadCreator", fields: [createdById], references: [id])
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastContactAt DateTime?
+  followUpAt    DateTime?
+
+  notes   LeadNote[]
+  history LeadStatusEvent[]
+  deal    Deal?
+
+  // טלפון הוא מפתח הכפילות בפועל — ייבוא CSV נשען עליו
+  @@index([phone])
+  @@index([status, updatedAt])
+  @@index([assigneeId, status])
+  @@index([followUpAt])
+}
+
+model LeadNote {
+  id     String @id @default(cuid())
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([leadId, createdAt])
+}
+
+/// כל שינוי סטטוס נשמר עם הפירוט שהסוכן הזין. זו היסטוריית הליד.
+model LeadStatusEvent {
+  id     String @id @default(cuid())
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  from   LeadStatus?
+  to     LeadStatus
+  detail String?
+
+  actorId String
+  actor   User   @relation(fields: [actorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([leadId, createdAt])
+}
+
+/* ── חבילות ─────────────────────────────────────────────────────────── */
+
+model Package {
+  id          String   @id @default(cuid())
+  name        String
+  provider    Provider
+  category    Category
+  /// מחיר חודשי ללקוח. null לחבילות חשמל — אין להן מחיר קבוע.
+  price       Decimal? @db.Decimal(10, 2)
+  /// עמלת סגירה למשווק — תמיד קיים, גם לחשמל.
+  commission  Decimal  @db.Decimal(10, 2)
+  /// שדות שמשתנים לפי קטגוריה (ג'יגה, מהירות הורדה, אחוז הנחה וכו').
+  /// ראה PACKAGE_SPEC_FIELDS ב-types.ts למקור האמת של אילו שדות שייכים לאיזו קטגוריה.
+  spec        Json     @default("{}")
+  description String?
+  active      Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deals DealPackage[]
+
+  @@index([provider, category])
+  @@index([active])
+}
+
+/* ── עסקאות ─────────────────────────────────────────────────────────── */
+
+/// שלבי מעקב הזמנה — סטפר רב-שלבי, לא רק סטטוס יחיד.
+enum DealStage {
+  new
+  sentToAktiv
+  inProgress
+  apiProcess
+  registered
+  awaitingShipment
+  awaitingPorting
+  awaitingInstall
+  active
+  approved
+  rejected
+  cancelled
+}
+
+model Deal {
+  id String @id @default(cuid())
+
+  /// מזהה תצוגה קצר (כמו "10001"), נפרד מ-id הפנימי
+  displayId String @unique
+
+  leadId String @unique
+  lead   Lead   @relation(fields: [leadId], references: [id])
+
+  agentId String
+  agent   User   @relation(fields: [agentId], references: [id])
+
+  /// קטגוריית הליד המקורי, מועתקת בזמן יצירת העסקה
+  category LeadCategory
+
+  /// סכום שנגבה מהלקוח
+  revenue      Decimal   @db.Decimal(10, 2)
+  note         String?
+  currentStage DealStage @default(new)
+  closedAt     DateTime  @default(now())
+
+  packages     DealPackage[]
+  stageHistory DealStageEvent[]
+
+  @@index([agentId, closedAt])
+  @@index([closedAt])
+}
+
+/// טבלת קישור — עסקה יכולה לכלול כמה חבילות (טריפל + סלולר וכו').
+model DealPackage {
+  dealId    String
+  deal      Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  packageId String
+  package   Package @relation(fields: [packageId], references: [id])
+
+  /// העמלה נשמרת כפי שהייתה ברגע הסגירה, כדי ששינוי מחירון
+  /// בעתיד לא ישכתב עמלות היסטוריות.
+  commissionAtClose Decimal @db.Decimal(10, 2)
+
+  @@id([dealId, packageId])
+}
+
+/// היסטוריית שלבי עסקה — מראה את LeadStatusEvent. מאפשרת ל-stepper
+/// להראות אילו שלבים העסקה כבר עברה, לא רק את הנוכחי.
+model DealStageEvent {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  from   DealStage?
+  to     DealStage
+  detail String?
+
+  actorId String
+  actor   User   @relation(fields: [actorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([dealId, createdAt])
+}
+
+/* ── הגדרות ─────────────────────────────────────────────────────────── */
+
+/// עלות רכישת ליד לפי קטגוריית ליד. שורה אחת לכל קטגוריה.
+model LeadCost {
+  category LeadCategory @id
+  cost     Decimal      @db.Decimal(10, 2)
+
+  updatedAt DateTime @updatedAt
+}
+
+/* ── טפסי רישום (הפניית שותפים) ────────────────────────────────────── */
+
+enum RegistrationStatus {
+  pending
+  handled
+  rejected
+}
+
+/// פנייה של בעל עסק חיצוני להצטרפות כשותף — דרך טופס ציבורי משותף,
+/// לא ליד מכירה. ישות נפרדת לגמרי מ-Lead.
+model Registration {
+  id           String  @id @default(cuid())
+  businessName String
+  contactName  String
+  phone        String
+  email        String?
+  /// תיאור חופשי של ערוץ ההפניה, למשל "ONE STOP" או שם עובד
+  referralSource String
+
+  referredByUserId String?
+  referredBy       User?   @relation("RegistrationReferrer", fields: [referredByUserId], references: [id], onDelete: SetNull)
+
+  status RegistrationStatus @default(pending)
+
+  createdAt DateTime  @default(now())
+  handledAt DateTime?
+
+  handledById String?
+  handledBy   User?   @relation("RegistrationHandler", fields: [handledById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([referredByUserId])
+}
