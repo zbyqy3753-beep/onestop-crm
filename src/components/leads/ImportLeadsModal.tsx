@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { importLeadsAction, type ImportRow } from "@/app/(app)/leads/actions";
 import { decodeSpreadsheetText, parseDelimited } from "@/lib/csv";
+import { readXlsxSheet } from "@/lib/xlsx";
 import {
   matchImportField,
   matchLeadCategory,
@@ -18,12 +19,12 @@ import { Button, Modal, type Toast } from "@/components/ui/primitives";
  * בלי התצוגה המקדימה הפעולה בשרת זורקת שורות פסולות בשקט ומחזירה
  * מספר — וזה בדיוק הרגע שבו משתמש מגלה שחצי מהקובץ נעלם.
  *
- * אקסל בינארי (.xls) לא נתמך ואי אפשר לתמוך בו בלי ספרייה; .xlsx
- * ייתמך בהמשך. שניהם מזוהים לפי סיומת ומקבלים הודעה מכוונת במקום
- * ג'יבריש.
+ * .xlsx נקרא בצד הלקוח דרך `xlsx.ts` (מנתח ZIP+XML עצמאי, בלי
+ * ספרייה). .xls בינארי (פורמט BIFF ישן) נשאר לא נתמך — אין דרך
+ * סבירה לפענח אותו בלי ספרייה ייעודית.
  */
 
-const ACCEPT = ".csv,.txt,.tsv";
+const ACCEPT = ".csv,.txt,.tsv,.xlsx";
 const PREVIEW_ROWS = 5;
 
 interface Parsed {
@@ -65,15 +66,26 @@ export function ImportLeadsModal({
     setParsed(null);
 
     const lower = file.name.toLowerCase();
-    if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
+    if (lower.endsWith(".xls")) {
       setError(
-        "קובץ אקסל עדיין לא נתמך. פתח אותו באקסל, בחר שמור בשם ← CSV UTF-8, ונסה שוב.",
+        "קובץ .xls (פורמט אקסל ישן) לא נתמך. פתח אותו באקסל ושמור בשם .xlsx או CSV, ונסה שוב.",
       );
       return;
     }
 
-    const text = decodeSpreadsheetText(await file.arrayBuffer());
-    const matrix = parseDelimited(text);
+    let matrix: string[][];
+    try {
+      matrix = lower.endsWith(".xlsx")
+        ? await readXlsxSheet(await file.arrayBuffer())
+        : parseDelimited(decodeSpreadsheetText(await file.arrayBuffer()));
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? `קריאת הקובץ נכשלה: ${e.message}`
+          : "קריאת הקובץ נכשלה — ודא שזה קובץ CSV או XLSX תקין.",
+      );
+      return;
+    }
 
     if (matrix.length === 0) {
       setError("הקובץ ריק");
@@ -140,7 +152,7 @@ export function ImportLeadsModal({
       {!parsed && (
         <div className="rounded-card border border-dashed border-line-strong px-6 py-10 text-center">
           <p className="text-sm text-ink-2">
-            בחר קובץ CSV עם עמודות של שם וטלפון.
+            בחר קובץ CSV או Excel (.xlsx) עם עמודות של שם וטלפון.
           </p>
           <p className="mt-1 text-xs text-ink-3">
             שורת כותרות בעברית או באנגלית תזוהה אוטומטית. אם אין כותרות, העמודה
