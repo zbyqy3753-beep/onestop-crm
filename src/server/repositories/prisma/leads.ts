@@ -152,6 +152,7 @@ export const prismaLeadRepository: LeadRepository = {
         currentProvider: input.currentProvider,
         assigneeId: input.assigneeId,
         source: input.source,
+        sourceDetail: input.sourceDetail,
         createdById: input.createdById,
         city: input.city,
         notes: input.note

@@ -48,6 +48,7 @@ export type LeadMinAggregateOutputType = {
   currentProvider: $Enums.Provider | null
   cost: runtime.Decimal | null
   isStarred: boolean | null
+  sourceDetail: string | null
   assigneeId: string | null
   createdById: string | null
   createdAt: Date | null
@@ -70,6 +71,7 @@ export type LeadMaxAggregateOutputType = {
   currentProvider: $Enums.Provider | null
   cost: runtime.Decimal | null
   isStarred: boolean | null
+  sourceDetail: string | null
   assigneeId: string | null
   createdById: string | null
   createdAt: Date | null
@@ -92,6 +94,7 @@ export type LeadCountAggregateOutputType = {
   currentProvider: number
   cost: number
   isStarred: number
+  sourceDetail: number
   assigneeId: number
   createdById: number
   createdAt: number
@@ -124,6 +127,7 @@ export type LeadMinAggregateInputType = {
   currentProvider?: true
   cost?: true
   isStarred?: true
+  sourceDetail?: true
   assigneeId?: true
   createdById?: true
   createdAt?: true
@@ -146,6 +150,7 @@ export type LeadMaxAggregateInputType = {
   currentProvider?: true
   cost?: true
   isStarred?: true
+  sourceDetail?: true
   assigneeId?: true
   createdById?: true
   createdAt?: true
@@ -168,6 +173,7 @@ export type LeadCountAggregateInputType = {
   currentProvider?: true
   cost?: true
   isStarred?: true
+  sourceDetail?: true
   assigneeId?: true
   createdById?: true
   createdAt?: true
@@ -277,6 +283,7 @@ export type LeadGroupByOutputType = {
   currentProvider: $Enums.Provider | null
   cost: runtime.Decimal | null
   isStarred: boolean
+  sourceDetail: string | null
   assigneeId: string | null
   createdById: string
   createdAt: Date
@@ -322,6 +329,7 @@ export type LeadWhereInput = {
   currentProvider?: Prisma.EnumProviderNullableFilter<"Lead"> | $Enums.Provider | null
   cost?: Prisma.DecimalNullableFilter<"Lead"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFilter<"Lead"> | boolean
+  sourceDetail?: Prisma.StringNullableFilter<"Lead"> | string | null
   assigneeId?: Prisma.StringNullableFilter<"Lead"> | string | null
   createdById?: Prisma.StringFilter<"Lead"> | string
   createdAt?: Prisma.DateTimeFilter<"Lead"> | Date | string
@@ -350,6 +358,7 @@ export type LeadOrderByWithRelationInput = {
   currentProvider?: Prisma.SortOrderInput | Prisma.SortOrder
   cost?: Prisma.SortOrderInput | Prisma.SortOrder
   isStarred?: Prisma.SortOrder
+  sourceDetail?: Prisma.SortOrderInput | Prisma.SortOrder
   assigneeId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -381,6 +390,7 @@ export type LeadWhereUniqueInput = Prisma.AtLeast<{
   currentProvider?: Prisma.EnumProviderNullableFilter<"Lead"> | $Enums.Provider | null
   cost?: Prisma.DecimalNullableFilter<"Lead"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFilter<"Lead"> | boolean
+  sourceDetail?: Prisma.StringNullableFilter<"Lead"> | string | null
   assigneeId?: Prisma.StringNullableFilter<"Lead"> | string | null
   createdById?: Prisma.StringFilter<"Lead"> | string
   createdAt?: Prisma.DateTimeFilter<"Lead"> | Date | string
@@ -409,6 +419,7 @@ export type LeadOrderByWithAggregationInput = {
   currentProvider?: Prisma.SortOrderInput | Prisma.SortOrder
   cost?: Prisma.SortOrderInput | Prisma.SortOrder
   isStarred?: Prisma.SortOrder
+  sourceDetail?: Prisma.SortOrderInput | Prisma.SortOrder
   assigneeId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -439,6 +450,7 @@ export type LeadScalarWhereWithAggregatesInput = {
   currentProvider?: Prisma.EnumProviderNullableWithAggregatesFilter<"Lead"> | $Enums.Provider | null
   cost?: Prisma.DecimalNullableWithAggregatesFilter<"Lead"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolWithAggregatesFilter<"Lead"> | boolean
+  sourceDetail?: Prisma.StringNullableWithAggregatesFilter<"Lead"> | string | null
   assigneeId?: Prisma.StringNullableWithAggregatesFilter<"Lead"> | string | null
   createdById?: Prisma.StringWithAggregatesFilter<"Lead"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Lead"> | Date | string
@@ -461,6 +473,7 @@ export type LeadCreateInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -487,6 +500,7 @@ export type LeadUncheckedCreateInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   assigneeId?: string | null
   createdById: string
   createdAt?: Date | string
@@ -513,6 +527,7 @@ export type LeadUpdateInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -539,6 +554,7 @@ export type LeadUncheckedUpdateInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -565,6 +581,7 @@ export type LeadCreateManyInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   assigneeId?: string | null
   createdById: string
   createdAt?: Date | string
@@ -587,6 +604,7 @@ export type LeadUpdateManyMutationInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -607,6 +625,7 @@ export type LeadUncheckedUpdateManyInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -639,6 +658,7 @@ export type LeadCountOrderByAggregateInput = {
   currentProvider?: Prisma.SortOrder
   cost?: Prisma.SortOrder
   isStarred?: Prisma.SortOrder
+  sourceDetail?: Prisma.SortOrder
   assigneeId?: Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -665,6 +685,7 @@ export type LeadMaxOrderByAggregateInput = {
   currentProvider?: Prisma.SortOrder
   cost?: Prisma.SortOrder
   isStarred?: Prisma.SortOrder
+  sourceDetail?: Prisma.SortOrder
   assigneeId?: Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -687,6 +708,7 @@ export type LeadMinOrderByAggregateInput = {
   currentProvider?: Prisma.SortOrder
   cost?: Prisma.SortOrder
   isStarred?: Prisma.SortOrder
+  sourceDetail?: Prisma.SortOrder
   assigneeId?: Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -890,6 +912,7 @@ export type LeadCreateWithoutAssigneeInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -915,6 +938,7 @@ export type LeadUncheckedCreateWithoutAssigneeInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   createdById: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -950,6 +974,7 @@ export type LeadCreateWithoutCreatedByInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -975,6 +1000,7 @@ export type LeadUncheckedCreateWithoutCreatedByInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   assigneeId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1029,6 +1055,7 @@ export type LeadScalarWhereInput = {
   currentProvider?: Prisma.EnumProviderNullableFilter<"Lead"> | $Enums.Provider | null
   cost?: Prisma.DecimalNullableFilter<"Lead"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFilter<"Lead"> | boolean
+  sourceDetail?: Prisma.StringNullableFilter<"Lead"> | string | null
   assigneeId?: Prisma.StringNullableFilter<"Lead"> | string | null
   createdById?: Prisma.StringFilter<"Lead"> | string
   createdAt?: Prisma.DateTimeFilter<"Lead"> | Date | string
@@ -1067,6 +1094,7 @@ export type LeadCreateWithoutNotesInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -1092,6 +1120,7 @@ export type LeadUncheckedCreateWithoutNotesInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   assigneeId?: string | null
   createdById: string
   createdAt?: Date | string
@@ -1133,6 +1162,7 @@ export type LeadUpdateWithoutNotesInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1158,6 +1188,7 @@ export type LeadUncheckedUpdateWithoutNotesInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1183,6 +1214,7 @@ export type LeadCreateWithoutActivityInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -1208,6 +1240,7 @@ export type LeadUncheckedCreateWithoutActivityInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   assigneeId?: string | null
   createdById: string
   createdAt?: Date | string
@@ -1249,6 +1282,7 @@ export type LeadUpdateWithoutActivityInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1274,6 +1308,7 @@ export type LeadUncheckedUpdateWithoutActivityInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1299,6 +1334,7 @@ export type LeadCreateWithoutHistoryInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -1324,6 +1360,7 @@ export type LeadUncheckedCreateWithoutHistoryInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   assigneeId?: string | null
   createdById: string
   createdAt?: Date | string
@@ -1365,6 +1402,7 @@ export type LeadUpdateWithoutHistoryInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1390,6 +1428,7 @@ export type LeadUncheckedUpdateWithoutHistoryInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1415,6 +1454,7 @@ export type LeadCreateWithoutDealInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -1440,6 +1480,7 @@ export type LeadUncheckedCreateWithoutDealInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   assigneeId?: string | null
   createdById: string
   createdAt?: Date | string
@@ -1481,6 +1522,7 @@ export type LeadUpdateWithoutDealInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1506,6 +1548,7 @@ export type LeadUncheckedUpdateWithoutDealInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1531,6 +1574,7 @@ export type LeadCreateManyAssigneeInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   createdById: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1552,6 +1596,7 @@ export type LeadCreateManyCreatedByInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  sourceDetail?: string | null
   assigneeId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1573,6 +1618,7 @@ export type LeadUpdateWithoutAssigneeInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1598,6 +1644,7 @@ export type LeadUncheckedUpdateWithoutAssigneeInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1623,6 +1670,7 @@ export type LeadUncheckedUpdateManyWithoutAssigneeInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1644,6 +1692,7 @@ export type LeadUpdateWithoutCreatedByInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1669,6 +1718,7 @@ export type LeadUncheckedUpdateWithoutCreatedByInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1694,6 +1744,7 @@ export type LeadUncheckedUpdateManyWithoutCreatedByInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1764,6 +1815,7 @@ export type LeadSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   currentProvider?: boolean
   cost?: boolean
   isStarred?: boolean
+  sourceDetail?: boolean
   assigneeId?: boolean
   createdById?: boolean
   createdAt?: boolean
@@ -1793,6 +1845,7 @@ export type LeadSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   currentProvider?: boolean
   cost?: boolean
   isStarred?: boolean
+  sourceDetail?: boolean
   assigneeId?: boolean
   createdById?: boolean
   createdAt?: boolean
@@ -1817,6 +1870,7 @@ export type LeadSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   currentProvider?: boolean
   cost?: boolean
   isStarred?: boolean
+  sourceDetail?: boolean
   assigneeId?: boolean
   createdById?: boolean
   createdAt?: boolean
@@ -1841,6 +1895,7 @@ export type LeadSelectScalar = {
   currentProvider?: boolean
   cost?: boolean
   isStarred?: boolean
+  sourceDetail?: boolean
   assigneeId?: boolean
   createdById?: boolean
   createdAt?: boolean
@@ -1849,7 +1904,7 @@ export type LeadSelectScalar = {
   followUpAt?: boolean
 }
 
-export type LeadOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "phone" | "email" | "city" | "kind" | "status" | "priority" | "source" | "category" | "currentProvider" | "cost" | "isStarred" | "assigneeId" | "createdById" | "createdAt" | "updatedAt" | "lastContactAt" | "followUpAt", ExtArgs["result"]["lead"]>
+export type LeadOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "phone" | "email" | "city" | "kind" | "status" | "priority" | "source" | "category" | "currentProvider" | "cost" | "isStarred" | "sourceDetail" | "assigneeId" | "createdById" | "createdAt" | "updatedAt" | "lastContactAt" | "followUpAt", ExtArgs["result"]["lead"]>
 export type LeadInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   assignee?: boolean | Prisma.Lead$assigneeArgs<ExtArgs>
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -1896,6 +1951,12 @@ export type $LeadPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
      */
     cost: runtime.Decimal | null
     isStarred: boolean
+    /**
+     * מאיפה הליד הגיע, כטקסט חופשי: שם הקמפיין, החבילה או הספק
+     * ("פלאפון – 300GB Perfect", "Easy Peasy"). משלים את `source`,
+     * שהוא רשימה סגורה ומתאר רק את *אופן* הקליטה (ידני/ייבוא/טופס).
+     */
+    sourceDetail: string | null
     assigneeId: string | null
     createdById: string
     createdAt: Date
@@ -2344,6 +2405,7 @@ export interface LeadFieldRefs {
   readonly currentProvider: Prisma.FieldRef<"Lead", 'Provider'>
   readonly cost: Prisma.FieldRef<"Lead", 'Decimal'>
   readonly isStarred: Prisma.FieldRef<"Lead", 'Boolean'>
+  readonly sourceDetail: Prisma.FieldRef<"Lead", 'String'>
   readonly assigneeId: Prisma.FieldRef<"Lead", 'String'>
   readonly createdById: Prisma.FieldRef<"Lead", 'String'>
   readonly createdAt: Prisma.FieldRef<"Lead", 'DateTime'>

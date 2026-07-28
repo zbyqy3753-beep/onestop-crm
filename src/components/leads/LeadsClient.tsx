@@ -33,6 +33,8 @@ import { QueueHeader } from "./QueueHeader";
 import { FilterBar, type Filters, EMPTY_FILTERS } from "./FilterBar";
 import { LeadsTable } from "./LeadsTable";
 import { Pagination, PAGE_SIZES } from "./Pagination";
+import { ColumnPicker } from "./ColumnPicker";
+import { setVisibleColumns, useVisibleColumns } from "./columns";
 import { LeadDrawer } from "./LeadDrawer";
 import { AddLeadModal } from "./AddLeadModal";
 import { EditLeadModal } from "./EditLeadModal";
@@ -79,6 +81,9 @@ export function LeadsClient({
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZES[2]);
+
+  /** נקרא מחנות חיצונית — ראה columns.ts. */
+  const visibleColumns = useVisibleColumns();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openLeadId, setOpenLeadId] = useState<string | null>(null);
@@ -418,6 +423,9 @@ export function LeadsClient({
         onBulkStatus={(to) => requestStatus(visibleSelected, to)}
         onBulkDelete={() => remove(visibleSelected)}
         onClearSelection={() => setSelected(new Set())}
+        columnPicker={
+          <ColumnPicker visible={visibleColumns} onChange={setVisibleColumns} />
+        }
         busy={pending}
       />
 
@@ -425,6 +433,7 @@ export function LeadsClient({
         leads={paged}
         userById={userById}
         leadCosts={leadCosts}
+        visibleColumns={visibleColumns}
         selected={selected}
         onSelectedChange={setSelected}
         sort={sort}

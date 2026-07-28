@@ -114,6 +114,15 @@ export function LeadFields({
         </select>
       </Field>
 
+      <Field label="מקור" hint="קמפיין, חבילה או ספק שהליד הגיע ממנו">
+        <input
+          name="sourceDetail"
+          defaultValue={lead?.sourceDetail ?? ""}
+          placeholder="פלאפון – 300GB Perfect"
+          className={inputClass}
+        />
+      </Field>
+
       <Field label="ספק נוכחי">
         <select
           name="currentProvider"

@@ -80,6 +80,8 @@ export interface CreateLeadInput {
   city?: string;
   assigneeId?: UserId;
   source: Lead["source"];
+  /** טקסט חופשי: שם הקמפיין/החבילה שהליד הגיע ממנה */
+  sourceDetail?: string;
   createdById: UserId;
   /** הערה ראשונית, אופציונלית */
   note?: string;
@@ -99,6 +101,7 @@ export type UpdateLeadInput = Partial<
     | "assigneeId"
     | "followUpAt"
     | "isStarred"
+    | "sourceDetail"
   >
 > & {
   /**

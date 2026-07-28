@@ -64,6 +64,7 @@ export function leadFromPrisma(
     // truthy, אבל 0 ו"לא הוגדר" הם שני מצבים שונים ואסור לאחד אותם
     cost: row.cost === null ? undefined : toNumber(row.cost),
     isStarred: row.isStarred,
+    sourceDetail: row.sourceDetail ?? undefined,
     assigneeId: row.assigneeId ?? undefined,
     createdById: row.createdById,
     createdAt: row.createdAt.toISOString(),

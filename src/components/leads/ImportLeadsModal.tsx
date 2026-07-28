@@ -291,6 +291,7 @@ function buildRow(cells: string[], mapping: Mapping): ImportRow {
     email: at("email") || undefined,
     city: at("city") || undefined,
     note: at("note") || undefined,
+    sourceDetail: at("sourceDetail") || undefined,
     category,
   };
 }

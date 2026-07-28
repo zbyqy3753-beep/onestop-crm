@@ -50,6 +50,7 @@ export async function createLeadAction(
   const assigneeId = String(formData.get("assigneeId") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
   const currentProvider = String(formData.get("currentProvider") ?? "").trim();
+  const sourceDetail = String(formData.get("sourceDetail") ?? "").trim();
   const actorId = await actor();
 
   await db.leads.create({
@@ -62,6 +63,7 @@ export async function createLeadAction(
     priority: (formData.get("priority") as Priority) ?? "normal",
     category: (category as LeadCategoryKey) || undefined,
     currentProvider: (currentProvider as ProviderKey) || undefined,
+    sourceDetail: sourceDetail || undefined,
     // ללא בחירה = משויך ליוצר, לא ל"ללא שיוך" — תואם לטופס האמיתי
     assigneeId: assigneeId || actorId,
     source: "manual",
@@ -99,6 +101,7 @@ export async function updateLeadAction(
   const assigneeId = String(formData.get("assigneeId") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
   const currentProvider = String(formData.get("currentProvider") ?? "").trim();
+  const sourceDetail = String(formData.get("sourceDetail") ?? "").trim();
 
   await db.leads.update(leadId, {
     name,
@@ -109,6 +112,7 @@ export async function updateLeadAction(
     priority: (formData.get("priority") as Priority) ?? "normal",
     category: (category as LeadCategoryKey) || undefined,
     currentProvider: (currentProvider as ProviderKey) || undefined,
+    sourceDetail: sourceDetail || undefined,
     // בעריכה "ללא שיוך" הוא בחירה מפורשת, לא ברירת מחדל ליוצר
     assigneeId: assigneeId || undefined,
   });
@@ -278,6 +282,8 @@ export interface ImportRow {
   category?: LeadCategoryKey;
   kind?: LeadKind;
   note?: string;
+  /** עמודת "מקור" בקובץ — שם הקמפיין/החבילה */
+  sourceDetail?: string;
 }
 
 export interface ImportResult {
@@ -347,6 +353,7 @@ export async function importLeadsAction(
       email: r.email?.trim() || undefined,
       city: r.city?.trim() || undefined,
       note: r.note?.trim() || undefined,
+      sourceDetail: r.sourceDetail?.trim() || undefined,
       category: r.category,
       kind: r.kind ?? "data",
       priority: "normal" as const,

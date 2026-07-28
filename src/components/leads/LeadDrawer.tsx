@@ -215,7 +215,9 @@ export function LeadDrawer({
                 : "—"}
             </Detail>
             <Detail label="עיר">{lead.city ?? "—"}</Detail>
-            <Detail label="מקור">{SOURCE_CONFIG[lead.source].label}</Detail>
+            <Detail label="מקור">
+              {lead.sourceDetail?.trim() || SOURCE_CONFIG[lead.source].label}
+            </Detail>
             {/* האימייל כטקסט ולא רק כאייקון — tooltip לא קיים במגע */}
             <Detail label="אימייל">
               {lead.email ? (

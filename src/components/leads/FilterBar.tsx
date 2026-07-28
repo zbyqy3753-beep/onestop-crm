@@ -55,11 +55,14 @@ export function FilterBar({
   onBulkStatus,
   onBulkDelete,
   onClearSelection,
+  columnPicker,
   busy,
 }: {
   filters: Filters;
   onChange: (f: Filters) => void;
   users: User[];
+  /** בורר העמודות, מוזרק מבחוץ כדי ש-FilterBar יישאר על סינון בלבד */
+  columnPicker?: React.ReactNode;
   searchRef: RefObject<HTMLInputElement | null>;
   selectedCount: number;
   onBulkAssign: (assigneeId: string | null) => void;
@@ -210,6 +213,9 @@ export function FilterBar({
           ניקוי ({activeCount})
         </Button>
       )}
+
+      {/* בורר העמודות בקצה השורה — הוא שולט בתצוגה, לא מסנן */}
+      <div className="ms-auto">{columnPicker}</div>
     </div>
   );
 }

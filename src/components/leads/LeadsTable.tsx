@@ -5,6 +5,7 @@ import { leadCost } from "@/server/services/economics";
 import { Button, EmptyState, useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import type { SortField } from "./LeadsClient";
+import { COLUMNS, type ColumnKey } from "./columns";
 import { LeadRow } from "./LeadRow";
 
 /**
@@ -15,23 +16,11 @@ import { LeadRow } from "./LeadRow";
  * שמצליב את הבחירה מול מלוא התוצאה המסוננת.
  */
 
-/**
- * "עודכן" ולא "פעילות אחרונה" — היה מתנגש בשם עם עמודת הפעילות
- * שמציגה משהו אחר לגמרי. "חזרה" נוסף כי תאריך החזרה הוא הערך הכי
- * מניע-פעולה במסך, והוא הוצג בלי שום דרך למיין לפיו.
- */
-const COLUMNS: { field: SortField; label: string; className?: string }[] = [
-  { field: "name", label: "ליד" },
-  { field: "status", label: "סטטוס" },
-  { field: "priority", label: "עדיפות" },
-  { field: "updatedAt", label: "עודכן" },
-  { field: "followUpAt", label: "חזרה" },
-];
-
 export function LeadsTable({
   leads,
   userById,
   leadCosts,
+  visibleColumns,
   selected,
   onSelectedChange,
   sort,
@@ -47,6 +36,7 @@ export function LeadsTable({
   leads: Lead[];
   userById: Map<string, User>;
   leadCosts: LeadCostTable;
+  visibleColumns: ColumnKey[];
   selected: Set<string>;
   onSelectedChange: (s: Set<string>) => void;
   sort: { field: SortField; dir: "asc" | "desc" };
@@ -60,6 +50,9 @@ export function LeadsTable({
   busy: boolean;
 }) {
   const now = useNow();
+
+  // סדר העמודות נקבע ב-columns.ts ולא בסדר שבו המשתמש סימן אותן
+  const shown = COLUMNS.filter((c) => visibleColumns.includes(c.key));
 
   const allChecked = leads.length > 0 && leads.every((l) => selected.has(l.id));
 
@@ -134,27 +127,30 @@ export function LeadsTable({
                 className="accent-[var(--c-brand)]"
               />
             </th>
-            {COLUMNS.map((col) => (
-              <th key={col.field} className="px-3 py-2.5 text-start font-medium">
-                <button
-                  onClick={() => sortBy(col.field)}
-                  className="inline-flex items-center gap-1 hover:text-ink-1"
-                >
-                  {col.label}
-                  {sort.field === col.field && (
-                    <Icon
-                      name="chevronDown"
-                      size={13}
-                      className={sort.dir === "asc" ? "rotate-180" : ""}
-                    />
-                  )}
-                </button>
+            {shown.map((col) => (
+              <th
+                key={col.key}
+                className="whitespace-nowrap px-3 py-2.5 text-start font-medium"
+              >
+                {col.sort ? (
+                  <button
+                    onClick={() => sortBy(col.sort!)}
+                    className="inline-flex items-center gap-1 hover:text-ink-1"
+                  >
+                    {col.label}
+                    {sort.field === col.sort && (
+                      <Icon
+                        name="chevronDown"
+                        size={13}
+                        className={sort.dir === "asc" ? "rotate-180" : ""}
+                      />
+                    )}
+                  </button>
+                ) : (
+                  col.label
+                )}
               </th>
             ))}
-            <th className="px-3 py-2.5 text-start font-medium">קטגוריה</th>
-            <th className="px-3 py-2.5 text-start font-medium">עלות</th>
-            <th className="px-3 py-2.5 text-start font-medium">משויך ל</th>
-            <th className="px-3 py-2.5 text-start font-medium">פעילות</th>
             <th className="w-20">
               <span className="sr-only">פעולות</span>
             </th>
@@ -169,6 +165,7 @@ export function LeadsTable({
               now={now}
               assignee={lead.assigneeId ? userById.get(lead.assigneeId) : undefined}
               userById={userById}
+              columns={shown}
               cost={leadCost(lead, leadCosts)}
               checked={selected.has(lead.id)}
               busy={busy}

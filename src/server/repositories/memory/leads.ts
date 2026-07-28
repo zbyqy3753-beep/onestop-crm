@@ -123,6 +123,7 @@ export const memoryLeadRepository: LeadRepository = {
       status: "new",
       priority: input.priority,
       source: input.source,
+      sourceDetail: input.sourceDetail,
       isStarred: false,
       category: input.category,
       currentProvider: input.currentProvider,

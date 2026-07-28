@@ -424,6 +424,11 @@ export interface Lead {
    */
   cost?: number;
   isStarred: boolean;
+  /**
+   * מאיפה הליד הגיע, בטקסט חופשי — שם קמפיין, חבילה או ספק.
+   * `source` אומר *איך* הוא נקלט (ידני/ייבוא/טופס); זה אומר *ממה*.
+   */
+  sourceDetail?: string;
   assigneeId?: UserId;
   createdById: UserId;
   createdAt: string;
@@ -451,7 +456,8 @@ export type LeadImportField =
   | "email"
   | "city"
   | "category"
-  | "note";
+  | "note"
+  | "sourceDetail";
 
 /**
  * כותרות מוכרות בקבצי ייבוא, בעברית ובאנגלית.
@@ -495,6 +501,12 @@ const LEAD_IMPORT_HEADER_ALIASES: Record<string, LeadImportField> = {
   note: "note",
   notes: "note",
   comment: "note",
+
+  מקור: "sourceDetail",
+  קמפיין: "sourceDetail",
+  חבילה: "sourceDetail",
+  source: "sourceDetail",
+  campaign: "sourceDetail",
 };
 
 /**
