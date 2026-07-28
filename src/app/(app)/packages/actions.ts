@@ -26,6 +26,10 @@ export async function saveLeadCostsAction(
   }
 
   await db.settings.setLeadCosts(next);
+
+  // גם מסך הלידים מציג רווח שנגזר מהעלויות האלה — בלי הרענון הזה
+  // הפאנל הפיננסי שם היה ממשיך להראות את המספרים הישנים
   revalidatePath("/packages");
+  revalidatePath("/leads");
   return { ok: true };
 }

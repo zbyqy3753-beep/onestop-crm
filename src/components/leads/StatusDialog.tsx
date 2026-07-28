@@ -19,11 +19,12 @@ export function StatusDialog({
 }: {
   target: { leadIds: string[]; to: LeadStatus } | null;
   onCancel: () => void;
-  onConfirm: (detail: string) => void;
+  onConfirm: (detail: string, followUpDate?: string) => void;
   busy: boolean;
 }) {
   // מתאפס בין פתיחות דרך ה-key שההורה נותן, לא דרך effect
   const [detail, setDetail] = useState("");
+  const [followUpDate, setFollowUpDate] = useState("");
 
   if (!target) return null;
 
@@ -31,6 +32,10 @@ export function StatusDialog({
   const prompt = meta.prompt;
   const many = target.leadIds.length > 1;
   const blocked = Boolean(prompt?.required) && !detail.trim();
+
+  // רק שני הסטטוסים האלה שומרים תזכורת חזרה — ראה changeStatus ברפוזיטורי
+  const wantsFollowUp =
+    target.to === "followUp" || target.to === "futureTracking";
 
   return (
     <Modal
@@ -63,13 +68,32 @@ export function StatusDialog({
         </label>
       )}
 
+      {wantsFollowUp && (
+        <label className="mt-3 block">
+          <span className="mb-1 block text-xs font-medium text-ink-2">
+            תאריך חזרה
+            <span className="font-normal text-ink-4"> (אופציונלי)</span>
+          </span>
+          <input
+            type="date"
+            value={followUpDate}
+            min={today()}
+            onChange={(e) => setFollowUpDate(e.target.value)}
+            className={`${inputClass} nums`}
+          />
+          <span className="mt-1 block text-xs text-ink-4">
+            הליד יופיע בתצוגה ״לחזור היום״ בתאריך שנבחר.
+          </span>
+        </label>
+      )}
+
       <div className="mt-4 flex justify-end gap-2">
         <Button onClick={onCancel} disabled={busy}>
           ביטול
         </Button>
         <Button
           variant="primary"
-          onClick={() => onConfirm(detail)}
+          onClick={() => onConfirm(detail, followUpDate || undefined)}
           disabled={busy || blocked}
         >
           {busy ? "שומר…" : "עדכון"}
@@ -77,4 +101,14 @@ export function StatusDialog({
       </div>
     </Modal>
   );
+}
+
+/**
+ * היום בפורמט של `<input type="date">`, בשעון המקומי.
+ * `toISOString()` היה מחזיר UTC ובישראל זה נופל ליום הקודם בלילה.
+ */
+function today(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }

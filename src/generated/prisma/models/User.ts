@@ -226,6 +226,7 @@ export type UserWhereInput = {
   createdLeads?: Prisma.LeadListRelationFilter
   notes?: Prisma.LeadNoteListRelationFilter
   statusEvents?: Prisma.LeadStatusEventListRelationFilter
+  leadActivity?: Prisma.LeadActivityListRelationFilter
   deals?: Prisma.DealListRelationFilter
   dealStageEvents?: Prisma.DealStageEventListRelationFilter
   referredRegistrations?: Prisma.RegistrationListRelationFilter
@@ -247,6 +248,7 @@ export type UserOrderByWithRelationInput = {
   createdLeads?: Prisma.LeadOrderByRelationAggregateInput
   notes?: Prisma.LeadNoteOrderByRelationAggregateInput
   statusEvents?: Prisma.LeadStatusEventOrderByRelationAggregateInput
+  leadActivity?: Prisma.LeadActivityOrderByRelationAggregateInput
   deals?: Prisma.DealOrderByRelationAggregateInput
   dealStageEvents?: Prisma.DealStageEventOrderByRelationAggregateInput
   referredRegistrations?: Prisma.RegistrationOrderByRelationAggregateInput
@@ -271,6 +273,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   createdLeads?: Prisma.LeadListRelationFilter
   notes?: Prisma.LeadNoteListRelationFilter
   statusEvents?: Prisma.LeadStatusEventListRelationFilter
+  leadActivity?: Prisma.LeadActivityListRelationFilter
   deals?: Prisma.DealListRelationFilter
   dealStageEvents?: Prisma.DealStageEventListRelationFilter
   referredRegistrations?: Prisma.RegistrationListRelationFilter
@@ -324,6 +327,7 @@ export type UserCreateInput = {
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
   deals?: Prisma.DealCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
@@ -345,6 +349,7 @@ export type UserUncheckedCreateInput = {
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
   deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
@@ -366,6 +371,7 @@ export type UserUpdateInput = {
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
@@ -387,6 +393,7 @@ export type UserUncheckedUpdateInput = {
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
@@ -549,6 +556,20 @@ export type UserUpdateOneRequiredWithoutNotesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutNotesInput, Prisma.UserUpdateWithoutNotesInput>, Prisma.UserUncheckedUpdateWithoutNotesInput>
 }
 
+export type UserCreateNestedOneWithoutLeadActivityInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLeadActivityInput, Prisma.UserUncheckedCreateWithoutLeadActivityInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLeadActivityInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutLeadActivityNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLeadActivityInput, Prisma.UserUncheckedCreateWithoutLeadActivityInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLeadActivityInput
+  upsert?: Prisma.UserUpsertWithoutLeadActivityInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutLeadActivityInput, Prisma.UserUpdateWithoutLeadActivityInput>, Prisma.UserUncheckedUpdateWithoutLeadActivityInput>
+}
+
 export type UserCreateNestedOneWithoutStatusEventsInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutStatusEventsInput, Prisma.UserUncheckedCreateWithoutStatusEventsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutStatusEventsInput
@@ -637,6 +658,7 @@ export type UserCreateWithoutAssignedLeadsInput = {
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
   deals?: Prisma.DealCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
@@ -657,6 +679,7 @@ export type UserUncheckedCreateWithoutAssignedLeadsInput = {
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
   deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
@@ -682,6 +705,7 @@ export type UserCreateWithoutCreatedLeadsInput = {
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
   deals?: Prisma.DealCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
@@ -702,6 +726,7 @@ export type UserUncheckedCreateWithoutCreatedLeadsInput = {
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
   deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
@@ -738,6 +763,7 @@ export type UserUpdateWithoutAssignedLeadsInput = {
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
@@ -758,6 +784,7 @@ export type UserUncheckedUpdateWithoutAssignedLeadsInput = {
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
@@ -789,6 +816,7 @@ export type UserUpdateWithoutCreatedLeadsInput = {
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
@@ -809,6 +837,7 @@ export type UserUncheckedUpdateWithoutCreatedLeadsInput = {
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
@@ -829,6 +858,7 @@ export type UserCreateWithoutNotesInput = {
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
   deals?: Prisma.DealCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
@@ -849,6 +879,7 @@ export type UserUncheckedCreateWithoutNotesInput = {
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
   deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
@@ -885,6 +916,7 @@ export type UserUpdateWithoutNotesInput = {
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
@@ -904,6 +936,107 @@ export type UserUncheckedUpdateWithoutNotesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+}
+
+export type UserCreateWithoutLeadActivityInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+}
+
+export type UserUncheckedCreateWithoutLeadActivityInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+}
+
+export type UserCreateOrConnectWithoutLeadActivityInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutLeadActivityInput, Prisma.UserUncheckedCreateWithoutLeadActivityInput>
+}
+
+export type UserUpsertWithoutLeadActivityInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutLeadActivityInput, Prisma.UserUncheckedUpdateWithoutLeadActivityInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutLeadActivityInput, Prisma.UserUncheckedCreateWithoutLeadActivityInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutLeadActivityInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutLeadActivityInput, Prisma.UserUncheckedUpdateWithoutLeadActivityInput>
+}
+
+export type UserUpdateWithoutLeadActivityInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutLeadActivityInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
@@ -925,6 +1058,7 @@ export type UserCreateWithoutStatusEventsInput = {
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
   deals?: Prisma.DealCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
@@ -945,6 +1079,7 @@ export type UserUncheckedCreateWithoutStatusEventsInput = {
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
   deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
@@ -981,6 +1116,7 @@ export type UserUpdateWithoutStatusEventsInput = {
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
@@ -1001,6 +1137,7 @@ export type UserUncheckedUpdateWithoutStatusEventsInput = {
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
@@ -1022,6 +1159,7 @@ export type UserCreateWithoutDealsInput = {
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
@@ -1042,6 +1180,7 @@ export type UserUncheckedCreateWithoutDealsInput = {
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
@@ -1078,6 +1217,7 @@ export type UserUpdateWithoutDealsInput = {
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
@@ -1098,6 +1238,7 @@ export type UserUncheckedUpdateWithoutDealsInput = {
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
@@ -1118,6 +1259,7 @@ export type UserCreateWithoutDealStageEventsInput = {
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
   deals?: Prisma.DealCreateNestedManyWithoutAgentInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
@@ -1138,6 +1280,7 @@ export type UserUncheckedCreateWithoutDealStageEventsInput = {
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
   deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
@@ -1174,6 +1317,7 @@ export type UserUpdateWithoutDealStageEventsInput = {
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
@@ -1194,6 +1338,7 @@ export type UserUncheckedUpdateWithoutDealStageEventsInput = {
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
@@ -1214,6 +1359,7 @@ export type UserCreateWithoutReferredRegistrationsInput = {
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
   deals?: Prisma.DealCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
@@ -1234,6 +1380,7 @@ export type UserUncheckedCreateWithoutReferredRegistrationsInput = {
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
   deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
@@ -1259,6 +1406,7 @@ export type UserCreateWithoutHandledRegistrationsInput = {
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
   deals?: Prisma.DealCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
@@ -1279,6 +1427,7 @@ export type UserUncheckedCreateWithoutHandledRegistrationsInput = {
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
   deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
@@ -1315,6 +1464,7 @@ export type UserUpdateWithoutReferredRegistrationsInput = {
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
@@ -1335,6 +1485,7 @@ export type UserUncheckedUpdateWithoutReferredRegistrationsInput = {
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
@@ -1366,6 +1517,7 @@ export type UserUpdateWithoutHandledRegistrationsInput = {
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
@@ -1386,6 +1538,7 @@ export type UserUncheckedUpdateWithoutHandledRegistrationsInput = {
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
   deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
@@ -1401,6 +1554,7 @@ export type UserCountOutputType = {
   createdLeads: number
   notes: number
   statusEvents: number
+  leadActivity: number
   deals: number
   dealStageEvents: number
   referredRegistrations: number
@@ -1412,6 +1566,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   createdLeads?: boolean | UserCountOutputTypeCountCreatedLeadsArgs
   notes?: boolean | UserCountOutputTypeCountNotesArgs
   statusEvents?: boolean | UserCountOutputTypeCountStatusEventsArgs
+  leadActivity?: boolean | UserCountOutputTypeCountLeadActivityArgs
   deals?: boolean | UserCountOutputTypeCountDealsArgs
   dealStageEvents?: boolean | UserCountOutputTypeCountDealStageEventsArgs
   referredRegistrations?: boolean | UserCountOutputTypeCountReferredRegistrationsArgs
@@ -1459,6 +1614,13 @@ export type UserCountOutputTypeCountStatusEventsArgs<ExtArgs extends runtime.Typ
 /**
  * UserCountOutputType without action
  */
+export type UserCountOutputTypeCountLeadActivityArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LeadActivityWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
 export type UserCountOutputTypeCountDealsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.DealWhereInput
 }
@@ -1500,6 +1662,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   createdLeads?: boolean | Prisma.User$createdLeadsArgs<ExtArgs>
   notes?: boolean | Prisma.User$notesArgs<ExtArgs>
   statusEvents?: boolean | Prisma.User$statusEventsArgs<ExtArgs>
+  leadActivity?: boolean | Prisma.User$leadActivityArgs<ExtArgs>
   deals?: boolean | Prisma.User$dealsArgs<ExtArgs>
   dealStageEvents?: boolean | Prisma.User$dealStageEventsArgs<ExtArgs>
   referredRegistrations?: boolean | Prisma.User$referredRegistrationsArgs<ExtArgs>
@@ -1552,6 +1715,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   createdLeads?: boolean | Prisma.User$createdLeadsArgs<ExtArgs>
   notes?: boolean | Prisma.User$notesArgs<ExtArgs>
   statusEvents?: boolean | Prisma.User$statusEventsArgs<ExtArgs>
+  leadActivity?: boolean | Prisma.User$leadActivityArgs<ExtArgs>
   deals?: boolean | Prisma.User$dealsArgs<ExtArgs>
   dealStageEvents?: boolean | Prisma.User$dealStageEventsArgs<ExtArgs>
   referredRegistrations?: boolean | Prisma.User$referredRegistrationsArgs<ExtArgs>
@@ -1568,6 +1732,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     createdLeads: Prisma.$LeadPayload<ExtArgs>[]
     notes: Prisma.$LeadNotePayload<ExtArgs>[]
     statusEvents: Prisma.$LeadStatusEventPayload<ExtArgs>[]
+    leadActivity: Prisma.$LeadActivityPayload<ExtArgs>[]
     deals: Prisma.$DealPayload<ExtArgs>[]
     dealStageEvents: Prisma.$DealStageEventPayload<ExtArgs>[]
     referredRegistrations: Prisma.$RegistrationPayload<ExtArgs>[]
@@ -1985,6 +2150,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   createdLeads<T extends Prisma.User$createdLeadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$createdLeadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notes<T extends Prisma.User$notesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadNotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   statusEvents<T extends Prisma.User$statusEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$statusEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadStatusEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  leadActivity<T extends Prisma.User$leadActivityArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$leadActivityArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadActivityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   deals<T extends Prisma.User$dealsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$dealsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DealPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   dealStageEvents<T extends Prisma.User$dealStageEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$dealStageEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DealStageEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   referredRegistrations<T extends Prisma.User$referredRegistrationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$referredRegistrationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RegistrationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2514,6 +2680,30 @@ export type User$statusEventsArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.LeadStatusEventScalarFieldEnum | Prisma.LeadStatusEventScalarFieldEnum[]
+}
+
+/**
+ * User.leadActivity
+ */
+export type User$leadActivityArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LeadActivity
+   */
+  select?: Prisma.LeadActivitySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LeadActivity
+   */
+  omit?: Prisma.LeadActivityOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeadActivityInclude<ExtArgs> | null
+  where?: Prisma.LeadActivityWhereInput
+  orderBy?: Prisma.LeadActivityOrderByWithRelationInput | Prisma.LeadActivityOrderByWithRelationInput[]
+  cursor?: Prisma.LeadActivityWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LeadActivityScalarFieldEnum | Prisma.LeadActivityScalarFieldEnum[]
 }
 
 /**

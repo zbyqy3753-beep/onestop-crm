@@ -10,11 +10,13 @@ import {
   SOURCE_CONFIG,
   STATUS_CONFIG,
   STATUS_ORDER,
+  whatsappGreeting,
 } from "@/lib/domain/types";
 import { addNoteAction } from "@/app/(app)/leads/actions";
-import { dateTime, phone, relative } from "@/lib/format";
+import { dateTime, phone, relative, waLink } from "@/lib/format";
 import { Badge, Button, inputClass, useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
+import { ActivityFeed } from "./ActivityFeed";
 
 /**
  * מגירת הליד — כל מה שצריך לפני חיוג, במסך אחד.
@@ -29,6 +31,7 @@ export function LeadDrawer({
   onClose,
   onStatus,
   onAssign,
+  onEdit,
   onDelete,
   onNotify,
   busy,
@@ -39,6 +42,7 @@ export function LeadDrawer({
   onClose: () => void;
   onStatus: (to: LeadStatus) => void;
   onAssign: (assigneeId: string | null) => void;
+  onEdit: () => void;
   onDelete: () => void;
   onNotify: (message: string, tone?: "good" | "bad") => void;
   busy: boolean;
@@ -109,13 +113,22 @@ export function LeadDrawer({
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              className="rounded-md p-1.5 text-ink-3 hover:bg-surface-3 hover:text-ink-1"
-              aria-label="סגירה"
-            >
-              <Icon name="close" size={18} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onEdit}
+                className="rounded-md px-2 py-1.5 text-xs text-ink-3 hover:bg-surface-3 hover:text-ink-1"
+                aria-label={`עריכת ${lead.name}`}
+              >
+                עריכה
+              </button>
+              <button
+                onClick={onClose}
+                className="rounded-md p-1.5 text-ink-3 hover:bg-surface-3 hover:text-ink-1"
+                aria-label="סגירה"
+              >
+                <Icon name="close" size={18} />
+              </button>
+            </div>
           </div>
 
           {/* פעולות קשר — הדבר הראשון שסוכן צריך */}
@@ -126,6 +139,16 @@ export function LeadDrawer({
             >
               <Icon name="phone" size={16} />
               <span className="ltr-num">{phone(lead.phone)}</span>
+            </a>
+            <a
+              href={waLink(lead.phone, whatsappGreeting(lead.name))}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-line-strong px-3 py-2 text-sm hover:bg-good-soft hover:text-good"
+              title="וואטסאפ"
+              aria-label={`וואטסאפ ל${lead.name}`}
+            >
+              <Icon name="whatsapp" size={16} />
             </a>
             {lead.email && (
               <a
@@ -203,66 +226,16 @@ export function LeadDrawer({
             )}
           </dl>
 
-          {/* היסטוריה */}
+          {/* ציר הזמן — סטטוסים, פעולות והערות במיזוג אחד */}
           <section className="mt-5 border-t border-line pt-4">
-            <h3 className="mb-2.5 text-xs font-semibold text-ink-2">
-              היסטוריית סטטוס
-            </h3>
-            <ol className="space-y-2.5">
-              {[...lead.history].reverse().map((event) => (
-                <li key={event.id} className="flex gap-2.5 text-xs">
-                  <span
-                    className="mt-1 size-2 shrink-0 rounded-full"
-                    style={{
-                      background: `var(--c-${
-                        STATUS_CONFIG[event.to].tone === "active"
-                          ? "brand"
-                          : STATUS_CONFIG[event.to].tone
-                      })`,
-                    }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-ink-1">
-                      {event.from
-                        ? `${STATUS_CONFIG[event.from].label} ← ${STATUS_CONFIG[event.to].label}`
-                        : `נוצר כ״${STATUS_CONFIG[event.to].label}״`}
-                    </p>
-                    {event.detail && (
-                      <p className="mt-0.5 text-ink-2">{event.detail}</p>
-                    )}
-                    <p className="mt-0.5 text-ink-4">
-                      {userById.get(event.actorId)?.name ?? "—"} ·{" "}
-                      {dateTime(event.createdAt)}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <h3 className="mb-3 text-xs font-semibold text-ink-2">פעילות</h3>
+            <ActivityFeed lead={lead} userById={userById} />
           </section>
 
-          {/* הערות */}
           <section className="mt-5 border-t border-line pt-4">
-            <h3 className="mb-2.5 text-xs font-semibold text-ink-2">הערות</h3>
-
-            {lead.notes.length > 0 ? (
-              <ul className="mb-3 space-y-2">
-                {lead.notes.map((n) => (
-                  <li
-                    key={n.id}
-                    className="rounded-md bg-surface-2 px-2.5 py-2 text-xs"
-                  >
-                    <p className="text-ink-1">{n.body}</p>
-                    <p className="mt-1 text-ink-4">
-                      {userById.get(n.authorId)?.name ?? "—"} ·{" "}
-                      {dateTime(n.createdAt)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mb-3 text-xs text-ink-4">אין הערות עדיין.</p>
-            )}
-
+            <h3 className="mb-2.5 text-xs font-semibold text-ink-2">
+              הוספת הערה
+            </h3>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}

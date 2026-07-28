@@ -2,6 +2,7 @@ import type {
   CategoryKey,
   Deal,
   Lead,
+  LeadActivityType,
   LeadCategoryKey,
   LeadCostTable,
   LeadId,
@@ -97,8 +98,15 @@ export type UpdateLeadInput = Partial<
     | "city"
     | "assigneeId"
     | "followUpAt"
+    | "isStarred"
   >
->;
+> & {
+  /**
+   * `null` מנקה את העלות הפרטנית ומחזיר לעלות הקטגוריה.
+   * השמטה (`undefined`) משאירה אותה כמו שהיא — שני מצבים שונים.
+   */
+  cost?: number | null;
+};
 
 /** שינוי סטטוס תמיד נושא איתו את הפירוט שהסוכן הזין. */
 export interface ChangeStatusInput {
@@ -106,6 +114,11 @@ export interface ChangeStatusInput {
   to: LeadStatus;
   detail?: string;
   actorId: UserId;
+  /**
+   * מתי לחזור. רלוונטי רק לסטטוסים `followUp` / `futureTracking` —
+   * בכל השאר התזכורת נמחקת ממילא והערך הזה מתעלמים ממנו.
+   */
+  followUpAt?: string;
 }
 
 /* ── ממשקים ───────────────────────────────────────────────────────────── */
@@ -122,11 +135,38 @@ export interface LeadRepository {
   create(input: CreateLeadInput): Promise<Lead>;
   /** יצירה מרובה, לייבוא CSV */
   createMany(inputs: CreateLeadInput[]): Promise<Lead[]>;
+  /**
+   * אילו מהטלפונים האלה כבר קיימים במערכת.
+   * הטלפון הוא מפתח הכפילות בפועל — `@@index([phone])` קיים בשבילו.
+   */
+  findPhones(phones: string[]): Promise<Set<string>>;
   update(id: LeadId, input: UpdateLeadInput): Promise<Lead>;
   changeStatus(input: ChangeStatusInput): Promise<Lead>;
-  assign(ids: LeadId[], assigneeId: UserId | null): Promise<Lead[]>;
+  assign(
+    ids: LeadId[],
+    assigneeId: UserId | null,
+    actorId: UserId,
+  ): Promise<Lead[]>;
   addNote(leadId: LeadId, authorId: UserId, body: string): Promise<Lead>;
+  /** רישום פעולה שאינה שינוי סטטוס — ראה LeadActivityEvent. */
+  logActivity(input: LogActivityInput): Promise<void>;
   remove(ids: LeadId[]): Promise<void>;
+}
+
+export interface LogActivityInput {
+  leadId: LeadId;
+  type: LeadActivityType;
+  detail?: string;
+  targetUserId?: UserId;
+  actorId: UserId;
+}
+
+export interface CreateUserInput {
+  name: string;
+  email: string;
+  phone?: string;
+  role: User["role"];
+  store?: string;
 }
 
 export interface UserRepository {
@@ -134,6 +174,7 @@ export interface UserRepository {
   getById(id: UserId): Promise<User | null>;
   getByEmail(email: string): Promise<User | null>;
   listActive(): Promise<User[]>;
+  create(input: CreateUserInput): Promise<User>;
 }
 
 export interface PackageFilter {

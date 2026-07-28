@@ -11,6 +11,7 @@
 export type * from './models/User'
 export type * from './models/Lead'
 export type * from './models/LeadNote'
+export type * from './models/LeadActivity'
 export type * from './models/LeadStatusEvent'
 export type * from './models/Package'
 export type * from './models/Deal'

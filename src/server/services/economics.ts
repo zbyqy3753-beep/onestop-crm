@@ -100,6 +100,29 @@ export function performanceByAgent(
     .sort((a, b) => b.profit - a.profit);
 }
 
+/**
+ * העלות האפקטיבית של ליד בודד.
+ *
+ * עלות ברמת הליד גוברת על עלות הקטגוריה. השדה אופציונלי בכוונה:
+ * `undefined` = "לא הוגדר, קח את ברירת המחדל של הקטגוריה", ואילו
+ * `0` = "הליד הזה היה חינם". בלי ההבחנה הזו אי אפשר לייצג ליד חינמי.
+ */
+export function leadCost(
+  lead: { cost?: number; category?: LeadCategoryKey },
+  costs: LeadCostTable,
+): number {
+  if (lead.cost !== undefined) return lead.cost;
+  return lead.category ? (costs[lead.category] ?? 0) : 0;
+}
+
+/** סך העלות של קבוצת לידים, בהתחשב בעלות פרטנית לכל ליד. */
+export function totalLeadCostForLeads(
+  leads: { cost?: number; category?: LeadCategoryKey }[],
+  costs: LeadCostTable,
+): number {
+  return round2(leads.reduce((sum, l) => sum + leadCost(l, costs), 0));
+}
+
 /** סך העלות של קבוצת לידים לפי הקטגוריות שלהן. */
 export function totalLeadCost(
   categories: (LeadCategoryKey | undefined)[],

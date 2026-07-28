@@ -57,6 +57,11 @@ export type Lead = Prisma.LeadModel
  */
 export type LeadNote = Prisma.LeadNoteModel
 /**
+ * Model LeadActivity
+ * 
+ */
+export type LeadActivity = Prisma.LeadActivityModel
+/**
  * Model LeadStatusEvent
  * כל שינוי סטטוס נשמר עם הפירוט שהסוכן הזין. זו היסטוריית הליד.
  */

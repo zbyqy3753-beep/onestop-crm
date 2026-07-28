@@ -22,6 +22,8 @@ export function QueueHeader({
   total,
   showing,
   onAdd,
+  onExport,
+  onImport,
   filters,
   onFiltersChange,
   currentUserId,
@@ -30,6 +32,8 @@ export function QueueHeader({
   total: number;
   showing: number;
   onAdd: () => void;
+  onExport: () => void;
+  onImport: () => void;
   filters: Filters;
   onFiltersChange: (f: Filters) => void;
   currentUserId: string;
@@ -70,12 +74,26 @@ export function QueueHeader({
           </p>
         </div>
 
-        <Button variant="primary" icon="plus" onClick={onAdd} className="h-10 px-4">
-          ליד חדש
-          <kbd className="ms-1 rounded border border-on-brand/30 px-1 text-[10px] font-normal opacity-70">
-            N
-          </kbd>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" icon="upload" onClick={onImport} className="h-10">
+            ייבוא
+          </Button>
+          <Button
+            variant="secondary"
+            icon="download"
+            onClick={onExport}
+            disabled={showing === 0}
+            className="h-10"
+          >
+            ייצוא
+          </Button>
+          <Button variant="primary" icon="plus" onClick={onAdd} className="h-10 px-4">
+            ליד חדש
+            <kbd className="ms-1 rounded border border-on-brand/30 px-1 text-[10px] font-normal opacity-70">
+              N
+            </kbd>
+          </Button>
+        </div>
       </div>
 
       {/* תצוגות מהירות — "מה אני צריך לעשות עכשיו" */}

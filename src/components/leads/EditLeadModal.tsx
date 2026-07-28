@@ -1,18 +1,27 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { User } from "@/lib/domain/types";
-import { createLeadAction } from "@/app/(app)/leads/actions";
+import type { Lead, User } from "@/lib/domain/types";
+import { updateLeadAction } from "@/app/(app)/leads/actions";
 import { Button, Modal } from "@/components/ui/primitives";
 import { LeadFields } from "./LeadFields";
 
-export function AddLeadModal({
+/**
+ * עריכת פרטי הליד.
+ *
+ * חלונית ולא הרחבה של המגירה: המגירה היא מסך העבודה השוטף (סטטוס,
+ * הערות, היסטוריה) ועריכת פרטי הזיהוי היא פעולה נדירה יותר שמרוויחה
+ * מ״אשר / בטל״ מפורש.
+ */
+export function EditLeadModal({
   open,
+  lead,
   users,
   onClose,
   onNotify,
 }: {
   open: boolean;
+  lead: Lead | null;
   users: User[];
   onClose: () => void;
   onNotify: (message: string, tone?: "good" | "bad") => void;
@@ -20,29 +29,26 @@ export function AddLeadModal({
   const [error, setError] = useState<string | null>(null);
   const [pending, startSubmit] = useTransition();
 
-  /**
-   * התוצאה מטופלת כאן ולא ב-effect: הסגירה היא תוצאה ישירה של
-   * השליחה, לא של שינוי מצב שצריך להגיב אליו.
-   * כישלון משאיר את הטופס פתוח עם מה שהמשתמש הקליד.
-   */
   function submit(formData: FormData) {
+    if (!lead) return;
+
     startSubmit(async () => {
-      const result = await createLeadAction(null, formData);
+      const result = await updateLeadAction(lead.id, formData);
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      onNotify("הליד נוצר");
+      onNotify("הליד עודכן");
       onClose();
     });
   }
 
-  if (!open) return null;
+  if (!open || !lead) return null;
 
   return (
-    <Modal open onClose={onClose} title="ליד חדש" wide>
+    <Modal open onClose={onClose} title={`עריכת ${lead.name}`} wide>
       <form action={submit} className="grid gap-3 sm:grid-cols-2">
-        <LeadFields users={users} showNote />
+        <LeadFields users={users} lead={lead} />
 
         {error && (
           <p
@@ -58,7 +64,7 @@ export function AddLeadModal({
             ביטול
           </Button>
           <Button type="submit" variant="primary" disabled={pending}>
-            {pending ? "שומר…" : "יצירת ליד"}
+            {pending ? "שומר…" : "שמירת שינויים"}
           </Button>
         </div>
       </form>

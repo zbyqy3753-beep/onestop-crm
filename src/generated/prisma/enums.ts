@@ -109,6 +109,19 @@ export const Provider = {
 export type Provider = (typeof Provider)[keyof typeof Provider]
 
 
+export const LeadActivityType = {
+  created: 'created',
+  assigned: 'assigned',
+  unassigned: 'unassigned',
+  imported: 'imported',
+  costChanged: 'costChanged',
+  starred: 'starred',
+  unstarred: 'unstarred'
+} as const
+
+export type LeadActivityType = (typeof LeadActivityType)[keyof typeof LeadActivityType]
+
+
 export const DealStage = {
   new: 'new',
   sentToAktiv: 'sentToAktiv',

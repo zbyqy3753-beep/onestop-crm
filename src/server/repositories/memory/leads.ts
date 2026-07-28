@@ -6,6 +6,7 @@ import type {
   LeadFilter,
   LeadRepository,
   LeadSort,
+  LogActivityInput,
   Page,
   Paginated,
   UpdateLeadInput,
@@ -122,6 +123,7 @@ export const memoryLeadRepository: LeadRepository = {
       status: "new",
       priority: input.priority,
       source: input.source,
+      isStarred: false,
       category: input.category,
       currentProvider: input.currentProvider,
       assigneeId: input.assigneeId,
@@ -150,6 +152,16 @@ export const memoryLeadRepository: LeadRepository = {
           createdAt: ts,
         },
       ],
+      activity: [
+        {
+          id: nextId("act"),
+          leadId: id,
+          type: input.source === "import" ? "imported" : "created",
+          targetUserId: input.assigneeId,
+          actorId: input.createdById,
+          createdAt: ts,
+        },
+      ],
     };
 
     state.leads.unshift(lead);
@@ -164,11 +176,25 @@ export const memoryLeadRepository: LeadRepository = {
     return created;
   },
 
+  async findPhones(phones: string[]): Promise<Set<string>> {
+    const wanted = new Set(phones);
+    const found = new Set<string>();
+    for (const lead of state.leads) {
+      if (wanted.has(lead.phone)) found.add(lead.phone);
+    }
+    return found;
+  },
+
   async update(id: LeadId, input: UpdateLeadInput): Promise<Lead> {
     const lead = state.leads.find((l) => l.id === id);
     if (!lead) throw new Error(`ליד ${id} לא נמצא`);
 
-    Object.assign(lead, input, { updatedAt: nowIso() });
+    // `cost` מטופל בנפרד: null מהקלט הוא "נקה" ונשמר כ-undefined,
+    // כדי שהמצב בזיכרון יהיה זהה למה שחוזר מ-Prisma
+    const { cost, ...rest } = input;
+    Object.assign(lead, rest, { updatedAt: nowIso() });
+    if (cost !== undefined) lead.cost = cost === null ? undefined : cost;
+
     return structuredClone(lead);
   },
 
@@ -177,6 +203,7 @@ export const memoryLeadRepository: LeadRepository = {
     to,
     detail,
     actorId,
+    followUpAt,
   }: ChangeStatusInput): Promise<Lead> {
     const lead = state.leads.find((l) => l.id === leadId);
     if (!lead) throw new Error(`ליד ${leadId} לא נמצא`);
@@ -198,15 +225,22 @@ export const memoryLeadRepository: LeadRepository = {
     lead.updatedAt = ts;
     lead.lastContactAt = ts;
 
-    // סטטוסים שאינם דורשים חזרה מנקים את התזכורת
+    // סטטוסים שאינם דורשים חזרה מנקים את התזכורת; אלה שכן — קובעים
+    // אותה אם התקבל תאריך, ומשאירים את הקיים אם לא
     if (to !== "followUp" && to !== "futureTracking") {
       lead.followUpAt = undefined;
+    } else if (followUpAt) {
+      lead.followUpAt = followUpAt;
     }
 
     return structuredClone(lead);
   },
 
-  async assign(ids: LeadId[], assigneeId: UserId | null): Promise<Lead[]> {
+  async assign(
+    ids: LeadId[],
+    assigneeId: UserId | null,
+    actorId: UserId,
+  ): Promise<Lead[]> {
     const ts = nowIso();
     const touched: Lead[] = [];
 
@@ -214,10 +248,39 @@ export const memoryLeadRepository: LeadRepository = {
       if (!ids.includes(lead.id)) continue;
       lead.assigneeId = assigneeId ?? undefined;
       lead.updatedAt = ts;
+      lead.activity.push({
+        id: nextId("act"),
+        leadId: lead.id,
+        type: assigneeId ? "assigned" : "unassigned",
+        targetUserId: assigneeId ?? undefined,
+        actorId,
+        createdAt: ts,
+      });
       touched.push(lead);
     }
 
     return structuredClone(touched);
+  },
+
+  async logActivity({
+    leadId,
+    type,
+    detail,
+    targetUserId,
+    actorId,
+  }: LogActivityInput): Promise<void> {
+    const lead = state.leads.find((l) => l.id === leadId);
+    if (!lead) return;
+
+    lead.activity.push({
+      id: nextId("act"),
+      leadId,
+      type,
+      detail,
+      targetUserId,
+      actorId,
+      createdAt: nowIso(),
+    });
   },
 
   async addNote(leadId: LeadId, authorId: UserId, body: string): Promise<Lead> {

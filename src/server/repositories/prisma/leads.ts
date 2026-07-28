@@ -8,6 +8,7 @@ import type {
   LeadFilter,
   LeadRepository,
   LeadSort,
+  LogActivityInput,
   Page,
   Paginated,
   UpdateLeadInput,
@@ -103,7 +104,7 @@ export const prismaLeadRepository: LeadRepository = {
         orderBy: buildOrderBy(sort),
         skip: page?.offset,
         take: page?.limit,
-        include: { notes: true, history: true },
+        include: { notes: true, history: true, activity: true },
       }),
       prisma.lead.count({ where }),
     ]);
@@ -114,7 +115,11 @@ export const prismaLeadRepository: LeadRepository = {
   async getById(id: LeadId): Promise<Lead | null> {
     const row = await prisma.lead.findUnique({
       where: { id },
-      include: { notes: true, history: { orderBy: { createdAt: "asc" } } },
+      include: {
+        notes: true,
+        history: { orderBy: { createdAt: "asc" } },
+        activity: { orderBy: { createdAt: "asc" } },
+      },
     });
     return row ? leadFromPrisma(row) : null;
   },
@@ -155,8 +160,17 @@ export const prismaLeadRepository: LeadRepository = {
         history: {
           create: [{ to: "new", actorId: input.createdById }],
         },
+        activity: {
+          create: [
+            {
+              type: input.source === "import" ? "imported" : "created",
+              targetUserId: input.assigneeId,
+              actorId: input.createdById,
+            },
+          ],
+        },
       },
-      include: { notes: true, history: true },
+      include: { notes: true, history: true, activity: true },
     });
 
     return leadFromPrisma(row);
@@ -172,6 +186,16 @@ export const prismaLeadRepository: LeadRepository = {
     return created;
   },
 
+  async findPhones(phones: string[]): Promise<Set<string>> {
+    if (phones.length === 0) return new Set();
+
+    const rows = await prisma.lead.findMany({
+      where: { phone: { in: phones } },
+      select: { phone: true },
+    });
+    return new Set(rows.map((r) => r.phone));
+  },
+
   async update(id: LeadId, input: UpdateLeadInput): Promise<Lead> {
     // ה-cast כאן נחוץ: Prisma לא מצליח להסיק אוטומטית בין
     // LeadUpdateInput ל-LeadUncheckedUpdateInput עבור אובייקט חלקי
@@ -179,7 +203,7 @@ export const prismaLeadRepository: LeadRepository = {
     const row = await prisma.lead.update({
       where: { id },
       data: input as Prisma.LeadUncheckedUpdateInput,
-      include: { notes: true, history: true },
+      include: { notes: true, history: true, activity: true },
     });
     return leadFromPrisma(row);
   },
@@ -189,8 +213,16 @@ export const prismaLeadRepository: LeadRepository = {
     to,
     detail,
     actorId,
+    followUpAt,
   }: ChangeStatusInput): Promise<Lead> {
     const clearsFollowUp = to !== "followUp" && to !== "futureTracking";
+
+    // undefined = אל תיגע; null = נקה. אותה התנהגות כמו במימוש הזיכרון.
+    const nextFollowUp = clearsFollowUp
+      ? null
+      : followUpAt
+        ? new Date(followUpAt)
+        : undefined;
 
     const row = await prisma.$transaction(async (tx) => {
       const current = await tx.lead.findUniqueOrThrow({
@@ -207,33 +239,62 @@ export const prismaLeadRepository: LeadRepository = {
         data: {
           status: to,
           lastContactAt: new Date(),
-          followUpAt: clearsFollowUp ? null : undefined,
+          followUpAt: nextFollowUp,
         },
-        include: { notes: true, history: true },
+        include: { notes: true, history: true, activity: true },
       });
     });
 
     return leadFromPrisma(row);
   },
 
-  async assign(ids: LeadId[], assigneeId: UserId | null): Promise<Lead[]> {
-    await prisma.lead.updateMany({
-      where: { id: { in: ids } },
-      data: { assigneeId },
-    });
+  async assign(
+    ids: LeadId[],
+    assigneeId: UserId | null,
+    actorId: UserId,
+  ): Promise<Lead[]> {
+    // העדכון ורישום הפעילות חייבים לרדת יחד, אחרת נשאר שיוך בלי עקבות
+    await prisma.$transaction([
+      prisma.lead.updateMany({
+        where: { id: { in: ids } },
+        data: { assigneeId },
+      }),
+      prisma.leadActivity.createMany({
+        data: ids.map((leadId) => ({
+          leadId,
+          type: assigneeId
+            ? ("assigned" as const)
+            : ("unassigned" as const),
+          targetUserId: assigneeId,
+          actorId,
+        })),
+      }),
+    ]);
 
     const rows = await prisma.lead.findMany({
       where: { id: { in: ids } },
-      include: { notes: true, history: true },
+      include: { notes: true, history: true, activity: true },
     });
     return rows.map(leadFromPrisma);
+  },
+
+  async logActivity({
+    leadId,
+    type,
+    detail,
+    targetUserId,
+    actorId,
+  }: LogActivityInput): Promise<void> {
+    await prisma.leadActivity.create({
+      data: { leadId, type, detail, targetUserId, actorId },
+    });
   },
 
   async addNote(leadId: LeadId, authorId: UserId, body: string): Promise<Lead> {
     const row = await prisma.lead.update({
       where: { id: leadId },
       data: { notes: { create: [{ authorId, body }] } },
-      include: { notes: true, history: true },
+      include: { notes: true, history: true, activity: true },
     });
     return leadFromPrisma(row);
   },
@@ -242,3 +303,4 @@ export const prismaLeadRepository: LeadRepository = {
     await prisma.lead.deleteMany({ where: { id: { in: ids } } });
   },
 };
+

@@ -42,6 +42,18 @@ const users: UserRepository = {
     });
     return rows.map(userFromPrisma);
   },
+  async create(input) {
+    const row = await prisma.user.create({
+      data: {
+        name: input.name,
+        email: input.email,
+        phone: input.phone,
+        role: input.role,
+        store: input.store,
+      },
+    });
+    return userFromPrisma(row);
+  },
 };
 
 const packages: PackageRepository = {

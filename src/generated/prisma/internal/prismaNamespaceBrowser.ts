@@ -54,6 +54,7 @@ export const ModelName = {
   User: 'User',
   Lead: 'Lead',
   LeadNote: 'LeadNote',
+  LeadActivity: 'LeadActivity',
   LeadStatusEvent: 'LeadStatusEvent',
   Package: 'Package',
   Deal: 'Deal',
@@ -107,6 +108,8 @@ export const LeadScalarFieldEnum = {
   source: 'source',
   category: 'category',
   currentProvider: 'currentProvider',
+  cost: 'cost',
+  isStarred: 'isStarred',
   assigneeId: 'assigneeId',
   createdById: 'createdById',
   createdAt: 'createdAt',
@@ -127,6 +130,19 @@ export const LeadNoteScalarFieldEnum = {
 } as const
 
 export type LeadNoteScalarFieldEnum = (typeof LeadNoteScalarFieldEnum)[keyof typeof LeadNoteScalarFieldEnum]
+
+
+export const LeadActivityScalarFieldEnum = {
+  id: 'id',
+  leadId: 'leadId',
+  type: 'type',
+  detail: 'detail',
+  targetUserId: 'targetUserId',
+  actorId: 'actorId',
+  createdAt: 'createdAt'
+} as const
+
+export type LeadActivityScalarFieldEnum = (typeof LeadActivityScalarFieldEnum)[keyof typeof LeadActivityScalarFieldEnum]
 
 
 export const LeadStatusEventScalarFieldEnum = {

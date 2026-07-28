@@ -9,7 +9,7 @@ import type {
 } from "../types";
 import { memoryLeadRepository } from "./leads";
 import { memoryRegistrationRepository } from "./registrations";
-import { state } from "./store";
+import { nextId, state } from "./store";
 
 const users: UserRepository = {
   async list() {
@@ -25,6 +25,19 @@ const users: UserRepository = {
   },
   async listActive() {
     return structuredClone(state.users.filter((u) => u.active));
+  },
+  async create(input) {
+    const user = {
+      id: nextId("user"),
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      role: input.role,
+      store: input.store,
+      active: true,
+    };
+    state.users.push(user);
+    return structuredClone(user);
   },
 };
 

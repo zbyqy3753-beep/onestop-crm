@@ -268,16 +268,25 @@ export type LeadKind = "hot" | "data";
 
 export const KIND_CONFIG: Record<
   LeadKind,
-  { label: string; short: string; tone: StatusTone; emptyState: string }
+  {
+    label: string;
+    /** ריבוי — לכותרות שסופרות ("לידים חמים · 24"), לא לתגית על שורה */
+    plural: string;
+    short: string;
+    tone: StatusTone;
+    emptyState: string;
+  }
 > = {
   hot: {
     label: "ליד חם",
+    plural: "לידים חמים",
     short: "חם",
     tone: "bad",
     emptyState: "אין לידים חמים עדיין",
   },
   data: {
     label: "ליד מדאטה",
+    plural: "לידים מדאטה",
     short: "דאטה",
     tone: "info",
     emptyState: "אין לידים מדאטה עדיין",
@@ -350,6 +359,52 @@ export interface LeadStatusEvent {
   createdAt: string;
 }
 
+/**
+ * פעולה על הליד שאינה שינוי סטטוס.
+ *
+ * `LeadStatusEvent` עונה על "מה הסטטוס עשה"; זה עונה על "מה נעשה לליד" —
+ * מי יצר אותו, למי הוא הועבר, מתי העלות שונתה.
+ */
+export type LeadActivityType =
+  | "created"
+  | "assigned"
+  | "unassigned"
+  | "imported"
+  | "costChanged"
+  | "starred"
+  | "unstarred";
+
+export interface LeadActivityEvent {
+  id: string;
+  leadId: LeadId;
+  type: LeadActivityType;
+  detail?: string;
+  /** היעד של הפעולה, כשרלוונטי (למשל העובד שהליד שויך אליו) */
+  targetUserId?: UserId;
+  actorId: UserId;
+  createdAt: string;
+}
+
+/**
+ * הניסוח של כל סוג פעולה. `target` הוא שם העובד שהפעולה מכוונת אליו,
+ * כבר מפוענח — הרכיב לא צריך לדעת איך לגשת למשתמשים.
+ */
+export const ACTIVITY_CONFIG: Record<
+  LeadActivityType,
+  { tone: StatusTone; text: (target?: string) => string }
+> = {
+  created: { tone: "info", text: () => "הליד נוצר" },
+  imported: { tone: "info", text: () => "יובא מקובץ" },
+  assigned: {
+    tone: "active",
+    text: (target) => (target ? `שויך ל${target}` : "שויך"),
+  },
+  unassigned: { tone: "neutral", text: () => "השיוך הוסר" },
+  costChanged: { tone: "warn", text: () => "העלות עודכנה" },
+  starred: { tone: "warn", text: () => "סומן" },
+  unstarred: { tone: "neutral", text: () => "הסימון הוסר" },
+};
+
 export interface Lead {
   id: LeadId;
   name: string;
@@ -363,6 +418,12 @@ export interface Lead {
   category?: LeadCategoryKey;
   /** הספק הנוכחי של הלקוח, אם ידוע */
   currentProvider?: ProviderKey;
+  /**
+   * עלות רכישת הליד. `undefined` = לא הוגדר, לוקחים את עלות הקטגוריה;
+   * `0` = הליד היה חינם. ההבחנה הזו היא הסיבה שהשדה אופציונלי ולא 0.
+   */
+  cost?: number;
+  isStarred: boolean;
   assigneeId?: UserId;
   createdById: UserId;
   createdAt: string;
@@ -373,6 +434,94 @@ export interface Lead {
   city?: string;
   notes: LeadNote[];
   history: LeadStatusEvent[];
+  activity: LeadActivityEvent[];
+}
+
+/** פתיח ההודעה שנשלחת ללקוח בוואטסאפ מתוך הטבלה או המגירה. */
+export function whatsappGreeting(name: string): string {
+  return `שלום ${name}, פונה אליך מ-ONE STOP בהמשך לפנייתך. איך אוכל לעזור?`;
+}
+
+/* ── ייבוא לידים: זיהוי כותרות ────────────────────────────────────────── */
+
+/** שדה בקובץ ייבוא שאנחנו יודעים למפות אליו עמודה. */
+export type LeadImportField =
+  | "name"
+  | "phone"
+  | "email"
+  | "city"
+  | "category"
+  | "note";
+
+/**
+ * כותרות מוכרות בקבצי ייבוא, בעברית ובאנגלית.
+ *
+ * המפתחות כאן כבר מנורמלים (אותיות קטנות, בלי רווחים/מקפים) — אל תחפש
+ * בהם ישירות, קרא ל-`matchImportField` כדי שהנרמול יישאר במקום אחד.
+ */
+const LEAD_IMPORT_HEADER_ALIASES: Record<string, LeadImportField> = {
+  שם: "name",
+  שםמלא: "name",
+  שםהלקוח: "name",
+  שםלקוח: "name",
+  name: "name",
+  fullname: "name",
+
+  טלפון: "phone",
+  נייד: "phone",
+  מספרטלפון: "phone",
+  phone: "phone",
+  mobile: "phone",
+  tel: "phone",
+
+  אימייל: "email",
+  מייל: "email",
+  // כל כתיבי "דוא״ל" מתכווצים לזה — הנרמול מסיר גרשיים
+  דואל: "email",
+  email: "email",
+  mail: "email",
+
+  עיר: "city",
+  ישוב: "city",
+  יישוב: "city",
+  city: "city",
+
+  קטגוריה: "category",
+  תחום: "category",
+  category: "category",
+
+  הערה: "note",
+  הערות: "note",
+  note: "note",
+  notes: "note",
+  comment: "note",
+};
+
+/**
+ * מזהה לאיזה שדה שייכת כותרת עמודה, או `undefined` אם היא לא מוכרת.
+ * מחזיר `undefined` גם עבור מחרוזת ריקה.
+ */
+export function matchImportField(header: string): LeadImportField | undefined {
+  // מסירים גם גרשיים וגרש (רגילים ועבריים) כדי ש"דוא״ל" / "דוא'ל" / "דואל"
+  // ייפלו כולם על אותו מפתח
+  const normalized = header
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_\-.'"׳״]/g, "");
+  if (!normalized) return undefined;
+  return LEAD_IMPORT_HEADER_ALIASES[normalized];
+}
+
+/** תווית עברית → מפתח קטגוריית ליד, לשימוש בייבוא. */
+export function matchLeadCategory(label: string): LeadCategoryKey | undefined {
+  const normalized = label.trim();
+  if (!normalized) return undefined;
+  if (normalized in LEAD_CATEGORY_CONFIG) {
+    return normalized as LeadCategoryKey;
+  }
+  return LEAD_CATEGORY_ORDER.find(
+    (k) => LEAD_CATEGORY_CONFIG[k].label === normalized,
+  );
 }
 
 /* ── קטגוריית ליד ─────────────────────────────────────────────────────── */

@@ -3,6 +3,7 @@ import type {
   DealPackage as PDealPackage,
   DealStageEvent as PDealStageEvent,
   Lead as PLead,
+  LeadActivity as PActivity,
   LeadNote as PLeadNote,
   LeadStatusEvent as PEvent,
   Package as PPackage,
@@ -13,6 +14,7 @@ import type {
   Deal,
   DealStageEvent,
   Lead,
+  LeadActivityEvent,
   LeadNote,
   LeadStatusEvent,
   Package,
@@ -41,7 +43,11 @@ export function toNumber(d: { toString(): string }): number {
 }
 
 export function leadFromPrisma(
-  row: PLead & { notes?: PLeadNote[]; history?: PEvent[] },
+  row: PLead & {
+    notes?: PLeadNote[];
+    history?: PEvent[];
+    activity?: PActivity[];
+  },
 ): Lead {
   return {
     id: row.id,
@@ -54,6 +60,10 @@ export function leadFromPrisma(
     source: row.source,
     category: row.category ?? undefined,
     currentProvider: row.currentProvider ?? undefined,
+    // בדיקת null מפורשת ולא `?? undefined`: Decimal(0) הוא אובייקט
+    // truthy, אבל 0 ו"לא הוגדר" הם שני מצבים שונים ואסור לאחד אותם
+    cost: row.cost === null ? undefined : toNumber(row.cost),
+    isStarred: row.isStarred,
     assigneeId: row.assigneeId ?? undefined,
     createdById: row.createdById,
     createdAt: row.createdAt.toISOString(),
@@ -63,6 +73,19 @@ export function leadFromPrisma(
     city: row.city ?? undefined,
     notes: (row.notes ?? []).map(noteFromPrisma),
     history: (row.history ?? []).map(eventFromPrisma),
+    activity: (row.activity ?? []).map(activityFromPrisma),
+  };
+}
+
+export function activityFromPrisma(row: PActivity): LeadActivityEvent {
+  return {
+    id: row.id,
+    leadId: row.leadId,
+    type: row.type,
+    detail: row.detail ?? undefined,
+    targetUserId: row.targetUserId ?? undefined,
+    actorId: row.actorId,
+    createdAt: row.createdAt.toISOString(),
   };
 }
 

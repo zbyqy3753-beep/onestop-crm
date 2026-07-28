@@ -1,20 +1,43 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import type { Lead, LeadStatus, User } from "@/lib/domain/types";
+import type {
+  Deal,
+  Lead,
+  LeadCostTable,
+  LeadStatus,
+  Package,
+  User,
+} from "@/lib/domain/types";
 import { PRIORITY_CONFIG, STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
 import {
   assignAction,
   changeStatusAction,
   deleteLeadsAction,
+  setLeadCostAction,
+  toggleStarAction,
 } from "@/app/(app)/leads/actions";
 import { useNow } from "@/lib/clock";
+import { downloadCsv, toCsv } from "@/lib/csv";
+import {
+  payableCommission,
+  performanceByAgent,
+  totalLeadCostForLeads,
+} from "@/server/services/economics";
 import { ToastStack, type Toast } from "@/components/ui/primitives";
+import { LeadCostsModal } from "@/components/settings/LeadCostsModal";
+import { LeadsFinancePanel } from "./LeadsFinancePanel";
+import { LeadsPerformancePanel } from "./LeadsPerformancePanel";
+import { leadsCsvFilename, leadsToCsvRows } from "./leadsCsv";
 import { QueueHeader } from "./QueueHeader";
 import { FilterBar, type Filters, EMPTY_FILTERS } from "./FilterBar";
 import { LeadsTable } from "./LeadsTable";
+import { Pagination, PAGE_SIZES } from "./Pagination";
+import { ScopeTiles } from "./ScopeTiles";
 import { LeadDrawer } from "./LeadDrawer";
 import { AddLeadModal } from "./AddLeadModal";
+import { EditLeadModal } from "./EditLeadModal";
+import { ImportLeadsModal } from "./ImportLeadsModal";
 import { StatusDialog } from "./StatusDialog";
 
 /**
@@ -30,11 +53,17 @@ export function LeadsClient({
   leads,
   users,
   counts,
+  leadCosts,
+  deals,
+  packages,
   currentUserId,
 }: {
   leads: Lead[];
   users: User[];
   counts: Record<LeadStatus, number>;
+  leadCosts: LeadCostTable;
+  deals: Deal[];
+  packages: Package[];
   currentUserId: string;
 }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -43,9 +72,15 @@ export function LeadsClient({
     dir: "desc",
   });
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZES[2]);
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openLeadId, setOpenLeadId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [costsOpen, setCostsOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [statusTarget, setStatusTarget] = useState<{
     leadIds: string[];
     to: LeadStatus;
@@ -154,6 +189,22 @@ export function LeadsClient({
     });
   }, [filtered, sort]);
 
+  /**
+   * העמוד מוגבל בזמן הרינדור ולא מאופס באפקט. אם התוצאה התכווצה
+   * מתחת לעמוד הנוכחי, מציגים את האחרון הקיים במקום עמוד ריק.
+   */
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+
+  /**
+   * העמוד הנוכחי בלבד. `sorted` נשאר מקור האמת לכל השאר — ייצוא,
+   * ספירות, ובחירה — כדי שמעבר עמוד לא ישנה את משמעות אף פעולה.
+   */
+  const paged = useMemo(
+    () => sorted.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [sorted, safePage, pageSize],
+  );
+
   /** נבדק לפי תוכן ולא לפי זהות אובייקט — מסנן שנוקה חייב להיקרא "ריק". */
   const hasActiveFilters = useMemo(
     () =>
@@ -178,6 +229,35 @@ export function LeadsClient({
     [users],
   );
 
+  /* ── כספים על החתך המוצג ─────────────────────────────────────────── */
+
+  const catalog = useMemo(
+    () => new Map(packages.map((p) => [p.id, p])),
+    [packages],
+  );
+
+  /** רק העסקאות שנסגרו מלידים שנמצאים בחתך הנוכחי. */
+  const dealsForLeads = useMemo(() => {
+    const ids = new Set(sorted.map((l) => l.id));
+    return deals.filter((d) => ids.has(d.leadId));
+  }, [deals, sorted]);
+
+  const finance = useMemo(
+    () => ({
+      cost: totalLeadCostForLeads(sorted, leadCosts),
+      commission: dealsForLeads.reduce(
+        (sum, d) => sum + payableCommission(d.packageIds, catalog),
+        0,
+      ),
+    }),
+    [sorted, leadCosts, dealsForLeads, catalog],
+  );
+
+  const performance = useMemo(
+    () => performanceByAgent(dealsForLeads, catalog, leadCosts),
+    [dealsForLeads, catalog, leadCosts],
+  );
+
   // בחירות שנעלמו מהסינון לא צריכות להישאר "נבחרות" בשקט
   const visibleSelected = useMemo(() => {
     const visible = new Set(sorted.map((l) => l.id));
@@ -185,6 +265,23 @@ export function LeadsClient({
   }, [selected, sorted]);
 
   /* ── פעולות ──────────────────────────────────────────────────────── */
+
+  // כל דבר שמשנה אילו שורות מוצגות מחזיר לעמוד הראשון. באירוע ולא
+  // באפקט — אחרת זה רינדור נוסף בכל שינוי סינון.
+  function applyFilters(next: Filters) {
+    setFilters(next);
+    setPage(1);
+  }
+
+  function applySort(next: { field: SortField; dir: "asc" | "desc" }) {
+    setSort(next);
+    setPage(1);
+  }
+
+  function applyPageSize(size: number) {
+    setPageSize(size);
+    setPage(1);
+  }
 
   /** פותח דיאלוג פירוט אם הסטטוס דורש אחד, אחרת מחיל ישירות. */
   function requestStatus(leadIds: string[], to: LeadStatus) {
@@ -195,10 +292,15 @@ export function LeadsClient({
     applyStatus(leadIds, to);
   }
 
-  function applyStatus(leadIds: string[], to: LeadStatus, detail?: string) {
+  function applyStatus(
+    leadIds: string[],
+    to: LeadStatus,
+    detail?: string,
+    followUpDate?: string,
+  ) {
     startTransition(async () => {
       for (const id of leadIds) {
-        const res = await changeStatusAction(id, to, detail);
+        const res = await changeStatusAction(id, to, detail, followUpDate);
         if (!res.ok) {
           notify(res.error, "bad");
           return;
@@ -224,6 +326,30 @@ export function LeadsClient({
     });
   }
 
+  function setCost(leadId: string, cost: number | null) {
+    startTransition(async () => {
+      const res = await setLeadCostAction(leadId, cost);
+      if (!res.ok) return notify(res.error, "bad");
+      notify(cost === null ? "העלות אופסה לברירת המחדל" : "העלות עודכנה");
+    });
+  }
+
+  function toggleStar(leadId: string, next: boolean) {
+    startTransition(async () => {
+      const res = await toggleStarAction(leadId, next);
+      if (!res.ok) notify(res.error, "bad");
+    });
+  }
+
+  /** מייצא את כל מה שתואם לסינון, לא רק את מה שנראה על המסך. */
+  function exportCsv() {
+    downloadCsv(
+      leadsCsvFilename(),
+      toCsv(leadsToCsvRows(sorted, userById, leadCosts)),
+    );
+    notify(`${sorted.length} לידים יוצאו`);
+  }
+
   function remove(leadIds: string[]) {
     startTransition(async () => {
       const res = await deleteLeadsAction(leadIds);
@@ -244,14 +370,26 @@ export function LeadsClient({
         total={leads.length}
         showing={sorted.length}
         onAdd={() => setAddOpen(true)}
+        onExport={exportCsv}
+        onImport={() => setImportOpen(true)}
         filters={filters}
-        onFiltersChange={setFilters}
+        onFiltersChange={applyFilters}
         currentUserId={currentUserId}
       />
 
+      <ScopeTiles leads={leads} filters={filters} onChange={applyFilters} />
+
+      <LeadsFinancePanel
+        cost={finance.cost}
+        commission={finance.commission}
+        onEditCosts={() => setCostsOpen(true)}
+      />
+
+      <LeadsPerformancePanel rows={performance} userById={userById} />
+
       <FilterBar
         filters={filters}
-        onChange={setFilters}
+        onChange={applyFilters}
         users={users}
         searchRef={searchRef}
         selectedCount={visibleSelected.length}
@@ -263,17 +401,31 @@ export function LeadsClient({
       />
 
       <LeadsTable
-        leads={sorted}
+        leads={paged}
         userById={userById}
+        leadCosts={leadCosts}
         selected={selected}
         onSelectedChange={setSelected}
         sort={sort}
-        onSortChange={setSort}
+        onSortChange={applySort}
         onOpen={setOpenLeadId}
         onStatus={(id, to) => requestStatus([id], to)}
+        onCost={setCost}
+        onStar={toggleStar}
         onAdd={() => setAddOpen(true)}
         hasFilters={hasActiveFilters}
+        busy={pending}
       />
+
+      {sorted.length > 0 && (
+        <Pagination
+          page={safePage}
+          pageSize={pageSize}
+          total={sorted.length}
+          onPageChange={setPage}
+          onPageSizeChange={applyPageSize}
+        />
+      )}
 
       {/* ה-key מאפס את מצב המגירה (הערה, אישור מחיקה) בכל ליד חדש */}
       <LeadDrawer
@@ -284,6 +436,7 @@ export function LeadsClient({
         onClose={() => setOpenLeadId(null)}
         onStatus={(to) => openLead && requestStatus([openLead.id], to)}
         onAssign={(uid) => openLead && assign([openLead.id], uid)}
+        onEdit={() => setEditOpen(true)}
         onDelete={() => openLead && remove([openLead.id])}
         onNotify={notify}
         busy={pending}
@@ -296,6 +449,31 @@ export function LeadsClient({
         onNotify={notify}
       />
 
+      <ImportLeadsModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onNotify={notify}
+      />
+
+      {/* ה-key טוען מחדש את ערכי ברירת המחדל של הטופס לכל ליד */}
+      <EditLeadModal
+        key={`edit:${openLead?.id ?? "none"}:${openLead?.updatedAt ?? ""}`}
+        open={editOpen}
+        lead={openLead}
+        users={users}
+        onClose={() => setEditOpen(false)}
+        onNotify={notify}
+      />
+
+      {/* ה-key מרענן את הטיוטה כשהעלויות משתנות מבחוץ */}
+      <LeadCostsModal
+        key={`costs:${JSON.stringify(leadCosts)}`}
+        open={costsOpen}
+        costs={leadCosts}
+        onClose={() => setCostsOpen(false)}
+        onNotify={notify}
+      />
+
       {/* ה-key מנקה את שדה הפירוט בין פתיחות */}
       <StatusDialog
         key={
@@ -305,8 +483,9 @@ export function LeadsClient({
         }
         target={statusTarget}
         onCancel={() => setStatusTarget(null)}
-        onConfirm={(detail) =>
-          statusTarget && applyStatus(statusTarget.leadIds, statusTarget.to, detail)
+        onConfirm={(detail, followUpDate) =>
+          statusTarget &&
+          applyStatus(statusTarget.leadIds, statusTarget.to, detail, followUpDate)
         }
         busy={pending}
       />

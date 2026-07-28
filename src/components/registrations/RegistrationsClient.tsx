@@ -7,6 +7,7 @@ import { updateRegistrationStatusAction } from "@/app/(app)/registrations/action
 import { Button, ToastStack, type Toast } from "@/components/ui/primitives";
 import { StatusBreakdownStrip, type StatusSegment } from "@/components/ui/StatusBreakdownStrip";
 import { number } from "@/lib/format";
+import { downloadCsv, toCsv } from "@/lib/csv";
 import { CopyReferralLink } from "./CopyReferralLink";
 import { RegistrationsTable } from "./RegistrationsTable";
 
@@ -100,20 +101,10 @@ export function RegistrationsClient({
       new Date(r.createdAt).toLocaleDateString("he-IL"),
     ]);
 
-    const csvBody = [header, ...rows]
-      .map((row) => row.map(escapeCsvCell).join(","))
-      .join("\r\n");
-
-    // BOM כדי שאקסל יזהה UTF-8 ולא ישבור עברית
-    const blob = new Blob([`﻿${csvBody}`], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `registrations-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    downloadCsv(
+      `registrations-${new Date().toISOString().slice(0, 10)}.csv`,
+      toCsv([header, ...rows]),
+    );
   }
 
   return (
@@ -188,11 +179,4 @@ export function RegistrationsClient({
       <ToastStack toasts={toasts} onDismiss={dismiss} />
     </div>
   );
-}
-
-function escapeCsvCell(value: string): string {
-  if (/[",\r\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
 }

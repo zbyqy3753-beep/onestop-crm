@@ -20,8 +20,18 @@ export type LeadModel = runtime.Types.Result.DefaultSelection<Prisma.$LeadPayloa
 
 export type AggregateLead = {
   _count: LeadCountAggregateOutputType | null
+  _avg: LeadAvgAggregateOutputType | null
+  _sum: LeadSumAggregateOutputType | null
   _min: LeadMinAggregateOutputType | null
   _max: LeadMaxAggregateOutputType | null
+}
+
+export type LeadAvgAggregateOutputType = {
+  cost: runtime.Decimal | null
+}
+
+export type LeadSumAggregateOutputType = {
+  cost: runtime.Decimal | null
 }
 
 export type LeadMinAggregateOutputType = {
@@ -36,6 +46,8 @@ export type LeadMinAggregateOutputType = {
   source: $Enums.LeadSource | null
   category: $Enums.LeadCategory | null
   currentProvider: $Enums.Provider | null
+  cost: runtime.Decimal | null
+  isStarred: boolean | null
   assigneeId: string | null
   createdById: string | null
   createdAt: Date | null
@@ -56,6 +68,8 @@ export type LeadMaxAggregateOutputType = {
   source: $Enums.LeadSource | null
   category: $Enums.LeadCategory | null
   currentProvider: $Enums.Provider | null
+  cost: runtime.Decimal | null
+  isStarred: boolean | null
   assigneeId: string | null
   createdById: string | null
   createdAt: Date | null
@@ -76,6 +90,8 @@ export type LeadCountAggregateOutputType = {
   source: number
   category: number
   currentProvider: number
+  cost: number
+  isStarred: number
   assigneeId: number
   createdById: number
   createdAt: number
@@ -85,6 +101,14 @@ export type LeadCountAggregateOutputType = {
   _all: number
 }
 
+
+export type LeadAvgAggregateInputType = {
+  cost?: true
+}
+
+export type LeadSumAggregateInputType = {
+  cost?: true
+}
 
 export type LeadMinAggregateInputType = {
   id?: true
@@ -98,6 +122,8 @@ export type LeadMinAggregateInputType = {
   source?: true
   category?: true
   currentProvider?: true
+  cost?: true
+  isStarred?: true
   assigneeId?: true
   createdById?: true
   createdAt?: true
@@ -118,6 +144,8 @@ export type LeadMaxAggregateInputType = {
   source?: true
   category?: true
   currentProvider?: true
+  cost?: true
+  isStarred?: true
   assigneeId?: true
   createdById?: true
   createdAt?: true
@@ -138,6 +166,8 @@ export type LeadCountAggregateInputType = {
   source?: true
   category?: true
   currentProvider?: true
+  cost?: true
+  isStarred?: true
   assigneeId?: true
   createdById?: true
   createdAt?: true
@@ -185,6 +215,18 @@ export type LeadAggregateArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: LeadAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: LeadSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: LeadMinAggregateInputType
@@ -215,6 +257,8 @@ export type LeadGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
   take?: number
   skip?: number
   _count?: LeadCountAggregateInputType | true
+  _avg?: LeadAvgAggregateInputType
+  _sum?: LeadSumAggregateInputType
   _min?: LeadMinAggregateInputType
   _max?: LeadMaxAggregateInputType
 }
@@ -231,6 +275,8 @@ export type LeadGroupByOutputType = {
   source: $Enums.LeadSource
   category: $Enums.LeadCategory | null
   currentProvider: $Enums.Provider | null
+  cost: runtime.Decimal | null
+  isStarred: boolean
   assigneeId: string | null
   createdById: string
   createdAt: Date
@@ -238,6 +284,8 @@ export type LeadGroupByOutputType = {
   lastContactAt: Date | null
   followUpAt: Date | null
   _count: LeadCountAggregateOutputType | null
+  _avg: LeadAvgAggregateOutputType | null
+  _sum: LeadSumAggregateOutputType | null
   _min: LeadMinAggregateOutputType | null
   _max: LeadMaxAggregateOutputType | null
 }
@@ -272,6 +320,8 @@ export type LeadWhereInput = {
   source?: Prisma.EnumLeadSourceFilter<"Lead"> | $Enums.LeadSource
   category?: Prisma.EnumLeadCategoryNullableFilter<"Lead"> | $Enums.LeadCategory | null
   currentProvider?: Prisma.EnumProviderNullableFilter<"Lead"> | $Enums.Provider | null
+  cost?: Prisma.DecimalNullableFilter<"Lead"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFilter<"Lead"> | boolean
   assigneeId?: Prisma.StringNullableFilter<"Lead"> | string | null
   createdById?: Prisma.StringFilter<"Lead"> | string
   createdAt?: Prisma.DateTimeFilter<"Lead"> | Date | string
@@ -282,6 +332,7 @@ export type LeadWhereInput = {
   createdBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   notes?: Prisma.LeadNoteListRelationFilter
   history?: Prisma.LeadStatusEventListRelationFilter
+  activity?: Prisma.LeadActivityListRelationFilter
   deal?: Prisma.XOR<Prisma.DealNullableScalarRelationFilter, Prisma.DealWhereInput> | null
 }
 
@@ -297,6 +348,8 @@ export type LeadOrderByWithRelationInput = {
   source?: Prisma.SortOrder
   category?: Prisma.SortOrderInput | Prisma.SortOrder
   currentProvider?: Prisma.SortOrderInput | Prisma.SortOrder
+  cost?: Prisma.SortOrderInput | Prisma.SortOrder
+  isStarred?: Prisma.SortOrder
   assigneeId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -307,6 +360,7 @@ export type LeadOrderByWithRelationInput = {
   createdBy?: Prisma.UserOrderByWithRelationInput
   notes?: Prisma.LeadNoteOrderByRelationAggregateInput
   history?: Prisma.LeadStatusEventOrderByRelationAggregateInput
+  activity?: Prisma.LeadActivityOrderByRelationAggregateInput
   deal?: Prisma.DealOrderByWithRelationInput
 }
 
@@ -325,6 +379,8 @@ export type LeadWhereUniqueInput = Prisma.AtLeast<{
   source?: Prisma.EnumLeadSourceFilter<"Lead"> | $Enums.LeadSource
   category?: Prisma.EnumLeadCategoryNullableFilter<"Lead"> | $Enums.LeadCategory | null
   currentProvider?: Prisma.EnumProviderNullableFilter<"Lead"> | $Enums.Provider | null
+  cost?: Prisma.DecimalNullableFilter<"Lead"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFilter<"Lead"> | boolean
   assigneeId?: Prisma.StringNullableFilter<"Lead"> | string | null
   createdById?: Prisma.StringFilter<"Lead"> | string
   createdAt?: Prisma.DateTimeFilter<"Lead"> | Date | string
@@ -335,6 +391,7 @@ export type LeadWhereUniqueInput = Prisma.AtLeast<{
   createdBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   notes?: Prisma.LeadNoteListRelationFilter
   history?: Prisma.LeadStatusEventListRelationFilter
+  activity?: Prisma.LeadActivityListRelationFilter
   deal?: Prisma.XOR<Prisma.DealNullableScalarRelationFilter, Prisma.DealWhereInput> | null
 }, "id">
 
@@ -350,6 +407,8 @@ export type LeadOrderByWithAggregationInput = {
   source?: Prisma.SortOrder
   category?: Prisma.SortOrderInput | Prisma.SortOrder
   currentProvider?: Prisma.SortOrderInput | Prisma.SortOrder
+  cost?: Prisma.SortOrderInput | Prisma.SortOrder
+  isStarred?: Prisma.SortOrder
   assigneeId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -357,8 +416,10 @@ export type LeadOrderByWithAggregationInput = {
   lastContactAt?: Prisma.SortOrderInput | Prisma.SortOrder
   followUpAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.LeadCountOrderByAggregateInput
+  _avg?: Prisma.LeadAvgOrderByAggregateInput
   _max?: Prisma.LeadMaxOrderByAggregateInput
   _min?: Prisma.LeadMinOrderByAggregateInput
+  _sum?: Prisma.LeadSumOrderByAggregateInput
 }
 
 export type LeadScalarWhereWithAggregatesInput = {
@@ -376,6 +437,8 @@ export type LeadScalarWhereWithAggregatesInput = {
   source?: Prisma.EnumLeadSourceWithAggregatesFilter<"Lead"> | $Enums.LeadSource
   category?: Prisma.EnumLeadCategoryNullableWithAggregatesFilter<"Lead"> | $Enums.LeadCategory | null
   currentProvider?: Prisma.EnumProviderNullableWithAggregatesFilter<"Lead"> | $Enums.Provider | null
+  cost?: Prisma.DecimalNullableWithAggregatesFilter<"Lead"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolWithAggregatesFilter<"Lead"> | boolean
   assigneeId?: Prisma.StringNullableWithAggregatesFilter<"Lead"> | string | null
   createdById?: Prisma.StringWithAggregatesFilter<"Lead"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Lead"> | Date | string
@@ -396,6 +459,8 @@ export type LeadCreateInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -404,6 +469,7 @@ export type LeadCreateInput = {
   createdBy: Prisma.UserCreateNestedOneWithoutCreatedLeadsInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutLeadInput
   history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealCreateNestedOneWithoutLeadInput
 }
 
@@ -419,6 +485,8 @@ export type LeadUncheckedCreateInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   assigneeId?: string | null
   createdById: string
   createdAt?: Date | string
@@ -427,6 +495,7 @@ export type LeadUncheckedCreateInput = {
   followUpAt?: Date | string | null
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutLeadInput
   history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
 }
 
@@ -442,6 +511,8 @@ export type LeadUpdateInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -450,6 +521,7 @@ export type LeadUpdateInput = {
   createdBy?: Prisma.UserUpdateOneRequiredWithoutCreatedLeadsNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
 }
 
@@ -465,6 +537,8 @@ export type LeadUncheckedUpdateInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -473,6 +547,7 @@ export type LeadUncheckedUpdateInput = {
   followUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
 }
 
@@ -488,6 +563,8 @@ export type LeadCreateManyInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   assigneeId?: string | null
   createdById: string
   createdAt?: Date | string
@@ -508,6 +585,8 @@ export type LeadUpdateManyMutationInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -526,6 +605,8 @@ export type LeadUncheckedUpdateManyInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -556,12 +637,18 @@ export type LeadCountOrderByAggregateInput = {
   source?: Prisma.SortOrder
   category?: Prisma.SortOrder
   currentProvider?: Prisma.SortOrder
+  cost?: Prisma.SortOrder
+  isStarred?: Prisma.SortOrder
   assigneeId?: Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastContactAt?: Prisma.SortOrder
   followUpAt?: Prisma.SortOrder
+}
+
+export type LeadAvgOrderByAggregateInput = {
+  cost?: Prisma.SortOrder
 }
 
 export type LeadMaxOrderByAggregateInput = {
@@ -576,6 +663,8 @@ export type LeadMaxOrderByAggregateInput = {
   source?: Prisma.SortOrder
   category?: Prisma.SortOrder
   currentProvider?: Prisma.SortOrder
+  cost?: Prisma.SortOrder
+  isStarred?: Prisma.SortOrder
   assigneeId?: Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -596,12 +685,18 @@ export type LeadMinOrderByAggregateInput = {
   source?: Prisma.SortOrder
   category?: Prisma.SortOrder
   currentProvider?: Prisma.SortOrder
+  cost?: Prisma.SortOrder
+  isStarred?: Prisma.SortOrder
   assigneeId?: Prisma.SortOrder
   createdById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastContactAt?: Prisma.SortOrder
   followUpAt?: Prisma.SortOrder
+}
+
+export type LeadSumOrderByAggregateInput = {
+  cost?: Prisma.SortOrder
 }
 
 export type LeadScalarRelationFilter = {
@@ -717,6 +812,14 @@ export type NullableEnumProviderFieldUpdateOperationsInput = {
   set?: $Enums.Provider | null
 }
 
+export type NullableDecimalFieldUpdateOperationsInput = {
+  set?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  increment?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  decrement?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  multiply?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  divide?: runtime.Decimal | runtime.DecimalJsLike | number | string
+}
+
 export type LeadCreateNestedOneWithoutNotesInput = {
   create?: Prisma.XOR<Prisma.LeadCreateWithoutNotesInput, Prisma.LeadUncheckedCreateWithoutNotesInput>
   connectOrCreate?: Prisma.LeadCreateOrConnectWithoutNotesInput
@@ -729,6 +832,20 @@ export type LeadUpdateOneRequiredWithoutNotesNestedInput = {
   upsert?: Prisma.LeadUpsertWithoutNotesInput
   connect?: Prisma.LeadWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.LeadUpdateToOneWithWhereWithoutNotesInput, Prisma.LeadUpdateWithoutNotesInput>, Prisma.LeadUncheckedUpdateWithoutNotesInput>
+}
+
+export type LeadCreateNestedOneWithoutActivityInput = {
+  create?: Prisma.XOR<Prisma.LeadCreateWithoutActivityInput, Prisma.LeadUncheckedCreateWithoutActivityInput>
+  connectOrCreate?: Prisma.LeadCreateOrConnectWithoutActivityInput
+  connect?: Prisma.LeadWhereUniqueInput
+}
+
+export type LeadUpdateOneRequiredWithoutActivityNestedInput = {
+  create?: Prisma.XOR<Prisma.LeadCreateWithoutActivityInput, Prisma.LeadUncheckedCreateWithoutActivityInput>
+  connectOrCreate?: Prisma.LeadCreateOrConnectWithoutActivityInput
+  upsert?: Prisma.LeadUpsertWithoutActivityInput
+  connect?: Prisma.LeadWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.LeadUpdateToOneWithWhereWithoutActivityInput, Prisma.LeadUpdateWithoutActivityInput>, Prisma.LeadUncheckedUpdateWithoutActivityInput>
 }
 
 export type LeadCreateNestedOneWithoutHistoryInput = {
@@ -771,6 +888,8 @@ export type LeadCreateWithoutAssigneeInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -778,6 +897,7 @@ export type LeadCreateWithoutAssigneeInput = {
   createdBy: Prisma.UserCreateNestedOneWithoutCreatedLeadsInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutLeadInput
   history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealCreateNestedOneWithoutLeadInput
 }
 
@@ -793,6 +913,8 @@ export type LeadUncheckedCreateWithoutAssigneeInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   createdById: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -800,6 +922,7 @@ export type LeadUncheckedCreateWithoutAssigneeInput = {
   followUpAt?: Date | string | null
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutLeadInput
   history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
 }
 
@@ -825,6 +948,8 @@ export type LeadCreateWithoutCreatedByInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -832,6 +957,7 @@ export type LeadCreateWithoutCreatedByInput = {
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedLeadsInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutLeadInput
   history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealCreateNestedOneWithoutLeadInput
 }
 
@@ -847,6 +973,8 @@ export type LeadUncheckedCreateWithoutCreatedByInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   assigneeId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -854,6 +982,7 @@ export type LeadUncheckedCreateWithoutCreatedByInput = {
   followUpAt?: Date | string | null
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutLeadInput
   history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
 }
 
@@ -898,6 +1027,8 @@ export type LeadScalarWhereInput = {
   source?: Prisma.EnumLeadSourceFilter<"Lead"> | $Enums.LeadSource
   category?: Prisma.EnumLeadCategoryNullableFilter<"Lead"> | $Enums.LeadCategory | null
   currentProvider?: Prisma.EnumProviderNullableFilter<"Lead"> | $Enums.Provider | null
+  cost?: Prisma.DecimalNullableFilter<"Lead"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFilter<"Lead"> | boolean
   assigneeId?: Prisma.StringNullableFilter<"Lead"> | string | null
   createdById?: Prisma.StringFilter<"Lead"> | string
   createdAt?: Prisma.DateTimeFilter<"Lead"> | Date | string
@@ -934,6 +1065,8 @@ export type LeadCreateWithoutNotesInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -941,6 +1074,7 @@ export type LeadCreateWithoutNotesInput = {
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedLeadsInput
   createdBy: Prisma.UserCreateNestedOneWithoutCreatedLeadsInput
   history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealCreateNestedOneWithoutLeadInput
 }
 
@@ -956,6 +1090,8 @@ export type LeadUncheckedCreateWithoutNotesInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   assigneeId?: string | null
   createdById: string
   createdAt?: Date | string
@@ -963,6 +1099,7 @@ export type LeadUncheckedCreateWithoutNotesInput = {
   lastContactAt?: Date | string | null
   followUpAt?: Date | string | null
   history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
 }
 
@@ -994,6 +1131,8 @@ export type LeadUpdateWithoutNotesInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1001,6 +1140,7 @@ export type LeadUpdateWithoutNotesInput = {
   assignee?: Prisma.UserUpdateOneWithoutAssignedLeadsNestedInput
   createdBy?: Prisma.UserUpdateOneRequiredWithoutCreatedLeadsNestedInput
   history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
 }
 
@@ -1016,12 +1156,131 @@ export type LeadUncheckedUpdateWithoutNotesInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
+  deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
+}
+
+export type LeadCreateWithoutActivityInput = {
+  id?: string
+  name: string
+  phone: string
+  email?: string | null
+  city?: string | null
+  kind?: $Enums.LeadKind
+  status?: $Enums.LeadStatus
+  priority?: $Enums.Priority
+  source?: $Enums.LeadSource
+  category?: $Enums.LeadCategory | null
+  currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastContactAt?: Date | string | null
+  followUpAt?: Date | string | null
+  assignee?: Prisma.UserCreateNestedOneWithoutAssignedLeadsInput
+  createdBy: Prisma.UserCreateNestedOneWithoutCreatedLeadsInput
+  notes?: Prisma.LeadNoteCreateNestedManyWithoutLeadInput
+  history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
+  deal?: Prisma.DealCreateNestedOneWithoutLeadInput
+}
+
+export type LeadUncheckedCreateWithoutActivityInput = {
+  id?: string
+  name: string
+  phone: string
+  email?: string | null
+  city?: string | null
+  kind?: $Enums.LeadKind
+  status?: $Enums.LeadStatus
+  priority?: $Enums.Priority
+  source?: $Enums.LeadSource
+  category?: $Enums.LeadCategory | null
+  currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
+  assigneeId?: string | null
+  createdById: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastContactAt?: Date | string | null
+  followUpAt?: Date | string | null
+  notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutLeadInput
+  history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
+  deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
+}
+
+export type LeadCreateOrConnectWithoutActivityInput = {
+  where: Prisma.LeadWhereUniqueInput
+  create: Prisma.XOR<Prisma.LeadCreateWithoutActivityInput, Prisma.LeadUncheckedCreateWithoutActivityInput>
+}
+
+export type LeadUpsertWithoutActivityInput = {
+  update: Prisma.XOR<Prisma.LeadUpdateWithoutActivityInput, Prisma.LeadUncheckedUpdateWithoutActivityInput>
+  create: Prisma.XOR<Prisma.LeadCreateWithoutActivityInput, Prisma.LeadUncheckedCreateWithoutActivityInput>
+  where?: Prisma.LeadWhereInput
+}
+
+export type LeadUpdateToOneWithWhereWithoutActivityInput = {
+  where?: Prisma.LeadWhereInput
+  data: Prisma.XOR<Prisma.LeadUpdateWithoutActivityInput, Prisma.LeadUncheckedUpdateWithoutActivityInput>
+}
+
+export type LeadUpdateWithoutActivityInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  kind?: Prisma.EnumLeadKindFieldUpdateOperationsInput | $Enums.LeadKind
+  status?: Prisma.EnumLeadStatusFieldUpdateOperationsInput | $Enums.LeadStatus
+  priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
+  category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
+  currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  assignee?: Prisma.UserUpdateOneWithoutAssignedLeadsNestedInput
+  createdBy?: Prisma.UserUpdateOneRequiredWithoutCreatedLeadsNestedInput
+  notes?: Prisma.LeadNoteUpdateManyWithoutLeadNestedInput
+  history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
+  deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
+}
+
+export type LeadUncheckedUpdateWithoutActivityInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  kind?: Prisma.EnumLeadKindFieldUpdateOperationsInput | $Enums.LeadKind
+  status?: Prisma.EnumLeadStatusFieldUpdateOperationsInput | $Enums.LeadStatus
+  priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
+  category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
+  currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdById?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
 }
@@ -1038,6 +1297,8 @@ export type LeadCreateWithoutHistoryInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -1045,6 +1306,7 @@ export type LeadCreateWithoutHistoryInput = {
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedLeadsInput
   createdBy: Prisma.UserCreateNestedOneWithoutCreatedLeadsInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealCreateNestedOneWithoutLeadInput
 }
 
@@ -1060,6 +1322,8 @@ export type LeadUncheckedCreateWithoutHistoryInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   assigneeId?: string | null
   createdById: string
   createdAt?: Date | string
@@ -1067,6 +1331,7 @@ export type LeadUncheckedCreateWithoutHistoryInput = {
   lastContactAt?: Date | string | null
   followUpAt?: Date | string | null
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
 }
 
@@ -1098,6 +1363,8 @@ export type LeadUpdateWithoutHistoryInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1105,6 +1372,7 @@ export type LeadUpdateWithoutHistoryInput = {
   assignee?: Prisma.UserUpdateOneWithoutAssignedLeadsNestedInput
   createdBy?: Prisma.UserUpdateOneRequiredWithoutCreatedLeadsNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
 }
 
@@ -1120,6 +1388,8 @@ export type LeadUncheckedUpdateWithoutHistoryInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1127,6 +1397,7 @@ export type LeadUncheckedUpdateWithoutHistoryInput = {
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
 }
 
@@ -1142,6 +1413,8 @@ export type LeadCreateWithoutDealInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   lastContactAt?: Date | string | null
@@ -1150,6 +1423,7 @@ export type LeadCreateWithoutDealInput = {
   createdBy: Prisma.UserCreateNestedOneWithoutCreatedLeadsInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutLeadInput
   history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
 }
 
 export type LeadUncheckedCreateWithoutDealInput = {
@@ -1164,6 +1438,8 @@ export type LeadUncheckedCreateWithoutDealInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   assigneeId?: string | null
   createdById: string
   createdAt?: Date | string
@@ -1172,6 +1448,7 @@ export type LeadUncheckedCreateWithoutDealInput = {
   followUpAt?: Date | string | null
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutLeadInput
   history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
 }
 
 export type LeadCreateOrConnectWithoutDealInput = {
@@ -1202,6 +1479,8 @@ export type LeadUpdateWithoutDealInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1210,6 +1489,7 @@ export type LeadUpdateWithoutDealInput = {
   createdBy?: Prisma.UserUpdateOneRequiredWithoutCreatedLeadsNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadUncheckedUpdateWithoutDealInput = {
@@ -1224,6 +1504,8 @@ export type LeadUncheckedUpdateWithoutDealInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1232,6 +1514,7 @@ export type LeadUncheckedUpdateWithoutDealInput = {
   followUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadCreateManyAssigneeInput = {
@@ -1246,6 +1529,8 @@ export type LeadCreateManyAssigneeInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   createdById: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1265,6 +1550,8 @@ export type LeadCreateManyCreatedByInput = {
   source?: $Enums.LeadSource
   category?: $Enums.LeadCategory | null
   currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
   assigneeId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1284,6 +1571,8 @@ export type LeadUpdateWithoutAssigneeInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1291,6 +1580,7 @@ export type LeadUpdateWithoutAssigneeInput = {
   createdBy?: Prisma.UserUpdateOneRequiredWithoutCreatedLeadsNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
 }
 
@@ -1306,6 +1596,8 @@ export type LeadUncheckedUpdateWithoutAssigneeInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1313,6 +1605,7 @@ export type LeadUncheckedUpdateWithoutAssigneeInput = {
   followUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
 }
 
@@ -1328,6 +1621,8 @@ export type LeadUncheckedUpdateManyWithoutAssigneeInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1347,6 +1642,8 @@ export type LeadUpdateWithoutCreatedByInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1354,6 +1651,7 @@ export type LeadUpdateWithoutCreatedByInput = {
   assignee?: Prisma.UserUpdateOneWithoutAssignedLeadsNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
 }
 
@@ -1369,6 +1667,8 @@ export type LeadUncheckedUpdateWithoutCreatedByInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1376,6 +1676,7 @@ export type LeadUncheckedUpdateWithoutCreatedByInput = {
   followUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
 }
 
@@ -1391,6 +1692,8 @@ export type LeadUncheckedUpdateManyWithoutCreatedByInput = {
   source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
   category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1406,11 +1709,13 @@ export type LeadUncheckedUpdateManyWithoutCreatedByInput = {
 export type LeadCountOutputType = {
   notes: number
   history: number
+  activity: number
 }
 
 export type LeadCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   notes?: boolean | LeadCountOutputTypeCountNotesArgs
   history?: boolean | LeadCountOutputTypeCountHistoryArgs
+  activity?: boolean | LeadCountOutputTypeCountActivityArgs
 }
 
 /**
@@ -1437,6 +1742,13 @@ export type LeadCountOutputTypeCountHistoryArgs<ExtArgs extends runtime.Types.Ex
   where?: Prisma.LeadStatusEventWhereInput
 }
 
+/**
+ * LeadCountOutputType without action
+ */
+export type LeadCountOutputTypeCountActivityArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LeadActivityWhereInput
+}
+
 
 export type LeadSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1450,6 +1762,8 @@ export type LeadSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   source?: boolean
   category?: boolean
   currentProvider?: boolean
+  cost?: boolean
+  isStarred?: boolean
   assigneeId?: boolean
   createdById?: boolean
   createdAt?: boolean
@@ -1460,6 +1774,7 @@ export type LeadSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   notes?: boolean | Prisma.Lead$notesArgs<ExtArgs>
   history?: boolean | Prisma.Lead$historyArgs<ExtArgs>
+  activity?: boolean | Prisma.Lead$activityArgs<ExtArgs>
   deal?: boolean | Prisma.Lead$dealArgs<ExtArgs>
   _count?: boolean | Prisma.LeadCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["lead"]>
@@ -1476,6 +1791,8 @@ export type LeadSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   source?: boolean
   category?: boolean
   currentProvider?: boolean
+  cost?: boolean
+  isStarred?: boolean
   assigneeId?: boolean
   createdById?: boolean
   createdAt?: boolean
@@ -1498,6 +1815,8 @@ export type LeadSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   source?: boolean
   category?: boolean
   currentProvider?: boolean
+  cost?: boolean
+  isStarred?: boolean
   assigneeId?: boolean
   createdById?: boolean
   createdAt?: boolean
@@ -1520,6 +1839,8 @@ export type LeadSelectScalar = {
   source?: boolean
   category?: boolean
   currentProvider?: boolean
+  cost?: boolean
+  isStarred?: boolean
   assigneeId?: boolean
   createdById?: boolean
   createdAt?: boolean
@@ -1528,12 +1849,13 @@ export type LeadSelectScalar = {
   followUpAt?: boolean
 }
 
-export type LeadOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "phone" | "email" | "city" | "kind" | "status" | "priority" | "source" | "category" | "currentProvider" | "assigneeId" | "createdById" | "createdAt" | "updatedAt" | "lastContactAt" | "followUpAt", ExtArgs["result"]["lead"]>
+export type LeadOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "phone" | "email" | "city" | "kind" | "status" | "priority" | "source" | "category" | "currentProvider" | "cost" | "isStarred" | "assigneeId" | "createdById" | "createdAt" | "updatedAt" | "lastContactAt" | "followUpAt", ExtArgs["result"]["lead"]>
 export type LeadInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   assignee?: boolean | Prisma.Lead$assigneeArgs<ExtArgs>
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   notes?: boolean | Prisma.Lead$notesArgs<ExtArgs>
   history?: boolean | Prisma.Lead$historyArgs<ExtArgs>
+  activity?: boolean | Prisma.Lead$activityArgs<ExtArgs>
   deal?: boolean | Prisma.Lead$dealArgs<ExtArgs>
   _count?: boolean | Prisma.LeadCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -1553,6 +1875,7 @@ export type $LeadPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     createdBy: Prisma.$UserPayload<ExtArgs>
     notes: Prisma.$LeadNotePayload<ExtArgs>[]
     history: Prisma.$LeadStatusEventPayload<ExtArgs>[]
+    activity: Prisma.$LeadActivityPayload<ExtArgs>[]
     deal: Prisma.$DealPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1567,6 +1890,12 @@ export type $LeadPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     source: $Enums.LeadSource
     category: $Enums.LeadCategory | null
     currentProvider: $Enums.Provider | null
+    /**
+     * עלות רכישת הליד. null = השתמש בעלות של הקטגוריה (טבלת LeadCost).
+     * 0 הוא ערך אמיתי — "הליד הזה היה חינם" — ולכן העמודה nullable.
+     */
+    cost: runtime.Decimal | null
+    isStarred: boolean
     assigneeId: string | null
     createdById: string
     createdAt: Date
@@ -1971,6 +2300,7 @@ export interface Prisma__LeadClient<T, Null = never, ExtArgs extends runtime.Typ
   createdBy<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   notes<T extends Prisma.Lead$notesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Lead$notesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadNotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   history<T extends Prisma.Lead$historyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Lead$historyArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadStatusEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  activity<T extends Prisma.Lead$activityArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Lead$activityArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadActivityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   deal<T extends Prisma.Lead$dealArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Lead$dealArgs<ExtArgs>>): Prisma.Prisma__DealClient<runtime.Types.Result.GetResult<Prisma.$DealPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -2012,6 +2342,8 @@ export interface LeadFieldRefs {
   readonly source: Prisma.FieldRef<"Lead", 'LeadSource'>
   readonly category: Prisma.FieldRef<"Lead", 'LeadCategory'>
   readonly currentProvider: Prisma.FieldRef<"Lead", 'Provider'>
+  readonly cost: Prisma.FieldRef<"Lead", 'Decimal'>
+  readonly isStarred: Prisma.FieldRef<"Lead", 'Boolean'>
   readonly assigneeId: Prisma.FieldRef<"Lead", 'String'>
   readonly createdById: Prisma.FieldRef<"Lead", 'String'>
   readonly createdAt: Prisma.FieldRef<"Lead", 'DateTime'>
@@ -2483,6 +2815,30 @@ export type Lead$historyArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
   take?: number
   skip?: number
   distinct?: Prisma.LeadStatusEventScalarFieldEnum | Prisma.LeadStatusEventScalarFieldEnum[]
+}
+
+/**
+ * Lead.activity
+ */
+export type Lead$activityArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LeadActivity
+   */
+  select?: Prisma.LeadActivitySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LeadActivity
+   */
+  omit?: Prisma.LeadActivityOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeadActivityInclude<ExtArgs> | null
+  where?: Prisma.LeadActivityWhereInput
+  orderBy?: Prisma.LeadActivityOrderByWithRelationInput | Prisma.LeadActivityOrderByWithRelationInput[]
+  cursor?: Prisma.LeadActivityWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LeadActivityScalarFieldEnum | Prisma.LeadActivityScalarFieldEnum[]
 }
 
 /**

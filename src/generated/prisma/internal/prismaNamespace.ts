@@ -387,6 +387,7 @@ export const ModelName = {
   User: 'User',
   Lead: 'Lead',
   LeadNote: 'LeadNote',
+  LeadActivity: 'LeadActivity',
   LeadStatusEvent: 'LeadStatusEvent',
   Package: 'Package',
   Deal: 'Deal',
@@ -409,7 +410,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "lead" | "leadNote" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration"
+    modelProps: "user" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -632,6 +633,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.LeadNoteCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.LeadNoteCountAggregateOutputType> | number
+        }
+      }
+    }
+    LeadActivity: {
+      payload: Prisma.$LeadActivityPayload<ExtArgs>
+      fields: Prisma.LeadActivityFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LeadActivityFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadActivityPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LeadActivityFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadActivityPayload>
+        }
+        findFirst: {
+          args: Prisma.LeadActivityFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadActivityPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LeadActivityFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadActivityPayload>
+        }
+        findMany: {
+          args: Prisma.LeadActivityFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadActivityPayload>[]
+        }
+        create: {
+          args: Prisma.LeadActivityCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadActivityPayload>
+        }
+        createMany: {
+          args: Prisma.LeadActivityCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LeadActivityCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadActivityPayload>[]
+        }
+        delete: {
+          args: Prisma.LeadActivityDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadActivityPayload>
+        }
+        update: {
+          args: Prisma.LeadActivityUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadActivityPayload>
+        }
+        deleteMany: {
+          args: Prisma.LeadActivityDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LeadActivityUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LeadActivityUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadActivityPayload>[]
+        }
+        upsert: {
+          args: Prisma.LeadActivityUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadActivityPayload>
+        }
+        aggregate: {
+          args: Prisma.LeadActivityAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLeadActivity>
+        }
+        groupBy: {
+          args: Prisma.LeadActivityGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LeadActivityGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LeadActivityCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LeadActivityCountAggregateOutputType> | number
         }
       }
     }
@@ -1220,6 +1295,8 @@ export const LeadScalarFieldEnum = {
   source: 'source',
   category: 'category',
   currentProvider: 'currentProvider',
+  cost: 'cost',
+  isStarred: 'isStarred',
   assigneeId: 'assigneeId',
   createdById: 'createdById',
   createdAt: 'createdAt',
@@ -1240,6 +1317,19 @@ export const LeadNoteScalarFieldEnum = {
 } as const
 
 export type LeadNoteScalarFieldEnum = (typeof LeadNoteScalarFieldEnum)[keyof typeof LeadNoteScalarFieldEnum]
+
+
+export const LeadActivityScalarFieldEnum = {
+  id: 'id',
+  leadId: 'leadId',
+  type: 'type',
+  detail: 'detail',
+  targetUserId: 'targetUserId',
+  actorId: 'actorId',
+  createdAt: 'createdAt'
+} as const
+
+export type LeadActivityScalarFieldEnum = (typeof LeadActivityScalarFieldEnum)[keyof typeof LeadActivityScalarFieldEnum]
 
 
 export const LeadStatusEventScalarFieldEnum = {
@@ -1515,20 +1605,6 @@ export type ListEnumProviderFieldRefInput<$PrismaModel> = FieldRefInputType<$Pri
 
 
 /**
- * Reference to a field of type 'Category'
- */
-export type EnumCategoryFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Category'>
-    
-
-
-/**
- * Reference to a field of type 'Category[]'
- */
-export type ListEnumCategoryFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Category[]'>
-    
-
-
-/**
  * Reference to a field of type 'Decimal'
  */
 export type DecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal'>
@@ -1539,6 +1615,34 @@ export type DecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
  * Reference to a field of type 'Decimal[]'
  */
 export type ListDecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal[]'>
+    
+
+
+/**
+ * Reference to a field of type 'LeadActivityType'
+ */
+export type EnumLeadActivityTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LeadActivityType'>
+    
+
+
+/**
+ * Reference to a field of type 'LeadActivityType[]'
+ */
+export type ListEnumLeadActivityTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LeadActivityType[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Category'
+ */
+export type EnumCategoryFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Category'>
+    
+
+
+/**
+ * Reference to a field of type 'Category[]'
+ */
+export type ListEnumCategoryFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Category[]'>
     
 
 
@@ -1710,6 +1814,7 @@ export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   lead?: Prisma.LeadOmit
   leadNote?: Prisma.LeadNoteOmit
+  leadActivity?: Prisma.LeadActivityOmit
   leadStatusEvent?: Prisma.LeadStatusEventOmit
   package?: Prisma.PackageOmit
   deal?: Prisma.DealOmit
