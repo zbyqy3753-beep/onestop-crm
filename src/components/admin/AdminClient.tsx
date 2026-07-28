@@ -6,16 +6,19 @@ import { Button, inputClass } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { AdminSummaryTiles } from "./AdminSummaryTiles";
 import { UsersTable } from "./UsersTable";
+import { AddUserModal } from "./AddUserModal";
 
 /**
  * מחזיק את מצב מסך ניהול המערכת ומעביר נתונים לילדים פרזנטציוניים.
  *
- * מסך קריאה בלבד: אין עדיין מערכת הרשאות כתיבה, ולכן אין כאן שום
- * מוטציה — רק חיפוש תצוגתי על טבלת המשתמשים. אריחי הסיכום תמיד
- * משקפים את כלל המשתמשים, לא את תוצאת החיפוש.
+ * "משתמש חדש" הוא המוטציה היחידה כרגע — יוצר גם רשומת User וגם
+ * חשבון Supabase Auth (ראה admin/actions.ts). עריכת משתמש קיים
+ * עדיין מושבתת: אין עדיין מערכת הרשאות (מי מורשה לערוך את מי).
+ * אריחי הסיכום תמיד משקפים את כלל המשתמשים, לא את תוצאת החיפוש.
  */
 export function AdminClient({ users, leads }: { users: User[]; leads: Lead[] }) {
   const [query, setQuery] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
 
   /** ספירת לידים לכל משתמש, נגזרת מ-assigneeId — בלי repository ייעודי. */
   const leadCountByUser = useMemo(() => {
@@ -50,17 +53,14 @@ export function AdminClient({ users, leads }: { users: User[]; leads: Lead[] }) 
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          icon="plus"
-          disabled
-          title="מערכת ההרשאות עדיין לא נבנתה"
-        >
+        <Button variant="primary" icon="plus" onClick={() => setAddOpen(true)}>
           משתמש חדש
         </Button>
       </header>
 
       <AdminSummaryTiles users={users} />
+
+      <AddUserModal open={addOpen} onClose={() => setAddOpen(false)} />
 
       <div className="mb-3 mt-6">
         <div className="relative max-w-xs">
