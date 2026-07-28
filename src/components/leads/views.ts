@@ -54,6 +54,16 @@ export const QUICK_VIEWS: QuickView[] = [
       openOnly: true,
     }),
   },
+  {
+    key: "hot",
+    label: "לידים חמים",
+    patch: () => ({ ...EMPTY_FILTERS, kind: ["hot"] }),
+  },
+  {
+    key: "data",
+    label: "לידים מדאטה",
+    patch: () => ({ ...EMPTY_FILTERS, kind: ["data"] }),
+  },
 ];
 
 /** האם המסננים הנוכחיים זהים לתצוגה. משמש לסימון הצ׳יפ הפעיל. */

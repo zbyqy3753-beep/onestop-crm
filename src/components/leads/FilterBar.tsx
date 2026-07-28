@@ -153,13 +153,11 @@ export function FilterBar({
         </kbd>
       </div>
 
-      <MultiSelect
-        label="סטטוס"
-        options={STATUS_ORDER.map((s) => ({ value: s, label: STATUS_CONFIG[s].label }))}
-        selected={filters.status}
-        onChange={(v) => onChange({ ...filters, status: v as LeadStatus[] })}
-      />
-
+      {/*
+        אין כאן MultiSelect לסטטוס בכוונה — רצועת התור ב-QueueHeader
+        כבר מסננת לפי סטטוס בלחיצה על צ'יפ, עם ספירה חיה לכל אחד.
+        שני פקדים לאותו דבר היו רק עומס.
+      */}
       <MultiSelect
         label="סוג"
         options={KIND_ORDER.map((k) => ({ value: k, label: KIND_CONFIG[k].label }))}

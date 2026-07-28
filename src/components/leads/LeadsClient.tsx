@@ -25,6 +25,7 @@ import {
   totalLeadCostForLeads,
 } from "@/server/services/economics";
 import { ToastStack, type Toast } from "@/components/ui/primitives";
+import { Icon } from "@/components/ui/Icon";
 import { LeadCostsModal } from "@/components/settings/LeadCostsModal";
 import { LeadsFinancePanel } from "./LeadsFinancePanel";
 import { LeadsPerformancePanel } from "./LeadsPerformancePanel";
@@ -33,7 +34,6 @@ import { QueueHeader } from "./QueueHeader";
 import { FilterBar, type Filters, EMPTY_FILTERS } from "./FilterBar";
 import { LeadsTable } from "./LeadsTable";
 import { Pagination, PAGE_SIZES } from "./Pagination";
-import { ScopeTiles } from "./ScopeTiles";
 import { LeadDrawer } from "./LeadDrawer";
 import { AddLeadModal } from "./AddLeadModal";
 import { EditLeadModal } from "./EditLeadModal";
@@ -81,6 +81,9 @@ export function LeadsClient({
   const [importOpen, setImportOpen] = useState(false);
   const [costsOpen, setCostsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  // מכווצים כברירת מחדל — שני הפאנלים האלה תפסו כל כך הרבה גובה
+  // שהטבלה עצמה נדחקה מתחת לגלילה הראשונה
+  const [statsOpen, setStatsOpen] = useState(false);
   const [statusTarget, setStatusTarget] = useState<{
     leadIds: string[];
     to: LeadStatus;
@@ -377,15 +380,31 @@ export function LeadsClient({
         currentUserId={currentUserId}
       />
 
-      <ScopeTiles leads={leads} filters={filters} onChange={applyFilters} />
+      <div className="mb-4 rounded-card border border-line bg-surface">
+        <button
+          onClick={() => setStatsOpen((v) => !v)}
+          aria-expanded={statsOpen}
+          className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-sm font-semibold text-ink-2 hover:text-ink-1"
+        >
+          נתונים פיננסיים וביצועים
+          <Icon
+            name="chevronDown"
+            size={15}
+            className={statsOpen ? "rotate-180" : ""}
+          />
+        </button>
 
-      <LeadsFinancePanel
-        cost={finance.cost}
-        commission={finance.commission}
-        onEditCosts={() => setCostsOpen(true)}
-      />
-
-      <LeadsPerformancePanel rows={performance} userById={userById} />
+        {statsOpen && (
+          <div className="border-t border-line px-4 pb-4 pt-3">
+            <LeadsFinancePanel
+              cost={finance.cost}
+              commission={finance.commission}
+              onEditCosts={() => setCostsOpen(true)}
+            />
+            <LeadsPerformancePanel rows={performance} userById={userById} />
+          </div>
+        )}
+      </div>
 
       <FilterBar
         filters={filters}
