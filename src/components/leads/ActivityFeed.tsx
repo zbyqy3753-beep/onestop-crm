@@ -1,6 +1,11 @@
 "use client";
 
-import type { Lead, StatusTone, User } from "@/lib/domain/types";
+import type {
+  Lead,
+  LeadActivityType,
+  StatusTone,
+  User,
+} from "@/lib/domain/types";
 import { ACTIVITY_CONFIG, STATUS_CONFIG } from "@/lib/domain/types";
 import { TONE_VAR, dateTime } from "@/lib/format";
 
@@ -11,13 +16,15 @@ import { TONE_VAR, dateTime } from "@/lib/format";
  * הליד זה סיפור אחד ברצף כרונולוגי אחד.
  */
 
-interface Entry {
+export interface Entry {
   id: string;
   at: string;
   tone: StatusTone;
   title: string;
   detail?: string;
   actorId: string;
+  /** קיים רק לרשומות פעילות — מאפשר סינון לפי סוג בלי להתאים מחרוזות */
+  activityType?: LeadActivityType;
 }
 
 export function buildTimeline(lead: Lead, userById: Map<string, User>): Entry[] {
@@ -41,6 +48,7 @@ export function buildTimeline(lead: Lead, userById: Map<string, User>): Entry[] 
       title: ACTIVITY_CONFIG[a.type].text(name(a.targetUserId)),
       detail: a.detail,
       actorId: a.actorId,
+      activityType: a.type,
     })),
     ...lead.notes.map((n) => ({
       id: `note:${n.id}`,

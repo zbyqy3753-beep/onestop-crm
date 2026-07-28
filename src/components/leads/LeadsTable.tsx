@@ -15,11 +15,17 @@ import { LeadRow } from "./LeadRow";
  * שמצליב את הבחירה מול מלוא התוצאה המסוננת.
  */
 
+/**
+ * "עודכן" ולא "פעילות אחרונה" — היה מתנגש בשם עם עמודת הפעילות
+ * שמציגה משהו אחר לגמרי. "חזרה" נוסף כי תאריך החזרה הוא הערך הכי
+ * מניע-פעולה במסך, והוא הוצג בלי שום דרך למיין לפיו.
+ */
 const COLUMNS: { field: SortField; label: string; className?: string }[] = [
   { field: "name", label: "ליד" },
   { field: "status", label: "סטטוס" },
   { field: "priority", label: "עדיפות" },
-  { field: "updatedAt", label: "פעילות אחרונה" },
+  { field: "updatedAt", label: "עודכן" },
+  { field: "followUpAt", label: "חזרה" },
 ];
 
 export function LeadsTable({
@@ -103,11 +109,21 @@ export function LeadsTable({
   }
 
   return (
-    <div className="scroll-thin overflow-x-auto rounded-card border border-line bg-surface shadow-card">
-      {/* 9 עמודות — הרוחב המינימלי גדל יחד עם עמודות העלות והפעילות */}
-      <table className="w-full min-w-[1100px] border-collapse text-sm">
-        {/* הכותרת נדבקת מתחת לסרגל העליון — 64 שורות זה הרבה גלילה */}
-        <thead className="sticky top-[60px] z-10 bg-surface-2">
+    /*
+      העוטף הוא scrollport אמיתי, עם גובה מוגבל.
+      `overflow-x-auto` לבדו כבר הפך אותו ל-scrollport בשני הצירים (לפי
+      מפרט CSS, ציר אחד שאינו visible הופך גם את השני ל-auto) — אבל בלי
+      הגבלת גובה הוא מעולם לא גלל, ולכן ה-thead ה"נדבק" פשוט נעלם עם
+      הגלילה. הגבלת הגובה היא מה שמחזירה לו משמעות.
+    */
+    <div className="scroll-thin max-h-[calc(100dvh-340px)] min-h-[240px] overflow-auto rounded-card border border-line bg-surface shadow-card">
+      {/*
+        הרוחב הטבעי של התוכן נמדד ב-986px רגיל ו-1062px במקרה הקיצון,
+        ולכן 900 הוא רצפה שלא כופה גלילה אופקית על מסך 1280.
+      */}
+      <table className="w-full min-w-[900px] border-collapse text-sm">
+        {/* נדבקת לראש מיכל הגלילה עצמו, ולא לסרגל העליון של הדף */}
+        <thead className="sticky top-0 z-10 bg-surface-2">
           <tr className="border-b border-line text-xs text-ink-3">
             <th className="w-10 ps-3 text-start">
               <input

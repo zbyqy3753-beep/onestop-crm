@@ -25,7 +25,6 @@ import {
   totalLeadCostForLeads,
 } from "@/server/services/economics";
 import { ToastStack, type Toast } from "@/components/ui/primitives";
-import { Icon } from "@/components/ui/Icon";
 import { LeadCostsModal } from "@/components/settings/LeadCostsModal";
 import { LeadsFinancePanel } from "./LeadsFinancePanel";
 import { LeadsPerformancePanel } from "./LeadsPerformancePanel";
@@ -47,7 +46,13 @@ import { StatusDialog } from "./StatusDialog";
  * לשרשרת ולא מחושבת אד-הוק בתוך הרינדור.
  */
 
-export type SortField = "updatedAt" | "createdAt" | "name" | "priority" | "status";
+export type SortField =
+  | "updatedAt"
+  | "createdAt"
+  | "name"
+  | "priority"
+  | "status"
+  | "followUpAt";
 
 export function LeadsClient({
   leads,
@@ -186,6 +191,16 @@ export function LeadsClient({
           );
         case "status":
           return (STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)) * dir;
+        case "followUpAt": {
+          // לידים בלי תאריך חזרה תמיד בסוף, בשני הכיוונים — אחרת מיון
+          // "מה הכי דחוף" היה מתחיל ברשימת הלידים שאין להם תאריך בכלל
+          const av = a.followUpAt ? Date.parse(a.followUpAt) : null;
+          const bv = b.followUpAt ? Date.parse(b.followUpAt) : null;
+          if (av === null && bv === null) return 0;
+          if (av === null) return 1;
+          if (bv === null) return -1;
+          return (av - bv) * dir;
+        }
         default:
           return (Date.parse(a[sort.field]) - Date.parse(b[sort.field])) * dir;
       }
@@ -367,7 +382,7 @@ export function LeadsClient({
   /* ── תצוגה ───────────────────────────────────────────────────────── */
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
+    <div className="mx-auto max-w-[1600px] px-4 py-3 sm:px-6">
       <QueueHeader
         counts={counts}
         total={leads.length}
@@ -375,36 +390,23 @@ export function LeadsClient({
         onAdd={() => setAddOpen(true)}
         onExport={exportCsv}
         onImport={() => setImportOpen(true)}
+        onToggleStats={() => setStatsOpen((v) => !v)}
+        statsOpen={statsOpen}
         filters={filters}
         onFiltersChange={applyFilters}
         currentUserId={currentUserId}
       />
 
-      <div className="mb-4 rounded-card border border-line bg-surface">
-        <button
-          onClick={() => setStatsOpen((v) => !v)}
-          aria-expanded={statsOpen}
-          className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-sm font-semibold text-ink-2 hover:text-ink-1"
-        >
-          נתונים פיננסיים וביצועים
-          <Icon
-            name="chevronDown"
-            size={15}
-            className={statsOpen ? "rotate-180" : ""}
+      {statsOpen && (
+        <div className="mb-3">
+          <LeadsFinancePanel
+            cost={finance.cost}
+            commission={finance.commission}
+            onEditCosts={() => setCostsOpen(true)}
           />
-        </button>
-
-        {statsOpen && (
-          <div className="border-t border-line px-4 pb-4 pt-3">
-            <LeadsFinancePanel
-              cost={finance.cost}
-              commission={finance.commission}
-              onEditCosts={() => setCostsOpen(true)}
-            />
-            <LeadsPerformancePanel rows={performance} userById={userById} />
-          </div>
-        )}
-      </div>
+          <LeadsPerformancePanel rows={performance} userById={userById} />
+        </div>
+      )}
 
       <FilterBar
         filters={filters}

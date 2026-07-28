@@ -42,7 +42,7 @@ export function StatusBreakdownStrip({
   return (
     <section
       aria-label="חלוקה לפי סטטוס"
-      className={`rounded-card border border-line bg-surface p-3.5 ${className}`}
+      className={`rounded-card border border-line bg-surface px-3 py-2 ${className}`}
     >
       <div className="flex h-1.5 w-full gap-px overflow-hidden rounded-full bg-surface-3">
         {visible.map((s) => (
@@ -61,7 +61,11 @@ export function StatusBreakdownStrip({
         ))}
       </div>
 
-      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+      {/*
+        גלילה אופקית ולא wrap: עם 9 סטטוסים פתוחים המקרא נשבר לשתי
+        שורות דווקא במסכי 1280 ומוסיף שם 24px — בדיוק במסך שהכי צפוף.
+      */}
+      <ul className="scroll-thin mt-2 flex gap-x-3 overflow-x-auto pb-0.5">
         {visible.map((s) => {
           const active = activeKeys.includes(s.key);
           const dot = (
@@ -74,7 +78,9 @@ export function StatusBreakdownStrip({
             />
           );
           const label = (
-            <span className={interactive && active ? "font-semibold" : ""}>
+            <span
+              className={`whitespace-nowrap ${interactive && active ? "font-semibold" : ""}`}
+            >
               {s.label}
             </span>
           );
@@ -82,7 +88,10 @@ export function StatusBreakdownStrip({
 
           if (!interactive) {
             return (
-              <li key={s.key} className="flex items-center gap-1.5 text-[13px] text-ink-1">
+              <li
+                key={s.key}
+                className="flex shrink-0 items-center gap-1.5 text-[13px] text-ink-1"
+              >
                 {dot}
                 {label}
                 {count}
@@ -91,7 +100,7 @@ export function StatusBreakdownStrip({
           }
 
           return (
-            <li key={s.key}>
+            <li key={s.key} className="shrink-0">
               <button
                 onClick={() => onToggle!(s.key)}
                 aria-pressed={active}

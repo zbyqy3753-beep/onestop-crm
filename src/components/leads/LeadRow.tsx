@@ -2,7 +2,6 @@
 
 import type { Lead, LeadStatus, User } from "@/lib/domain/types";
 import {
-  KIND_CONFIG,
   LEAD_CATEGORY_CONFIG,
   PRIORITY_CONFIG,
   STATUS_CONFIG,
@@ -49,7 +48,23 @@ export function LeadRow({
   /** הפירוט האחרון שהסוכן הזין — מה שהוא באמת צריך לראות לפני חיוג. */
   const lastDetail = [...lead.history].reverse().find((h) => h.detail)?.detail;
 
-  const timeline = buildTimeline(lead, userById);
+  /**
+   * שתי שורות הפעילות שמוצגות בטבלה.
+   *
+   * שני תיקונים מול הצגת הציר הגולמי:
+   *  - סימון/ביטול כוכב מסוננים החוצה. הם פעולה בת-לחיצה-אחת ולכן
+   *    תכופה, והם היו תופסים את שתי המשבצות ודוחקים החוצה את שינוי
+   *    הסטטוס — בדיוק מה שהסוכן צריך לראות.
+   *  - הכותרת והפירוט מוצגים יחד. פירוט לבדו נתן שורות חסרות הקשר
+   *    כמו "25 ₪" בלי לומר שהעלות עודכנה.
+   */
+  const preview = buildTimeline(lead, userById)
+    .filter((e) => e.activityType !== "starred" && e.activityType !== "unstarred")
+    .slice(0, 2)
+    .map((e) => ({
+      id: e.id,
+      full: e.detail?.trim() ? `${e.title} — ${e.detail.trim()}` : e.title,
+    }));
 
   return (
     <tr
@@ -75,7 +90,11 @@ export function LeadRow({
       <td className="px-3 py-3">
         <span className="flex items-center gap-1.5">
           <StarToggle lead={lead} onToggle={onStar} busy={busy} />
-          <button onClick={onOpen} className="block max-w-[260px] text-start">
+          <button
+            onClick={onOpen}
+            title={lead.name}
+            className="block max-w-[260px] text-start"
+          >
             <span className="flex items-center gap-1.5">
               <span className="truncate text-[15px] font-semibold text-ink-1 group-hover:text-brand">
                 {lead.name}
@@ -99,8 +118,10 @@ export function LeadRow({
       <td className="px-3 py-2.5">
         <StatusPicker current={lead.status} onPick={onStatus} />
         {lastDetail && (
+          // ink-3 ולא ink-4: זה הטקסט שהסוכן קורא לפני חיוג, ו-ink-4
+          // על הרקע הזה לא עומד ביחס ניגודיות קריא
           <p
-            className="mt-1 max-w-[220px] truncate text-xs text-ink-4"
+            className="mt-1 max-w-[320px] truncate text-xs text-ink-3"
             title={lastDetail}
           >
             {lastDetail}
@@ -117,34 +138,40 @@ export function LeadRow({
         )}
       </td>
 
-      {/* פעילות אחרונה */}
-      <td className="px-3 py-2.5 text-xs text-ink-3">
+      {/* עודכן */}
+      <td className="whitespace-nowrap px-3 py-2.5 text-xs text-ink-3">
         {/* ריק עד ההרכבה — "עכשיו" לא קיים בשרת */}
         {now === null ? (
           <span className="inline-block h-3.5 w-16" />
         ) : (
-          <>
-            <span>{relative(lead.updatedAt, now)}</span>
-            {lead.followUpAt && (
-              <span className="mt-0.5 flex items-center gap-1 text-warn">
-                <Icon name="clock" size={12} />
-                {until(lead.followUpAt, now)}
-              </span>
-            )}
-          </>
+          relative(lead.updatedAt, now)
         )}
       </td>
 
-      {/* קטגוריה */}
+      {/* חזרה מתוכננת */}
+      <td className="whitespace-nowrap px-3 py-2.5 text-xs">
+        {now === null ? (
+          <span className="inline-block h-3.5 w-14" />
+        ) : lead.followUpAt ? (
+          <span className="flex items-center gap-1 text-warn">
+            <Icon name="clock" size={12} />
+            {until(lead.followUpAt, now)}
+          </span>
+        ) : (
+          <span className="text-ink-4">—</span>
+        )}
+      </td>
+
+      {/*
+        קטגוריה. סוג הליד (חם/דאטה) לא חוזר כאן — הוא כבר מסומן בנקודה
+        האדומה שליד השם, ושתי הצגות לאותו נתון רק הגביהו את השורה.
+      */}
       <td className="px-3 py-2.5 text-xs text-ink-2">
         {lead.category ? (
           LEAD_CATEGORY_CONFIG[lead.category].label
         ) : (
           <span className="text-ink-4">—</span>
         )}
-        <span className="mt-0.5 block text-ink-4">
-          {KIND_CONFIG[lead.kind].short}
-        </span>
       </td>
 
       {/* עלות */}
@@ -159,7 +186,10 @@ export function LeadRow({
             <span className="grid size-5 shrink-0 place-items-center rounded-full bg-surface-3 text-[9px] font-bold text-ink-2">
               {assignee.name.slice(0, 2)}
             </span>
-            {assignee.name}
+            {/* truncate: שם ארוך היה נשבר לשתי שורות ומגביה את כל השורה */}
+            <span className="max-w-[110px] truncate" title={assignee.name}>
+              {assignee.name}
+            </span>
           </span>
         ) : (
           <span className="text-xs text-ink-4">ללא שיוך</span>
@@ -168,17 +198,17 @@ export function LeadRow({
 
       {/* פעילות — שתי הרשומות האחרונות, כדי לראות מה קרה בלי לפתוח */}
       <td className="px-3 py-2.5">
-        {timeline.length === 0 ? (
+        {preview.length === 0 ? (
           <span className="text-xs text-ink-4">—</span>
         ) : (
           <ul className="space-y-0.5">
-            {timeline.slice(0, 2).map((entry) => (
+            {preview.map((entry) => (
               <li
                 key={entry.id}
                 className="max-w-[190px] truncate text-xs text-ink-3"
-                title={entry.detail ? `${entry.title} — ${entry.detail}` : entry.title}
+                title={entry.full}
               >
-                {entry.detail ?? entry.title}
+                {entry.full}
               </li>
             ))}
           </ul>

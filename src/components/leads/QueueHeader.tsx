@@ -4,6 +4,7 @@ import type { LeadStatus } from "@/lib/domain/types";
 import { OPEN_STATUSES, STATUS_CONFIG } from "@/lib/domain/types";
 import { number } from "@/lib/format";
 import { Button } from "@/components/ui/primitives";
+import { Icon } from "@/components/ui/Icon";
 import { StatusBreakdownStrip } from "@/components/ui/StatusBreakdownStrip";
 import type { Filters } from "./FilterBar";
 import { QUICK_VIEWS, isViewActive } from "./views";
@@ -24,6 +25,8 @@ export function QueueHeader({
   onAdd,
   onExport,
   onImport,
+  onToggleStats,
+  statsOpen,
   filters,
   onFiltersChange,
   currentUserId,
@@ -34,6 +37,8 @@ export function QueueHeader({
   onAdd: () => void;
   onExport: () => void;
   onImport: () => void;
+  onToggleStats: () => void;
+  statsOpen: boolean;
   filters: Filters;
   onFiltersChange: (f: Filters) => void;
   currentUserId: string;
@@ -48,13 +53,14 @@ export function QueueHeader({
   const filtering = showing !== total;
 
   return (
-    <header className="mb-5">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-[30px] font-bold leading-none tracking-tight">
+    <header className="mb-3">
+      {/* הכותרת והמונים באותה שורה עם הכפתורים — היו שלוש שורות נפרדות */}
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h1 className="font-display text-[22px] font-bold leading-none tracking-tight">
             תור העבודה
           </h1>
-          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-3">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-3">
             <span className="nums font-semibold text-ink-1">
               {number(filtering ? showing : total)}
             </span>
@@ -75,7 +81,22 @@ export function QueueHeader({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" icon="upload" onClick={onImport} className="h-10">
+          {/* הטוגל של הפאנלים יושב כאן ולא ככרטיס נפרד — ככרטיס הוא עלה
+              58 פיקסלים של גובה בלי להציג שום נתון */}
+          <Button
+            variant="ghost"
+            onClick={onToggleStats}
+            aria-expanded={statsOpen}
+            className="h-9"
+          >
+            נתונים פיננסיים
+            <Icon
+              name="chevronDown"
+              size={14}
+              className={statsOpen ? "rotate-180" : ""}
+            />
+          </Button>
+          <Button variant="secondary" icon="upload" onClick={onImport} className="h-9">
             ייבוא
           </Button>
           <Button
@@ -83,11 +104,11 @@ export function QueueHeader({
             icon="download"
             onClick={onExport}
             disabled={showing === 0}
-            className="h-10"
+            className="h-9"
           >
             ייצוא
           </Button>
-          <Button variant="primary" icon="plus" onClick={onAdd} className="h-10 px-4">
+          <Button variant="primary" icon="plus" onClick={onAdd} className="h-9 px-4">
             ליד חדש
             <kbd className="ms-1 rounded border border-on-brand/30 px-1 text-[10px] font-normal opacity-70">
               N
@@ -98,7 +119,7 @@ export function QueueHeader({
 
       {/* תצוגות מהירות — "מה אני צריך לעשות עכשיו" */}
       <div
-        className="scroll-thin -mx-1 mb-4 flex gap-1.5 overflow-x-auto px-1 pb-1"
+        className="scroll-thin -mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-0.5"
         role="group"
         aria-label="תצוגות מהירות"
       >

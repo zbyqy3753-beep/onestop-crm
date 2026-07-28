@@ -13,7 +13,7 @@ import {
   whatsappGreeting,
 } from "@/lib/domain/types";
 import { addNoteAction } from "@/app/(app)/leads/actions";
-import { dateTime, phone, relative, waLink } from "@/lib/format";
+import { dateTime, money, phone, relative, waLink } from "@/lib/format";
 import { Badge, Button, inputClass, useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { ActivityFeed } from "./ActivityFeed";
@@ -216,22 +216,40 @@ export function LeadDrawer({
             </Detail>
             <Detail label="עיר">{lead.city ?? "—"}</Detail>
             <Detail label="מקור">{SOURCE_CONFIG[lead.source].label}</Detail>
+            {/* האימייל כטקסט ולא רק כאייקון — tooltip לא קיים במגע */}
+            <Detail label="אימייל">
+              {lead.email ? (
+                <span className="ltr-num break-all">{lead.email}</span>
+              ) : (
+                "—"
+              )}
+            </Detail>
+            <Detail label="עלות ליד">
+              {lead.cost === undefined
+                ? "ברירת מחדל לפי קטגוריה"
+                : lead.cost === 0
+                  ? "חינם"
+                  : money(lead.cost)}
+            </Detail>
             <Detail label="נוצר">{dateTime(lead.createdAt)}</Detail>
             <Detail label="עודכן">
               {now === null ? "—" : relative(lead.updatedAt, now)}
             </Detail>
+            {/* היה עד כה בלתי נראה בכל המערכת, למרות שהוא נכתב בכל שינוי סטטוס */}
+            <Detail label="קשר אחרון">
+              {lead.lastContactAt ? dateTime(lead.lastContactAt) : "—"}
+            </Detail>
+            <Detail label="חזרה מתוכננת">
+              {lead.followUpAt ? dateTime(lead.followUpAt) : "—"}
+            </Detail>
             {assignee && <Detail label="סוכן מטפל">{assignee.name}</Detail>}
-            {lead.followUpAt && (
-              <Detail label="חזרה מתוכננת">{dateTime(lead.followUpAt)}</Detail>
-            )}
           </dl>
 
-          {/* ציר הזמן — סטטוסים, פעולות והערות במיזוג אחד */}
-          <section className="mt-5 border-t border-line pt-4">
-            <h3 className="mb-3 text-xs font-semibold text-ink-2">פעילות</h3>
-            <ActivityFeed lead={lead} userById={userById} />
-          </section>
-
+          {/*
+            תיבת ההערה מעל ציר הזמן ולא מתחתיו. הציר לא חסום באורך, ולכן
+            ליד עם 30 אירועים היה קובר את הפעולה הנפוצה ביותר במגירה
+            מתחת ל-2000 פיקסלים של גלילה.
+          */}
           <section className="mt-5 border-t border-line pt-4">
             <h3 className="mb-2.5 text-xs font-semibold text-ink-2">
               הוספת הערה
@@ -250,6 +268,12 @@ export function LeadDrawer({
             >
               {savingNote ? "שומר…" : "הוספת הערה"}
             </Button>
+          </section>
+
+          {/* ציר הזמן — סטטוסים, פעולות והערות במיזוג אחד */}
+          <section className="mt-5 border-t border-line pt-4">
+            <h3 className="mb-3 text-xs font-semibold text-ink-2">פעילות</h3>
+            <ActivityFeed lead={lead} userById={userById} />
           </section>
         </div>
 
