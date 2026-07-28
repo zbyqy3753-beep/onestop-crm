@@ -194,7 +194,6 @@ export type LeadNoteOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   lead?: Prisma.LeadOrderByWithRelationInput
   author?: Prisma.UserOrderByWithRelationInput
-  _relevance?: Prisma.LeadNoteOrderByRelevanceInput
 }
 
 export type LeadNoteWhereUniqueInput = Prisma.AtLeast<{
@@ -294,12 +293,6 @@ export type LeadNoteListRelationFilter = {
 
 export type LeadNoteOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
-}
-
-export type LeadNoteOrderByRelevanceInput = {
-  fields: Prisma.LeadNoteOrderByRelevanceFieldEnum | Prisma.LeadNoteOrderByRelevanceFieldEnum[]
-  sort: Prisma.SortOrder
-  search: string
 }
 
 export type LeadNoteCountOrderByAggregateInput = {
@@ -569,7 +562,25 @@ export type LeadNoteSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   author?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["leadNote"]>
 
+export type LeadNoteSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  id?: boolean
+  leadId?: boolean
+  authorId?: boolean
+  body?: boolean
+  createdAt?: boolean
+  lead?: boolean | Prisma.LeadDefaultArgs<ExtArgs>
+  author?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}, ExtArgs["result"]["leadNote"]>
 
+export type LeadNoteSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  id?: boolean
+  leadId?: boolean
+  authorId?: boolean
+  body?: boolean
+  createdAt?: boolean
+  lead?: boolean | Prisma.LeadDefaultArgs<ExtArgs>
+  author?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}, ExtArgs["result"]["leadNote"]>
 
 export type LeadNoteSelectScalar = {
   id?: boolean
@@ -581,6 +592,14 @@ export type LeadNoteSelectScalar = {
 
 export type LeadNoteOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "leadId" | "authorId" | "body" | "createdAt", ExtArgs["result"]["leadNote"]>
 export type LeadNoteInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  lead?: boolean | Prisma.LeadDefaultArgs<ExtArgs>
+  author?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}
+export type LeadNoteIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  lead?: boolean | Prisma.LeadDefaultArgs<ExtArgs>
+  author?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}
+export type LeadNoteIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   lead?: boolean | Prisma.LeadDefaultArgs<ExtArgs>
   author?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -715,6 +734,30 @@ export interface LeadNoteDelegate<ExtArgs extends runtime.Types.Extensions.Inter
   createMany<T extends LeadNoteCreateManyArgs>(args?: Prisma.SelectSubset<T, LeadNoteCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
+   * Create many LeadNotes and returns the data saved in the database.
+   * @param {LeadNoteCreateManyAndReturnArgs} args - Arguments to create many LeadNotes.
+   * @example
+   * // Create many LeadNotes
+   * const leadNote = await prisma.leadNote.createManyAndReturn({
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Create many LeadNotes and only return the `id`
+   * const leadNoteWithIdOnly = await prisma.leadNote.createManyAndReturn({
+   *   select: { id: true },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  createManyAndReturn<T extends LeadNoteCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, LeadNoteCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadNotePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+  /**
    * Delete a LeadNote.
    * @param {LeadNoteDeleteArgs} args - Arguments to delete one LeadNote.
    * @example
@@ -777,6 +820,36 @@ export interface LeadNoteDelegate<ExtArgs extends runtime.Types.Extensions.Inter
    * 
    */
   updateMany<T extends LeadNoteUpdateManyArgs>(args: Prisma.SelectSubset<T, LeadNoteUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
+
+  /**
+   * Update zero or more LeadNotes and returns the data updated in the database.
+   * @param {LeadNoteUpdateManyAndReturnArgs} args - Arguments to update many LeadNotes.
+   * @example
+   * // Update many LeadNotes
+   * const leadNote = await prisma.leadNote.updateManyAndReturn({
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Update zero or more LeadNotes and only return the `id`
+   * const leadNoteWithIdOnly = await prisma.leadNote.updateManyAndReturn({
+   *   select: { id: true },
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  updateManyAndReturn<T extends LeadNoteUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, LeadNoteUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadNotePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one LeadNote.
@@ -1211,6 +1284,29 @@ export type LeadNoteCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
 }
 
 /**
+ * LeadNote createManyAndReturn
+ */
+export type LeadNoteCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LeadNote
+   */
+  select?: Prisma.LeadNoteSelectCreateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the LeadNote
+   */
+  omit?: Prisma.LeadNoteOmit<ExtArgs> | null
+  /**
+   * The data used to create many LeadNotes.
+   */
+  data: Prisma.LeadNoteCreateManyInput | Prisma.LeadNoteCreateManyInput[]
+  skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeadNoteIncludeCreateManyAndReturn<ExtArgs> | null
+}
+
+/**
  * LeadNote update
  */
 export type LeadNoteUpdateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1252,6 +1348,36 @@ export type LeadNoteUpdateManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * Limit how many LeadNotes to update.
    */
   limit?: number
+}
+
+/**
+ * LeadNote updateManyAndReturn
+ */
+export type LeadNoteUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LeadNote
+   */
+  select?: Prisma.LeadNoteSelectUpdateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the LeadNote
+   */
+  omit?: Prisma.LeadNoteOmit<ExtArgs> | null
+  /**
+   * The data used to update LeadNotes.
+   */
+  data: Prisma.XOR<Prisma.LeadNoteUpdateManyMutationInput, Prisma.LeadNoteUncheckedUpdateManyInput>
+  /**
+   * Filter which LeadNotes to update
+   */
+  where?: Prisma.LeadNoteWhereInput
+  /**
+   * Limit how many LeadNotes to update.
+   */
+  limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeadNoteIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**

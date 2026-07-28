@@ -28,7 +28,7 @@ export default function LoginPage() {
         <LoginForm />
 
         <p className="mt-6 text-center text-xs text-ink-4">
-          גרסת בדיקה — האימות עדיין לא מחובר.
+          &quot;כניסת בדיקה&quot; נכנסת כמשתמש פיתוח, בלי אימות.
         </p>
       </div>
     </main>

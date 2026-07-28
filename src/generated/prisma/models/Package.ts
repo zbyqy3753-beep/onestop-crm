@@ -280,7 +280,6 @@ export type PackageOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   deals?: Prisma.DealPackageOrderByRelationAggregateInput
-  _relevance?: Prisma.PackageOrderByRelevanceInput
 }
 
 export type PackageWhereUniqueInput = Prisma.AtLeast<{
@@ -437,12 +436,6 @@ export type PackageUncheckedUpdateManyInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-}
-
-export type PackageOrderByRelevanceInput = {
-  fields: Prisma.PackageOrderByRelevanceFieldEnum | Prisma.PackageOrderByRelevanceFieldEnum[]
-  sort: Prisma.SortOrder
-  search: string
 }
 
 export type PackageCountOrderByAggregateInput = {
@@ -657,7 +650,33 @@ export type PackageSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   _count?: boolean | Prisma.PackageCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["package"]>
 
+export type PackageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  id?: boolean
+  name?: boolean
+  provider?: boolean
+  category?: boolean
+  price?: boolean
+  commission?: boolean
+  spec?: boolean
+  description?: boolean
+  active?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
+}, ExtArgs["result"]["package"]>
 
+export type PackageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  id?: boolean
+  name?: boolean
+  provider?: boolean
+  category?: boolean
+  price?: boolean
+  commission?: boolean
+  spec?: boolean
+  description?: boolean
+  active?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
+}, ExtArgs["result"]["package"]>
 
 export type PackageSelectScalar = {
   id?: boolean
@@ -678,6 +697,8 @@ export type PackageInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   deals?: boolean | Prisma.Package$dealsArgs<ExtArgs>
   _count?: boolean | Prisma.PackageCountOutputTypeDefaultArgs<ExtArgs>
 }
+export type PackageIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type PackageIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
 
 export type $PackagePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Package"
@@ -824,6 +845,30 @@ export interface PackageDelegate<ExtArgs extends runtime.Types.Extensions.Intern
   createMany<T extends PackageCreateManyArgs>(args?: Prisma.SelectSubset<T, PackageCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
+   * Create many Packages and returns the data saved in the database.
+   * @param {PackageCreateManyAndReturnArgs} args - Arguments to create many Packages.
+   * @example
+   * // Create many Packages
+   * const package = await prisma.package.createManyAndReturn({
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Create many Packages and only return the `id`
+   * const packageWithIdOnly = await prisma.package.createManyAndReturn({
+   *   select: { id: true },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  createManyAndReturn<T extends PackageCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, PackageCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PackagePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+  /**
    * Delete a Package.
    * @param {PackageDeleteArgs} args - Arguments to delete one Package.
    * @example
@@ -886,6 +931,36 @@ export interface PackageDelegate<ExtArgs extends runtime.Types.Extensions.Intern
    * 
    */
   updateMany<T extends PackageUpdateManyArgs>(args: Prisma.SelectSubset<T, PackageUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
+
+  /**
+   * Update zero or more Packages and returns the data updated in the database.
+   * @param {PackageUpdateManyAndReturnArgs} args - Arguments to update many Packages.
+   * @example
+   * // Update many Packages
+   * const package = await prisma.package.updateManyAndReturn({
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Update zero or more Packages and only return the `id`
+   * const packageWithIdOnly = await prisma.package.updateManyAndReturn({
+   *   select: { id: true },
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  updateManyAndReturn<T extends PackageUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, PackageUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PackagePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one Package.
@@ -1325,6 +1400,25 @@ export type PackageCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Inter
 }
 
 /**
+ * Package createManyAndReturn
+ */
+export type PackageCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Package
+   */
+  select?: Prisma.PackageSelectCreateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the Package
+   */
+  omit?: Prisma.PackageOmit<ExtArgs> | null
+  /**
+   * The data used to create many Packages.
+   */
+  data: Prisma.PackageCreateManyInput | Prisma.PackageCreateManyInput[]
+  skipDuplicates?: boolean
+}
+
+/**
  * Package update
  */
 export type PackageUpdateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1354,6 +1448,32 @@ export type PackageUpdateArgs<ExtArgs extends runtime.Types.Extensions.InternalA
  * Package updateMany
  */
 export type PackageUpdateManyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * The data used to update Packages.
+   */
+  data: Prisma.XOR<Prisma.PackageUpdateManyMutationInput, Prisma.PackageUncheckedUpdateManyInput>
+  /**
+   * Filter which Packages to update
+   */
+  where?: Prisma.PackageWhereInput
+  /**
+   * Limit how many Packages to update.
+   */
+  limit?: number
+}
+
+/**
+ * Package updateManyAndReturn
+ */
+export type PackageUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Package
+   */
+  select?: Prisma.PackageSelectUpdateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the Package
+   */
+  omit?: Prisma.PackageOmit<ExtArgs> | null
   /**
    * The data used to update Packages.
    */

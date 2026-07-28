@@ -132,6 +132,7 @@ export interface LeadRepository {
 export interface UserRepository {
   list(): Promise<User[]>;
   getById(id: UserId): Promise<User | null>;
+  getByEmail(email: string): Promise<User | null>;
   listActive(): Promise<User[]>;
 }
 

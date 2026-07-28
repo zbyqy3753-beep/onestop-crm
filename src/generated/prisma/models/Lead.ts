@@ -308,7 +308,6 @@ export type LeadOrderByWithRelationInput = {
   notes?: Prisma.LeadNoteOrderByRelationAggregateInput
   history?: Prisma.LeadStatusEventOrderByRelationAggregateInput
   deal?: Prisma.DealOrderByWithRelationInput
-  _relevance?: Prisma.LeadOrderByRelevanceInput
 }
 
 export type LeadWhereUniqueInput = Prisma.AtLeast<{
@@ -543,12 +542,6 @@ export type LeadListRelationFilter = {
 
 export type LeadOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
-}
-
-export type LeadOrderByRelevanceInput = {
-  fields: Prisma.LeadOrderByRelevanceFieldEnum | Prisma.LeadOrderByRelevanceFieldEnum[]
-  sort: Prisma.SortOrder
-  search: string
 }
 
 export type LeadCountOrderByAggregateInput = {
@@ -1471,7 +1464,49 @@ export type LeadSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   _count?: boolean | Prisma.LeadCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["lead"]>
 
+export type LeadSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  id?: boolean
+  name?: boolean
+  phone?: boolean
+  email?: boolean
+  city?: boolean
+  kind?: boolean
+  status?: boolean
+  priority?: boolean
+  source?: boolean
+  category?: boolean
+  currentProvider?: boolean
+  assigneeId?: boolean
+  createdById?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
+  lastContactAt?: boolean
+  followUpAt?: boolean
+  assignee?: boolean | Prisma.Lead$assigneeArgs<ExtArgs>
+  createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}, ExtArgs["result"]["lead"]>
 
+export type LeadSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  id?: boolean
+  name?: boolean
+  phone?: boolean
+  email?: boolean
+  city?: boolean
+  kind?: boolean
+  status?: boolean
+  priority?: boolean
+  source?: boolean
+  category?: boolean
+  currentProvider?: boolean
+  assigneeId?: boolean
+  createdById?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
+  lastContactAt?: boolean
+  followUpAt?: boolean
+  assignee?: boolean | Prisma.Lead$assigneeArgs<ExtArgs>
+  createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}, ExtArgs["result"]["lead"]>
 
 export type LeadSelectScalar = {
   id?: boolean
@@ -1501,6 +1536,14 @@ export type LeadInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   history?: boolean | Prisma.Lead$historyArgs<ExtArgs>
   deal?: boolean | Prisma.Lead$dealArgs<ExtArgs>
   _count?: boolean | Prisma.LeadCountOutputTypeDefaultArgs<ExtArgs>
+}
+export type LeadIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  assignee?: boolean | Prisma.Lead$assigneeArgs<ExtArgs>
+  createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}
+export type LeadIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  assignee?: boolean | Prisma.Lead$assigneeArgs<ExtArgs>
+  createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 
 export type $LeadPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1648,6 +1691,30 @@ export interface LeadDelegate<ExtArgs extends runtime.Types.Extensions.InternalA
   createMany<T extends LeadCreateManyArgs>(args?: Prisma.SelectSubset<T, LeadCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
+   * Create many Leads and returns the data saved in the database.
+   * @param {LeadCreateManyAndReturnArgs} args - Arguments to create many Leads.
+   * @example
+   * // Create many Leads
+   * const lead = await prisma.lead.createManyAndReturn({
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Create many Leads and only return the `id`
+   * const leadWithIdOnly = await prisma.lead.createManyAndReturn({
+   *   select: { id: true },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  createManyAndReturn<T extends LeadCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, LeadCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+  /**
    * Delete a Lead.
    * @param {LeadDeleteArgs} args - Arguments to delete one Lead.
    * @example
@@ -1710,6 +1777,36 @@ export interface LeadDelegate<ExtArgs extends runtime.Types.Extensions.InternalA
    * 
    */
   updateMany<T extends LeadUpdateManyArgs>(args: Prisma.SelectSubset<T, LeadUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
+
+  /**
+   * Update zero or more Leads and returns the data updated in the database.
+   * @param {LeadUpdateManyAndReturnArgs} args - Arguments to update many Leads.
+   * @example
+   * // Update many Leads
+   * const lead = await prisma.lead.updateManyAndReturn({
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Update zero or more Leads and only return the `id`
+   * const leadWithIdOnly = await prisma.lead.updateManyAndReturn({
+   *   select: { id: true },
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  updateManyAndReturn<T extends LeadUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, LeadUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one Lead.
@@ -2159,6 +2256,29 @@ export type LeadCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
 }
 
 /**
+ * Lead createManyAndReturn
+ */
+export type LeadCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Lead
+   */
+  select?: Prisma.LeadSelectCreateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the Lead
+   */
+  omit?: Prisma.LeadOmit<ExtArgs> | null
+  /**
+   * The data used to create many Leads.
+   */
+  data: Prisma.LeadCreateManyInput | Prisma.LeadCreateManyInput[]
+  skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeadIncludeCreateManyAndReturn<ExtArgs> | null
+}
+
+/**
  * Lead update
  */
 export type LeadUpdateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2200,6 +2320,36 @@ export type LeadUpdateManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Limit how many Leads to update.
    */
   limit?: number
+}
+
+/**
+ * Lead updateManyAndReturn
+ */
+export type LeadUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Lead
+   */
+  select?: Prisma.LeadSelectUpdateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the Lead
+   */
+  omit?: Prisma.LeadOmit<ExtArgs> | null
+  /**
+   * The data used to update Leads.
+   */
+  data: Prisma.XOR<Prisma.LeadUpdateManyMutationInput, Prisma.LeadUncheckedUpdateManyInput>
+  /**
+   * Filter which Leads to update
+   */
+  where?: Prisma.LeadWhereInput
+  /**
+   * Limit how many Leads to update.
+   */
+  limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeadIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**

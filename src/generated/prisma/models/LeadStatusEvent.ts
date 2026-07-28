@@ -212,7 +212,6 @@ export type LeadStatusEventOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   lead?: Prisma.LeadOrderByWithRelationInput
   actor?: Prisma.UserOrderByWithRelationInput
-  _relevance?: Prisma.LeadStatusEventOrderByRelevanceInput
 }
 
 export type LeadStatusEventWhereUniqueInput = Prisma.AtLeast<{
@@ -332,12 +331,6 @@ export type LeadStatusEventListRelationFilter = {
 
 export type LeadStatusEventOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
-}
-
-export type LeadStatusEventOrderByRelevanceInput = {
-  fields: Prisma.LeadStatusEventOrderByRelevanceFieldEnum | Prisma.LeadStatusEventOrderByRelevanceFieldEnum[]
-  sort: Prisma.SortOrder
-  search: string
 }
 
 export type LeadStatusEventCountOrderByAggregateInput = {
@@ -645,7 +638,29 @@ export type LeadStatusEventSelect<ExtArgs extends runtime.Types.Extensions.Inter
   actor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["leadStatusEvent"]>
 
+export type LeadStatusEventSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  id?: boolean
+  leadId?: boolean
+  from?: boolean
+  to?: boolean
+  detail?: boolean
+  actorId?: boolean
+  createdAt?: boolean
+  lead?: boolean | Prisma.LeadDefaultArgs<ExtArgs>
+  actor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}, ExtArgs["result"]["leadStatusEvent"]>
 
+export type LeadStatusEventSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  id?: boolean
+  leadId?: boolean
+  from?: boolean
+  to?: boolean
+  detail?: boolean
+  actorId?: boolean
+  createdAt?: boolean
+  lead?: boolean | Prisma.LeadDefaultArgs<ExtArgs>
+  actor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}, ExtArgs["result"]["leadStatusEvent"]>
 
 export type LeadStatusEventSelectScalar = {
   id?: boolean
@@ -659,6 +674,14 @@ export type LeadStatusEventSelectScalar = {
 
 export type LeadStatusEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "leadId" | "from" | "to" | "detail" | "actorId" | "createdAt", ExtArgs["result"]["leadStatusEvent"]>
 export type LeadStatusEventInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  lead?: boolean | Prisma.LeadDefaultArgs<ExtArgs>
+  actor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}
+export type LeadStatusEventIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  lead?: boolean | Prisma.LeadDefaultArgs<ExtArgs>
+  actor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}
+export type LeadStatusEventIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   lead?: boolean | Prisma.LeadDefaultArgs<ExtArgs>
   actor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -795,6 +818,30 @@ export interface LeadStatusEventDelegate<ExtArgs extends runtime.Types.Extension
   createMany<T extends LeadStatusEventCreateManyArgs>(args?: Prisma.SelectSubset<T, LeadStatusEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
+   * Create many LeadStatusEvents and returns the data saved in the database.
+   * @param {LeadStatusEventCreateManyAndReturnArgs} args - Arguments to create many LeadStatusEvents.
+   * @example
+   * // Create many LeadStatusEvents
+   * const leadStatusEvent = await prisma.leadStatusEvent.createManyAndReturn({
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Create many LeadStatusEvents and only return the `id`
+   * const leadStatusEventWithIdOnly = await prisma.leadStatusEvent.createManyAndReturn({
+   *   select: { id: true },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  createManyAndReturn<T extends LeadStatusEventCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, LeadStatusEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadStatusEventPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+  /**
    * Delete a LeadStatusEvent.
    * @param {LeadStatusEventDeleteArgs} args - Arguments to delete one LeadStatusEvent.
    * @example
@@ -857,6 +904,36 @@ export interface LeadStatusEventDelegate<ExtArgs extends runtime.Types.Extension
    * 
    */
   updateMany<T extends LeadStatusEventUpdateManyArgs>(args: Prisma.SelectSubset<T, LeadStatusEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
+
+  /**
+   * Update zero or more LeadStatusEvents and returns the data updated in the database.
+   * @param {LeadStatusEventUpdateManyAndReturnArgs} args - Arguments to update many LeadStatusEvents.
+   * @example
+   * // Update many LeadStatusEvents
+   * const leadStatusEvent = await prisma.leadStatusEvent.updateManyAndReturn({
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Update zero or more LeadStatusEvents and only return the `id`
+   * const leadStatusEventWithIdOnly = await prisma.leadStatusEvent.updateManyAndReturn({
+   *   select: { id: true },
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  updateManyAndReturn<T extends LeadStatusEventUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, LeadStatusEventUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadStatusEventPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one LeadStatusEvent.
@@ -1293,6 +1370,29 @@ export type LeadStatusEventCreateManyArgs<ExtArgs extends runtime.Types.Extensio
 }
 
 /**
+ * LeadStatusEvent createManyAndReturn
+ */
+export type LeadStatusEventCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LeadStatusEvent
+   */
+  select?: Prisma.LeadStatusEventSelectCreateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the LeadStatusEvent
+   */
+  omit?: Prisma.LeadStatusEventOmit<ExtArgs> | null
+  /**
+   * The data used to create many LeadStatusEvents.
+   */
+  data: Prisma.LeadStatusEventCreateManyInput | Prisma.LeadStatusEventCreateManyInput[]
+  skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeadStatusEventIncludeCreateManyAndReturn<ExtArgs> | null
+}
+
+/**
  * LeadStatusEvent update
  */
 export type LeadStatusEventUpdateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1334,6 +1434,36 @@ export type LeadStatusEventUpdateManyArgs<ExtArgs extends runtime.Types.Extensio
    * Limit how many LeadStatusEvents to update.
    */
   limit?: number
+}
+
+/**
+ * LeadStatusEvent updateManyAndReturn
+ */
+export type LeadStatusEventUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LeadStatusEvent
+   */
+  select?: Prisma.LeadStatusEventSelectUpdateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the LeadStatusEvent
+   */
+  omit?: Prisma.LeadStatusEventOmit<ExtArgs> | null
+  /**
+   * The data used to update LeadStatusEvents.
+   */
+  data: Prisma.XOR<Prisma.LeadStatusEventUpdateManyMutationInput, Prisma.LeadStatusEventUncheckedUpdateManyInput>
+  /**
+   * Filter which LeadStatusEvents to update
+   */
+  where?: Prisma.LeadStatusEventWhereInput
+  /**
+   * Limit how many LeadStatusEvents to update.
+   */
+  limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeadStatusEventIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**

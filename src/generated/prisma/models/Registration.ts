@@ -249,7 +249,6 @@ export type RegistrationOrderByWithRelationInput = {
   handledById?: Prisma.SortOrderInput | Prisma.SortOrder
   referredBy?: Prisma.UserOrderByWithRelationInput
   handledBy?: Prisma.UserOrderByWithRelationInput
-  _relevance?: Prisma.RegistrationOrderByRelevanceInput
 }
 
 export type RegistrationWhereUniqueInput = Prisma.AtLeast<{
@@ -409,12 +408,6 @@ export type RegistrationListRelationFilter = {
 
 export type RegistrationOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
-}
-
-export type RegistrationOrderByRelevanceInput = {
-  fields: Prisma.RegistrationOrderByRelevanceFieldEnum | Prisma.RegistrationOrderByRelevanceFieldEnum[]
-  sort: Prisma.SortOrder
-  search: string
 }
 
 export type RegistrationCountOrderByAggregateInput = {
@@ -790,7 +783,37 @@ export type RegistrationSelect<ExtArgs extends runtime.Types.Extensions.Internal
   handledBy?: boolean | Prisma.Registration$handledByArgs<ExtArgs>
 }, ExtArgs["result"]["registration"]>
 
+export type RegistrationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  id?: boolean
+  businessName?: boolean
+  contactName?: boolean
+  phone?: boolean
+  email?: boolean
+  referralSource?: boolean
+  referredByUserId?: boolean
+  status?: boolean
+  createdAt?: boolean
+  handledAt?: boolean
+  handledById?: boolean
+  referredBy?: boolean | Prisma.Registration$referredByArgs<ExtArgs>
+  handledBy?: boolean | Prisma.Registration$handledByArgs<ExtArgs>
+}, ExtArgs["result"]["registration"]>
 
+export type RegistrationSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  id?: boolean
+  businessName?: boolean
+  contactName?: boolean
+  phone?: boolean
+  email?: boolean
+  referralSource?: boolean
+  referredByUserId?: boolean
+  status?: boolean
+  createdAt?: boolean
+  handledAt?: boolean
+  handledById?: boolean
+  referredBy?: boolean | Prisma.Registration$referredByArgs<ExtArgs>
+  handledBy?: boolean | Prisma.Registration$handledByArgs<ExtArgs>
+}, ExtArgs["result"]["registration"]>
 
 export type RegistrationSelectScalar = {
   id?: boolean
@@ -808,6 +831,14 @@ export type RegistrationSelectScalar = {
 
 export type RegistrationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "businessName" | "contactName" | "phone" | "email" | "referralSource" | "referredByUserId" | "status" | "createdAt" | "handledAt" | "handledById", ExtArgs["result"]["registration"]>
 export type RegistrationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  referredBy?: boolean | Prisma.Registration$referredByArgs<ExtArgs>
+  handledBy?: boolean | Prisma.Registration$handledByArgs<ExtArgs>
+}
+export type RegistrationIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  referredBy?: boolean | Prisma.Registration$referredByArgs<ExtArgs>
+  handledBy?: boolean | Prisma.Registration$handledByArgs<ExtArgs>
+}
+export type RegistrationIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   referredBy?: boolean | Prisma.Registration$referredByArgs<ExtArgs>
   handledBy?: boolean | Prisma.Registration$handledByArgs<ExtArgs>
 }
@@ -951,6 +982,30 @@ export interface RegistrationDelegate<ExtArgs extends runtime.Types.Extensions.I
   createMany<T extends RegistrationCreateManyArgs>(args?: Prisma.SelectSubset<T, RegistrationCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
+   * Create many Registrations and returns the data saved in the database.
+   * @param {RegistrationCreateManyAndReturnArgs} args - Arguments to create many Registrations.
+   * @example
+   * // Create many Registrations
+   * const registration = await prisma.registration.createManyAndReturn({
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Create many Registrations and only return the `id`
+   * const registrationWithIdOnly = await prisma.registration.createManyAndReturn({
+   *   select: { id: true },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  createManyAndReturn<T extends RegistrationCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, RegistrationCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RegistrationPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+  /**
    * Delete a Registration.
    * @param {RegistrationDeleteArgs} args - Arguments to delete one Registration.
    * @example
@@ -1013,6 +1068,36 @@ export interface RegistrationDelegate<ExtArgs extends runtime.Types.Extensions.I
    * 
    */
   updateMany<T extends RegistrationUpdateManyArgs>(args: Prisma.SelectSubset<T, RegistrationUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
+
+  /**
+   * Update zero or more Registrations and returns the data updated in the database.
+   * @param {RegistrationUpdateManyAndReturnArgs} args - Arguments to update many Registrations.
+   * @example
+   * // Update many Registrations
+   * const registration = await prisma.registration.updateManyAndReturn({
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Update zero or more Registrations and only return the `id`
+   * const registrationWithIdOnly = await prisma.registration.updateManyAndReturn({
+   *   select: { id: true },
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  updateManyAndReturn<T extends RegistrationUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, RegistrationUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RegistrationPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one Registration.
@@ -1453,6 +1538,29 @@ export type RegistrationCreateManyArgs<ExtArgs extends runtime.Types.Extensions.
 }
 
 /**
+ * Registration createManyAndReturn
+ */
+export type RegistrationCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Registration
+   */
+  select?: Prisma.RegistrationSelectCreateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the Registration
+   */
+  omit?: Prisma.RegistrationOmit<ExtArgs> | null
+  /**
+   * The data used to create many Registrations.
+   */
+  data: Prisma.RegistrationCreateManyInput | Prisma.RegistrationCreateManyInput[]
+  skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RegistrationIncludeCreateManyAndReturn<ExtArgs> | null
+}
+
+/**
  * Registration update
  */
 export type RegistrationUpdateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1494,6 +1602,36 @@ export type RegistrationUpdateManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Limit how many Registrations to update.
    */
   limit?: number
+}
+
+/**
+ * Registration updateManyAndReturn
+ */
+export type RegistrationUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Registration
+   */
+  select?: Prisma.RegistrationSelectUpdateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the Registration
+   */
+  omit?: Prisma.RegistrationOmit<ExtArgs> | null
+  /**
+   * The data used to update Registrations.
+   */
+  data: Prisma.XOR<Prisma.RegistrationUpdateManyMutationInput, Prisma.RegistrationUncheckedUpdateManyInput>
+  /**
+   * Filter which Registrations to update
+   */
+  where?: Prisma.RegistrationWhereInput
+  /**
+   * Limit how many Registrations to update.
+   */
+  limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RegistrationIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
 /**
@@ -24,7 +24,7 @@ function createClient(): PrismaClient {
     );
   }
 
-  const adapter = new PrismaMariaDb(connectionString);
+  const adapter = new PrismaPg({ connectionString });
   return new PrismaClient({ adapter });
 }
 

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/server/repositories";
-import { CURRENT_USER_ID } from "@/lib/domain/seed";
+import { requireSessionUser } from "@/server/auth/session";
 import type {
   LeadCategoryKey,
   LeadKind,
@@ -19,19 +19,16 @@ import { isIsraeliPhone } from "@/lib/format";
  * הפעולות כאן הן נקודות קצה אמיתיות — כל אחת חייבת לאמת את הקלט
  * בעצמה. אימות בצד הלקוח הוא נוחות, לא הגנה.
  *
- * ⚠️ אין כאן עדיין בדיקת הרשאות. `actorId` נלקח מקבוע במקום
- * מ-session. בחיבור auth, כל פעולה חייבת להתחיל ב:
- *     const session = await auth();
- *     if (!session) return { ok: false, error: "אין הרשאה" };
- * ולהשתמש ב-session.user.id במקום ב-CURRENT_USER_ID.
+ * ⚠️ אין כאן עדיין בדיקת הרשאות (מי מורשה לעשות מה) — רק זיהוי מי
+ * מבצע את הפעולה, דרך הסשן האמיתי (`requireSessionUser`).
  */
 
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
 
-function actor(): string {
-  return CURRENT_USER_ID;
+async function actor(): Promise<string> {
+  return (await requireSessionUser()).id;
 }
 
 /* ── יצירה ────────────────────────────────────────────────────────────── */
@@ -53,6 +50,7 @@ export async function createLeadAction(
   const assigneeId = String(formData.get("assigneeId") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
   const currentProvider = String(formData.get("currentProvider") ?? "").trim();
+  const actorId = await actor();
 
   await db.leads.create({
     name,
@@ -65,9 +63,9 @@ export async function createLeadAction(
     category: (category as LeadCategoryKey) || undefined,
     currentProvider: (currentProvider as ProviderKey) || undefined,
     // ללא בחירה = משויך ליוצר, לא ל"ללא שיוך" — תואם לטופס האמיתי
-    assigneeId: assigneeId || actor(),
+    assigneeId: assigneeId || actorId,
     source: "manual",
-    createdById: actor(),
+    createdById: actorId,
   });
 
   revalidatePath("/leads");
@@ -93,7 +91,7 @@ export async function changeStatusAction(
     leadId,
     to,
     detail: detail?.trim() || undefined,
-    actorId: actor(),
+    actorId: await actor(),
   });
 
   revalidatePath("/leads");
@@ -128,7 +126,7 @@ export async function addNoteAction(
   const text = body.trim();
   if (!text) return { ok: false, error: "ההערה ריקה" };
 
-  await db.leads.addNote(leadId, actor(), text);
+  await db.leads.addNote(leadId, await actor(), text);
   revalidatePath("/leads");
   return { ok: true };
 }
@@ -165,6 +163,8 @@ export async function importLeadsAction(
     return { ok: false, error: "לא נמצאו שורות תקינות בקובץ" };
   }
 
+  const actorId = await actor();
+
   await db.leads.createMany(
     valid.map((r) => ({
       name: r.name.trim(),
@@ -174,7 +174,7 @@ export async function importLeadsAction(
       kind: "data" as const,
       priority: "normal" as const,
       source: "import" as const,
-      createdById: actor(),
+      createdById: actorId,
     })),
   );
 

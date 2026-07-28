@@ -313,7 +313,17 @@ export type LeadCostSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   updatedAt?: boolean
 }, ExtArgs["result"]["leadCost"]>
 
+export type LeadCostSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  category?: boolean
+  cost?: boolean
+  updatedAt?: boolean
+}, ExtArgs["result"]["leadCost"]>
 
+export type LeadCostSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  category?: boolean
+  cost?: boolean
+  updatedAt?: boolean
+}, ExtArgs["result"]["leadCost"]>
 
 export type LeadCostSelectScalar = {
   category?: boolean
@@ -448,6 +458,30 @@ export interface LeadCostDelegate<ExtArgs extends runtime.Types.Extensions.Inter
   createMany<T extends LeadCostCreateManyArgs>(args?: Prisma.SelectSubset<T, LeadCostCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
+   * Create many LeadCosts and returns the data saved in the database.
+   * @param {LeadCostCreateManyAndReturnArgs} args - Arguments to create many LeadCosts.
+   * @example
+   * // Create many LeadCosts
+   * const leadCost = await prisma.leadCost.createManyAndReturn({
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Create many LeadCosts and only return the `cost`
+   * const leadCostWithCostOnly = await prisma.leadCost.createManyAndReturn({
+   *   select: { cost: true },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  createManyAndReturn<T extends LeadCostCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, LeadCostCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadCostPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+  /**
    * Delete a LeadCost.
    * @param {LeadCostDeleteArgs} args - Arguments to delete one LeadCost.
    * @example
@@ -510,6 +544,36 @@ export interface LeadCostDelegate<ExtArgs extends runtime.Types.Extensions.Inter
    * 
    */
   updateMany<T extends LeadCostUpdateManyArgs>(args: Prisma.SelectSubset<T, LeadCostUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
+
+  /**
+   * Update zero or more LeadCosts and returns the data updated in the database.
+   * @param {LeadCostUpdateManyAndReturnArgs} args - Arguments to update many LeadCosts.
+   * @example
+   * // Update many LeadCosts
+   * const leadCost = await prisma.leadCost.updateManyAndReturn({
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Update zero or more LeadCosts and only return the `cost`
+   * const leadCostWithCostOnly = await prisma.leadCost.updateManyAndReturn({
+   *   select: { cost: true },
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  updateManyAndReturn<T extends LeadCostUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, LeadCostUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadCostPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one LeadCost.
@@ -916,6 +980,25 @@ export type LeadCostCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
 }
 
 /**
+ * LeadCost createManyAndReturn
+ */
+export type LeadCostCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LeadCost
+   */
+  select?: Prisma.LeadCostSelectCreateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the LeadCost
+   */
+  omit?: Prisma.LeadCostOmit<ExtArgs> | null
+  /**
+   * The data used to create many LeadCosts.
+   */
+  data: Prisma.LeadCostCreateManyInput | Prisma.LeadCostCreateManyInput[]
+  skipDuplicates?: boolean
+}
+
+/**
  * LeadCost update
  */
 export type LeadCostUpdateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -941,6 +1024,32 @@ export type LeadCostUpdateArgs<ExtArgs extends runtime.Types.Extensions.Internal
  * LeadCost updateMany
  */
 export type LeadCostUpdateManyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * The data used to update LeadCosts.
+   */
+  data: Prisma.XOR<Prisma.LeadCostUpdateManyMutationInput, Prisma.LeadCostUncheckedUpdateManyInput>
+  /**
+   * Filter which LeadCosts to update
+   */
+  where?: Prisma.LeadCostWhereInput
+  /**
+   * Limit how many LeadCosts to update.
+   */
+  limit?: number
+}
+
+/**
+ * LeadCost updateManyAndReturn
+ */
+export type LeadCostUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LeadCost
+   */
+  select?: Prisma.LeadCostSelectUpdateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the LeadCost
+   */
+  omit?: Prisma.LeadCostOmit<ExtArgs> | null
   /**
    * The data used to update LeadCosts.
    */

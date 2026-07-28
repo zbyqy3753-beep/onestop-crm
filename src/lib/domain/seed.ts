@@ -13,11 +13,11 @@ import type { Deal, Lead, Registration, User } from "./types";
 export const SEED_EPOCH = new Date("2026-07-20T09:00:00.000Z").getTime();
 
 /**
- * זהות המשתמש שהמעטפת מרנדרת לפיה (סרגל צד, הרשאות תצוגה, אווטאר).
- *
- * זו אינה "נתוני דוגמה" ואינה נכתבת ל-DB — זהו מציין מקום לפיתוח
- * בלבד, כל עוד אין מערכת התחברות אמיתית. תפקיד owner כדי שכל פריטי
- * הניווט יוצגו. בחיבור auth אמיתי הוא יוחלף במשתמש מה-session.
+ * משתמש "כניסת בדיקה" — הכניסה המהירה במסך /login שלא דורשת סיסמה.
+ * נזרע כשורה אמיתית ב-DB (ראה prisma/seed.ts) כדי ש-createdById/
+ * assigneeId לא ייכשלו על מפתח זר. תפקיד owner כדי שכל פריטי הניווט
+ * יוצגו. שאר המסכים מזהים את המשתמש דרך הסשן האמיתי (getSessionUser),
+ * לא דרך הקבוע הזה.
  */
 export const DEV_USER: User = {
   id: "dev-user",
@@ -26,9 +26,6 @@ export const DEV_USER: User = {
   email: "dev@onestop.local",
   active: true,
 };
-
-/** המזהה של המשתמש המחובר. בחיבור auth אמיתי יגיע מה-session. */
-export const CURRENT_USER_ID = DEV_USER.id;
 
 /* ── נתונים ריקים — יתמלאו מ-MySQL ────────────────────────────────────── */
 

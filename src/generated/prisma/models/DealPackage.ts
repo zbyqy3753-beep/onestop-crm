@@ -210,7 +210,6 @@ export type DealPackageOrderByWithRelationInput = {
   commissionAtClose?: Prisma.SortOrder
   deal?: Prisma.DealOrderByWithRelationInput
   package?: Prisma.PackageOrderByWithRelationInput
-  _relevance?: Prisma.DealPackageOrderByRelevanceInput
 }
 
 export type DealPackageWhereUniqueInput = Prisma.AtLeast<{
@@ -293,12 +292,6 @@ export type DealPackageListRelationFilter = {
 
 export type DealPackageOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
-}
-
-export type DealPackageOrderByRelevanceInput = {
-  fields: Prisma.DealPackageOrderByRelevanceFieldEnum | Prisma.DealPackageOrderByRelevanceFieldEnum[]
-  sort: Prisma.SortOrder
-  search: string
 }
 
 export type DealPackageDealIdPackageIdCompoundUniqueInput = {
@@ -547,7 +540,21 @@ export type DealPackageSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   package?: boolean | Prisma.PackageDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["dealPackage"]>
 
+export type DealPackageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  dealId?: boolean
+  packageId?: boolean
+  commissionAtClose?: boolean
+  deal?: boolean | Prisma.DealDefaultArgs<ExtArgs>
+  package?: boolean | Prisma.PackageDefaultArgs<ExtArgs>
+}, ExtArgs["result"]["dealPackage"]>
 
+export type DealPackageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  dealId?: boolean
+  packageId?: boolean
+  commissionAtClose?: boolean
+  deal?: boolean | Prisma.DealDefaultArgs<ExtArgs>
+  package?: boolean | Prisma.PackageDefaultArgs<ExtArgs>
+}, ExtArgs["result"]["dealPackage"]>
 
 export type DealPackageSelectScalar = {
   dealId?: boolean
@@ -557,6 +564,14 @@ export type DealPackageSelectScalar = {
 
 export type DealPackageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"dealId" | "packageId" | "commissionAtClose", ExtArgs["result"]["dealPackage"]>
 export type DealPackageInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  deal?: boolean | Prisma.DealDefaultArgs<ExtArgs>
+  package?: boolean | Prisma.PackageDefaultArgs<ExtArgs>
+}
+export type DealPackageIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  deal?: boolean | Prisma.DealDefaultArgs<ExtArgs>
+  package?: boolean | Prisma.PackageDefaultArgs<ExtArgs>
+}
+export type DealPackageIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   deal?: boolean | Prisma.DealDefaultArgs<ExtArgs>
   package?: boolean | Prisma.PackageDefaultArgs<ExtArgs>
 }
@@ -693,6 +708,30 @@ export interface DealPackageDelegate<ExtArgs extends runtime.Types.Extensions.In
   createMany<T extends DealPackageCreateManyArgs>(args?: Prisma.SelectSubset<T, DealPackageCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
+   * Create many DealPackages and returns the data saved in the database.
+   * @param {DealPackageCreateManyAndReturnArgs} args - Arguments to create many DealPackages.
+   * @example
+   * // Create many DealPackages
+   * const dealPackage = await prisma.dealPackage.createManyAndReturn({
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Create many DealPackages and only return the `dealId`
+   * const dealPackageWithDealIdOnly = await prisma.dealPackage.createManyAndReturn({
+   *   select: { dealId: true },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  createManyAndReturn<T extends DealPackageCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, DealPackageCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DealPackagePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+  /**
    * Delete a DealPackage.
    * @param {DealPackageDeleteArgs} args - Arguments to delete one DealPackage.
    * @example
@@ -755,6 +794,36 @@ export interface DealPackageDelegate<ExtArgs extends runtime.Types.Extensions.In
    * 
    */
   updateMany<T extends DealPackageUpdateManyArgs>(args: Prisma.SelectSubset<T, DealPackageUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
+
+  /**
+   * Update zero or more DealPackages and returns the data updated in the database.
+   * @param {DealPackageUpdateManyAndReturnArgs} args - Arguments to update many DealPackages.
+   * @example
+   * // Update many DealPackages
+   * const dealPackage = await prisma.dealPackage.updateManyAndReturn({
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Update zero or more DealPackages and only return the `dealId`
+   * const dealPackageWithDealIdOnly = await prisma.dealPackage.updateManyAndReturn({
+   *   select: { dealId: true },
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  updateManyAndReturn<T extends DealPackageUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, DealPackageUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DealPackagePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one DealPackage.
@@ -1187,6 +1256,29 @@ export type DealPackageCreateManyArgs<ExtArgs extends runtime.Types.Extensions.I
 }
 
 /**
+ * DealPackage createManyAndReturn
+ */
+export type DealPackageCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DealPackage
+   */
+  select?: Prisma.DealPackageSelectCreateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the DealPackage
+   */
+  omit?: Prisma.DealPackageOmit<ExtArgs> | null
+  /**
+   * The data used to create many DealPackages.
+   */
+  data: Prisma.DealPackageCreateManyInput | Prisma.DealPackageCreateManyInput[]
+  skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DealPackageIncludeCreateManyAndReturn<ExtArgs> | null
+}
+
+/**
  * DealPackage update
  */
 export type DealPackageUpdateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1228,6 +1320,36 @@ export type DealPackageUpdateManyArgs<ExtArgs extends runtime.Types.Extensions.I
    * Limit how many DealPackages to update.
    */
   limit?: number
+}
+
+/**
+ * DealPackage updateManyAndReturn
+ */
+export type DealPackageUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DealPackage
+   */
+  select?: Prisma.DealPackageSelectUpdateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the DealPackage
+   */
+  omit?: Prisma.DealPackageOmit<ExtArgs> | null
+  /**
+   * The data used to update DealPackages.
+   */
+  data: Prisma.XOR<Prisma.DealPackageUpdateManyMutationInput, Prisma.DealPackageUncheckedUpdateManyInput>
+  /**
+   * Filter which DealPackages to update
+   */
+  where?: Prisma.DealPackageWhereInput
+  /**
+   * Limit how many DealPackages to update.
+   */
+  limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DealPackageIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**

@@ -19,6 +19,10 @@ const users: UserRepository = {
     const found = state.users.find((u) => u.id === id);
     return found ? structuredClone(found) : null;
   },
+  async getByEmail(email) {
+    const found = state.users.find((u) => u.email === email);
+    return found ? structuredClone(found) : null;
+  },
   async listActive() {
     return structuredClone(state.users.filter((u) => u.active));
   },

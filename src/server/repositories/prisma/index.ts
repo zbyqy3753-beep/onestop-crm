@@ -31,6 +31,10 @@ const users: UserRepository = {
     const row = await prisma.user.findUnique({ where: { id } });
     return row ? userFromPrisma(row) : null;
   },
+  async getByEmail(email) {
+    const row = await prisma.user.findUnique({ where: { email } });
+    return row ? userFromPrisma(row) : null;
+  },
   async listActive() {
     const rows = await prisma.user.findMany({
       where: { active: true },

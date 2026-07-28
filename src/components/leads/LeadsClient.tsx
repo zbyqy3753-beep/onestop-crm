@@ -8,7 +8,6 @@ import {
   changeStatusAction,
   deleteLeadsAction,
 } from "@/app/(app)/leads/actions";
-import { CURRENT_USER_ID } from "@/lib/domain/seed";
 import { useNow } from "@/lib/clock";
 import { ToastStack, type Toast } from "@/components/ui/primitives";
 import { QueueHeader } from "./QueueHeader";
@@ -31,10 +30,12 @@ export function LeadsClient({
   leads,
   users,
   counts,
+  currentUserId,
 }: {
   leads: Lead[];
   users: User[];
   counts: Record<LeadStatus, number>;
+  currentUserId: string;
 }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<{ field: SortField; dir: "asc" | "desc" }>({
@@ -245,7 +246,7 @@ export function LeadsClient({
         onAdd={() => setAddOpen(true)}
         filters={filters}
         onFiltersChange={setFilters}
-        currentUserId={CURRENT_USER_ID}
+        currentUserId={currentUserId}
       />
 
       <FilterBar

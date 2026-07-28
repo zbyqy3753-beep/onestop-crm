@@ -1,5 +1,5 @@
 import { MyDealsClient } from "@/components/deals/MyDealsClient";
-import { CURRENT_USER_ID } from "@/lib/domain/seed";
+import { requireSessionUser } from "@/server/auth/session";
 import { db } from "@/server/repositories";
 
 /**
@@ -7,8 +7,9 @@ import { db } from "@/server/repositories";
  * שהסוכן המחובר סגר, בניגוד ל-`/deals` שהוא טבלת רווח ארגונית.
  */
 export default async function MyDealsPage() {
+  const currentUser = await requireSessionUser();
   const [deals, leads, packages] = await Promise.all([
-    db.deals.listByAgent(CURRENT_USER_ID),
+    db.deals.listByAgent(currentUser.id),
     db.leads.list(),
     db.packages.list(),
   ]);

@@ -237,56 +237,20 @@ export const JsonNullValueInput = {
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
+export const QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+} as const
+
+export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
 export const NullsOrder = {
   first: 'first',
   last: 'last'
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
-
-
-export const UserOrderByRelevanceFieldEnum = {
-  id: 'id',
-  name: 'name',
-  email: 'email',
-  phone: 'phone',
-  store: 'store'
-} as const
-
-export type UserOrderByRelevanceFieldEnum = (typeof UserOrderByRelevanceFieldEnum)[keyof typeof UserOrderByRelevanceFieldEnum]
-
-
-export const LeadOrderByRelevanceFieldEnum = {
-  id: 'id',
-  name: 'name',
-  phone: 'phone',
-  email: 'email',
-  city: 'city',
-  assigneeId: 'assigneeId',
-  createdById: 'createdById'
-} as const
-
-export type LeadOrderByRelevanceFieldEnum = (typeof LeadOrderByRelevanceFieldEnum)[keyof typeof LeadOrderByRelevanceFieldEnum]
-
-
-export const LeadNoteOrderByRelevanceFieldEnum = {
-  id: 'id',
-  leadId: 'leadId',
-  authorId: 'authorId',
-  body: 'body'
-} as const
-
-export type LeadNoteOrderByRelevanceFieldEnum = (typeof LeadNoteOrderByRelevanceFieldEnum)[keyof typeof LeadNoteOrderByRelevanceFieldEnum]
-
-
-export const LeadStatusEventOrderByRelevanceFieldEnum = {
-  id: 'id',
-  leadId: 'leadId',
-  detail: 'detail',
-  actorId: 'actorId'
-} as const
-
-export type LeadStatusEventOrderByRelevanceFieldEnum = (typeof LeadStatusEventOrderByRelevanceFieldEnum)[keyof typeof LeadStatusEventOrderByRelevanceFieldEnum]
 
 
 export const JsonNullValueFilter = {
@@ -296,64 +260,4 @@ export const JsonNullValueFilter = {
 } as const
 
 export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
-
-
-export const QueryMode = {
-  default: 'default',
-  insensitive: 'insensitive'
-} as const
-
-export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
-
-
-export const PackageOrderByRelevanceFieldEnum = {
-  id: 'id',
-  name: 'name',
-  description: 'description'
-} as const
-
-export type PackageOrderByRelevanceFieldEnum = (typeof PackageOrderByRelevanceFieldEnum)[keyof typeof PackageOrderByRelevanceFieldEnum]
-
-
-export const DealOrderByRelevanceFieldEnum = {
-  id: 'id',
-  displayId: 'displayId',
-  leadId: 'leadId',
-  agentId: 'agentId',
-  note: 'note'
-} as const
-
-export type DealOrderByRelevanceFieldEnum = (typeof DealOrderByRelevanceFieldEnum)[keyof typeof DealOrderByRelevanceFieldEnum]
-
-
-export const DealPackageOrderByRelevanceFieldEnum = {
-  dealId: 'dealId',
-  packageId: 'packageId'
-} as const
-
-export type DealPackageOrderByRelevanceFieldEnum = (typeof DealPackageOrderByRelevanceFieldEnum)[keyof typeof DealPackageOrderByRelevanceFieldEnum]
-
-
-export const DealStageEventOrderByRelevanceFieldEnum = {
-  id: 'id',
-  dealId: 'dealId',
-  detail: 'detail',
-  actorId: 'actorId'
-} as const
-
-export type DealStageEventOrderByRelevanceFieldEnum = (typeof DealStageEventOrderByRelevanceFieldEnum)[keyof typeof DealStageEventOrderByRelevanceFieldEnum]
-
-
-export const RegistrationOrderByRelevanceFieldEnum = {
-  id: 'id',
-  businessName: 'businessName',
-  contactName: 'contactName',
-  phone: 'phone',
-  email: 'email',
-  referralSource: 'referralSource',
-  referredByUserId: 'referredByUserId',
-  handledById: 'handledById'
-} as const
-
-export type RegistrationOrderByRelevanceFieldEnum = (typeof RegistrationOrderByRelevanceFieldEnum)[keyof typeof RegistrationOrderByRelevanceFieldEnum]
 

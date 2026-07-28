@@ -1,5 +1,5 @@
 import { db } from "@/server/repositories";
-import { CURRENT_USER_ID, DEV_USER } from "@/lib/domain/seed";
+import { requireSessionUser } from "@/server/auth/session";
 import { OPEN_STATUSES, ROLE_CONFIG } from "@/lib/domain/types";
 import { performanceByAgent } from "@/server/services/economics";
 import { SummaryTiles } from "@/components/dashboard/SummaryTiles";
@@ -27,8 +27,9 @@ const LONG_DATE_FMT = new Intl.DateTimeFormat("he-IL", {
  * באמצע חיווט שלהם.
  */
 export default async function DashboardPage() {
-  const [users, allLeads, recentLeads, counts, deals, packages, costs] =
+  const [currentUser, users, allLeads, recentLeads, counts, deals, packages, costs] =
     await Promise.all([
+      requireSessionUser(),
       db.users.list(),
       db.leads.list(),
       db.leads.list(undefined, { field: "createdAt", direction: "desc" }, { offset: 0, limit: 8 }),
@@ -37,9 +38,6 @@ export default async function DashboardPage() {
       db.packages.list(),
       db.settings.getLeadCosts(),
     ]);
-
-  const currentUser =
-    users.find((u) => u.id === CURRENT_USER_ID) ?? users[0] ?? DEV_USER;
 
   const now = new Date();
   const todayLabel = `${WEEKDAY_FMT.format(now)}, ${LONG_DATE_FMT.format(now)}`;

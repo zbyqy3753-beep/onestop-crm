@@ -1,12 +1,13 @@
 // סכמת ONE STOP CRM.
 //
-// Prisma ORM 7. חיבור מבוסס driver adapter (@prisma/adapter-mariadb) —
-// עובד מול כל MySQL/MariaDB שמקבל connection string רגיל: MySQL של
-// כל ספק אירוח, PlanetScale, RDS, או שרת MySQL רגיל.
+// Prisma ORM 7. חיבור מבוסס driver adapter (@prisma/adapter-pg) —
+// עובד מול כל Postgres שמקבל connection string רגיל: Supabase,
+// RDS, Neon, או שרת Postgres רגיל.
 //
-// כדי לחבר MySQL חיצוני:
-//   1. הגדר DATABASE_URL ב-.env בפורמט:
-//        mysql://user:password@host:3306/dbname
+// כדי לחבר Supabase:
+//   1. צור פרויקט ב-supabase.com, הגדר ב-.env:
+//        DATABASE_URL  — ה-connection pooler (transaction mode, פורט 6543)
+//        DIRECT_URL    — חיבור ישיר (session mode, פורט 5432), למיגרציות
 //      (ראה .env.example)
 //   2. npx prisma migrate dev --name init   (בונה את כל הטבלאות)
 //   3. הגדר DATA_SOURCE=prisma ב-.env
@@ -16,6 +17,9 @@
 // המערכת מתחילה ריקה; אין נתוני seed.
 //
 // חיבור ה-URL עצמו יושב ב-prisma.config.ts, לא כאן — כך דורש Prisma 7.
+// prisma.config.ts משתמש ב-DIRECT_URL (לא הפול המשותף) כי כלי המיגרציה
+// זקוקים לחיבור ישיר; ה-runtime client (src/server/db/client.ts) משתמש
+// ב-DATABASE_URL המאוגם.
 
 generator client {
   provider = "prisma-client"
@@ -23,7 +27,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
 }
 
 /* ── משתמשים ────────────────────────────────────────────────────────── */

@@ -1,8 +1,9 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import { DEV_USER } from "@/lib/domain/seed";
+import { db } from "@/server/repositories";
 import type { User } from "@/lib/domain/types";
+import { verifySupabasePassword } from "./supabase";
 
 export const SESSION_COOKIE = "os_session";
 
@@ -18,23 +19,34 @@ export const SESSION_COOKIE_OPTIONS = {
 } as const;
 
 /**
- * נקודת ההחלפה היחידה לאימות אמיתי.
- *
- * כרגע מחזירה `null` תמיד — אין אימות במערכת. כשיהיה מקור משתמשים
- * אמיתי, זו הפונקציה שמשנים, וכל השאר (המסך, העוגייה, ה-middleware)
- * נשאר כפי שהוא.
+ * מאמת מול Supabase Auth (auth.users), ואז מוצא את המשתמש המקביל
+ * אצלנו לפי מייל. סיסמה נכונה ב-Supabase בלי שורת User תואמת = לא
+ * מאומת אצלנו (המשתמש לא סופק למערכת עדיין).
  */
-/* eslint-disable @typescript-eslint/no-unused-vars -- הפרמטרים מתועדים בכוונה: הם החוזה שהמימוש האמיתי ימלא. */
 export async function verifyCredentials(
-  _email: string,
-  _password: string,
+  email: string,
+  password: string,
 ): Promise<User | null> {
-  return null;
+  const ok = await verifySupabasePassword(email, password);
+  if (!ok) return null;
+  return db.users.getByEmail(email);
 }
 
-/** המשתמש שהסשן מייצג. כרגע תמיד משתמש הבדיקה מנתוני הזרע. */
+/** המשתמש שהסשן מייצג. תוכן העוגייה הוא מזהה המשתמש עצמו. */
 export async function getSessionUser(): Promise<User | null> {
   const store = await cookies();
-  if (!store.get(SESSION_COOKIE)) return null;
-  return DEV_USER;
+  const userId = store.get(SESSION_COOKIE)?.value;
+  if (!userId) return null;
+  return db.users.getById(userId);
+}
+
+/**
+ * כמו `getSessionUser`, אבל זורק אם אין סשן תקין — לשימוש בפעולות
+ * כתיבה שחייבות actorId אמיתי. `proxy.ts` כבר חוסם גישה בלי עוגיית
+ * סשן; זה מכסה את המקרה הנדיר של עוגייה שמצביעה למשתמש שנמחק.
+ */
+export async function requireSessionUser(): Promise<User> {
+  const user = await getSessionUser();
+  if (!user) throw new Error("אין משתמש מחובר");
+  return user;
 }

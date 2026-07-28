@@ -213,7 +213,6 @@ export type DealStageEventOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   deal?: Prisma.DealOrderByWithRelationInput
   actor?: Prisma.UserOrderByWithRelationInput
-  _relevance?: Prisma.DealStageEventOrderByRelevanceInput
 }
 
 export type DealStageEventWhereUniqueInput = Prisma.AtLeast<{
@@ -333,12 +332,6 @@ export type DealStageEventListRelationFilter = {
 
 export type DealStageEventOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
-}
-
-export type DealStageEventOrderByRelevanceInput = {
-  fields: Prisma.DealStageEventOrderByRelevanceFieldEnum | Prisma.DealStageEventOrderByRelevanceFieldEnum[]
-  sort: Prisma.SortOrder
-  search: string
 }
 
 export type DealStageEventCountOrderByAggregateInput = {
@@ -646,7 +639,29 @@ export type DealStageEventSelect<ExtArgs extends runtime.Types.Extensions.Intern
   actor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["dealStageEvent"]>
 
+export type DealStageEventSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  id?: boolean
+  dealId?: boolean
+  from?: boolean
+  to?: boolean
+  detail?: boolean
+  actorId?: boolean
+  createdAt?: boolean
+  deal?: boolean | Prisma.DealDefaultArgs<ExtArgs>
+  actor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}, ExtArgs["result"]["dealStageEvent"]>
 
+export type DealStageEventSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  id?: boolean
+  dealId?: boolean
+  from?: boolean
+  to?: boolean
+  detail?: boolean
+  actorId?: boolean
+  createdAt?: boolean
+  deal?: boolean | Prisma.DealDefaultArgs<ExtArgs>
+  actor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}, ExtArgs["result"]["dealStageEvent"]>
 
 export type DealStageEventSelectScalar = {
   id?: boolean
@@ -660,6 +675,14 @@ export type DealStageEventSelectScalar = {
 
 export type DealStageEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "dealId" | "from" | "to" | "detail" | "actorId" | "createdAt", ExtArgs["result"]["dealStageEvent"]>
 export type DealStageEventInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  deal?: boolean | Prisma.DealDefaultArgs<ExtArgs>
+  actor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}
+export type DealStageEventIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  deal?: boolean | Prisma.DealDefaultArgs<ExtArgs>
+  actor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+}
+export type DealStageEventIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   deal?: boolean | Prisma.DealDefaultArgs<ExtArgs>
   actor?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -796,6 +819,30 @@ export interface DealStageEventDelegate<ExtArgs extends runtime.Types.Extensions
   createMany<T extends DealStageEventCreateManyArgs>(args?: Prisma.SelectSubset<T, DealStageEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
+   * Create many DealStageEvents and returns the data saved in the database.
+   * @param {DealStageEventCreateManyAndReturnArgs} args - Arguments to create many DealStageEvents.
+   * @example
+   * // Create many DealStageEvents
+   * const dealStageEvent = await prisma.dealStageEvent.createManyAndReturn({
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Create many DealStageEvents and only return the `id`
+   * const dealStageEventWithIdOnly = await prisma.dealStageEvent.createManyAndReturn({
+   *   select: { id: true },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  createManyAndReturn<T extends DealStageEventCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, DealStageEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DealStageEventPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+  /**
    * Delete a DealStageEvent.
    * @param {DealStageEventDeleteArgs} args - Arguments to delete one DealStageEvent.
    * @example
@@ -858,6 +905,36 @@ export interface DealStageEventDelegate<ExtArgs extends runtime.Types.Extensions
    * 
    */
   updateMany<T extends DealStageEventUpdateManyArgs>(args: Prisma.SelectSubset<T, DealStageEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
+
+  /**
+   * Update zero or more DealStageEvents and returns the data updated in the database.
+   * @param {DealStageEventUpdateManyAndReturnArgs} args - Arguments to update many DealStageEvents.
+   * @example
+   * // Update many DealStageEvents
+   * const dealStageEvent = await prisma.dealStageEvent.updateManyAndReturn({
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * 
+   * // Update zero or more DealStageEvents and only return the `id`
+   * const dealStageEventWithIdOnly = await prisma.dealStageEvent.updateManyAndReturn({
+   *   select: { id: true },
+   *   where: {
+   *     // ... provide filter here
+   *   },
+   *   data: [
+   *     // ... provide data here
+   *   ]
+   * })
+   * Note, that providing `undefined` is treated as the value not being there.
+   * Read more here: https://pris.ly/d/null-undefined
+   * 
+   */
+  updateManyAndReturn<T extends DealStageEventUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, DealStageEventUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DealStageEventPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one DealStageEvent.
@@ -1294,6 +1371,29 @@ export type DealStageEventCreateManyArgs<ExtArgs extends runtime.Types.Extension
 }
 
 /**
+ * DealStageEvent createManyAndReturn
+ */
+export type DealStageEventCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DealStageEvent
+   */
+  select?: Prisma.DealStageEventSelectCreateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the DealStageEvent
+   */
+  omit?: Prisma.DealStageEventOmit<ExtArgs> | null
+  /**
+   * The data used to create many DealStageEvents.
+   */
+  data: Prisma.DealStageEventCreateManyInput | Prisma.DealStageEventCreateManyInput[]
+  skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DealStageEventIncludeCreateManyAndReturn<ExtArgs> | null
+}
+
+/**
  * DealStageEvent update
  */
 export type DealStageEventUpdateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1335,6 +1435,36 @@ export type DealStageEventUpdateManyArgs<ExtArgs extends runtime.Types.Extension
    * Limit how many DealStageEvents to update.
    */
   limit?: number
+}
+
+/**
+ * DealStageEvent updateManyAndReturn
+ */
+export type DealStageEventUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DealStageEvent
+   */
+  select?: Prisma.DealStageEventSelectUpdateManyAndReturn<ExtArgs> | null
+  /**
+   * Omit specific fields from the DealStageEvent
+   */
+  omit?: Prisma.DealStageEventOmit<ExtArgs> | null
+  /**
+   * The data used to update DealStageEvents.
+   */
+  data: Prisma.XOR<Prisma.DealStageEventUpdateManyMutationInput, Prisma.DealStageEventUncheckedUpdateManyInput>
+  /**
+   * Filter which DealStageEvents to update
+   */
+  where?: Prisma.DealStageEventWhereInput
+  /**
+   * Limit how many DealStageEvents to update.
+   */
+  limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DealStageEventIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
