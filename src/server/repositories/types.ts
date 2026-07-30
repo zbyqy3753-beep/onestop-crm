@@ -135,6 +135,14 @@ export interface LeadRepository {
   getById(id: LeadId): Promise<Lead | null>;
   /** ספירה לפי סטטוס — משמש לכרטיסי הסיכום בלי לשלוף את כל השורות */
   countByStatus(filter?: LeadFilter): Promise<Record<LeadStatus, number>>;
+  /**
+   * כמה לידים *פתוחים* משויכים לכל עובד. לידים ללא שיוך לא נספרים,
+   * ועובד בלי לידים פתוחים פשוט חסר מהמפה (ולא מופיע עם 0).
+   *
+   * קיים בשביל חלוקה מאוזנת של לידים נכנסים (`POST /api/leads`) —
+   * ולכן הוא ספירה מצטברת ולא שליפת שורות: זו קריאה בנתיב החם.
+   */
+  countOpenByAssignee(): Promise<Record<UserId, number>>;
   create(input: CreateLeadInput): Promise<Lead>;
   /** יצירה מרובה, לייבוא CSV */
   createMany(inputs: CreateLeadInput[]): Promise<Lead[]>;
