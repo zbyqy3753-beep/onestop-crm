@@ -84,8 +84,17 @@ export function Field({
   );
 }
 
+/**
+ * ⚠️ `text-base lg:text-sm` ולא `text-sm` — הגודל במובייל הוא תיקון, לא עיצוב.
+ *
+ * ספארי באייפון מזיים אוטומטית את כל העמוד כשמתמקדים בשדה שהגופן שלו
+ * קטן מ-16px, **ולא חוזר** אחרי שיוצאים ממנו. `text-sm` הוא 14px, ולכן
+ * כל חיפוש, כל טופס וכל בורר במערכת השאירו את המשתמש בתצוגה מזויימת.
+ *
+ * מ-1024px ומעלה חוזרים ל-14px, כך שבשולחן שום דבר לא משתנה.
+ */
 export const inputClass =
-  "w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm text-ink-1 placeholder:text-ink-4 focus:border-brand focus:outline-none focus-visible:outline-none";
+  "w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-base lg:text-sm text-ink-1 placeholder:text-ink-4 focus:border-brand focus:outline-none focus-visible:outline-none";
 
 /* ── מצב ריק ──────────────────────────────────────────────────────────── */
 
