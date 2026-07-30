@@ -32,7 +32,9 @@ export function StatusPicker({
   const meta = STATUS_CONFIG[current];
 
   return (
-    <span className="relative inline-flex">
+    // אותה בעיה כמו InlinePicker: ה-<select> השקוף יורש את גודל
+    // ה-badge הקטן שהוא עוטף — נמדד בפועל 43×20 בטלפון.
+    <span className="relative inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0">
       <Badge tone={meta.tone} className="pe-4">
         {meta.label}
       </Badge>
