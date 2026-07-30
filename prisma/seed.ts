@@ -1,33 +1,23 @@
 /**
- * אין נתוני זרע עסקיים — המערכת מתחילה ריקה לגמרי.
+ * אין נתוני זרע — המערכת מתחילה ריקה לגמרי.
  *
- * השורה היחידה שכן נזרעת: משתמש הפיתוח (DEV_USER, src/lib/domain/seed.ts).
- * `getSessionUser` מחזיר אותו תמיד — אין עדיין אימות אמיתי — כך שכל פעולת
- * כתיבה (יצירת ליד וכו') דורשת שהשורה הזו תתקיים ב-DB בפועל, אחרת
- * מפתחות זרים (createdById/assigneeId) נכשלים.
+ * ⚠️ כאן נזרע פעם "משתמש פיתוח" עם `id: "dev-user"` ותפקיד `owner`,
+ * מהתקופה שבה לא היה אימות אמיתי ו-`getSessionUser` החזיר אותו תמיד.
+ * הזריעה הזו הוסרה ב-30.7.2026, משתי סיבות:
+ *
+ *  1. עוגיית הסשן אינה חתומה וערכה הוא מזהה המשתמש הגולמי — וה-id
+ *     היה המחרוזת `dev-user`, כלומר ניחוש טריוויאלי. מי שכתב
+ *     `os_session=dev-user` בדפדפן קיבל גישת מנהל ראשי בלי לעבור
+ *     דרך שום מסך התחברות. הסרת כפתור "כניסת בדיקה" לבדה לא סגרה את זה.
+ *  2. אין בה יותר צורך: המשתמשים אמיתיים ומאומתים מול Supabase Auth,
+ *     והפעולות שולפות `actorId` מהסשן.
+ *
+ * אל תחזיר את זה. משתמש ראשון נוצר דרך מסך הניהול או ידנית מול
+ * Supabase — לא דרך מזהה קבוע שכתוב בקוד המקור.
  */
-import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { DEV_USER } from "../src/lib/domain/seed";
 
 async function main() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-  const prisma = new PrismaClient({ adapter });
-
-  await prisma.user.upsert({
-    where: { id: DEV_USER.id },
-    create: {
-      id: DEV_USER.id,
-      name: DEV_USER.name,
-      email: DEV_USER.email,
-      role: DEV_USER.role,
-      active: DEV_USER.active,
-    },
-    update: {},
-  });
-
-  console.log("נזרע: משתמש הפיתוח.");
-  await prisma.$disconnect();
+  console.log("אין נתוני זרע — המערכת מתחילה ריקה.");
 }
 
 main();

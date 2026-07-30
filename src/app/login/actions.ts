@@ -2,19 +2,23 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { DEV_USER } from "@/lib/domain/seed";
+import { GATE_COOKIE, GATE_COOKIE_OPTIONS } from "@/lib/gate";
 import {
   SESSION_COOKIE,
   SESSION_COOKIE_OPTIONS,
   verifyCredentials,
 } from "@/server/auth/session";
 
-/** "כניסת בדיקה" — נכנס תמיד כמשתמש הפיתוח, בלי אימות. */
-export async function startTestSession() {
-  const store = await cookies();
-  store.set(SESSION_COOKIE, DEV_USER.id, SESSION_COOKIE_OPTIONS);
-  redirect("/");
-}
+/*
+ * ⚠️ כאן ישבה `startTestSession` — כפתור "כניסת בדיקה" שכתב עוגיית סשן
+ * של DEV_USER (תפקיד owner) בלי שום אימות. היא הוסרה ב-30.7.2026.
+ *
+ * הסיבה: `ACCESS_KEY` בייצור היה ריק, ולכן השער ב-proxy.ts היה פתוח
+ * ו-/login היה נגיש לכל מי שידע את הכתובת. כלומר כל מי שהגיע לכתובת
+ * קיבל גישת מנהל ראשי מלאה ללידים אמיתיים בלחיצה אחת.
+ *
+ * אל תחזיר את זה. גם לא "רק לפיתוח" — זה בדיוק מה שהיה כתוב עליה.
+ */
 
 /** שליחת הטופס — מאמת מול Supabase Auth דרך verifyCredentials. */
 export async function signIn(_prev: string | null, formData: FormData) {
@@ -28,6 +32,12 @@ export async function signIn(_prev: string | null, formData: FormData) {
 
   const store = await cookies();
   store.set(SESSION_COOKIE, user.id, SESSION_COOKIE_OPTIONS);
+
+  // גם עוגיית השער, ולא רק הסשן: אפליקציה שהותקנה למסך הבית באייפון
+  // מקבלת צנצנת עוגיות נפרדת מספארי, ולכן היא מגיעה לכאן בלי שום
+  // עוגייה. בלי השורה הזו היא הייתה נכנסת ומיד חוטפת 404 מהשער.
+  store.set(GATE_COOKIE, "1", GATE_COOKIE_OPTIONS);
+
   redirect("/");
 }
 

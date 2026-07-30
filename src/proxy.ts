@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { GATE_COOKIE, GATE_COOKIE_OPTIONS } from "@/lib/gate";
 
 /**
  * שער הגישה לגרסת הבדיקה — שתי שכבות.
@@ -20,10 +21,8 @@ import { NextResponse, type NextRequest } from "next/server";
  * או בצילום מסך. 404 (ולא הפניה) כדי לא להסגיר שיש כאן מערכת בכלל.
  */
 
-const GATE_COOKIE = "os_gate";
 const SESSION_COOKIE = "os_session";
 const KEY_PARAM = "k";
-const MAX_AGE = 60 * 60 * 24 * 7;
 
 /**
  * נתיבים שנשארים פתוחים לגמרי: הטופס הציבורי, ה-API ונכסי המערכת.
@@ -40,13 +39,27 @@ const PUBLIC_PREFIXES = [
   "/robots.txt",
 ];
 
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: "lax",
-  path: "/",
-  maxAge: MAX_AGE,
-  secure: process.env.NODE_ENV === "production",
-} as const;
+/**
+ * נתיבים שעוברים את **שער הגישה** בלי עוגיית `os_gate`, אבל עדיין
+ * דורשים סשן לכל השאר. שונה מ-`PUBLIC_PREFIXES`: אלה לא "פתוחים",
+ * הם רק לא מוסתרים מאחורי המפתח הסודי.
+ *
+ * הסיבה היא אייפון: אפליקציה שהותקנה למסך הבית רצה במחיצת אחסון
+ * **נפרדת מספארי**, ולכן היא נפתחת בלי `os_gate` ובלי `os_session`.
+ * בלי הרשימה הזו היא הייתה מקבלת 404 בהפעלה הראשונה, בלי שום דרך
+ * להתאושש מתוך האפליקציה — אייקון מת.
+ *
+ * המניפסט והאייקונים חייבים להיות כאן גם מסיבה שנייה: הדפדפן מושך
+ * אותם בלי לצרף עוגיות אלא אם ה-tag נושא `crossorigin`, ו-Next לא
+ * פולט אותו.
+ */
+const GATE_EXEMPT = [
+  "/login",
+  "/manifest.webmanifest",
+  "/icon",
+  "/apple-icon",
+  "/apple-touch-icon",
+];
 
 /**
  * השוואה בזמן קבוע. `node:crypto` לא זמין ב-Edge runtime, אז
@@ -66,13 +79,23 @@ export function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const expected = process.env.ACCESS_KEY;
-  // ACCESS_KEY ריק = השער פתוח. מכוון, כדי ש-`npm run dev` מקומי
-  // יעבוד בלי הגדרות. בייצור חובה להגדיר אותו.
-  const gateOpen = !expected || Boolean(req.cookies.get(GATE_COOKIE));
+  const expected = process.env.ACCESS_KEY?.trim();
 
-  if (!gateOpen) {
-    const provided = searchParams.get(KEY_PARAM);
+  /*
+   * ⚠️ ACCESS_KEY ריק פותח את השער — אבל **רק בפיתוח**.
+   *
+   * הכוונה המקורית הייתה ש-`npm run dev` יעבוד בלי הגדרות, וזה עדיין
+   * נכון. מה שלא נלקח בחשבון: בייצור, משתנה סביבה חסר או ריק פתח את
+   * המערכת כולה בשקט — וזה בדיוק מה שקרה בפועל. כשל־סגור הוא ברירת
+   * המחדל הנכונה כשהצד השני של הטעות הוא חשיפת נתוני לקוחות.
+   */
+  const gateConfigured = Boolean(expected);
+  const devOpen = !gateConfigured && process.env.NODE_ENV !== "production";
+  const gateOpen = devOpen || Boolean(req.cookies.get(GATE_COOKIE));
+
+  if (!gateOpen && !GATE_EXEMPT.some((p) => pathname.startsWith(p))) {
+    // בלי מפתח מוגדר בייצור אין מה להשוות מולו — הכל 404 עד שיוגדר
+    const provided = gateConfigured ? searchParams.get(KEY_PARAM) : null;
     if (!provided || !safeEqual(provided, expected!)) {
       return new NextResponse(null, { status: 404 });
     }
@@ -80,11 +103,14 @@ export function proxy(req: NextRequest) {
     const clean = req.nextUrl.clone();
     clean.searchParams.delete(KEY_PARAM);
     const res = NextResponse.redirect(clean);
-    res.cookies.set(GATE_COOKIE, "1", COOKIE_OPTIONS);
+    res.cookies.set(GATE_COOKIE, "1", GATE_COOKIE_OPTIONS);
     return res;
   }
 
   if (pathname === "/login") return NextResponse.next();
+  if (GATE_EXEMPT.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
 
   if (!req.cookies.get(SESSION_COOKIE)) {
     const login = req.nextUrl.clone();

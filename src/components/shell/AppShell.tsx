@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { ROLE_CONFIG } from "@/lib/domain/types";
-import { DEV_USER } from "@/lib/domain/seed";
 import type { User } from "@/lib/domain/types";
 import { useNow } from "@/lib/clock";
 import { endSession } from "@/app/login/actions";
@@ -21,12 +20,18 @@ import {
 /**
  * המעטפת של האפליקציה: סרגל צד קבוע + אזור תוכן.
  *
- * המשתמש המחובר מגיע כרגע מנתוני הזרע. בחיבור auth אמיתי
- * הוא יגיע מה-session ויועבר לכאן כ-prop מה-layout.
+ * המשתמש מגיע כ-prop מה-layout, שמושך אותו מהסשן האמיתי. אל תחזיר
+ * כאן ייבוא של `DEV_USER` — התפריט נגזר מ-`user.role`, ולכן ערך קבוע
+ * כאן פירושו שכל משתמש רואה את הרשאות ה-owner.
  */
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  user,
+  children,
+}: {
+  user: User;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
-  const user = DEV_USER;
   const groups = visibleFor(user.role);
 
   const [navOpen, setNavOpen] = useState(false);
