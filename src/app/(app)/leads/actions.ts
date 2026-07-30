@@ -14,6 +14,7 @@ import {
   isLeadCategory,
   isLeadKind,
   isLeadStatus,
+  isPriority,
 } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
 import { revalidateLeadSurfaces } from "@/app/(app)/_revalidate";
@@ -133,6 +134,81 @@ export async function updateLeadAction(
     // בעריכה "ללא שיוך" הוא בחירה מפורשת, לא ברירת מחדל ליוצר
     assigneeId: assigneeId || null,
   });
+
+  revalidateLeadSurfaces();
+  return { ok: true };
+}
+
+/* ── עריכה מהירה מתוך השורה ───────────────────────────────────────────── */
+
+/**
+ * שינוי שדה בודד ישירות מטבלת הלידים.
+ *
+ * נפרד מ-`updateLeadAction` בכוונה: זו לא שליחת טופס אלא שינוי של ערך
+ * אחד, ולכן היא לא דורשת שם וטלפון תקינים כדי לעבור. שליחת הטופס
+ * המלא רק כדי לשנות עדיפות הייתה גם דורסת שדות שהמשתמש לא נגע בהם.
+ *
+ * `null` מנקה, `undefined` לא נוגע — אותה מוסכמה כמו `UpdateLeadInput`.
+ */
+export interface LeadPatch {
+  priority?: Priority;
+  category?: LeadCategoryKey | null;
+  kind?: LeadKind;
+  /** `null` = הסרת שיוך */
+  assigneeId?: string | null;
+  /** `YYYY-MM-DD` מ-`<input type="date">`, או `null` לניקוי */
+  followUpDate?: string | null;
+}
+
+export async function patchLeadAction(
+  leadId: string,
+  patch: LeadPatch,
+): Promise<ActionResult> {
+  const actorId = await actor();
+
+  if (patch.priority !== undefined && !isPriority(patch.priority)) {
+    return { ok: false, error: "עדיפות לא מוכרת" };
+  }
+  if (
+    patch.category !== undefined &&
+    patch.category !== null &&
+    !isLeadCategory(patch.category)
+  ) {
+    return { ok: false, error: "קטגוריה לא מוכרת" };
+  }
+  if (patch.kind !== undefined && !isLeadKind(patch.kind)) {
+    return { ok: false, error: "סוג ליד לא מוכר" };
+  }
+
+  // השיוך עובר דרך `assign` ולא דרך `update` — רק הוא רושם את הפעולה
+  // ביומן הפעילות של הליד, וזה מה שמאפשר לדעת אחר כך מי העביר למי
+  if (patch.assigneeId !== undefined) {
+    if (patch.assigneeId) {
+      const user = await db.users.getById(patch.assigneeId);
+      if (!user) return { ok: false, error: "העובד לא נמצא" };
+      if (!user.active) return { ok: false, error: "העובד אינו פעיל" };
+    }
+    await db.leads.assign([leadId], patch.assigneeId, actorId);
+  }
+
+  const update: Parameters<typeof db.leads.update>[1] = {};
+  if (patch.priority !== undefined) update.priority = patch.priority;
+  if (patch.category !== undefined) update.category = patch.category;
+  if (patch.kind !== undefined) update.kind = patch.kind;
+
+  if (patch.followUpDate !== undefined) {
+    if (patch.followUpDate === null || patch.followUpDate === "") {
+      update.followUpAt = null;
+    } else {
+      const parsed = parseFollowUpDate(patch.followUpDate);
+      if (!parsed) return { ok: false, error: "תאריך החזרה לא תקין" };
+      update.followUpAt = parsed;
+    }
+  }
+
+  if (Object.keys(update).length > 0) {
+    await db.leads.update(leadId, update);
+  }
 
   revalidateLeadSurfaces();
   return { ok: true };

@@ -14,6 +14,8 @@ import { PRIORITY_CONFIG, STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types
 import {
   assignAction,
   changeStatusManyAction,
+  patchLeadAction,
+  type LeadPatch,
   deleteLeadsAction,
   setLeadCostAction,
   toggleStarAction,
@@ -423,6 +425,20 @@ export function LeadsClient({
     });
   }
 
+  /**
+   * עריכה מהירה של שדה בודד מתוך השורה.
+   *
+   * בלי טוסט הצלחה בכוונה: השינוי נראה מיד בתא עצמו, וטוסט על כל
+   * שינוי עדיפות היה מציף את המסך. שגיאה כן מדווחת — אותה אי אפשר
+   * לראות בתא.
+   */
+  function patchLead(leadId: string, patch: LeadPatch) {
+    startTransition(async () => {
+      const res = await patchLeadAction(leadId, patch);
+      if (!res.ok) notify(res.error, "bad");
+    });
+  }
+
   function toggleStar(leadId: string, next: boolean) {
     startTransition(async () => {
       const res = await toggleStarAction(leadId, next);
@@ -508,6 +524,8 @@ export function LeadsClient({
         onStatus={(id, to) => requestStatus([id], to)}
         onCost={setCost}
         onStar={toggleStar}
+        onPatch={patchLead}
+        users={users}
         onAdd={() => setAddOpen(true)}
         hasFilters={hasActiveFilters}
         busy={pending}

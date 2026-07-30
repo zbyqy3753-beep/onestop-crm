@@ -58,6 +58,89 @@ export function StatusPicker({
 }
 
 /**
+ * בורר כללי לעריכה מתוך השורה.
+ *
+ * אותו דפוס כמו `StatusPicker`: `<select>` מקורי בשקיפות 0 מעל התצוגה
+ * הרגילה. זה נראה כמו טריק, וזה בכוונה — הוא נותן ניווט במקלדת, בורר
+ * מקורי במובייל ותמיכה בקורא מסך בלי שורת קוד אחת של ניהול פוקוס.
+ *
+ * `children` הוא מה שנראה כשלא נוגעים; ה-`<select>` הוא מה שקורה
+ * כשלוחצים. הערך הריק (`""`) מייצג "ללא" ומתורגם ל-`null` בשמירה.
+ */
+export function InlinePicker({
+  value,
+  options,
+  onPick,
+  label,
+  busy,
+  children,
+}: {
+  value: string;
+  options: { value: string; label: string }[];
+  onPick: (value: string) => void;
+  label: string;
+  busy?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="relative inline-flex items-center rounded pe-3.5 hover:bg-surface-3">
+      {children}
+      <Icon
+        name="chevronDown"
+        size={11}
+        className="pointer-events-none absolute inset-y-0 end-0.5 my-auto opacity-0 transition-opacity group-hover:opacity-50"
+      />
+      <select
+        value={value}
+        disabled={busy}
+        onChange={(e) => onPick(e.target.value)}
+        aria-label={label}
+        className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-wait"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </span>
+  );
+}
+
+/**
+ * תאריך חזרה, עם עריכה במקום.
+ *
+ * `<input type="date">` שקוף מעל התצוגה — אותו היגיון כמו `InlinePicker`,
+ * אבל עם בורר תאריכים מקורי במקום רשימה.
+ */
+export function FollowUpCell({
+  value,
+  onPick,
+  busy,
+  children,
+}: {
+  /** `YYYY-MM-DD` או מחרוזת ריקה */
+  value: string;
+  onPick: (value: string) => void;
+  busy?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="relative inline-flex items-center rounded hover:bg-surface-3">
+      {children}
+      <input
+        type="date"
+        value={value}
+        disabled={busy}
+        onChange={(e) => onPick(e.target.value)}
+        aria-label="תאריך חזרה"
+        className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-wait"
+      />
+    </span>
+  );
+}
+
+/**
  * עלות הליד, עם עריכה במקום.
  *
  * מציג `חינם` כשהעלות האפקטיבית 0 — זה מה שהופך "לא שילמנו על הליד"

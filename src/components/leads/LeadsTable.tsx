@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/Icon";
 import type { SortField } from "./LeadsClient";
 import { COLUMNS, type ColumnKey } from "./columns";
 import { LeadRow } from "./LeadRow";
+import type { LeadPatch } from "@/app/(app)/leads/actions";
 
 /**
  * טבלת הלידים: כותרת, מיון, ובחירה. השורה עצמה חיה ב-`LeadRow`
@@ -29,6 +30,8 @@ export function LeadsTable({
   onStatus,
   onCost,
   onStar,
+  onPatch,
+  users,
   onAdd,
   hasFilters,
   busy,
@@ -45,6 +48,9 @@ export function LeadsTable({
   onStatus: (id: string, to: LeadStatus) => void;
   onCost: (id: string, cost: number | null) => void;
   onStar: (id: string, next: boolean) => void;
+  onPatch: (id: string, patch: LeadPatch) => void;
+  /** עובדים פעילים — לבורר השיוך שבתוך השורה */
+  users: User[];
   onAdd: () => void;
   hasFilters: boolean;
   busy: boolean;
@@ -174,6 +180,8 @@ export function LeadsTable({
               onStatus={(to) => onStatus(lead.id, to)}
               onCost={(cost) => onCost(lead.id, cost)}
               onStar={(next) => onStar(lead.id, next)}
+              onPatch={(patch) => onPatch(lead.id, patch)}
+              users={users}
             />
           ))}
         </tbody>

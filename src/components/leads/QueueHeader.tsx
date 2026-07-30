@@ -1,12 +1,12 @@
 "use client";
 
 import type { LeadStatus } from "@/lib/domain/types";
-import { OPEN_STATUSES, STATUS_CONFIG } from "@/lib/domain/types";
+import { OPEN_STATUSES } from "@/lib/domain/types";
 import { number } from "@/lib/format";
 import { Button } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
-import { StatusBreakdownStrip } from "@/components/ui/StatusBreakdownStrip";
 import type { Filters } from "./FilterBar";
+import { StatusTiles } from "./StatusTiles";
 import { QUICK_VIEWS, isViewActive } from "./views";
 
 /**
@@ -142,28 +142,21 @@ export function QueueHeader({
         })}
       </div>
 
-      {/* רצועת התור */}
-      {openTotal > 0 && (
-        <StatusBreakdownStrip
-          segments={segments.map(({ status, count }) => ({
-            key: status,
-            label: STATUS_CONFIG[status].label,
-            count,
-            tone: STATUS_CONFIG[status].tone,
-          }))}
-          activeKeys={filters.status}
-          onToggle={(key) => {
-            const status = key as LeadStatus;
-            const active = filters.status.includes(status);
-            onFiltersChange({
-              ...filters,
-              status: active
-                ? filters.status.filter((s) => s !== status)
-                : [...filters.status, status],
-            });
-          }}
-        />
-      )}
+      {/* קוביות הסטטוס — מצב התור וגם הסינון, באותו פקד */}
+      <StatusTiles
+        counts={counts}
+        active={filters.status}
+        onToggle={(status) => {
+          const on = filters.status.includes(status);
+          onFiltersChange({
+            ...filters,
+            status: on
+              ? filters.status.filter((s) => s !== status)
+              : [...filters.status, status],
+          });
+        }}
+        onClear={() => onFiltersChange({ ...filters, status: [] })}
+      />
     </header>
   );
 }

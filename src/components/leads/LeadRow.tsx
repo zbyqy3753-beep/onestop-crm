@@ -1,19 +1,41 @@
 "use client";
 
-import type { Lead, LeadStatus, User } from "@/lib/domain/types";
+import type {
+  Lead,
+  LeadCategoryKey,
+  LeadStatus,
+  Priority,
+  User,
+} from "@/lib/domain/types";
 import {
   LEAD_CATEGORY_CONFIG,
+  LEAD_CATEGORY_ORDER,
   PRIORITY_CONFIG,
+  PRIORITY_ORDER,
   PROVIDER_CONFIG,
   SOURCE_CONFIG,
   STATUS_CONFIG,
 } from "@/lib/domain/types";
+import type { LeadPatch } from "@/app/(app)/leads/actions";
 import { TONE_VAR, date, phone, relative, until } from "@/lib/format";
+import { dayKey } from "@/lib/tz";
 import { Badge } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
-import { CostCell, RowActions, StarToggle, StatusPicker } from "./cells";
+import {
+  CostCell,
+  FollowUpCell,
+  InlinePicker,
+  RowActions,
+  StarToggle,
+  StatusPicker,
+} from "./cells";
 import { buildTimeline } from "./ActivityFeed";
 import type { ColumnDef, ColumnKey } from "./columns";
+
+/** ISO → `YYYY-MM-DD` בשעון ישראל, כפי ש-`<input type="date">` מצפה. */
+function isoToDateInput(iso: string): string {
+  return dayKey(Date.parse(iso));
+}
 
 /** מחלקות התא לכל עמודה — נשמר כאן ולא ב-columns.ts כדי ש-columns.ts יישאר נטול JSX. */
 const CELL_CLASS: Record<ColumnKey, string> = {
@@ -49,6 +71,8 @@ export function LeadRow({
   onStatus,
   onCost,
   onStar,
+  onPatch,
+  users,
 }: {
   lead: Lead;
   now: number | null;
@@ -66,6 +90,10 @@ export function LeadRow({
   onStatus: (to: LeadStatus) => void;
   onCost: (cost: number | null) => void;
   onStar: (next: boolean) => void;
+  /** עריכה מהירה של שדה בודד מתוך השורה */
+  onPatch: (patch: LeadPatch) => void;
+  /** העובדים שאפשר לשייך אליהם — פעילים בלבד */
+  users: User[];
 }) {
   const status = STATUS_CONFIG[lead.status];
   const priority = PRIORITY_CONFIG[lead.priority];
@@ -142,10 +170,23 @@ export function LeadRow({
         );
 
       case "priority":
-        return lead.priority === "normal" ? (
-          dash
-        ) : (
-          <Badge tone={priority.tone}>{priority.label}</Badge>
+        return (
+          <InlinePicker
+            value={lead.priority}
+            label="שינוי עדיפות"
+            busy={busy}
+            onPick={(v) => onPatch({ priority: v as Priority })}
+            options={PRIORITY_ORDER.map((p) => ({
+              value: p,
+              label: PRIORITY_CONFIG[p].label,
+            }))}
+          >
+            {lead.priority === "normal" ? (
+              dash
+            ) : (
+              <Badge tone={priority.tone}>{priority.label}</Badge>
+            )}
+          </InlinePicker>
         );
 
       case "updatedAt":
@@ -153,35 +194,76 @@ export function LeadRow({
 
       case "followUpAt":
         if (now === null) return skeleton("w-14");
-        return lead.followUpAt ? (
-          <span className="flex items-center gap-1 text-warn">
-            <Icon name="clock" size={12} />
-            {until(lead.followUpAt, now)}
-          </span>
-        ) : (
-          dash
+        return (
+          <FollowUpCell
+            // `<input type="date">` מצפה ל-YYYY-MM-DD בשעון המקומי,
+            // ו-toISOString היה מחזיר UTC ומזיז יום סביב חצות
+            value={lead.followUpAt ? isoToDateInput(lead.followUpAt) : ""}
+            busy={busy}
+            onPick={(v) => onPatch({ followUpDate: v || null })}
+          >
+            {lead.followUpAt ? (
+              <span className="flex items-center gap-1 text-warn">
+                <Icon name="clock" size={12} />
+                {until(lead.followUpAt, now)}
+              </span>
+            ) : (
+              dash
+            )}
+          </FollowUpCell>
         );
 
       // סוג הליד (חם/דאטה) לא חוזר כאן — הוא כבר מסומן בנקודה שליד השם
       case "category":
-        return lead.category ? LEAD_CATEGORY_CONFIG[lead.category].label : dash;
+        return (
+          <InlinePicker
+            value={lead.category ?? ""}
+            label="שינוי קטגוריה"
+            busy={busy}
+            onPick={(v) =>
+              onPatch({ category: (v as LeadCategoryKey) || null })
+            }
+            options={[
+              { value: "", label: "ללא קטגוריה" },
+              ...LEAD_CATEGORY_ORDER.map((c) => ({
+                value: c,
+                label: LEAD_CATEGORY_CONFIG[c].label,
+              })),
+            ]}
+          >
+            {lead.category ? LEAD_CATEGORY_CONFIG[lead.category].label : dash}
+          </InlinePicker>
+        );
 
       case "cost":
         return <CostCell lead={lead} effective={cost} onSave={onCost} busy={busy} />;
 
       case "assignee":
-        return assignee ? (
-          <span className="flex items-center gap-1.5 text-xs">
-            <span className="grid size-5 shrink-0 place-items-center rounded-full bg-surface-3 text-[9px] font-bold text-ink-2">
-              {assignee.name.slice(0, 2)}
-            </span>
-            {/* truncate: שם ארוך היה נשבר לשתי שורות ומגביה את כל השורה */}
-            <span className="max-w-[110px] truncate" title={assignee.name}>
-              {assignee.name}
-            </span>
-          </span>
-        ) : (
-          <span className="text-xs text-ink-4">ללא שיוך</span>
+        return (
+          <InlinePicker
+            value={lead.assigneeId ?? ""}
+            label="שיוך לעובד"
+            busy={busy}
+            onPick={(v) => onPatch({ assigneeId: v || null })}
+            options={[
+              { value: "", label: "ללא שיוך" },
+              ...users.map((u) => ({ value: u.id, label: u.name })),
+            ]}
+          >
+            {assignee ? (
+              <span className="flex items-center gap-1.5 text-xs">
+                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-surface-3 text-[9px] font-bold text-ink-2">
+                  {assignee.name.slice(0, 2)}
+                </span>
+                {/* truncate: שם ארוך היה נשבר לשתי שורות ומגביה את השורה */}
+                <span className="max-w-[110px] truncate" title={assignee.name}>
+                  {assignee.name}
+                </span>
+              </span>
+            ) : (
+              <span className="text-xs text-ink-4">ללא שיוך</span>
+            )}
+          </InlinePicker>
         );
 
       case "activity":

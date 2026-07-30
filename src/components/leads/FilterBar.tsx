@@ -8,17 +8,8 @@ import type {
   Priority,
   User,
 } from "@/lib/domain/types";
-import {
-  KIND_CONFIG,
-  KIND_ORDER,
-  LEAD_CATEGORY_CONFIG,
-  LEAD_CATEGORY_ORDER,
-  PRIORITY_CONFIG,
-  PRIORITY_ORDER,
-  STATUS_CONFIG,
-  STATUS_ORDER,
-} from "@/lib/domain/types";
-import { Button, MultiSelect, inputClass } from "@/components/ui/primitives";
+import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
+import { Button, inputClass } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 
 export interface Filters {
@@ -157,56 +148,15 @@ export function FilterBar({
       </div>
 
       {/*
-        אין כאן MultiSelect לסטטוס בכוונה — רצועת התור ב-QueueHeader
-        כבר מסננת לפי סטטוס בלחיצה על צ'יפ, עם ספירה חיה לכל אחד.
-        שני פקדים לאותו דבר היו רק עומס.
+        אין כאן יותר MultiSelect-ים לסוג/עדיפות/קטגוריה/עובד.
+        קוביות הסטטוס (`StatusTiles`) מסננות לפי הדבר שבאמת מסננים
+        לפיו, והתצוגות המהירות ב-`QueueHeader` מכסות את השאר — "שלי",
+        "דחוף", "ללא שיוך", "לידים חמים". ארבעה תפריטים שצריך לפתוח
+        כדי לגלות אם יש בהם משהו היו עלות בלי תמורה.
+
+        השדות עצמם נשארו ב-`Filters` ובשרת: התצוגות המהירות משתמשות
+        בהם, והם יחזרו כשיהיה צורך אמיתי בסינון עדין יותר.
       */}
-      <MultiSelect
-        label="סוג"
-        options={KIND_ORDER.map((k) => ({ value: k, label: KIND_CONFIG[k].label }))}
-        selected={filters.kind}
-        onChange={(v) => onChange({ ...filters, kind: v as LeadKind[] })}
-      />
-
-      <MultiSelect
-        label="עדיפות"
-        options={PRIORITY_ORDER.map((p) => ({
-          value: p,
-          label: PRIORITY_CONFIG[p].label,
-        }))}
-        selected={filters.priority}
-        onChange={(v) => onChange({ ...filters, priority: v as Priority[] })}
-      />
-
-      <MultiSelect
-        label="קטגוריה"
-        options={LEAD_CATEGORY_ORDER.map((c) => ({
-          value: c,
-          label: LEAD_CATEGORY_CONFIG[c].label,
-        }))}
-        selected={filters.category}
-        onChange={(v) => onChange({ ...filters, category: v as LeadCategoryKey[] })}
-      />
-
-      <MultiSelect
-        label="עובד"
-        options={[
-          { value: "unassigned", label: "ללא שיוך" },
-          ...users.map((u) => ({ value: u.id, label: u.name })),
-        ]}
-        selected={filters.assignee}
-        onChange={(v) => onChange({ ...filters, assignee: v })}
-      />
-
-      <label className="flex cursor-pointer items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-sm text-ink-2 hover:bg-surface-2">
-        <input
-          type="checkbox"
-          checked={filters.openOnly}
-          onChange={(e) => onChange({ ...filters, openOnly: e.target.checked })}
-          className="accent-[var(--c-brand)]"
-        />
-        פתוחים בלבד
-      </label>
 
       {activeCount > 0 && (
         <Button variant="ghost" onClick={() => onChange(EMPTY_FILTERS)}>
