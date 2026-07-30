@@ -82,20 +82,22 @@ export function proxy(req: NextRequest) {
   const expected = process.env.ACCESS_KEY?.trim();
 
   /*
-   * ⚠️ ACCESS_KEY ריק פותח את השער — אבל **רק בפיתוח**.
+   * `ACCESS_KEY` ריק = אין שכבת הסתרה, אבל **הסשן עדיין נדרש**.
    *
-   * הכוונה המקורית הייתה ש-`npm run dev` יעבוד בלי הגדרות, וזה עדיין
-   * נכון. מה שלא נלקח בחשבון: בייצור, משתנה סביבה חסר או ריק פתח את
-   * המערכת כולה בשקט — וזה בדיוק מה שקרה בפועל. כשל־סגור הוא ברירת
-   * המחדל הנכונה כשהצד השני של הטעות הוא חשיפת נתוני לקוחות.
+   * זו לא אותה משמעות כמו קודם. פעם "שער פתוח" היה מסוכן, כי מאחוריו
+   * ישב כפתור "כניסת בדיקה" שנתן גישת owner בלי סיסמה — כלומר משתנה
+   * סביבה חסר חשף את המערכת. הכפתור הוסר, ולכן מה שנשאר מאחורי השער
+   * הוא מסך התחברות אמיתי מול Supabase, וזו ההגנה בפועל.
+   *
+   * ⚠️ במפורש **לא** מחזירים 404 כשהמפתח חסר: זה היה הופך את הכתובת
+   * הראשית ל"אתר שבור" עבור הבעלים, ושובר את `start_url` של האפליקציה
+   * המותקנת — שחייב לנחות על `/login` כדי שאפשר יהיה להתחבר ממנה.
    */
   const gateConfigured = Boolean(expected);
-  const devOpen = !gateConfigured && process.env.NODE_ENV !== "production";
-  const gateOpen = devOpen || Boolean(req.cookies.get(GATE_COOKIE));
+  const gateOpen = !gateConfigured || Boolean(req.cookies.get(GATE_COOKIE));
 
   if (!gateOpen && !GATE_EXEMPT.some((p) => pathname.startsWith(p))) {
-    // בלי מפתח מוגדר בייצור אין מה להשוות מולו — הכל 404 עד שיוגדר
-    const provided = gateConfigured ? searchParams.get(KEY_PARAM) : null;
+    const provided = searchParams.get(KEY_PARAM);
     if (!provided || !safeEqual(provided, expected!)) {
       return new NextResponse(null, { status: 404 });
     }
