@@ -257,7 +257,7 @@ export function StarToggle({
        * הגודל החזותי של הכוכב עצמו — פסאודו-אלמנט לא תופס מקום
        * בפריסה, ולכן אין השפעה על שאר האלמנטים בשורה.
        */
-      className={`relative shrink-0 rounded p-0.5 transition-colors after:absolute after:-inset-3 after:content-[''] active:scale-90 ${
+      className={`relative shrink-0 rounded p-0.5 transition-colors after:absolute after:-inset-3.5 after:content-[''] active:scale-90 ${
         lead.isStarred
           ? "text-warn"
           : "text-ink-4 opacity-100 hover:text-ink-2 focus-visible:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
