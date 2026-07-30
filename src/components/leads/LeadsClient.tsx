@@ -21,13 +21,14 @@ import {
   toggleStarAction,
 } from "@/app/(app)/leads/actions";
 import { useNow } from "@/lib/clock";
+import { useIsNarrow } from "@/lib/media";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import {
   payableCommission,
   performanceByAgent,
   totalLeadCostForLeads,
 } from "@/server/services/economics";
-import { ToastStack, type Toast } from "@/components/ui/primitives";
+import { Modal, ToastStack, type Toast } from "@/components/ui/primitives";
 import { LeadCostsModal } from "@/components/settings/LeadCostsModal";
 import { LeadsFinancePanel } from "./LeadsFinancePanel";
 import { LeadsPerformancePanel } from "./LeadsPerformancePanel";
@@ -35,6 +36,8 @@ import { leadsCsvFilename, leadsToCsvRows } from "./leadsCsv";
 import { QueueHeader } from "./QueueHeader";
 import { FilterBar, type Filters, EMPTY_FILTERS } from "./FilterBar";
 import { LeadsTable } from "./LeadsTable";
+import { LeadCardList } from "./LeadCardList";
+import { StatusTiles } from "./StatusTiles";
 import { Pagination, PAGE_SIZES } from "./Pagination";
 import { ColumnPicker } from "./ColumnPicker";
 import { setVisibleColumns, useVisibleColumns } from "./columns";
@@ -103,6 +106,11 @@ export function LeadsClient({
   // מכווצים כברירת מחדל — שני הפאנלים האלה תפסו כל כך הרבה גובה
   // שהטבלה עצמה נדחקה מתחת לגלילה הראשונה
   const [statsOpen, setStatsOpen] = useState(false);
+  /** גיליון "כל הסטטוסים" — קיים רק במסך צר, ראה StatusTiles */
+  const [statusSheetOpen, setStatusSheetOpen] = useState(false);
+
+  /** מסך צר = תצוגת כרטיסים במקום טבלה */
+  const narrow = useIsNarrow();
   const [statusTarget, setStatusTarget] = useState<{
     leadIds: string[];
     to: LeadStatus;
@@ -482,6 +490,8 @@ export function LeadsClient({
         filters={filters}
         onFiltersChange={applyFilters}
         currentUserId={currentUserId}
+        compact={narrow}
+        onExpandStatuses={() => setStatusSheetOpen(true)}
       />
 
       {statsOpen && (
@@ -500,36 +510,63 @@ export function LeadsClient({
         onChange={applyFilters}
         users={users}
         searchRef={searchRef}
-        selectedCount={visibleSelected.length}
+        selectedCount={narrow ? 0 : visibleSelected.length}
         onBulkAssign={(id) => assign(visibleSelected, id)}
         onBulkStatus={(to) => requestStatus(visibleSelected, to)}
         onBulkDelete={() => remove(visibleSelected)}
         onClearSelection={() => setSelected(new Set())}
         columnPicker={
-          <ColumnPicker visible={visibleColumns} onChange={setVisibleColumns} />
+          // בורר העמודות הוא כלי של הטבלה בלבד — לכרטיס אין עמודות
+          narrow ? undefined : (
+            <ColumnPicker visible={visibleColumns} onChange={setVisibleColumns} />
+          )
         }
         busy={pending}
       />
 
-      <LeadsTable
-        leads={paged}
-        userById={userById}
-        leadCosts={leadCosts}
-        visibleColumns={visibleColumns}
-        selected={selected}
-        onSelectedChange={setSelected}
-        sort={sort}
-        onSortChange={applySort}
-        onOpen={setOpenLeadId}
-        onStatus={(id, to) => requestStatus([id], to)}
-        onCost={setCost}
-        onStar={toggleStar}
-        onPatch={patchLead}
-        users={users}
-        onAdd={() => setAddOpen(true)}
-        hasFilters={hasActiveFilters}
-        busy={pending}
-      />
+      {/*
+        טבלה או כרטיסים — אחד מהם, לא שניהם עם `hidden`. רינדור כפול
+        היה מכפיל 50 שורות × 11 תאים ואת כל ה-`<select>`-ים שבתוכן,
+        דווקא על המכשיר החלש ביותר. ראה `useIsNarrow`.
+      */}
+      {narrow ? (
+        <LeadCardList
+          leads={paged}
+          users={users}
+          selected={selected}
+          onSelectedChange={setSelected}
+          busy={pending}
+          onOpen={setOpenLeadId}
+          onStatus={(id, to) => requestStatus([id], to)}
+          onStar={toggleStar}
+          onPatch={patchLead}
+          onAdd={() => setAddOpen(true)}
+          hasFilters={hasActiveFilters}
+          onBulkAssign={(id) => assign([...selected], id)}
+          onBulkStatus={(to) => requestStatus([...selected], to)}
+          onBulkDelete={() => remove([...selected])}
+        />
+      ) : (
+        <LeadsTable
+          leads={paged}
+          userById={userById}
+          leadCosts={leadCosts}
+          visibleColumns={visibleColumns}
+          selected={selected}
+          onSelectedChange={setSelected}
+          sort={sort}
+          onSortChange={applySort}
+          onOpen={setOpenLeadId}
+          onStatus={(id, to) => requestStatus([id], to)}
+          onCost={setCost}
+          onStar={toggleStar}
+          onPatch={patchLead}
+          users={users}
+          onAdd={() => setAddOpen(true)}
+          hasFilters={hasActiveFilters}
+          busy={pending}
+        />
+      )}
 
       {sorted.length > 0 && (
         <Pagination
@@ -587,6 +624,32 @@ export function LeadsClient({
         onClose={() => setCostsOpen(false)}
         onNotify={notify}
       />
+
+      {/*
+        כל 15 הסטטוסים, בגיליון. קיים רק במסך צר: שם הכותרת מציגה רק
+        את הסטטוסים שיש בהם עבודה, וזה הפתח להגיע לשאר בלי לוותר על
+        הכלל שאסור להסתיר סטטוס מאחורי גלילה.
+      */}
+      <Modal
+        open={statusSheetOpen}
+        onClose={() => setStatusSheetOpen(false)}
+        title="סינון לפי סטטוס"
+      >
+        <StatusTiles
+          counts={counts}
+          active={filters.status}
+          onToggle={(status) => {
+            const on = filters.status.includes(status);
+            applyFilters({
+              ...filters,
+              status: on
+                ? filters.status.filter((s) => s !== status)
+                : [...filters.status, status],
+            });
+          }}
+          onClear={() => applyFilters({ ...filters, status: [] })}
+        />
+      </Modal>
 
       {/* ה-key מנקה את שדה הפירוט בין פתיחות */}
       <StatusDialog

@@ -26,20 +26,40 @@ export function StatusTiles({
   active,
   onToggle,
   onClear,
+  /**
+   * בטלפון מוצגים רק הסטטוסים שיש בהם עבודה, ועוד כפתור שפותח את כל
+   * ה-15. חמש-עשרה קוביות ברוחב 358px נשברות לחמש שורות ואוכלות 260px
+   * מתוך מסך של 844 — לפני שרואים ליד אחד.
+   *
+   * הכלל שמנחה את הרכיב ("סטטוס שצריך לגלול כדי לגלות אותו הוא סטטוס
+   * שלא ידעו שהוא קיים") נשמר: הוא רק מקבל רמת עקיפה אחת במקום אפס.
+   */
+  compact = false,
+  onExpand,
 }: {
   counts: Record<LeadStatus, number>;
   active: LeadStatus[];
   onToggle: (status: LeadStatus) => void;
   onClear: () => void;
+  compact?: boolean;
+  onExpand?: () => void;
 }) {
+  const shown = compact
+    ? STATUS_ORDER.filter((s) => (counts[s] ?? 0) > 0 || active.includes(s))
+    : STATUS_ORDER;
+
   return (
     <div className="mb-3">
       <div
-        className="flex flex-wrap gap-1.5"
+        className={
+          compact
+            ? "scroll-thin -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
+            : "flex flex-wrap gap-1.5"
+        }
         role="group"
         aria-label="סינון לפי סטטוס"
       >
-        {STATUS_ORDER.map((status) => {
+        {shown.map((status) => {
           const meta = STATUS_CONFIG[status];
           const count = counts[status] ?? 0;
           const on = active.includes(status);
@@ -52,7 +72,9 @@ export function StatusTiles({
               aria-pressed={on}
               title={`${meta.label} — ${count}`}
               style={{ "--spine-c": TONE_VAR[meta.tone] } as React.CSSProperties}
-              className={`spine relative min-w-[92px] flex-1 rounded-card border ps-2.5 pe-2 py-1.5 text-start transition-colors ${
+              className={`spine relative min-w-[92px] rounded-card border py-1.5 pe-2 ps-2.5 text-start transition-colors ${
+                compact ? "shrink-0" : "flex-1"
+              } ${
                 on
                   ? "border-brand bg-brand-soft"
                   : "border-line bg-surface hover:border-line-strong hover:bg-surface-2"
@@ -77,6 +99,15 @@ export function StatusTiles({
             </button>
           );
         })}
+
+        {compact && (
+          <button
+            onClick={onExpand}
+            className="shrink-0 whitespace-nowrap rounded-card border border-dashed border-line px-3 py-1.5 text-xs text-ink-3 transition-colors hover:border-line-strong hover:text-ink-1"
+          >
+            כל הסטטוסים ({STATUS_ORDER.length})
+          </button>
+        )}
       </div>
 
       {active.length > 0 && (

@@ -30,6 +30,8 @@ export function QueueHeader({
   filters,
   onFiltersChange,
   currentUserId,
+  compact = false,
+  onExpandStatuses,
 }: {
   counts: Record<LeadStatus, number>;
   total: number;
@@ -42,6 +44,9 @@ export function QueueHeader({
   filters: Filters;
   onFiltersChange: (f: Filters) => void;
   currentUserId: string;
+  /** מסך צר — קוביות הסטטוס מתקפלות לשורה אחת */
+  compact?: boolean;
+  onExpandStatuses?: () => void;
 }) {
   const segments = OPEN_STATUSES.map((status) => ({
     status,
@@ -146,6 +151,8 @@ export function QueueHeader({
       <StatusTiles
         counts={counts}
         active={filters.status}
+        compact={compact}
+        onExpand={onExpandStatuses}
         onToggle={(status) => {
           const on = filters.status.includes(status);
           onFiltersChange({
