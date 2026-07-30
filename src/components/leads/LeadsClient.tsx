@@ -13,7 +13,7 @@ import type {
 import { PRIORITY_CONFIG, STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
 import {
   assignAction,
-  changeStatusAction,
+  changeStatusManyAction,
   deleteLeadsAction,
   setLeadCostAction,
   toggleStarAction,
@@ -382,19 +382,25 @@ export function LeadsClient({
     followUpDate?: string,
   ) {
     startTransition(async () => {
-      for (const id of leadIds) {
-        const res = await changeStatusAction(id, to, detail, followUpDate);
-        if (!res.ok) {
-          notify(res.error, "bad");
-          return;
-        }
-      }
+      const res = await changeStatusManyAction(leadIds, to, detail, followUpDate);
+      if (!res.ok) return notify(res.error, "bad");
+
       setStatusTarget(null);
-      notify(
-        leadIds.length === 1
-          ? `הסטטוס עודכן ל"${STATUS_CONFIG[to].label}"`
-          : `${leadIds.length} לידים עודכנו ל"${STATUS_CONFIG[to].label}"`,
-      );
+
+      const { updated, failed } = res.data!;
+      const label = STATUS_CONFIG[to].label;
+
+      // הצלחה חלקית היא תוצאה אמיתית ולא שגיאה — הדיווח אומר בדיוק
+      // מה קרה, כדי שהמשתמש לא ינסה שוב ויכפיל את מה שכבר הצליח
+      if (failed > 0) {
+        notify(`${updated} עודכנו ל"${label}", ${failed} נכשלו`, "warn");
+      } else {
+        notify(
+          updated === 1
+            ? `הסטטוס עודכן ל"${label}"`
+            : `${updated} לידים עודכנו ל"${label}"`,
+        );
+      }
     });
   }
 

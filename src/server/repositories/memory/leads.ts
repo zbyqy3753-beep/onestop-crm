@@ -48,7 +48,16 @@ function matches(lead: Lead, f: LeadFilter): boolean {
   return true;
 }
 
+/**
+ * שובר שוויון קבוע, זהה למימוש Prisma. `Array.sort` יציב ולכן כאן זה
+ * פחות קריטי, אבל שני המימושים חייבים להחזיר את *אותו* סדר בדיוק —
+ * אחרת עימוד מציג שורות שונות בכל אחד מהם.
+ */
 function compare(a: Lead, b: Lead, sort: LeadSort): number {
+  return compareByField(a, b, sort) || a.id.localeCompare(b.id);
+}
+
+function compareByField(a: Lead, b: Lead, sort: LeadSort): number {
   const dir = sort.direction === "asc" ? 1 : -1;
 
   switch (sort.field) {
@@ -200,11 +209,16 @@ export const memoryLeadRepository: LeadRepository = {
     const lead = state.leads.find((l) => l.id === id);
     if (!lead) throw new Error(`ליד ${id} לא נמצא`);
 
-    // `cost` מטופל בנפרד: null מהקלט הוא "נקה" ונשמר כ-undefined,
-    // כדי שהמצב בזיכרון יהיה זהה למה שחוזר מ-Prisma
-    const { cost, ...rest } = input;
-    Object.assign(lead, rest, { updatedAt: nowIso() });
-    if (cost !== undefined) lead.cost = cost === null ? undefined : cost;
+    // ⚠️ לא `Object.assign`. הוא כותב גם מפתחות שערכם `undefined`,
+    // כלומר מוחק שדה שהקורא ביקש *לא* לגעת בו — ההפך המדויק ממה
+    // ש-Prisma עושה עם אותו קלט. הלולאה המפורשת היא מה שמייצר
+    // התנהגות זהה בשני המימושים: מדלגים על `undefined`, ומתרגמים
+    // `null` (= נקה) ל-`undefined`, שהוא ייצוג "אין ערך" בדומיין.
+    for (const [key, value] of Object.entries(input)) {
+      if (value === undefined) continue;
+      Reflect.set(lead, key, value === null ? undefined : value);
+    }
+    lead.updatedAt = nowIso();
 
     return structuredClone(lead);
   },
@@ -281,7 +295,10 @@ export const memoryLeadRepository: LeadRepository = {
     actorId,
   }: LogActivityInput): Promise<void> {
     const lead = state.leads.find((l) => l.id === leadId);
-    if (!lead) return;
+    // זורק ולא שותק: ב-Prisma זו הפרת מפתח זר. `setLeadCostAction`
+    // עושה update ואז logActivity, וליד שנמחק בין שתי הקריאות היה
+    // "מצליח" כאן ונופל שם — שני מימושים, שתי התנהגויות.
+    if (!lead) throw new Error(`ליד ${leadId} לא נמצא`);
 
     lead.activity.push({
       id: nextId("act"),

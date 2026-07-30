@@ -123,16 +123,6 @@ export function totalLeadCostForLeads(
   return round2(leads.reduce((sum, l) => sum + leadCost(l, costs), 0));
 }
 
-/** סך העלות של קבוצת לידים לפי הקטגוריות שלהן. */
-export function totalLeadCost(
-  categories: (LeadCategoryKey | undefined)[],
-  costs: LeadCostTable,
-): number {
-  return round2(
-    categories.reduce((sum, c) => sum + (c ? costs[c] : 0), 0),
-  );
-}
-
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }

@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { db } from "@/server/repositories";
 import { requireSessionUser } from "@/server/auth/session";
 import type {
@@ -10,8 +9,14 @@ import type {
   Priority,
   ProviderKey,
 } from "@/lib/domain/types";
-import { STATUS_CONFIG } from "@/lib/domain/types";
+import {
+  STATUS_CONFIG,
+  isLeadCategory,
+  isLeadKind,
+  isLeadStatus,
+} from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
+import { revalidateLeadSurfaces } from "@/app/(app)/_revalidate";
 
 /**
  * כל הכתיבות למסך הלידים.
@@ -19,8 +24,12 @@ import { isIsraeliPhone } from "@/lib/format";
  * הפעולות כאן הן נקודות קצה אמיתיות — כל אחת חייבת לאמת את הקלט
  * בעצמה. אימות בצד הלקוח הוא נוחות, לא הגנה.
  *
- * ⚠️ אין כאן עדיין בדיקת הרשאות (מי מורשה לעשות מה) — רק זיהוי מי
- * מבצע את הפעולה, דרך הסשן האמיתי (`requireSessionUser`).
+ * כל פעולה כאן מאמתת סשן בעצמה. השער ב-`proxy.ts` בודק רק שקיימת
+ * עוגיית סשן, לא שהיא מצביעה למשתמש אמיתי, ו-Server Action אפשר
+ * לקרוא ישירות — כך ש-`requireSessionUser` הוא ההגנה בפועל.
+ *
+ * ⚠️ עדיין אין בדיקת הרשאות פרטנית: כל משתמש מחובר יכול לערוך ולמחוק
+ * כל ליד, גם כזה שמשויך למישהו אחר.
  */
 
 export type ActionResult<T = undefined> =
@@ -55,7 +64,10 @@ export async function createLeadAction(
 
   await db.leads.create({
     name,
-    phone,
+    // ספרות בלבד — הייבוא, העריכה וקצה ה-API כולם מנרמלים כך, והדדופ
+    // לפי טלפון הוא השוואת מחרוזות מדויקת. ליד שנשמר כאן כ-
+    // "050-123-4567" לא היה מזוהה ככפילות מול אף אחד מהם.
+    phone: phone.replace(/\D/g, ""),
     email: email || undefined,
     city: city || undefined,
     note: note || undefined,
@@ -70,7 +82,7 @@ export async function createLeadAction(
     createdById: actorId,
   });
 
-  revalidatePath("/leads");
+  revalidateLeadSurfaces();
   return { ok: true };
 }
 
@@ -89,6 +101,8 @@ export async function updateLeadAction(
   leadId: string,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireSessionUser();
+
   const name = String(formData.get("name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
 
@@ -103,25 +117,95 @@ export async function updateLeadAction(
   const currentProvider = String(formData.get("currentProvider") ?? "").trim();
   const sourceDetail = String(formData.get("sourceDetail") ?? "").trim();
 
+  // `null` ולא `undefined`: שדה ריק בטופס הוא בקשה מפורשת *לנקות*.
+  // עם `undefined` הבקשה הזו נבלעה ב-Postgres והמשתמש קיבל טוסט
+  // הצלחה על שינוי שלא קרה. ראה UpdateLeadInput.
   await db.leads.update(leadId, {
     name,
     phone: phone.replace(/\D/g, ""),
-    email: email || undefined,
-    city: city || undefined,
+    email: email || null,
+    city: city || null,
     kind: (formData.get("kind") as LeadKind) ?? "data",
     priority: (formData.get("priority") as Priority) ?? "normal",
-    category: (category as LeadCategoryKey) || undefined,
-    currentProvider: (currentProvider as ProviderKey) || undefined,
-    sourceDetail: sourceDetail || undefined,
+    category: (category as LeadCategoryKey) || null,
+    currentProvider: (currentProvider as ProviderKey) || null,
+    sourceDetail: sourceDetail || null,
     // בעריכה "ללא שיוך" הוא בחירה מפורשת, לא ברירת מחדל ליוצר
-    assigneeId: assigneeId || undefined,
+    assigneeId: assigneeId || null,
   });
 
-  revalidatePath("/leads");
+  revalidateLeadSurfaces();
   return { ok: true };
 }
 
 /* ── שינוי סטטוס ──────────────────────────────────────────────────────── */
+
+export interface BulkStatusResult {
+  updated: number;
+  /** לידים שנכשלו — בדרך כלל נמחקו ע"י מישהו אחר בינתיים */
+  failed: number;
+}
+
+/**
+ * שינוי סטטוס לקבוצת לידים.
+ *
+ * ⚠️ הגרסה הקודמת רצה בלולאה **בלקוח** ועצרה בכישלון הראשון: מתוך 20
+ * לידים, 6 כבר שונו, 14 לא, והמשתמש ראה רק הודעת שגיאה עם הדיאלוג
+ * פתוח — כך שניסיון חוזר שכתב את ההיסטוריה של הראשונים פעם שנייה.
+ *
+ * כאן הוולידציה רצה פעם אחת, הלולאה בשרת, וכישלון בליד בודד לא עוצר
+ * את השאר. הריענון קורה פעם אחת בסוף במקום N פעמים.
+ */
+export async function changeStatusManyAction(
+  leadIds: string[],
+  to: LeadStatus,
+  detail?: string,
+  followUpDate?: string,
+): Promise<ActionResult<BulkStatusResult>> {
+  if (leadIds.length === 0) return { ok: false, error: "לא נבחרו לידים" };
+
+  if (!isLeadStatus(to)) return { ok: false, error: "סטטוס לא מוכר" };
+  const meta = STATUS_CONFIG[to];
+
+  if (meta.prompt?.required && !detail?.trim()) {
+    return { ok: false, error: `${meta.prompt.question} — שדה חובה` };
+  }
+
+  let followUpAt: string | undefined;
+  if (followUpDate) {
+    const parsed = parseFollowUpDate(followUpDate);
+    if (!parsed) return { ok: false, error: "תאריך החזרה לא תקין" };
+    followUpAt = parsed;
+  }
+
+  const actorId = await actor();
+  const trimmed = detail?.trim() || undefined;
+
+  let updated = 0;
+  let failed = 0;
+  for (const leadId of leadIds) {
+    try {
+      await db.leads.changeStatus({
+        leadId,
+        to,
+        detail: trimmed,
+        actorId,
+        followUpAt,
+      });
+      updated += 1;
+    } catch {
+      // ליד שנמחק בינתיים לא צריך להפיל את השאר
+      failed += 1;
+    }
+  }
+
+  if (updated === 0) {
+    return { ok: false, error: "אף ליד לא עודכן — ייתכן שהלידים נמחקו" };
+  }
+
+  revalidateLeadSurfaces();
+  return { ok: true, data: { updated, failed } };
+}
 
 export async function changeStatusAction(
   leadId: string,
@@ -129,8 +213,9 @@ export async function changeStatusAction(
   detail?: string,
   followUpDate?: string,
 ): Promise<ActionResult> {
+  // `STATUS_CONFIG[to]` לבדו היה עובר גם עבור "constructor"/"toString"
+  if (!isLeadStatus(to)) return { ok: false, error: "סטטוס לא מוכר" };
   const meta = STATUS_CONFIG[to];
-  if (!meta) return { ok: false, error: "סטטוס לא מוכר" };
 
   // הפירוט הוא מה שהופך את ההיסטוריה לשימושית — נאכף בשרת, לא רק בטופס
   if (meta.prompt?.required && !detail?.trim()) {
@@ -152,7 +237,7 @@ export async function changeStatusAction(
     followUpAt,
   });
 
-  revalidatePath("/leads");
+  revalidateLeadSurfaces();
   return { ok: true };
 }
 
@@ -195,7 +280,7 @@ export async function assignAction(
   }
 
   await db.leads.assign(leadIds, assigneeId, await actor());
-  revalidatePath("/leads");
+  revalidateLeadSurfaces();
   return { ok: true };
 }
 
@@ -227,7 +312,7 @@ export async function setLeadCostAction(
     actorId: await actor(),
   });
 
-  revalidatePath("/leads");
+  revalidateLeadSurfaces();
   return { ok: true };
 }
 
@@ -242,7 +327,7 @@ export async function toggleStarAction(
     actorId: await actor(),
   });
 
-  revalidatePath("/leads");
+  revalidateLeadSurfaces();
   return { ok: true };
 }
 
@@ -256,7 +341,7 @@ export async function addNoteAction(
   if (!text) return { ok: false, error: "ההערה ריקה" };
 
   await db.leads.addNote(leadId, await actor(), text);
-  revalidatePath("/leads");
+  revalidateLeadSurfaces();
   return { ok: true };
 }
 
@@ -265,10 +350,12 @@ export async function addNoteAction(
 export async function deleteLeadsAction(
   leadIds: string[],
 ): Promise<ActionResult> {
+  await requireSessionUser();
+
   if (leadIds.length === 0) return { ok: false, error: "לא נבחרו לידים" };
 
   await db.leads.remove(leadIds);
-  revalidatePath("/leads");
+  revalidateLeadSurfaces();
   return { ok: true };
 }
 
@@ -312,8 +399,14 @@ export async function importLeadsAction(
     };
   }
 
+  // הקלט מגיע מהלקוח, ולכן `category`/`kind` נאמתים כאן ולא רק
+  // בפרסור הקובץ — ערך לא חוקי היה עובר ישר ל-DB
   const valid = rows.filter(
-    (r) => r.name?.trim().length >= 2 && isIsraeliPhone(r.phone ?? ""),
+    (r) =>
+      r.name?.trim().length >= 2 &&
+      isIsraeliPhone(r.phone ?? "") &&
+      (r.category === undefined || isLeadCategory(r.category)) &&
+      (r.kind === undefined || isLeadKind(r.kind)),
   );
   const skipped = rows.length - valid.length;
 
@@ -362,7 +455,7 @@ export async function importLeadsAction(
     })),
   );
 
-  revalidatePath("/leads");
+  revalidateLeadSurfaces();
   return {
     ok: true,
     data: { imported: fresh.length, skipped, duplicates },

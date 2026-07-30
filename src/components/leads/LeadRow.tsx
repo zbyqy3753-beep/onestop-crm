@@ -254,7 +254,7 @@ export function LeadRow({
 
   return (
     <tr
-      className="spine group border-b border-line last:border-0 hover:bg-surface-2"
+      className="group border-b border-line last:border-0 hover:bg-surface-2"
       style={
         {
           "--spine-c": TONE_VAR[status.tone],
@@ -262,7 +262,9 @@ export function LeadRow({
         } as React.CSSProperties
       }
     >
-      <td className="ps-3">
+      {/* הפס יושב על התא ולא על השורה — `::before` על `table-row` היה
+          מייצר תא אנונימי ומזיז את כל העמודות. ראה globals.css. */}
+      <td className="spine-cell ps-3">
         <input
           type="checkbox"
           checked={checked}

@@ -105,6 +105,22 @@ export function ImportLeadsModal({
     }
 
     if (rows.length === 0) {
+      // כשזוהתה כותרת אבל לא נמצאה עמודת שם/טלפון, האשם הוא הכותרת
+      // ולא הנתונים. ההודעה הישנה ("לא נמצאה אף שורה תקינה") שלחה את
+      // המשתמש לבדוק את הטלפונים בקובץ, בזמן שהבעיה הייתה שהעמודה
+      // בכלל לא מופתה. מניית הכותרות שכן זוהו הופכת את זה לפתיר.
+      const missing: string[] = [];
+      if (hadHeader && mapping.name === undefined) missing.push("שם");
+      if (hadHeader && mapping.phone === undefined) missing.push("טלפון");
+
+      if (missing.length > 0) {
+        const found = matrix[0].map((c) => c.trim()).filter(Boolean).join(", ");
+        setError(
+          `לא זוהתה עמודת ${missing.join(" ועמודת ")}. הכותרות שנמצאו בקובץ: ${found}`,
+        );
+        return;
+      }
+
       setError(
         hadHeader
           ? "לא נמצאה אף שורה תקינה. כל שורה צריכה שם (2 תווים לפחות) וטלפון ישראלי."

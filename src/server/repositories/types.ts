@@ -87,29 +87,37 @@ export interface CreateLeadInput {
   note?: string;
 }
 
-export type UpdateLeadInput = Partial<
-  Pick<
-    Lead,
-    | "name"
-    | "phone"
-    | "email"
-    | "kind"
-    | "priority"
-    | "category"
-    | "currentProvider"
-    | "city"
-    | "assigneeId"
-    | "followUpAt"
-    | "isStarred"
-    | "sourceDetail"
-  >
-> & {
-  /**
-   * `null` מנקה את העלות הפרטנית ומחזיר לעלות הקטגוריה.
-   * השמטה (`undefined`) משאירה אותה כמו שהיא — שני מצבים שונים.
-   */
+/**
+ * עדכון ליד. **`undefined` = אל תיגע בשדה, `null` = נקה אותו.**
+ *
+ * ⚠️ ההבחנה הזו חייבת להיות מפורשת בטיפוס, ולא נגזרת מ-`Partial`.
+ * `Partial<Pick<Lead, …>>` נותן `string | undefined` לשדה אופציונלי,
+ * ואז "נקה את האימייל" ו"אל תיגע באימייל" הם אותו ערך בדיוק — שני
+ * המימושים פירשו אותו הפוך: Prisma מתעלם מ-`undefined`, בעוד
+ * `Object.assign` במימוש הזיכרון מוחק את השדה. התוצאה הייתה שבחירת
+ * "ללא שיוך" בעריכת ליד הציגה טוסט הצלחה ולא עשתה כלום ב-Postgres.
+ *
+ * כל שדה שאפשר לנקות מוצהר כאן כ-`T | null | undefined`.
+ */
+export interface UpdateLeadInput {
+  /* שדות חובה בישות — אפשר לשנות, אי אפשר לנקות */
+  name?: string;
+  phone?: string;
+  kind?: LeadKind;
+  priority?: Priority;
+  isStarred?: boolean;
+
+  /* שדות שניתן לנקות — `null` מוחק */
+  email?: string | null;
+  city?: string | null;
+  category?: LeadCategoryKey | null;
+  currentProvider?: ProviderKey | null;
+  assigneeId?: UserId | null;
+  followUpAt?: string | null;
+  sourceDetail?: string | null;
+  /** `null` מנקה את העלות הפרטנית ומחזיר לעלות הקטגוריה. */
   cost?: number | null;
-};
+}
 
 /** שינוי סטטוס תמיד נושא איתו את הפירוט שהסוכן הזין. */
 export interface ChangeStatusInput {

@@ -476,9 +476,17 @@ const LEAD_IMPORT_HEADER_ALIASES: Record<string, LeadImportField> = {
   טלפון: "phone",
   נייד: "phone",
   מספרטלפון: "phone",
+  // הנרמול מסיר רווחים, מקפים וגרשיים — כך ש"מס' סלולרי" מגיע לכאן
+  // כ"מססלולרי". הכינויים האלה מופיעים בקבצים אמיתיים של שותפים.
+  סלולרי: "phone",
+  מססלולרי: "phone",
+  מסטלפון: "phone",
+  טלפוןנייד: "phone",
+  מספרנייד: "phone",
   phone: "phone",
   mobile: "phone",
   tel: "phone",
+  cell: "phone",
 
   אימייל: "email",
   מייל: "email",
@@ -528,9 +536,9 @@ export function matchImportField(header: string): LeadImportField | undefined {
 export function matchLeadCategory(label: string): LeadCategoryKey | undefined {
   const normalized = label.trim();
   if (!normalized) return undefined;
-  if (normalized in LEAD_CATEGORY_CONFIG) {
-    return normalized as LeadCategoryKey;
-  }
+  // `in` היה מחזיר true גם עבור "constructor"/"__proto__" ומזריק ערך
+  // לא חוקי לייבוא. `LEAD_CATEGORY_ORDER` הוא הרשימה הסגורה האמיתית.
+  if (isLeadCategory(normalized)) return normalized;
   return LEAD_CATEGORY_ORDER.find(
     (k) => LEAD_CATEGORY_CONFIG[k].label === normalized,
   );
@@ -925,4 +933,59 @@ export interface Registration {
   createdAt: string;
   handledAt?: string;
   handledById?: UserId;
+}
+
+/* ── שומרי טיפוס לערכי enum מבחוץ ─────────────────────────────────────── */
+
+/**
+ * ולידציה של ערך enum שהגיע מהלקוח.
+ *
+ * ⚠️ הדפוס שהיה כאן קודם — `if (!STATUS_CONFIG[value]) return שגיאה` —
+ * נראה תקין אבל דולף: מפות התצורה הן object literals, ולכן
+ * `STATUS_CONFIG["constructor"]` ו-`STATUS_CONFIG["toString"]` הם
+ * פונקציות מהפרוטוטייפ, כלומר truthy, והבדיקה עוברת. ערך כזה היה
+ * ממשיך ל-DB ונופל שם, או — במימוש הזיכרון — נשמר וגורם לכל רינדור
+ * להתרסק על `STATUS_CONFIG[lead.status].terminal`.
+ *
+ * מערכי ה-`*_ORDER` הם רשימות סגורות ומפורשות, ולכן `Set` מעליהם הוא
+ * מקור האמת הנכון לשאלה "האם הערך הזה חוקי".
+ */
+const STATUS_SET: ReadonlySet<string> = new Set(STATUS_ORDER);
+const ROLE_SET: ReadonlySet<string> = new Set(ROLE_ORDER);
+const KIND_SET: ReadonlySet<string> = new Set(KIND_ORDER);
+const PRIORITY_SET: ReadonlySet<string> = new Set(PRIORITY_ORDER);
+const LEAD_CATEGORY_SET: ReadonlySet<string> = new Set(LEAD_CATEGORY_ORDER);
+const PROVIDER_SET: ReadonlySet<string> = new Set(PROVIDER_ORDER);
+const REGISTRATION_STATUS_SET: ReadonlySet<string> = new Set(
+  REGISTRATION_STATUS_ORDER,
+);
+
+export function isLeadStatus(value: string): value is LeadStatus {
+  return STATUS_SET.has(value);
+}
+
+export function isRole(value: string): value is Role {
+  return ROLE_SET.has(value);
+}
+
+export function isLeadKind(value: string): value is LeadKind {
+  return KIND_SET.has(value);
+}
+
+export function isPriority(value: string): value is Priority {
+  return PRIORITY_SET.has(value);
+}
+
+export function isLeadCategory(value: string): value is LeadCategoryKey {
+  return LEAD_CATEGORY_SET.has(value);
+}
+
+export function isProvider(value: string): value is ProviderKey {
+  return PROVIDER_SET.has(value);
+}
+
+export function isRegistrationStatus(
+  value: string,
+): value is RegistrationStatus {
+  return REGISTRATION_STATUS_SET.has(value);
 }

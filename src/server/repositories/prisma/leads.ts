@@ -56,12 +56,15 @@ function buildWhere(filter: LeadFilter): Prisma.LeadWhereInput {
 
   if (filter.query?.trim()) {
     const q = filter.query.trim();
+    // `mode: "insensitive"` נחוץ: ב-Postgres `contains` הוא LIKE רגיש
+    // לרישיות, בעוד מימוש הזיכרון והסינון בלקוח מנרמלים ל-lowercase.
+    // בלעדיו חיפוש "israel" לא היה מוצא את "Israel".
     and.push({
       OR: [
-        { name: { contains: q } },
+        { name: { contains: q, mode: "insensitive" } },
         { phone: { contains: q } },
-        { email: { contains: q } },
-        { city: { contains: q } },
+        { email: { contains: q, mode: "insensitive" } },
+        { city: { contains: q, mode: "insensitive" } },
       ],
     });
   }
@@ -70,21 +73,31 @@ function buildWhere(filter: LeadFilter): Prisma.LeadWhereInput {
   return where;
 }
 
-function buildOrderBy(sort: LeadSort): Prisma.LeadOrderByWithRelationInput {
+/**
+ * המיון תמיד מסתיים ב-`id` כשובר שוויון.
+ *
+ * בלעדיו, שורות עם אותו `updatedAt` מקבלות מ-Postgres סדר בלתי מוגדר
+ * שיכול להשתנות בין שאילתות — ועם `LIMIT/OFFSET` זה אומר שליד יופיע
+ * פעמיים בשני עמודים שונים, או ייעלם לגמרי. הקריאה המעומדת בדשבורד
+ * (`page.tsx`, 8 הלידים האחרונים) כבר חשופה לזה היום.
+ */
+function buildOrderBy(sort: LeadSort): Prisma.LeadOrderByWithRelationInput[] {
+  const tieBreak: Prisma.LeadOrderByWithRelationInput = { id: "asc" };
+
   switch (sort.field) {
     case "name":
-      return { name: sort.direction };
+      return [{ name: sort.direction }, tieBreak];
     case "priority":
-      return { priority: sort.direction };
+      return [{ priority: sort.direction }, tieBreak];
     case "status":
-      return { status: sort.direction };
+      return [{ status: sort.direction }, tieBreak];
     case "followUpAt":
       // null תמיד בסוף, ללא קשר לכיוון — כך גם במימוש הזיכרון
-      return { followUpAt: { sort: sort.direction, nulls: "last" } };
+      return [{ followUpAt: { sort: sort.direction, nulls: "last" } }, tieBreak];
     case "createdAt":
     case "updatedAt":
     default:
-      return { [sort.field]: sort.direction };
+      return [{ [sort.field]: sort.direction }, tieBreak];
   }
 }
 
@@ -104,7 +117,15 @@ export const prismaLeadRepository: LeadRepository = {
         orderBy: buildOrderBy(sort),
         skip: page?.offset,
         take: page?.limit,
-        include: { notes: true, history: true, activity: true },
+        // `orderBy` על היחסים אינו קישוט: `LeadRow` בונה את עמודת
+        // הפעילות מתוך `[...history].reverse()` ומניח סדר עולה, ובלי
+        // המיון Postgres מחזיר סדר בלתי מוגדר — כלומר ציר הזמן של
+        // הליד יכול להופיע הפוך. `getById` כבר ממיין כך.
+        include: {
+          notes: true,
+          history: { orderBy: { createdAt: "asc" } },
+          activity: { orderBy: { createdAt: "asc" } },
+        },
       }),
       prisma.lead.count({ where }),
     ]);
@@ -217,6 +238,10 @@ export const prismaLeadRepository: LeadRepository = {
     // ה-cast כאן נחוץ: Prisma לא מצליח להסיק אוטומטית בין
     // LeadUpdateInput ל-LeadUncheckedUpdateInput עבור אובייקט חלקי
     // עם שדות סקלריים כמו assigneeId. שני הטיפוסים תואמים בפועל.
+    //
+    // המוסכמה של `UpdateLeadInput` (undefined = אל תיגע, null = נקה)
+    // היא בדיוק הסמנטיקה של Prisma, ולכן ההעברה הישירה נכונה כאן.
+    // מימוש הזיכרון הוא זה שנדרש להתאמץ כדי להתנהג אותו דבר.
     const row = await prisma.lead.update({
       where: { id },
       data: input as Prisma.LeadUncheckedUpdateInput,

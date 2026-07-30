@@ -2,14 +2,21 @@ import { db } from "@/server/repositories";
 import { requireSessionUser } from "@/server/auth/session";
 import { OPEN_STATUSES, ROLE_CONFIG } from "@/lib/domain/types";
 import { performanceByAgent } from "@/server/services/economics";
+import { TZ, startOfDay, startOfMonth } from "@/lib/tz";
 import { SummaryTiles } from "@/components/dashboard/SummaryTiles";
 import { RecentLeadsList } from "@/components/dashboard/RecentLeadsList";
 import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { StatusBreakdownStrip, type StatusSegment } from "@/components/ui/StatusBreakdownStrip";
 
-const WEEKDAY_FMT = new Intl.DateTimeFormat("he-IL", { weekday: "long" });
+// `timeZone` מפורש: זה רכיב שרת, והתהליך ב-Vercel רץ ב-UTC. בלעדיו
+// בין 00:00 ל-03:00 שעון ישראל הכותרת הציגה את היום הקודם.
+const WEEKDAY_FMT = new Intl.DateTimeFormat("he-IL", {
+  timeZone: TZ,
+  weekday: "long",
+});
 const LONG_DATE_FMT = new Intl.DateTimeFormat("he-IL", {
+  timeZone: TZ,
   day: "numeric",
   month: "long",
   year: "numeric",
@@ -71,11 +78,14 @@ export default async function DashboardPage() {
   /* ── לוח מובילים ────────────────────────────────────────────────── */
 
   const catalog = new Map(packages.map((p) => [p.id, p]));
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  // גבולות היום והחודש בשעון ישראל. `new Date(y, m, d)` היה משתמש
+  // באזור הזמן של התהליך — UTC בייצור — ולכן "היום" בלוח המובילים היה
+  // מתחיל שעתיים-שלוש מאוחר מדי.
+  const dayStart = startOfDay(now);
+  const monthStart = startOfMonth(now);
 
-  const dealsToday = deals.filter((d) => Date.parse(d.closedAt) >= startOfToday);
-  const dealsMonth = deals.filter((d) => Date.parse(d.closedAt) >= startOfMonth);
+  const dealsToday = deals.filter((d) => Date.parse(d.closedAt) >= dayStart);
+  const dealsMonth = deals.filter((d) => Date.parse(d.closedAt) >= monthStart);
 
   const perfToday = performanceByAgent(dealsToday, catalog, costs);
   const perfMonth = performanceByAgent(dealsMonth, catalog, costs);

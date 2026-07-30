@@ -1,4 +1,4 @@
-import type { LeadCostTable, Package } from "@/lib/domain/types";
+import type { Deal, LeadCostTable, Package } from "@/lib/domain/types";
 import type {
   DealRepository,
   PackageFilter,
@@ -11,9 +11,20 @@ import { memoryLeadRepository } from "./leads";
 import { memoryRegistrationRepository } from "./registrations";
 import { nextId, state } from "./store";
 
+/**
+ * מיון לפי שם, זהה ל-`orderBy: { name: "asc" }` במימוש Prisma.
+ *
+ * ⚠️ לא קוסמטיקה. `nextAssignee` ב-`api/leads/route.ts` שובר שוויון
+ * בין נציגים בעלי אותו עומס לפי סדר הרשימה, ומתעד את זה כהתנהגות
+ * דטרמיניסטית. בסדר הכנסה זה היה בוחר נציג אחר מאשר ב-Postgres.
+ */
+function byName<T extends { name: string }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => a.name.localeCompare(b.name, "he"));
+}
+
 const users: UserRepository = {
   async list() {
-    return structuredClone(state.users);
+    return structuredClone(byName(state.users));
   },
   async getById(id) {
     const found = state.users.find((u) => u.id === id);
@@ -24,7 +35,7 @@ const users: UserRepository = {
     return found ? structuredClone(found) : null;
   },
   async listActive() {
-    return structuredClone(state.users.filter((u) => u.active));
+    return structuredClone(byName(state.users.filter((u) => u.active)));
   },
   async create(input) {
     const user = {
@@ -56,7 +67,7 @@ const packages: PackageRepository = {
       }
       return true;
     });
-    return structuredClone(rows);
+    return structuredClone(byName(rows));
   },
   async getById(id) {
     const found = state.packages.find((p) => p.id === id);
@@ -70,12 +81,21 @@ const packages: PackageRepository = {
   },
 };
 
+/** החדשות קודם — זהה ל-`orderBy: { closedAt: "desc" }` ב-Prisma. */
+function byClosedAtDesc(rows: Deal[]): Deal[] {
+  return [...rows].sort(
+    (a, b) => Date.parse(b.closedAt) - Date.parse(a.closedAt),
+  );
+}
+
 const deals: DealRepository = {
   async list() {
-    return structuredClone(state.deals);
+    return structuredClone(byClosedAtDesc(state.deals));
   },
   async listByAgent(agentId) {
-    return structuredClone(state.deals.filter((d) => d.agentId === agentId));
+    return structuredClone(
+      byClosedAtDesc(state.deals.filter((d) => d.agentId === agentId)),
+    );
   },
   async getById(id) {
     const found = state.deals.find((d) => d.id === id);

@@ -114,7 +114,7 @@ function Row({ row }: { row: DealRow }) {
 
   return (
     <tr
-      className="spine border-b border-line last:border-0 hover:bg-surface-2"
+      className="border-b border-line last:border-0 hover:bg-surface-2"
       style={
         {
           "--spine-c": primaryProvider
@@ -123,7 +123,8 @@ function Row({ row }: { row: DealRow }) {
         } as React.CSSProperties
       }
     >
-      <td className="px-3 py-2.5">
+      {/* `spine-cell` ולא `spine` על ה-`<tr>` — ראה globals.css */}
+      <td className="spine-cell px-3 py-2.5">
         <p className="max-w-[200px] truncate font-semibold text-ink-1">
           {lead?.name ?? "לקוח לא ידוע"}
         </p>

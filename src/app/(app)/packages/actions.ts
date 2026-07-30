@@ -1,9 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { db } from "@/server/repositories";
+import { requireSessionUser } from "@/server/auth/session";
 import { LEAD_CATEGORY_ORDER, type LeadCostTable } from "@/lib/domain/types";
 import type { ActionResult } from "@/app/(app)/leads/actions";
+import { revalidatePath } from "next/cache";
+import { revalidateLeadSurfaces } from "@/app/(app)/_revalidate";
 
 /**
  * עדכון עלות רכישת ליד לפי קטגוריה.
@@ -14,6 +16,10 @@ import type { ActionResult } from "@/app/(app)/leads/actions";
 export async function saveLeadCostsAction(
   costs: Record<string, number>,
 ): Promise<ActionResult> {
+  // הערך הזה מזיז כל מספר רווח במערכת — נקודת קצה שאפשר לקרוא לה
+  // ישירות, ולכן היא מאמתת סשן בעצמה ולא נשענת על השער ב-proxy
+  await requireSessionUser();
+
   const next = {} as LeadCostTable;
 
   for (const category of LEAD_CATEGORY_ORDER) {
@@ -27,9 +33,9 @@ export async function saveLeadCostsAction(
 
   await db.settings.setLeadCosts(next);
 
-  // גם מסך הלידים מציג רווח שנגזר מהעלויות האלה — בלי הרענון הזה
-  // הפאנל הפיננסי שם היה ממשיך להראות את המספרים הישנים
+  // גם מסך הלידים, גם הדשבורד וגם מסך העסקאות מציגים רווח שנגזר
+  // מהעלויות האלה — בלי הריענון הרחב הם ממשיכים להראות מספרים ישנים
   revalidatePath("/packages");
-  revalidatePath("/leads");
+  revalidateLeadSurfaces();
   return { ok: true };
 }

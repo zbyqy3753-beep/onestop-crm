@@ -1,4 +1,5 @@
 import type { StatusTone } from "./domain/types";
+import { TZ, calendarDaysBetween } from "./tz";
 
 /** מיפוי טון סמנטי למחלקות Tailwind. מקור אמת יחיד לצבעי תגיות. */
 export const TONE_CLASS: Record<StatusTone, string> = {
@@ -40,13 +41,18 @@ export function number(n: number): string {
   return new Intl.NumberFormat("he-IL").format(n);
 }
 
+// `timeZone` מפורש ולא ברירת המחדל של הסביבה: השרת רץ ב-UTC והדפדפן
+// בשעון ישראל, כך שליד שנוצר ב-22:30 UTC הוצג "30.07" מהשרת ו-"31.07"
+// אחרי ההרכבה — גם תאריך שגוי וגם אי-התאמת הידרציה.
 const dateFmt = new Intl.DateTimeFormat("he-IL", {
+  timeZone: TZ,
   day: "2-digit",
   month: "2-digit",
   year: "2-digit",
 });
 
 const dateTimeFmt = new Intl.DateTimeFormat("he-IL", {
+  timeZone: TZ,
   day: "2-digit",
   month: "2-digit",
   hour: "2-digit",
@@ -87,10 +93,16 @@ export function relative(iso: string, now: number): string {
   return date(iso);
 }
 
-/** כמה זמן נותר עד תאריך עתידי. */
+/**
+ * כמה זמן נותר עד תאריך עתידי, בימי לוח.
+ *
+ * ⚠️ ימי לוח ולא הפרש שעות. הגרסה הקודמת חישבה
+ * `Math.ceil(diff / 86_400_000)`, ולכן תזכורת שנקבעה ל**היום** ב-09:00
+ * הוצגה "מחר" כל עוד השעה הייתה לפני 09:00 — בזמן שהמסנן "לחזור היום"
+ * כן כלל אותה. אותו ליד, שתי אמירות סותרות באותו מסך.
+ */
 export function until(iso: string, now: number): string {
-  const diff = Date.parse(iso) - now;
-  const days = Math.ceil(diff / 86_400_000);
+  const days = calendarDaysBetween(now, Date.parse(iso));
 
   if (days < 0) return `באיחור ${Math.abs(days)} ימים`;
   if (days === 0) return "היום";

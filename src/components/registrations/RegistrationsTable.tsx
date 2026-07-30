@@ -71,10 +71,11 @@ function Row({
 
   return (
     <tr
-      className="spine border-b border-line last:border-0 hover:bg-surface-2"
+      className="border-b border-line last:border-0 hover:bg-surface-2"
       style={{ "--spine-c": TONE_VAR[status.tone], "--spine-w": "3px" } as React.CSSProperties}
     >
-      <td className="px-3 py-3">
+      {/* `spine-cell` ולא `spine` על ה-`<tr>` — ראה globals.css */}
+      <td className="spine-cell px-3 py-3">
         <span className="block max-w-[220px] truncate text-[15px] font-semibold text-ink-1">
           {reg.businessName}
         </span>
