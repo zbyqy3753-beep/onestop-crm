@@ -12,10 +12,17 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    /*
+     * `id` הוא הזהות היציבה של האפליקציה. בלעדיו אנדרואיד גוזר זהות
+     * מ-`start_url`, וכל שינוי בו היה נקרא כאפליקציה **חדשה** — כלומר
+     * אייקון שני במגירה במקום עדכון. קובעים אותו פעם אחת ולא נוגעים.
+     */
+    id: "/",
     name: "ONE STOP CRM",
     // עד 12 תווים — מעבר לזה מסך הבית חותך את השם
     short_name: "ONE STOP",
     description: "ניהול לידים, חבילות ועסקאות",
+    categories: ["business", "productivity"],
     lang: "he",
     dir: "rtl",
 
