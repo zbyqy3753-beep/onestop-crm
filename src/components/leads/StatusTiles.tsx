@@ -16,8 +16,10 @@ import { number } from "@/lib/format";
  * הן לא משתנות כשמסננים — קוביה שמראה "12" ואז "0" ברגע שלוחצים
  * עליה הייתה חסרת שימוש.
  *
- * סטטוסים ריקים מוסתרים כברירת מחדל: 15 קוביות שרובן 0 הן רעש. הן
- * חוזרות ברגע שיש בהן ליד, וגם כשהן מסוננות (כדי שאפשר יהיה לבטל).
+ * **כל 15 הסטטוסים מוצגים תמיד**, גם הריקים. הרשת נשברת לשורות ולא
+ * נגללת לצדדים: סטטוס שדורש גלילה כדי לגלות אותו הוא סטטוס שלא ידעו
+ * שהוא קיים. הריקים מעומעמים כדי שהעין תיפול על מה שיש בו עבודה,
+ * אבל הם נשארים לחיצים — לסנן ל"אין מענה" ולראות שהוא ריק זו תשובה.
  */
 export function StatusTiles({
   counts,
@@ -30,58 +32,59 @@ export function StatusTiles({
   onToggle: (status: LeadStatus) => void;
   onClear: () => void;
 }) {
-  const tiles = STATUS_ORDER.filter(
-    (s) => (counts[s] ?? 0) > 0 || active.includes(s),
-  );
-
-  if (tiles.length === 0) return null;
-
   return (
-    <div
-      className="scroll-thin -mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1"
-      role="group"
-      aria-label="סינון לפי סטטוס"
-    >
-      {tiles.map((status) => {
-        const meta = STATUS_CONFIG[status];
-        const on = active.includes(status);
+    <div className="mb-3">
+      <div
+        className="flex flex-wrap gap-1.5"
+        role="group"
+        aria-label="סינון לפי סטטוס"
+      >
+        {STATUS_ORDER.map((status) => {
+          const meta = STATUS_CONFIG[status];
+          const count = counts[status] ?? 0;
+          const on = active.includes(status);
+          const empty = count === 0;
 
-        return (
-          <button
-            key={status}
-            onClick={() => onToggle(status)}
-            aria-pressed={on}
-            style={{ "--spine-c": TONE_VAR[meta.tone] } as React.CSSProperties}
-            className={`spine relative shrink-0 rounded-card border ps-3.5 pe-4 py-2 text-start transition-colors ${
-              on
-                ? "border-brand bg-brand-soft"
-                : "border-line bg-surface hover:border-line-strong hover:bg-surface-2"
-            }`}
-          >
-            <span
-              className={`nums block text-lg font-bold leading-none ${
-                on ? "text-brand" : "text-ink-1"
-              }`}
+          return (
+            <button
+              key={status}
+              onClick={() => onToggle(status)}
+              aria-pressed={on}
+              title={`${meta.label} — ${count}`}
+              style={{ "--spine-c": TONE_VAR[meta.tone] } as React.CSSProperties}
+              className={`spine relative min-w-[92px] flex-1 rounded-card border ps-2.5 pe-2 py-1.5 text-start transition-colors ${
+                on
+                  ? "border-brand bg-brand-soft"
+                  : "border-line bg-surface hover:border-line-strong hover:bg-surface-2"
+              } ${empty && !on ? "opacity-45 hover:opacity-100" : ""}`}
             >
-              {number(counts[status] ?? 0)}
-            </span>
-            <span
-              className={`mt-1 block whitespace-nowrap text-xs ${
-                on ? "text-brand" : "text-ink-3"
-              }`}
-            >
-              {meta.label}
-            </span>
-          </button>
-        );
-      })}
+              <span
+                className={`nums block text-base font-bold leading-none ${
+                  on ? "text-brand" : "text-ink-1"
+                }`}
+              >
+                {number(count)}
+              </span>
+              {/* truncate ולא whitespace-nowrap: "נמכר ע״י משווק מקביל"
+                  היה מותח את הקוביה שלו לרוחב שלוש אחרות */}
+              <span
+                className={`mt-0.5 block truncate text-[11px] ${
+                  on ? "text-brand" : "text-ink-3"
+                }`}
+              >
+                {meta.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {active.length > 0 && (
         <button
           onClick={onClear}
-          className="shrink-0 self-stretch rounded-card border border-dashed border-line px-3 text-xs text-ink-3 transition-colors hover:border-line-strong hover:text-ink-1"
+          className="mt-1.5 text-xs text-ink-3 underline-offset-2 transition-colors hover:text-ink-1 hover:underline"
         >
-          ניקוי
+          ניקוי הסינון ({active.length})
         </button>
       )}
     </div>
