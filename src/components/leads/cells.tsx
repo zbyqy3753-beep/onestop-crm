@@ -83,7 +83,11 @@ export function InlinePicker({
   children: React.ReactNode;
 }) {
   return (
-    <span className="relative inline-flex items-center rounded pe-3.5 hover:bg-surface-3">
+    // ⚠️ min-h/min-w מתחת ל-lg נמדדו בפועל בכרטיס: בלי זה תא "רגיל"
+    // (badge קטן, מקף) נותן ל-<select> השקוף מאחוריו איזור לחיצה של
+    // 43×20 — פחות מחצי מ-44px הנדרש. lg:min-h-0 מחזיר את השולחן
+    // לצפיפות המקורית, שם התא כבר בגובה שורה שלם ואין מה להרחיב.
+    <span className="relative inline-flex min-h-11 min-w-11 items-center rounded pe-3.5 hover:bg-surface-3 lg:min-h-0 lg:min-w-0">
       {children}
       <Icon
         name="chevronDown"
@@ -126,7 +130,10 @@ export function FollowUpCell({
   children: React.ReactNode;
 }) {
   return (
-    <span className="relative inline-flex items-center rounded hover:bg-surface-3">
+    // אותה סיבה כמו ב-InlinePicker: נמדד בפועל 61×16 בלי זה — התאריך
+    // הריק ("קבע חזרה") הוא הטקסט הכי נמוך בכרטיס, וה-input השקוף
+    // ירש את הגובה שלו.
+    <span className="relative inline-flex min-h-11 min-w-11 items-center rounded hover:bg-surface-3 lg:min-h-0 lg:min-w-0">
       {children}
       <input
         type="date"
@@ -238,10 +245,20 @@ export function StarToggle({
       aria-pressed={lead.isStarred}
       aria-label={lead.isStarred ? `הסרת הסימון מ${lead.name}` : `סימון ${lead.name}`}
       title={lead.isStarred ? "הסרת סימון" : "סימון ליד"}
-      className={`shrink-0 rounded p-0.5 transition-colors ${
+      /*
+       * ⚠️ נמדד בפועל בכרטיס: 18×18 ו-`opacity: 0` — כפתור בלתי נראה
+       * לגמרי במגע, כי "hover" לא קיים באצבע. `opacity-100 lg:opacity-0
+       * lg:group-hover:opacity-100` הופך אותו לגלוי מתחת ל-lg ומשאיר
+       * את השולחן בדיוק כמו שהיה.
+       *
+       * `after:-inset-3` מרחיב את איזור הלחיצה ל-~40px בלי לשנות את
+       * הגודל החזותי של הכוכב עצמו — פסאודו-אלמנט לא תופס מקום
+       * בפריסה, ולכן אין השפעה על שאר האלמנטים בשורה.
+       */
+      className={`relative shrink-0 rounded p-0.5 transition-colors after:absolute after:-inset-3 after:content-[''] active:scale-90 ${
         lead.isStarred
           ? "text-warn"
-          : "text-ink-4 opacity-0 hover:text-ink-2 focus-visible:opacity-100 group-hover:opacity-100"
+          : "text-ink-4 opacity-100 hover:text-ink-2 focus-visible:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
       }`}
     >
       <Icon
@@ -268,12 +285,21 @@ export function RowActions({
 }) {
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
+  /*
+   * ⚠️ נמדד בפועל בכרטיס: 32×32 — קרוב אבל מתחת ל-44px. `after:-inset-1.5`
+   * מוסיף 6px לכל צד בלי לשנות את הגודל החזותי (פסאודו-אלמנט, לא
+   * תופס מקום). `active:scale-95` הוא משוב הלחיצה היחיד באתר — בלעדיו
+   * מגע על המסך "מרגיש מת", כי כל הפידבק הקיים הוא hover בלבד.
+   */
+  const actionClass =
+    "relative rounded-lg p-2 transition-colors after:absolute after:-inset-1.5 after:content-[''] active:scale-95";
+
   return (
     <div className="flex items-center justify-end gap-0.5">
       <a
         href={`tel:${lead.phone}`}
         onClick={stop}
-        className="rounded-lg p-2 text-ink-3 transition-colors hover:bg-brand-soft hover:text-brand"
+        className={`${actionClass} text-ink-3 hover:bg-brand-soft hover:text-brand`}
         aria-label={`חיוג ל${lead.name}`}
         title="חיוג"
       >
@@ -285,7 +311,7 @@ export function RowActions({
         onClick={stop}
         target="_blank"
         rel="noopener noreferrer"
-        className="rounded-lg p-2 text-ink-3 transition-colors hover:bg-good-soft hover:text-good"
+        className={`${actionClass} text-ink-3 hover:bg-good-soft hover:text-good`}
         aria-label={`וואטסאפ ל${lead.name}`}
         title="וואטסאפ"
       >
@@ -296,7 +322,7 @@ export function RowActions({
         <a
           href={`mailto:${lead.email}`}
           onClick={stop}
-          className="rounded-lg p-2 text-ink-3 transition-colors hover:bg-info-soft hover:text-info"
+          className={`${actionClass} text-ink-3 hover:bg-info-soft hover:text-info`}
           aria-label={`מייל ל${lead.name}`}
           title="מייל"
         >
@@ -306,7 +332,7 @@ export function RowActions({
 
       <button
         onClick={onOpen}
-        className="rounded-lg p-2 text-ink-4 transition-colors hover:bg-surface-3 hover:text-ink-1"
+        className={`${actionClass} text-ink-4 hover:bg-surface-3 hover:text-ink-1`}
         aria-label={`פתיחת ${lead.name}`}
         title="פתיחת הליד"
       >

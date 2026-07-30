@@ -78,8 +78,10 @@ export function LeadCard({
     >
       <div className="flex items-start gap-2">
         {selecting ? (
-          // `-m-2.5 p-2.5` מרחיב את אזור הלחיצה ל-44px בלי לשנות פריסה
-          <label className="-m-2.5 shrink-0 cursor-pointer p-2.5">
+          // `-m-3.5 p-3.5` מרחיב את אזור הלחיצה סביב צ׳קבוקס של ~16px
+          // ל-44px בלי לשנות את הפריסה — המרווח השלילי מבטל את מה
+          // שהריפוד מוסיף לתפוסת המקום.
+          <label className="-m-3.5 shrink-0 cursor-pointer p-3.5">
             <input
               type="checkbox"
               checked={checked}

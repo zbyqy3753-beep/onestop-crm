@@ -97,7 +97,7 @@ function Sidebar({
           <Wordmark />
           <button
             onClick={onClose}
-            className="ms-auto rounded-md p-1.5 text-ink-3 hover:bg-surface-3 lg:hidden"
+            className="relative ms-auto rounded-md p-1.5 text-ink-3 after:absolute after:-inset-2.5 after:content-[''] hover:bg-surface-3 active:scale-95 lg:hidden"
             aria-label="סגירת התפריט"
           >
             <Icon name="close" />
@@ -177,7 +177,7 @@ function Sidebar({
                 type="submit"
                 title="יציאה"
                 aria-label="יציאה"
-                className="rounded-md p-1.5 text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink-1"
+                className="relative rounded-md p-1.5 text-ink-3 transition-colors after:absolute after:-inset-2.5 after:content-[''] hover:bg-surface-3 hover:text-ink-1 active:scale-95"
               >
                 <Icon name="logout" size={17} />
               </button>
@@ -230,7 +230,9 @@ function TopBar({
     <header className="sticky top-0 z-20 flex h-[60px] shrink-0 items-center gap-3 border-b border-line bg-surface px-4 sm:px-6">
       <button
         onClick={onMenu}
-        className="-ms-1 rounded-md p-2 text-ink-2 hover:bg-surface-3 lg:hidden"
+        // `after:-inset-2` מרחיב את איזור הלחיצה מ-34px ל-44px, בלי
+        // להזיז את שאר הכותרת — פסאודו-אלמנט לא תופס מקום בפריסה
+        className="relative -ms-1 rounded-md p-2 text-ink-2 after:absolute after:-inset-2 after:content-[''] hover:bg-surface-3 active:scale-95 lg:hidden"
         aria-label="פתיחת התפריט"
       >
         <Icon name="menu" />
@@ -282,7 +284,7 @@ function ThemeToggle() {
   return (
     <button
       onClick={toggle}
-      className="rounded-lg p-2 text-ink-2 transition-colors hover:bg-surface-3 hover:text-ink-1"
+      className="relative rounded-lg p-2 text-ink-2 transition-colors after:absolute after:-inset-2 after:content-[''] hover:bg-surface-3 hover:text-ink-1 active:scale-95"
       aria-label={theme === "dark" ? "מעבר לתמה בהירה" : "מעבר לתמה כהה"}
       title={theme === "dark" ? "תמה בהירה" : "תמה כהה"}
     >
