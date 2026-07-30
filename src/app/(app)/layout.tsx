@@ -1,5 +1,6 @@
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/AppShell";
-import { requireSessionUser } from "@/server/auth/session";
+import { getSessionUser } from "@/server/auth/session";
 
 /**
  * מעטפת ה-shell (סרגל צד + סרגל עליון) — חלה על כל מסך שדורש אותה.
@@ -17,6 +18,12 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireSessionUser();
+  // `getSessionUser` ולא `requireSessionUser`: עוגייה שמצביעה על משתמש
+  // שכבר לא קיים היא מצב צפוי — משתמש שנמחק, או סשן ששרד אותו — והיא
+  // צריכה להחזיר למסך התחברות, לא לזרוק 500. ה-proxy בודק רק שהעוגייה
+  // *קיימת*, ולכן זו הנקודה הראשונה שיודעת שהיא חסרת תוקף.
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
   return <AppShell user={user}>{children}</AppShell>;
 }
