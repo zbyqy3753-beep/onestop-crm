@@ -134,13 +134,27 @@ export function LeadsClient({
   const awaitingPoll = useRef(false);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      // לשונית ברקע לא צריכה נתונים טריים — וגם לא קריאות DB
-      if (document.hidden) return;
+    function pull() {
       awaitingPoll.current = true;
       router.refresh();
+    }
+
+    const timer = setInterval(() => {
+      // לשונית ברקע לא צריכה נתונים טריים — וגם לא קריאות DB
+      if (!document.hidden) pull();
     }, AUTO_REFRESH_MS);
-    return () => clearInterval(timer);
+
+    // חזרה ללשונית מרעננת מיד ולא מחכה לטיק הבא: מסך שהיה מוסתר
+    // חצי שעה מציג נתונים בני חצי שעה, וזו בדיוק הנקודה שבה מסתכלים.
+    function onVisible() {
+      if (!document.hidden) pull();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [router]);
 
   useEffect(() => {
