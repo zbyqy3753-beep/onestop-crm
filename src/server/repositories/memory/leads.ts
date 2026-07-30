@@ -110,6 +110,16 @@ export const memoryLeadRepository: LeadRepository = {
     return counts;
   },
 
+  async countOpenByAssignee(): Promise<Record<UserId, number>> {
+    const counts: Record<UserId, number> = {};
+    for (const lead of state.leads) {
+      if (!lead.assigneeId) continue;
+      if (STATUS_CONFIG[lead.status].terminal) continue;
+      counts[lead.assigneeId] = (counts[lead.assigneeId] ?? 0) + 1;
+    }
+    return counts;
+  },
+
   async create(input: CreateLeadInput): Promise<Lead> {
     const id = nextId("lead");
     const ts = nowIso();

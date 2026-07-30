@@ -25,8 +25,20 @@ const SESSION_COOKIE = "os_session";
 const KEY_PARAM = "k";
 const MAX_AGE = 60 * 60 * 24 * 7;
 
-/** נתיבים שנשארים פתוחים לגמרי: הטופס הציבורי ונכסי המערכת. */
-const PUBLIC_PREFIXES = ["/form", "/_next", "/favicon.ico", "/robots.txt"];
+/**
+ * נתיבים שנשארים פתוחים לגמרי: הטופס הציבורי, ה-API ונכסי המערכת.
+ *
+ * `/api` פתוח כי הקוראים שלו הם שרתים של שותפים — אין להם עוגייה
+ * ואין להם דפדפן שיעבור בשער. כל נתיב תחת `/api` **חייב** לאמת את
+ * עצמו (ראה `src/app/api/leads/route.ts`, שמאמת `x-api-key`).
+ */
+const PUBLIC_PREFIXES = [
+  "/form",
+  "/api",
+  "/_next",
+  "/favicon.ico",
+  "/robots.txt",
+];
 
 const COOKIE_OPTIONS = {
   httpOnly: true,

@@ -140,6 +140,22 @@ export const prismaLeadRepository: LeadRepository = {
     return counts;
   },
 
+  async countOpenByAssignee(): Promise<Record<UserId, number>> {
+    const grouped = await prisma.lead.groupBy({
+      by: ["assigneeId"],
+      where: { status: { in: openStatuses }, assigneeId: { not: null } },
+      _count: { _all: true },
+    });
+
+    const counts: Record<UserId, number> = {};
+    for (const g of grouped) {
+      // `assigneeId: { not: null }` כבר סינן, אבל הטיפוס של groupBy
+      // עדיין nullable — הבדיקה כאן היא בשביל TypeScript
+      if (g.assigneeId) counts[g.assigneeId] = g._count._all;
+    }
+    return counts;
+  },
+
   async create(input: CreateLeadInput): Promise<Lead> {
     const row = await prisma.lead.create({
       data: {

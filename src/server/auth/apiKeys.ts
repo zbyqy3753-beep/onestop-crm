@@ -1,0 +1,76 @@
+import "server-only";
+
+/**
+ * מפתחות API לשותפים חיצוניים ששולחים לידים למערכת.
+ *
+ * הרישום חי ב-env ולא ב-DB: מספר השותפים קטן, וכך אפשר לבטל מפתח
+ * שדלף בלי מיגרציה ובלי פריסת קוד — משנים משתנה סביבה ומפעילים מחדש.
+ *
+ * פורמט `LEADS_API_KEYS` — זוגות `מפתח:שם`, מופרדים בפסיק:
+ *
+ *   LEADS_API_KEYS="os_moshe_a1b2c3d4e5:משה,os_dana_9f8e7d:דנה"
+ *
+ * השם הוא מה שיירשם בשדה "מקור" של הליד כשהשותף לא שולח `source`
+ * משלו — כך רואים בטבלה מי הביא כל ליד.
+ *
+ * ⚠️ בלי `LEADS_API_KEYS` הרשימה ריקה וכל בקשה נדחית ב-401. זו
+ * ברירת המחדל הבטוחה: נקודת קצה ציבורית בלי מפתחות מוגדרים היא
+ * דלת פתוחה, ולכן היא סגורה.
+ */
+
+export interface ApiPartner {
+  /** שם השותף לתצוגה — נכנס ל-`sourceDetail` של הליד */
+  name: string;
+}
+
+interface Registered extends ApiPartner {
+  key: string;
+}
+
+function registry(): Registered[] {
+  const raw = process.env.LEADS_API_KEYS?.trim();
+  if (!raw) return [];
+
+  return raw
+    .split(",")
+    .map((entry) => {
+      // רק המפריד הראשון נחשב — שם שותף יכול להכיל נקודתיים
+      const separator = entry.indexOf(":");
+      if (separator === -1) return null;
+
+      const key = entry.slice(0, separator).trim();
+      const name = entry.slice(separator + 1).trim();
+      if (!key || !name) return null;
+
+      return { key, name };
+    })
+    .filter((p): p is Registered => p !== null);
+}
+
+/**
+ * השוואה בזמן קבוע. מונעת דליפת המפתח דרך מדידת זמן התגובה.
+ * מימוש ידני ולא `crypto.timingSafeEqual` כדי שהקוד יעבוד גם אם
+ * הנתיב ירוץ יום אחד ב-Edge runtime, שבו `node:crypto` לא זמין.
+ */
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/**
+ * מזהה את השותף מכותרת `x-api-key`, או `null` אם המפתח חסר/לא מוכר.
+ *
+ * הלולאה עוברת על **כל** המפתחות גם אחרי התאמה, כדי שזמן התשובה
+ * לא יסגיר כמה מפתחות רשומים ואיפה ברשימה נמצא המפתח שנשלח.
+ */
+export function partnerFromKey(provided: string | null): ApiPartner | null {
+  if (!provided) return null;
+
+  let match: ApiPartner | null = null;
+  for (const partner of registry()) {
+    if (safeEqual(provided, partner.key)) match = { name: partner.name };
+  }
+  return match;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type {
   Deal,
   Lead,
@@ -47,6 +48,12 @@ import { StatusDialog } from "./StatusDialog";
  * הנגזרות (filtered → sorted) הן שרשרת useMemo. נגזרת חדשה מצטרפת
  * לשרשרת ולא מחושבת אד-הוק בתוך הרינדור.
  */
+
+/**
+ * כל כמה זמן למשוך לידים חדשים. דקה — מספיק צמוד לליד שנכנס מהאתר,
+ * ורחוק מספיק כדי שלא ייצור עומס DB מיותר על מסך שפתוח כל היום.
+ */
+const AUTO_REFRESH_MS = 60_000;
 
 export type SortField =
   | "updatedAt"
@@ -112,6 +119,59 @@ export function LeadsClient({
     (id: number) => setToasts((t) => t.filter((x) => x.id !== id)),
     [],
   );
+
+  /* ── רענון אוטומטי ───────────────────────────────────────────────── */
+
+  /**
+   * לידים נכנסים מבחוץ (`POST /api/leads`) בלי שהדפדפן יודע על כך,
+   * ובלי רענון המסך היה נשאר תקוע עד שמישהו מרענן ידנית.
+   *
+   * `router.refresh()` מושך מחדש רק את רכיב השרת — מצב הלקוח (מסננים,
+   * בחירה, מיון, מודלים פתוחים) שורד. לכן אין כאן חסימה בזמן עריכה.
+   */
+  const router = useRouter();
+  const knownLeadIds = useRef<Set<string> | null>(null);
+  const awaitingPoll = useRef(false);
+
+  useEffect(() => {
+    function pull() {
+      awaitingPoll.current = true;
+      router.refresh();
+    }
+
+    const timer = setInterval(() => {
+      // לשונית ברקע לא צריכה נתונים טריים — וגם לא קריאות DB
+      if (!document.hidden) pull();
+    }, AUTO_REFRESH_MS);
+
+    // חזרה ללשונית מרעננת מיד ולא מחכה לטיק הבא: מסך שהיה מוסתר
+    // חצי שעה מציג נתונים בני חצי שעה, וזו בדיוק הנקודה שבה מסתכלים.
+    function onVisible() {
+      if (!document.hidden) pull();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [router]);
+
+  useEffect(() => {
+    const previous = knownLeadIds.current;
+    knownLeadIds.current = new Set(leads.map((l) => l.id));
+
+    // ההשוואה הראשונה היא רק לבניית הבסיס. `awaitingPoll` מבדיל בין
+    // ליד שנכנס מבחוץ לבין ליד שהמשתמש עצמו יצר — על יצירה ידנית יש
+    // כבר טוסט משלה, וטוסט שני היה כפילות.
+    if (!previous || !awaitingPoll.current) return;
+    awaitingPoll.current = false;
+
+    const added = leads.filter((l) => !previous.has(l.id)).length;
+    if (added > 0) {
+      notify(added === 1 ? "נכנס ליד חדש" : `נכנסו ${added} לידים חדשים`);
+    }
+  }, [leads, notify]);
 
   /* ── קיצורי מקלדת ────────────────────────────────────────────────── */
 
