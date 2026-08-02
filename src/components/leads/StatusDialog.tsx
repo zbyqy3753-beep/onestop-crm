@@ -33,9 +33,18 @@ export function StatusDialog({
   const many = target.leadIds.length > 1;
   const blocked = Boolean(prompt?.required) && !detail.trim();
 
-  // רק שני הסטטוסים האלה שומרים תזכורת חזרה — ראה changeStatus ברפוזיטורי
-  const wantsFollowUp =
-    target.to === "followUp" || target.to === "futureTracking";
+  // סטטוסים ששומרים תזכורת חזרה — ראה changeStatus ברפוזיטורי.
+  // הורחב מעבר ל"פולו־אפ"/"מעקב עתידי": אחרי "אין מענה" (וכד׳) הנציג
+  // צריך לקבוע חזרה בלי לפתוח דיאלוג נוסף. התאריך נשאר אופציונלי.
+  const FOLLOW_UP_STATUSES: LeadStatus[] = [
+    "followUp",
+    "futureTracking",
+    "noAnswer",
+    "contacted",
+    "awaitingClient",
+    "quoteSent",
+  ];
+  const wantsFollowUp = FOLLOW_UP_STATUSES.includes(target.to);
 
   return (
     <Modal
@@ -74,6 +83,28 @@ export function StatusDialog({
             תאריך חזרה
             <span className="font-normal text-ink-4"> (אופציונלי)</span>
           </span>
+          {/* קיצורי דרך נפוצים — נגיעה אחת במקום גלילה בלוח שנה */}
+          <div className="mb-2 flex gap-1.5">
+            {FOLLOW_UP_PRESETS.map((preset) => {
+              const date = inDays(preset.days);
+              const active = followUpDate === date;
+              return (
+                <button
+                  key={preset.days}
+                  type="button"
+                  onClick={() => setFollowUpDate(date)}
+                  aria-pressed={active}
+                  className={`min-h-9 rounded-full border px-3 text-xs font-medium transition-colors active:scale-95 ${
+                    active
+                      ? "border-brand bg-brand-soft text-brand"
+                      : "border-line bg-surface text-ink-2 hover:border-line-strong hover:text-ink-1"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
           <input
             type="date"
             value={followUpDate}
@@ -108,7 +139,23 @@ export function StatusDialog({
  * `toISOString()` היה מחזיר UTC ובישראל זה נופל ליום הקודם בלילה.
  */
 function today(): string {
+  return inDays(0);
+}
+
+/**
+ * תאריך בעוד `days` ימים, באותו פורמט ובאותו שעון מקומי —
+ * `setDate` מטפל בגלישת חודש/שנה בעצמו.
+ */
+function inDays(days: number): string {
   const d = new Date();
+  d.setDate(d.getDate() + days);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
+
+// קיצורי הדרך שמעל שדה התאריך
+const FOLLOW_UP_PRESETS = [
+  { label: "מחר", days: 1 },
+  { label: "בעוד 3 ימים", days: 3 },
+  { label: "שבוע הבא", days: 7 },
+] as const;

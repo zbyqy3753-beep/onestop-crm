@@ -10,7 +10,7 @@ import {
 } from "@/lib/domain/types";
 import { TONE_VAR, phone, relative, until, waLink } from "@/lib/format";
 import { whatsappGreeting } from "@/lib/domain/types";
-import { dayKey } from "@/lib/tz";
+import { calendarDaysBetween, dayKey } from "@/lib/tz";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
 import { Badge } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
@@ -46,6 +46,7 @@ export function LeadCard({
   onToggle,
   onOpen,
   onStatus,
+  onQuickStatus,
   onStar,
   onPatch,
 }: {
@@ -58,11 +59,22 @@ export function LeadCard({
   onToggle: () => void;
   onOpen: () => void;
   onStatus: (to: LeadStatus) => void;
+  /**
+   * שינוי סטטוס **בלי דיאלוג** — לצ׳יפ "אין מענה". אופציונלי:
+   * כשלא סופק, הצ׳יפ נופל ל-`onStatus` הרגיל (עם דיאלוג).
+   */
+  onQuickStatus?: (to: LeadStatus) => void;
   onStar: (next: boolean) => void;
   onPatch: (patch: LeadPatch) => void;
 }) {
   const priority = PRIORITY_CONFIG[lead.priority];
   const status = STATUS_CONFIG[lead.status];
+
+  /** תאריך החזרה כבר עבר (בימי לוח) — הליד זועק, לא ממתין. */
+  const overdue =
+    now !== null &&
+    lead.followUpAt !== undefined &&
+    calendarDaysBetween(now, Date.parse(lead.followUpAt)) < 0;
 
   // ⚠️ הספק והחבילה מוצגים **ביחד**. הם מגיעים מהשותף כמחרוזת אחת
   // ("ULTIMATE – YES") ונשמרים בשתי עמודות, ולכן החבילה לבדה נראית
@@ -185,7 +197,13 @@ export function LeadCard({
           onPick={(v) => onPatch({ followUpDate: v || null })}
         >
           {lead.followUpAt && now !== null ? (
-            <span className="flex items-center gap-1 text-xs text-warn">
+            // באיחור — אדום ומודגש; `until()` כבר אומר "באיחור X ימים",
+            // כך שהצבע רק מחזק ולא מוסיף מילים. היום/עתיד נשארים בצהוב.
+            <span
+              className={`flex items-center gap-1 text-xs ${
+                overdue ? "font-semibold text-bad" : "text-warn"
+              }`}
+            >
               <Icon name="clock" size={12} />
               {until(lead.followUpAt, now)}
             </span>
@@ -196,6 +214,22 @@ export function LeadCard({
             </span>
           )}
         </FollowUpCell>
+
+        {/*
+          התוצאה הנפוצה ביותר של חיוג — "אין מענה" — בלחיצה אחת,
+          בלי לפתוח את בורר הסטטוסים. דרך `onQuickStatus` היא גם
+          מדלגת על הדיאלוג (השאלה שם אינה חובה); בלעדיו נופלים
+          ל-`onStatus` הרגיל. מוסתר כשהליד כבר "אין מענה" או סגור.
+        */}
+        {lead.status !== "noAnswer" && !status.terminal && (
+          <button
+            onClick={() => (onQuickStatus ?? onStatus)("noAnswer")}
+            disabled={busy}
+            className="min-h-9 rounded-full border border-line px-2.5 text-xs text-ink-2 transition-transform active:scale-95 disabled:opacity-50"
+          >
+            אין מענה
+          </button>
+        )}
 
         {/*
           וואטסאפ והזמן היחסי בקצה אותה שורה.

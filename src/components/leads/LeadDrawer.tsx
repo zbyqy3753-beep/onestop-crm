@@ -14,10 +14,12 @@ import {
 } from "@/lib/domain/types";
 import { addNoteAction } from "@/app/(app)/leads/actions";
 import { dateTime, money, phone, relative, waLink } from "@/lib/format";
+import { dayKey } from "@/lib/tz";
 import { useBodyScrollLock } from "@/lib/overlay";
 import { Badge, Button, inputClass, useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { ActivityFeed } from "./ActivityFeed";
+import { FollowUpCell } from "./cells";
 
 /**
  * מגירת הליד — כל מה שצריך לפני חיוג, במסך אחד.
@@ -32,6 +34,7 @@ export function LeadDrawer({
   onClose,
   onStatus,
   onAssign,
+  onPatchFollowUp,
   onEdit,
   onDelete,
   onNotify,
@@ -43,6 +46,8 @@ export function LeadDrawer({
   onClose: () => void;
   onStatus: (to: LeadStatus) => void;
   onAssign: (assigneeId: string | null) => void;
+  /** קביעה/ניקוי של תאריך החזרה ישירות מהמגירה. `null` = ניקוי. */
+  onPatchFollowUp?: (date: string | null) => void;
   onEdit: () => void;
   onDelete: () => void;
   onNotify: (message: string, tone?: "good" | "bad") => void;
@@ -249,8 +254,23 @@ export function LeadDrawer({
             <Detail label="קשר אחרון">
               {lead.lastContactAt ? dateTime(lead.lastContactAt) : "—"}
             </Detail>
+            {/*
+              עד כה זה היה טקסט קריא-בלבד — הדרך היחידה לקבוע חזרה
+              מהמגירה הייתה לצאת ממנה ולערוך מהשורה. אותו FollowUpCell
+              של הטבלה והכרטיס, כדי שהתנהגות העריכה תישאר אחת.
+            */}
             <Detail label="חזרה מתוכננת">
-              {lead.followUpAt ? dateTime(lead.followUpAt) : "—"}
+              <FollowUpCell
+                value={lead.followUpAt ? dayKey(Date.parse(lead.followUpAt)) : ""}
+                busy={busy}
+                onPick={(v) => onPatchFollowUp?.(v || null)}
+              >
+                {lead.followUpAt ? (
+                  dateTime(lead.followUpAt)
+                ) : (
+                  <span className="text-ink-4">קבע חזרה</span>
+                )}
+              </FollowUpCell>
             </Detail>
             {assignee && <Detail label="סוכן מטפל">{assignee.name}</Detail>}
           </dl>

@@ -36,7 +36,13 @@ import {
   performanceByAgent,
   totalLeadCostForLeads,
 } from "@/server/services/economics";
-import { Button, Modal, ToastStack, type Toast } from "@/components/ui/primitives";
+import {
+  Button,
+  Modal,
+  ToastStack,
+  inputClass,
+  type Toast,
+} from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { LeadCostsModal } from "@/components/settings/LeadCostsModal";
 import { LeadsFinancePanel } from "./LeadsFinancePanel";
@@ -71,6 +77,8 @@ import { StatusDialog } from "./StatusDialog";
 const AUTO_REFRESH_MS = 60_000;
 
 export type SortField =
+  /** תור העבודה: באיחור/להיום → חדשים → כל השאר. ראה `sorted`. */
+  | "queue"
   | "updatedAt"
   | "createdAt"
   | "name"
@@ -105,8 +113,10 @@ export function LeadsClient({
   canSeeAll: boolean;
 }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  // ברירת המחדל היא תור העבודה — מה שדחוף היום צף למעלה בלי
+  // שהמשתמש יבחר מיון. הכיוון לא משפיע על "queue" (הסדר קבוע).
   const [sort, setSort] = useState<{ field: SortField; dir: "asc" | "desc" }>({
-    field: "updatedAt",
+    field: "queue",
     dir: "desc",
   });
 
@@ -375,8 +385,43 @@ export function LeadsClient({
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
 
+    /**
+     * דירוג "תור העבודה": 0 — תאריך החזרה הגיע (באיחור או היום),
+     * 1 — ליד חדש שטרם טופל, 2 — כל השאר. לפני ההרכבה אין "היום"
+     * (`endOfToday === null`) ולכן אין קבוצה 0 — ראה מקרה "queue".
+     */
+    const queueRank = (l: Lead): number => {
+      if (
+        endOfToday !== null &&
+        l.followUpAt &&
+        Date.parse(l.followUpAt) <= endOfToday
+      )
+        return 0;
+      if (l.status === "new") return 1;
+      return 2;
+    };
+
     return [...filtered].sort((a, b) => {
       switch (sort.field) {
+        case "queue": {
+          // בשרת ולפני ההרכבה אין שעון — נופלים למיון "עודכן לאחרונה"
+          // בלבד, זהה בשני הצדדים, בלי אי-התאמת הידרציה
+          if (endOfToday === null)
+            return Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
+
+          const ra = queueRank(a);
+          const rb = queueRank(b);
+          if (ra !== rb) return ra - rb;
+          // בתוך קבוצה 0: החזרה המוקדמת ביותר קודם (הכי באיחור למעלה)
+          if (ra === 0)
+            return Date.parse(a.followUpAt!) - Date.parse(b.followUpAt!);
+          // בתוך קבוצה 1: החדש ביותר קודם
+          if (ra === 1)
+            return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+          // קבוצה 2: העדכני ביותר קודם. הכיוון (dir) לא חל על התור —
+          // "תור הפוך" הוא לא סדר שמישהו מתכוון אליו
+          return Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
+        }
         case "name":
           return a.name.localeCompare(b.name, "he") * dir;
         case "priority":
@@ -399,7 +444,7 @@ export function LeadsClient({
           return (Date.parse(a[sort.field]) - Date.parse(b[sort.field])) * dir;
       }
     });
-  }, [filtered, sort]);
+  }, [filtered, sort, endOfToday]);
 
   /**
    * העמוד מוגבל בזמן הרינדור ולא מאופס באפקט. אם התוצאה התכווצה
@@ -497,9 +542,20 @@ export function LeadsClient({
     setPage(1);
   }
 
-  /** פותח דיאלוג פירוט אם הסטטוס דורש אחד, אחרת מחיל ישירות. */
-  function requestStatus(leadIds: string[], to: LeadStatus) {
-    if (STATUS_CONFIG[to].prompt) {
+  /**
+   * פותח דיאלוג פירוט אם הסטטוס דורש אחד, אחרת מחיל ישירות.
+   *
+   * `skipDialog` מדלג על הדיאלוג גם כשיש שאלה — אבל **רק** אם היא
+   * לא חובה. זה מה שהופך "אין מענה" מהכרטיס ללחיצה אופטימית אחת,
+   * בלי לפתוח פרצה בסטטוסים שהפירוט בהם הוא חובה.
+   */
+  function requestStatus(
+    leadIds: string[],
+    to: LeadStatus,
+    opts?: { skipDialog?: boolean },
+  ) {
+    const prompt = STATUS_CONFIG[to].prompt;
+    if (prompt && !(opts?.skipDialog && !prompt.required)) {
       setStatusTarget({ leadIds, to });
       return;
     }
@@ -689,16 +745,42 @@ export function LeadsClient({
         }
         overflow={
           narrow ? (
-            <Button
-              variant="secondary"
-              onClick={() => setMoreOpen(true)}
-              aria-label="פעולות נוספות"
-              className="size-11 shrink-0 px-0"
-            >
-              <span aria-hidden className="text-lg leading-none">
-                ⋯
-              </span>
-            </Button>
+            <div className="flex shrink-0 items-center gap-2">
+              {/*
+                בטלפון אין כותרות עמודה ללחוץ עליהן — זה פקד המיון
+                היחיד. "תור עבודה" הוא ברירת המחדל; הכיוון קבוע לכל
+                אפשרות (שם עולה, תאריך חזרה עולה, השאר יורד) כי בורר
+                כיוון נפרד היה מכפיל את הפקד בשביל מקרה שאיש לא צריך.
+              */}
+              <select
+                value={sort.field}
+                onChange={(e) => {
+                  const field = e.target.value as SortField;
+                  applySort({
+                    field,
+                    dir: field === "name" || field === "followUpAt" ? "asc" : "desc",
+                  });
+                }}
+                aria-label="מיון"
+                className={`${inputClass} min-h-11 w-auto`}
+              >
+                <option value="queue">תור עבודה</option>
+                <option value="updatedAt">עודכן לאחרונה</option>
+                <option value="createdAt">חדשים קודם</option>
+                <option value="followUpAt">תאריך חזרה</option>
+                <option value="name">שם</option>
+              </select>
+              <Button
+                variant="secondary"
+                onClick={() => setMoreOpen(true)}
+                aria-label="פעולות נוספות"
+                className="size-11 shrink-0 px-0"
+              >
+                <span aria-hidden className="text-lg leading-none">
+                  ⋯
+                </span>
+              </Button>
+            </div>
           ) : undefined
         }
         busy={pending}
@@ -718,6 +800,7 @@ export function LeadsClient({
           busyIds={busyIds}
           onOpen={setOpenLeadId}
           onStatus={(id, to) => requestStatus([id], to)}
+          onQuickStatus={(id, to) => requestStatus([id], to, { skipDialog: true })}
           onStar={toggleStar}
           onPatch={patchLead}
           onAdd={() => setAddOpen(true)}
@@ -829,6 +912,9 @@ export function LeadsClient({
         onClose={() => setOpenLeadId(null)}
         onStatus={(to) => openLead && requestStatus([openLead.id], to)}
         onAssign={(uid) => openLead && assign([openLead.id], uid)}
+        onPatchFollowUp={(date) =>
+          openLead && patchLead(openLead.id, { followUpDate: date })
+        }
         onEdit={() => setEditOpen(true)}
         onDelete={() => openLead && remove([openLead.id])}
         onNotify={notify}

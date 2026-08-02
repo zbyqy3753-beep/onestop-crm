@@ -129,8 +129,8 @@ export interface ChangeStatusInput {
   detail?: string;
   actorId: UserId;
   /**
-   * מתי לחזור. רלוונטי רק לסטטוסים `followUp` / `futureTracking` —
-   * בכל השאר התזכורת נמחקת ממילא והערך הזה מתעלמים ממנו.
+   * מתי לחזור. ערך מפורש תמיד מנצח; בלעדיו — סטטוס סופי (terminal)
+   * מנקה את התזכורת, וכל סטטוס אחר משאיר אותה כמו שהיא.
    */
   followUpAt?: string;
 }

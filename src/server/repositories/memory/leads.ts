@@ -251,12 +251,14 @@ export const memoryLeadRepository: LeadRepository = {
     lead.updatedAt = ts;
     lead.lastContactAt = ts;
 
-    // סטטוסים שאינם דורשים חזרה מנקים את התזכורת; אלה שכן — קובעים
-    // אותה אם התקבל תאריך, ומשאירים את הקיים אם לא
-    if (to !== "followUp" && to !== "futureTracking") {
-      lead.followUpAt = undefined;
-    } else if (followUpAt) {
+    // רק סטטוס סופי מנקה תאריך חזרה — הליד כבר לא בטיפול. סטטוס
+    // לא-סופי משמר את התאריך הקיים: הכלל הישן גרם לכך שמעבר
+    // ל"אין מענה" מחק תאריך חזרה שנקבע מראש. תאריך שהועבר במפורש
+    // תמיד גובר. אותה התנהגות כמו במימוש Prisma.
+    if (followUpAt) {
       lead.followUpAt = followUpAt;
+    } else if (STATUS_CONFIG[to].terminal) {
+      lead.followUpAt = undefined;
     }
 
     return structuredClone(lead);

@@ -22,6 +22,7 @@ export function LeadCardList({
   busyIds,
   onOpen,
   onStatus,
+  onQuickStatus,
   onStar,
   onPatch,
   onAdd,
@@ -41,6 +42,8 @@ export function LeadCardList({
   busyIds: ReadonlySet<string>;
   onOpen: (id: string) => void;
   onStatus: (id: string, to: LeadStatus) => void;
+  /** סטטוס בנגיעה אחת מהכרטיס — מדלג על הדיאלוג כשאין שאלה חובה */
+  onQuickStatus: (id: string, to: LeadStatus) => void;
   onStar: (id: string, next: boolean) => void;
   onPatch: (id: string, patch: LeadPatch) => void;
   onAdd: () => void;
@@ -124,6 +127,7 @@ export function LeadCardList({
               onToggle={() => toggle(lead.id)}
               onOpen={() => onOpen(lead.id)}
               onStatus={(to) => onStatus(lead.id, to)}
+              onQuickStatus={(to) => onQuickStatus(lead.id, to)}
               onStar={(next) => onStar(lead.id, next)}
               onPatch={(patch) => onPatch(lead.id, patch)}
             />

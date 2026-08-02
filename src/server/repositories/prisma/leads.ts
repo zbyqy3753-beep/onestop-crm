@@ -258,13 +258,18 @@ export const prismaLeadRepository: LeadRepository = {
     actorId,
     followUpAt,
   }: ChangeStatusInput): Promise<Lead> {
-    const clearsFollowUp = to !== "followUp" && to !== "futureTracking";
+    // רק סטטוס סופי (עסקה סגורה, נדחה וכו׳) מנקה תאריך חזרה — הליד
+    // כבר לא בטיפול. סטטוס לא-סופי *משמר* את התאריך הקיים: הכלל הישן
+    // ("כל מה שאינו followUp/futureTracking מנקה") גרם לכך שמעבר
+    // ל"אין מענה" מחק תאריך חזרה שנקבע מראש. תאריך שהועבר במפורש
+    // תמיד גובר.
+    const clearsFollowUp = STATUS_CONFIG[to].terminal;
 
     // undefined = אל תיגע; null = נקה. אותה התנהגות כמו במימוש הזיכרון.
-    const nextFollowUp = clearsFollowUp
-      ? null
-      : followUpAt
-        ? new Date(followUpAt)
+    const nextFollowUp = followUpAt
+      ? new Date(followUpAt)
+      : clearsFollowUp
+        ? null
         : undefined;
 
     const row = await prisma.$transaction(async (tx) => {

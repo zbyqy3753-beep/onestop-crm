@@ -18,7 +18,7 @@ import {
 } from "@/lib/domain/types";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
 import { TONE_VAR, date, phone, relative, until } from "@/lib/format";
-import { dayKey } from "@/lib/tz";
+import { calendarDaysBetween, dayKey } from "@/lib/tz";
 import { Badge } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import {
@@ -193,8 +193,13 @@ export function LeadRow({
       case "updatedAt":
         return now === null ? skeleton("w-16") : relative(lead.updatedAt, now);
 
-      case "followUpAt":
+      case "followUpAt": {
         if (now === null) return skeleton("w-14");
+        // באיחור — אדום ומודגש. חזרה שעברה היא לא "תזכורת", היא חוב.
+        // `until()` כבר אומר "באיחור X ימים"; היום/עתיד נשארים בצהוב.
+        const followUpOverdue =
+          lead.followUpAt !== undefined &&
+          calendarDaysBetween(now, Date.parse(lead.followUpAt)) < 0;
         return (
           <FollowUpCell
             // `<input type="date">` מצפה ל-YYYY-MM-DD בשעון המקומי,
@@ -204,7 +209,11 @@ export function LeadRow({
             onPick={(v) => onPatch({ followUpDate: v || null })}
           >
             {lead.followUpAt ? (
-              <span className="flex items-center gap-1 text-warn">
+              <span
+                className={`flex items-center gap-1 ${
+                  followUpOverdue ? "font-semibold text-bad" : "text-warn"
+                }`}
+              >
                 <Icon name="clock" size={12} />
                 {until(lead.followUpAt, now)}
               </span>
@@ -213,6 +222,7 @@ export function LeadRow({
             )}
           </FollowUpCell>
         );
+      }
 
       // סוג הליד (חם/דאטה) לא חוזר כאן — הוא כבר מסומן בנקודה שליד השם
       case "category":
