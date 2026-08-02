@@ -13,6 +13,13 @@ export interface QuickView {
   label: string;
   /** מה התצוגה קובעת. השאר נשאר ריק. */
   patch: (userId: string) => Filters;
+  /**
+   * התצוגה מוצגת רק למי שרואה את כל הלידים.
+   *
+   * לעובד שרואה רק את הלידים שלו, "שלי" זהה ל"הכל" ו"ללא שיוך"
+   * תמיד ריקה — שני צ׳יפים שתופסים מקום ולא עושים כלום.
+   */
+  fullAccessOnly?: boolean;
 }
 
 export const QUICK_VIEWS: QuickView[] = [
@@ -25,6 +32,7 @@ export const QUICK_VIEWS: QuickView[] = [
     key: "mine",
     label: "שלי",
     patch: (userId) => ({ ...EMPTY_FILTERS, assignee: [userId], openOnly: true }),
+    fullAccessOnly: true,
   },
   {
     key: "due",
@@ -53,6 +61,7 @@ export const QUICK_VIEWS: QuickView[] = [
       assignee: ["unassigned"],
       openOnly: true,
     }),
+    fullAccessOnly: true,
   },
   {
     key: "hot",

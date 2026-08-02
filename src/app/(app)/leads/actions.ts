@@ -17,6 +17,7 @@ import {
   isPriority,
 } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
+import { canSeeAllLeads } from "@/lib/domain/permissions";
 import { revalidateLeadSurfaces } from "@/app/(app)/_revalidate";
 
 /**
@@ -29,8 +30,8 @@ import { revalidateLeadSurfaces } from "@/app/(app)/_revalidate";
  * עוגיית סשן, לא שהיא מצביעה למשתמש אמיתי, ו-Server Action אפשר
  * לקרוא ישירות — כך ש-`requireSessionUser` הוא ההגנה בפועל.
  *
- * ⚠️ עדיין אין בדיקת הרשאות פרטנית: כל משתמש מחובר יכול לערוך ולמחוק
- * כל ליד, גם כזה שמשויך למישהו אחר.
+ * ההרשאה הפרטנית נאכפת דרך `assertCanEdit`: מנהל עורך כל ליד, עובד
+ * עורך רק לידים שמשויכים אליו או שאינם משויכים לאיש.
  */
 
 export type ActionResult<T = undefined> =
@@ -39,6 +40,36 @@ export type ActionResult<T = undefined> =
 
 async function actor(): Promise<string> {
   return (await requireSessionUser()).id;
+}
+
+/** מוחזר כשעובד מנסה לגעת בליד של מישהו אחר. */
+const FORBIDDEN = "אין לך הרשאה לערוך את הליד הזה";
+
+/**
+ * בדיקת בעלות על ליד.
+ *
+ * ⚠️ **זו ההרשאה האמיתית, לא הסינון במסך.** `leads/page.tsx` רק
+ * מחליט מה *מוצג*; Server Action אפשר לקרוא ישירות עם כל מזהה ליד,
+ * ולכן בלי הבדיקה כאן עובד היה יכול לערוך או למחוק ליד של עמית
+ * פשוט על ידי ניחוש מזהה.
+ *
+ * ליד ללא שיוך מותר לעריכה — הוא במאגר המשותף, וזו הדרך שבה עובד
+ * לוקח אותו לטיפול.
+ *
+ * מחזיר `null` כשמותר, או הודעת שגיאה כשאסור.
+ */
+async function assertCanEdit(leadIds: string[]): Promise<string | null> {
+  const user = await requireSessionUser();
+  if (canSeeAllLeads(user.role)) return null;
+
+  for (const id of leadIds) {
+    const lead = await db.leads.getById(id);
+    // ליד שלא קיים נבלע כאן בשקט — הפעולה עצמה תיכשל עליו ממילא,
+    // ואין סיבה להסגיר לעובד אילו מזהים קיימים במערכת
+    if (!lead) continue;
+    if (lead.assigneeId && lead.assigneeId !== user.id) return FORBIDDEN;
+  }
+  return null;
 }
 
 /* ── יצירה ────────────────────────────────────────────────────────────── */
@@ -102,7 +133,8 @@ export async function updateLeadAction(
   leadId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireSessionUser();
+  const denied = await assertCanEdit([leadId]);
+  if (denied) return { ok: false, error: denied };
 
   const name = String(formData.get("name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
@@ -164,6 +196,9 @@ export async function patchLeadAction(
   leadId: string,
   patch: LeadPatch,
 ): Promise<ActionResult> {
+  const denied = await assertCanEdit([leadId]);
+  if (denied) return { ok: false, error: denied };
+
   const actorId = await actor();
 
   if (patch.priority !== undefined && !isPriority(patch.priority)) {
@@ -240,6 +275,9 @@ export async function changeStatusManyAction(
 ): Promise<ActionResult<BulkStatusResult>> {
   if (leadIds.length === 0) return { ok: false, error: "לא נבחרו לידים" };
 
+  const denied = await assertCanEdit(leadIds);
+  if (denied) return { ok: false, error: denied };
+
   if (!isLeadStatus(to)) return { ok: false, error: "סטטוס לא מוכר" };
   const meta = STATUS_CONFIG[to];
 
@@ -289,6 +327,9 @@ export async function changeStatusAction(
   detail?: string,
   followUpDate?: string,
 ): Promise<ActionResult> {
+  const denied = await assertCanEdit([leadId]);
+  if (denied) return { ok: false, error: denied };
+
   // `STATUS_CONFIG[to]` לבדו היה עובר גם עבור "constructor"/"toString"
   if (!isLeadStatus(to)) return { ok: false, error: "סטטוס לא מוכר" };
   const meta = STATUS_CONFIG[to];
@@ -349,6 +390,11 @@ export async function assignAction(
 ): Promise<ActionResult> {
   if (leadIds.length === 0) return { ok: false, error: "לא נבחרו לידים" };
 
+  // עובד יכול לקחת לעצמו ליד מהמאגר המשותף, אבל לא לחטוף ליד
+  // שכבר משויך לעמית — `assertCanEdit` חוסם בדיוק את זה
+  const denied = await assertCanEdit(leadIds);
+  if (denied) return { ok: false, error: denied };
+
   if (assigneeId) {
     const user = await db.users.getById(assigneeId);
     if (!user) return { ok: false, error: "העובד לא נמצא" };
@@ -367,13 +413,14 @@ export async function assignAction(
  *
  * `null` מנקה אותה ומחזיר לעלות של הקטגוריה; `0` הוא ערך אמיתי
  * שמשמעותו "הליד היה חינם". שני מצבים שונים, ולכן שני ערכים שונים.
- *
- * ⚠️ אין בדיקת הרשאות — הערך הזה מזיז כל מספר רווח במערכת.
  */
 export async function setLeadCostAction(
   leadId: string,
   cost: number | null,
 ): Promise<ActionResult> {
+  const denied = await assertCanEdit([leadId]);
+  if (denied) return { ok: false, error: denied };
+
   if (cost !== null && (!Number.isFinite(cost) || cost < 0)) {
     return { ok: false, error: "עלות חייבת להיות מספר חיובי" };
   }
@@ -396,6 +443,9 @@ export async function toggleStarAction(
   leadId: string,
   next: boolean,
 ): Promise<ActionResult> {
+  const denied = await assertCanEdit([leadId]);
+  if (denied) return { ok: false, error: denied };
+
   await db.leads.update(leadId, { isStarred: next });
   await db.leads.logActivity({
     leadId,
@@ -413,6 +463,9 @@ export async function addNoteAction(
   leadId: string,
   body: string,
 ): Promise<ActionResult> {
+  const denied = await assertCanEdit([leadId]);
+  if (denied) return { ok: false, error: denied };
+
   const text = body.trim();
   if (!text) return { ok: false, error: "ההערה ריקה" };
 
@@ -426,9 +479,10 @@ export async function addNoteAction(
 export async function deleteLeadsAction(
   leadIds: string[],
 ): Promise<ActionResult> {
-  await requireSessionUser();
-
   if (leadIds.length === 0) return { ok: false, error: "לא נבחרו לידים" };
+
+  const denied = await assertCanEdit(leadIds);
+  if (denied) return { ok: false, error: denied };
 
   await db.leads.remove(leadIds);
   revalidateLeadSurfaces();

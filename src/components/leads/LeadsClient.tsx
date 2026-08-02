@@ -76,6 +76,7 @@ export function LeadsClient({
   deals,
   packages,
   currentUserId,
+  canSeeAll,
 }: {
   leads: Lead[];
   users: User[];
@@ -84,6 +85,14 @@ export function LeadsClient({
   deals: Deal[];
   packages: Package[];
   currentUserId: string;
+  /**
+   * האם המשתמש רואה את כל הלידים בארגון.
+   *
+   * ⚠️ זה **לא** מנגנון ההרשאה — ההגבלה נאכפת בשליפה ב-`page.tsx`,
+   * ולידים של אחרים לא מגיעים לכאן מלכתחילה. הדגל הזה משמש רק
+   * להסתרת פקדים שאין להם משמעות בחתך אישי.
+   */
+  canSeeAll: boolean;
 }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<{ field: SortField; dir: "asc" | "desc" }>({
@@ -490,6 +499,7 @@ export function LeadsClient({
         filters={filters}
         onFiltersChange={applyFilters}
         currentUserId={currentUserId}
+        canSeeAll={canSeeAll}
         compact={narrow}
         onExpandStatuses={() => setStatusSheetOpen(true)}
       />

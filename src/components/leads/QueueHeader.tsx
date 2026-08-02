@@ -30,6 +30,7 @@ export function QueueHeader({
   filters,
   onFiltersChange,
   currentUserId,
+  canSeeAll,
   compact = false,
   onExpandStatuses,
 }: {
@@ -44,6 +45,8 @@ export function QueueHeader({
   filters: Filters;
   onFiltersChange: (f: Filters) => void;
   currentUserId: string;
+  /** מסתיר תצוגות מהירות שאין להן משמעות בחתך אישי */
+  canSeeAll: boolean;
   /** מסך צר — קוביות הסטטוס מתקפלות לשורה אחת */
   compact?: boolean;
   onExpandStatuses?: () => void;
@@ -128,7 +131,7 @@ export function QueueHeader({
         role="group"
         aria-label="תצוגות מהירות"
       >
-        {QUICK_VIEWS.map((view) => {
+        {QUICK_VIEWS.filter((v) => canSeeAll || !v.fullAccessOnly).map((view) => {
           const active = isViewActive(view, filters, currentUserId);
           return (
             <button
