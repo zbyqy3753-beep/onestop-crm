@@ -91,10 +91,23 @@ export function InlinePicker({
     // לצפיפות המקורית, שם התא כבר בגובה שורה שלם ואין מה להרחיב.
     <span className="relative inline-flex min-h-11 min-w-11 items-center rounded pe-3.5 hover:bg-surface-3 lg:min-h-0 lg:min-w-0">
       {children}
+      {/*
+        ⚠️ גלוי בטלפון, מוסתר-עד-hover בשולחן.
+
+        קודם הוא היה `opacity-0 group-hover:opacity-50` בלבד, כלומר
+        **בלתי נראה לנצח במגע** — ובכרטיס הליד זה אומר שהעדיפות ותאריך
+        החזרה נראים כמו טקסט סטטי. קביעת מועד חזרה היא חצי מהעבודה של
+        העובד, והפקד שלה לא נראה כפקד.
+
+        ⚠️ `max-lg:` ולא מחלקת בסיס + `lg:` שדורסת אותה. נמדד: הצמד
+        `opacity-50 lg:opacity-0` **לא** עבד — שתי המחלקות נכתבות לאותה
+        תכונה בלי הפרש specificity, ומדיה-קוורי לא מוסיפה כזה, כך
+        שסדר הפלט הכריע. שני טווחים בלעדיים זה לזה לא יכולים להתנגש.
+      */}
       <Icon
         name="chevronDown"
         size={11}
-        className="pointer-events-none absolute inset-y-0 end-0.5 my-auto opacity-0 transition-opacity group-hover:opacity-50"
+        className="pointer-events-none absolute inset-y-0 end-0.5 my-auto transition-opacity max-lg:opacity-50 lg:opacity-0 lg:group-hover:opacity-50"
       />
       <select
         value={value}

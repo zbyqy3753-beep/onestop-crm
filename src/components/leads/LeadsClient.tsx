@@ -603,15 +603,39 @@ export function LeadsClient({
         />
       )}
 
-      {sorted.length > 0 && (
-        <Pagination
-          page={safePage}
-          pageSize={pageSize}
-          total={sorted.length}
-          onPageChange={setPage}
-          onPageSizeChange={applyPageSize}
-        />
-      )}
+      {/*
+        ⚠️ עימוד בטלפון הוחלף ב"טען עוד".
+
+        פקדי העימוד היו הפקדים הקטנים ביותר באפליקציה — חצים של 26×26
+        עם 4px ביניהם, ובורר גודל עמוד שדרס את הגופן חזרה ל-12px
+        וגרם לספארי לזיים את העמוד בכל מיקוד. במסך שגוללים בו ממילא,
+        "טען עוד" הוא גם הפקד הנכון וגם מוחק את שלושת הפגמים האלה.
+
+        בשולחן העימוד נשאר כפי שהוא — שם הטבלה בגובה קבוע ודילוג
+        לעמוד 7 הוא פעולה אמיתית.
+      */}
+      {sorted.length > 0 &&
+        (narrow ? (
+          paged.length < sorted.length && (
+            <div className="mt-3">
+              <Button
+                variant="secondary"
+                onClick={() => applyPageSize(pageSize + 20)}
+                className="w-full"
+              >
+                טען עוד ({sorted.length - paged.length} נותרו)
+              </Button>
+            </div>
+          )
+        ) : (
+          <Pagination
+            page={safePage}
+            pageSize={pageSize}
+            total={sorted.length}
+            onPageChange={setPage}
+            onPageSizeChange={applyPageSize}
+          />
+        ))}
 
       {/*
         "ליד חדש" כ-FAB — בטלפון בלבד.

@@ -8,7 +8,8 @@ import {
   PROVIDER_CONFIG,
   STATUS_CONFIG,
 } from "@/lib/domain/types";
-import { TONE_VAR, phone, relative, until } from "@/lib/format";
+import { TONE_VAR, phone, relative, until, waLink } from "@/lib/format";
+import { whatsappGreeting } from "@/lib/domain/types";
 import { dayKey } from "@/lib/tz";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
 import { Badge } from "@/components/ui/primitives";
@@ -16,7 +17,6 @@ import { Icon } from "@/components/ui/Icon";
 import {
   FollowUpCell,
   InlinePicker,
-  RowActions,
   StarToggle,
   StatusPicker,
 } from "./cells";
@@ -129,24 +129,34 @@ export function LeadCard({
               />
             )}
           </span>
-          <span className="ltr-num mt-0.5 block text-[13px] text-ink-3">
-            {phone(lead.phone)}
-          </span>
-          {/* במה הוא מתעניין — הקטגוריה והחבילה בשורה אחת.
-              זה מה שהסוכן צריך לדעת לפני שהוא מחייג, ובלידים שנכנסים
-              מה-API אלה שני השדות שנושאים את פרטי ההתעניינות. שורה
-              אחת ולא שתיים, כדי שגובה הכרטיס לא ישתנה. */}
-          {interest && (
-            <span className="mt-0.5 block truncate text-[12px] text-ink-2">
-              {interest}
+          {/* הטלפון ובמה הוא מתעניין — שורה אחת, לא שתיים */}
+          <span className="mt-0.5 flex items-baseline gap-1.5 text-[12px]">
+            <span className="ltr-num shrink-0 text-ink-3">
+              {phone(lead.phone)}
             </span>
-          )}
+            {interest && (
+              <span className="truncate text-ink-4">· {interest}</span>
+            )}
+          </span>
         </button>
 
-        {/* מתי נגעו בו לאחרונה — מסביר למה הוא במקום שהוא בו בתור */}
-        <span className="shrink-0 whitespace-nowrap pt-0.5 text-[11px] text-ink-4">
-          {now === null ? "" : relative(lead.updatedAt, now)}
-        </span>
+        {/*
+          כפתור החיוג — הפעולה שבשבילה המסך הזה נפתח בטלפון מלכתחילה.
+
+          ⚠️ הוא ישב קודם בתחתית הכרטיס, מאחורי קו מפריד, בגודל 32px,
+          בשורה משלו שעלתה 45px. עכשיו הוא העוגן החזותי של הכרטיס:
+          44px, צבע מותג, בקצה העוקב של השורה הראשונה.
+        */}
+        {!selecting && (
+          <a
+            href={`tel:${lead.phone}`}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`חיוג ל${lead.name}`}
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-brand-soft text-brand transition-transform active:scale-90"
+          >
+            <Icon name="phone" size={18} />
+          </a>
+        )}
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
@@ -186,14 +196,30 @@ export function LeadCard({
             </span>
           )}
         </FollowUpCell>
-      </div>
 
-      {/* פעולות הקשר — הסיבה שהמסך הזה נפתח בטלפון מלכתחילה */}
-      {!selecting && (
-        <div className="mt-1.5 border-t border-line pt-1.5">
-          <RowActions lead={lead} onOpen={onOpen} />
-        </div>
-      )}
+        {/*
+          וואטסאפ והזמן היחסי בקצה אותה שורה.
+
+          ⚠️ כאן ישבה שורת `RowActions` שלמה מאחורי קו מפריד — 45px
+          בכל כרטיס. מה שירד ממנה: החיוג עלה לשורה הראשונה, המייל ירד
+          למגירה (הוא לא פעולה של תור חיוג), והצ׳ברון "פתיחת הליד"
+          נמחק כי גוף הכרטיס כולו כבר כפתור שפותח אותו.
+        */}
+        <a
+          href={waLink(lead.phone, whatsappGreeting(lead.name))}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`וואטסאפ ל${lead.name}`}
+          className="relative ms-auto rounded-lg p-1 text-ink-3 after:absolute after:-inset-2 after:content-[''] active:scale-90"
+        >
+          <Icon name="whatsapp" size={16} />
+        </a>
+
+        <span className="shrink-0 whitespace-nowrap text-[11px] text-ink-4">
+          {now === null ? "" : relative(lead.updatedAt, now)}
+        </span>
+      </div>
     </li>
   );
 }
