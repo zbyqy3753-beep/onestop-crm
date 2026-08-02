@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/AppShell";
-import { getSessionUser } from "@/server/auth/session";
+import { ImpersonationBanner } from "@/components/shell/ImpersonationBanner";
+import { db } from "@/server/repositories";
+import { getImpersonatorId, getSessionUser } from "@/server/auth/session";
 
 /**
  * מעטפת ה-shell (סרגל צד + סרגל עליון) — חלה על כל מסך שדורש אותה.
@@ -25,5 +27,20 @@ export default async function AppLayout({
   const user = await getSessionUser();
   if (!user) redirect("/login");
 
-  return <AppShell user={user}>{children}</AppShell>;
+  // בזמן התחזות — באנר קבוע בראש כל מסך, עם שתי הזהויות ודרך חזרה.
+  // `getSessionUser` כבר מחזיר את המתוחזה, כך שכל השאר מתנהג רגיל.
+  const realId = await getImpersonatorId();
+  const realUser = realId ? await db.users.getById(realId) : null;
+
+  return (
+    <>
+      {realUser && (
+        <ImpersonationBanner
+          impersonatedName={user.name}
+          realName={realUser.name}
+        />
+      )}
+      <AppShell user={user}>{children}</AppShell>
+    </>
+  );
 }

@@ -7,6 +7,12 @@ import { verifySupabasePassword } from "./supabase";
 
 export const SESSION_COOKIE = "os_session";
 
+/**
+ * עוגיית ההתחזות — שומרת את מזהה הבעלים **האמיתי** בזמן שהוא מחובר
+ * בתור משתמש אחר. קיומה = מצב התחזות פעיל. ראה admin/impersonation.ts.
+ */
+export const IMPERSONATION_COOKIE = "os_real";
+
 /** שבוע — מספיק לסבב בדיקות, קצר מספיק שקישור ישן לא יחיה לנצח. */
 const MAX_AGE = 60 * 60 * 24 * 7;
 
@@ -49,4 +55,25 @@ export async function requireSessionUser(): Promise<User> {
   const user = await getSessionUser();
   if (!user) throw new Error("אין משתמש מחובר");
   return user;
+}
+
+/**
+ * הזהות **האמיתית** של מי שיושב מול המסך.
+ *
+ * בזמן התחזות `getSessionUser` מחזיר את המשתמש המתוחזה — וזה נכון
+ * לכל שימוש רגיל (הרשאות, actorId, תצוגה): המערכת מתנהגת בדיוק כפי
+ * שהיא מתנהגת לאותו משתמש. שני מקומות בלבד צריכים את האמת:
+ * הרשאת ההתחזות עצמה, והבאנר שמציג "אתה מחובר בתור X".
+ */
+export async function getRealSessionUser(): Promise<User | null> {
+  const store = await cookies();
+  const realId = store.get(IMPERSONATION_COOKIE)?.value;
+  if (realId) return db.users.getById(realId);
+  return getSessionUser();
+}
+
+/** מזהה הבעלים האמיתי אם יש התחזות פעילה, אחרת `null`. */
+export async function getImpersonatorId(): Promise<string | null> {
+  const store = await cookies();
+  return store.get(IMPERSONATION_COOKIE)?.value ?? null;
 }

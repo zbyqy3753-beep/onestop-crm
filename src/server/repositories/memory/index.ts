@@ -50,6 +50,17 @@ const users: UserRepository = {
     state.users.push(user);
     return structuredClone(user);
   },
+  async update(id, input) {
+    const user = state.users.find((u) => u.id === id);
+    if (!user) throw new Error(`משתמש ${id} לא נמצא`);
+
+    // כמו בלידים: לא Object.assign — undefined מדלגים, null מנקה
+    for (const [key, value] of Object.entries(input)) {
+      if (value === undefined) continue;
+      Reflect.set(user, key, value === null ? undefined : value);
+    }
+    return structuredClone(user);
+  },
 };
 
 const packages: PackageRepository = {

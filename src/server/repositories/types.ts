@@ -191,12 +191,28 @@ export interface CreateUserInput {
   store?: string;
 }
 
+/**
+ * עדכון משתמש. `undefined` = אל תיגע, `null` = נקה — אותה מוסכמה
+ * כמו `UpdateLeadInput`, ומאותה סיבה.
+ *
+ * אימייל לא כאן בכוונה: הוא המפתח לחשבון ה-Supabase Auth, ושינוי שלו
+ * רק אצלנו היה מנתק את המשתמש מהחשבון שהוא מתחבר איתו.
+ */
+export interface UpdateUserInput {
+  name?: string;
+  phone?: string | null;
+  role?: User["role"];
+  store?: string | null;
+  active?: boolean;
+}
+
 export interface UserRepository {
   list(): Promise<User[]>;
   getById(id: UserId): Promise<User | null>;
   getByEmail(email: string): Promise<User | null>;
   listActive(): Promise<User[]>;
   create(input: CreateUserInput): Promise<User>;
+  update(id: UserId, input: UpdateUserInput): Promise<User>;
 }
 
 export interface PackageFilter {

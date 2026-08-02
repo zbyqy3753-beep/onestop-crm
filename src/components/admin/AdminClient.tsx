@@ -7,18 +7,30 @@ import { Icon } from "@/components/ui/Icon";
 import { AdminSummaryTiles } from "./AdminSummaryTiles";
 import { UsersTable } from "./UsersTable";
 import { AddUserModal } from "./AddUserModal";
+import { EditUserModal } from "./EditUserModal";
 
 /**
  * מחזיק את מצב מסך ניהול המערכת ומעביר נתונים לילדים פרזנטציוניים.
  *
- * "משתמש חדש" הוא המוטציה היחידה כרגע — יוצר גם רשומת User וגם
- * חשבון Supabase Auth (ראה admin/actions.ts). עריכת משתמש קיים
- * עדיין מושבתת: אין עדיין מערכת הרשאות (מי מורשה לערוך את מי).
+ * שתי מוטציות: יצירת משתמש ועריכת משתמש (admin/actions.ts). בנוסף,
+ * בעלים יכול להיכנס למערכת בתור משתמש אחר — ראה admin/impersonation.ts.
  * אריחי הסיכום תמיד משקפים את כלל המשתמשים, לא את תוצאת החיפוש.
  */
-export function AdminClient({ users, leads }: { users: User[]; leads: Lead[] }) {
+export function AdminClient({
+  users,
+  leads,
+  canImpersonate,
+  currentUserId,
+}: {
+  users: User[];
+  leads: Lead[];
+  /** בעלים בלבד — נקבע בשרת ב-page.tsx */
+  canImpersonate: boolean;
+  currentUserId: string;
+}) {
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [editUser, setEditUser] = useState<User | null>(null);
 
   /** ספירת לידים לכל משתמש, נגזרת מ-assigneeId — בלי repository ייעודי. */
   const leadCountByUser = useMemo(() => {
@@ -62,6 +74,13 @@ export function AdminClient({ users, leads }: { users: User[]; leads: Lead[] }) 
 
       <AddUserModal open={addOpen} onClose={() => setAddOpen(false)} />
 
+      {/* ה-key מרענן את ערכי ברירת המחדל של הטופס בין משתמשים */}
+      <EditUserModal
+        key={editUser?.id ?? "none"}
+        user={editUser}
+        onClose={() => setEditUser(null)}
+      />
+
       <div className="mb-3 mt-6">
         <div className="relative max-w-xs">
           <Icon
@@ -80,7 +99,14 @@ export function AdminClient({ users, leads }: { users: User[]; leads: Lead[] }) 
         </div>
       </div>
 
-      <UsersTable users={filteredUsers} leadCountByUser={leadCountByUser} hasFilters={query.trim() !== ""} />
+      <UsersTable
+        users={filteredUsers}
+        leadCountByUser={leadCountByUser}
+        hasFilters={query.trim() !== ""}
+        onEdit={setEditUser}
+        canImpersonate={canImpersonate}
+        currentUserId={currentUserId}
+      />
     </div>
   );
 }

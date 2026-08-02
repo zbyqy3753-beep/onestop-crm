@@ -54,6 +54,12 @@ const users: UserRepository = {
     });
     return userFromPrisma(row);
   },
+  async update(id, input) {
+    // אותה סמנטיקה כמו לידים: undefined = אל תיגע, null = נקה.
+    // Prisma מפרש את זה כך בדיוק, ולכן ההעברה ישירה.
+    const row = await prisma.user.update({ where: { id }, data: input });
+    return userFromPrisma(row);
+  },
 };
 
 const packages: PackageRepository = {

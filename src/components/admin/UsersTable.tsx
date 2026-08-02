@@ -1,20 +1,28 @@
+"use client";
+
+import { useTransition } from "react";
 import type { User } from "@/lib/domain/types";
 import { ROLE_CONFIG } from "@/lib/domain/types";
 import { number, phone as formatPhone } from "@/lib/format";
+import { impersonateAction } from "@/app/(app)/admin/impersonation";
 import { Badge, Button, EmptyState } from "@/components/ui/primitives";
 
-/**
- * טבלת משתמשים. מסך קריאה בלבד — אין עדיין מערכת הרשאות כתיבה,
- * ולכן פעולת העריכה מושבתת ולא מזויפת כזרימה שעובדת.
- */
+/** טבלת משתמשים: עריכה, וכניסה בתור משתמש (לבעלים בלבד). */
 export function UsersTable({
   users,
   leadCountByUser,
   hasFilters,
+  onEdit,
+  canImpersonate,
+  currentUserId,
 }: {
   users: User[];
   leadCountByUser: Map<string, number>;
   hasFilters: boolean;
+  onEdit: (user: User) => void;
+  /** רק בעלים — נקבע בשרת ומועבר כ-prop, הכפתור מוסתר לכל השאר */
+  canImpersonate: boolean;
+  currentUserId: string;
 }) {
   if (users.length === 0) {
     return (
@@ -37,7 +45,7 @@ export function UsersTable({
             <th className="px-3 py-2.5 text-start font-medium">יצירת קשר</th>
             <th className="px-3 py-2.5 text-start font-medium">סטטוס</th>
             <th className="px-3 py-2.5 text-start font-medium">לידים</th>
-            <th className="w-24">
+            <th className="w-48">
               <span className="sr-only">פעולות</span>
             </th>
           </tr>
@@ -49,6 +57,9 @@ export function UsersTable({
               key={user.id}
               user={user}
               leadCount={leadCountByUser.get(user.id) ?? 0}
+              onEdit={() => onEdit(user)}
+              canImpersonate={canImpersonate}
+              isSelf={user.id === currentUserId}
             />
           ))}
         </tbody>
@@ -57,8 +68,29 @@ export function UsersTable({
   );
 }
 
-function Row({ user, leadCount }: { user: User; leadCount: number }) {
+function Row({
+  user,
+  leadCount,
+  onEdit,
+  canImpersonate,
+  isSelf,
+}: {
+  user: User;
+  leadCount: number;
+  onEdit: () => void;
+  canImpersonate: boolean;
+  isSelf: boolean;
+}) {
   const role = ROLE_CONFIG[user.role];
+  const [entering, startEnter] = useTransition();
+
+  /*
+   * הכפתור מוצג רק כשהכניסה באמת אפשרית: לא לעצמך, לא לבעלים אחר,
+   * ולא למשתמש מושבת. השרת אוכף את אותם כללים בדיוק — ההסתרה כאן
+   * היא כדי לא להציג כפתור שנכשל בלחיצה.
+   */
+  const impersonatable =
+    canImpersonate && !isSelf && user.role !== "owner" && user.active;
 
   return (
     <tr className="border-b border-line last:border-0 hover:bg-surface-2">
@@ -98,10 +130,22 @@ function Row({ user, leadCount }: { user: User; leadCount: number }) {
 
       {/* פעולות */}
       <td className="pe-3">
-        <div className="flex justify-end">
-          <Button disabled title="מערכת ההרשאות עדיין לא נבנתה">
-            עריכה
-          </Button>
+        <div className="flex justify-end gap-1.5">
+          {impersonatable && (
+            <Button
+              variant="secondary"
+              disabled={entering}
+              onClick={() =>
+                startEnter(async () => {
+                  await impersonateAction(user.id);
+                })
+              }
+              title={`כניסה למערכת בתור ${user.name}`}
+            >
+              {entering ? "נכנס…" : "כניסה בתור"}
+            </Button>
+          )}
+          <Button onClick={onEdit}>עריכה</Button>
         </div>
       </td>
     </tr>

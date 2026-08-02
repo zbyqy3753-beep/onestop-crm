@@ -24,5 +24,12 @@ export default async function AdminPage() {
     db.leads.list(),
   ]);
 
-  return <AdminClient users={users} leads={leads} />;
+  return (
+    <AdminClient
+      users={users}
+      leads={leads}
+      canImpersonate={actor.role === "owner"}
+      currentUserId={actor.id}
+    />
+  );
 }
