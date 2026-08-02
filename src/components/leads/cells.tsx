@@ -25,9 +25,11 @@ import { Icon } from "@/components/ui/Icon";
 export function StatusPicker({
   current,
   onPick,
+  busy,
 }: {
   current: LeadStatus;
   onPick: (to: LeadStatus) => void;
+  busy?: boolean;
 }) {
   const meta = STATUS_CONFIG[current];
 
@@ -45,9 +47,12 @@ export function StatusPicker({
       />
       <select
         value={current}
+        // כמו ב-InlinePicker: נעילה בזמן שמירה — לחיצה כפולה שלחה
+        // את הבקשה פעמיים ופתחה מחדש את דיאלוג הסטטוס
+        disabled={busy}
         onChange={(e) => onPick(e.target.value as LeadStatus)}
         aria-label="שינוי סטטוס"
-        className="absolute inset-0 cursor-pointer opacity-0"
+        className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-wait"
       >
         {STATUS_ORDER.map((s) => (
           <option key={s} value={s}>

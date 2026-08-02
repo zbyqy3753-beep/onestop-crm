@@ -160,7 +160,7 @@ export function LeadCard({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <StatusPicker current={lead.status} onPick={onStatus} />
+        <StatusPicker current={lead.status} onPick={onStatus} busy={busy} />
 
         <InlinePicker
           value={lead.priority}

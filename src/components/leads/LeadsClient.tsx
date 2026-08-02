@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import type {
   Deal,
@@ -153,6 +161,60 @@ export function LeadsClient({
     [],
   );
 
+  /* ── עטיפות מוטציה: שגיאות ועסוק-פר-ליד ──────────────────────────── */
+
+  /**
+   * הלידים שמוטציה רצה עליהם כרגע. פעולה על שורה אחת מנטרלת רק את
+   * השורה הזו — לא את כל הטבלה — כך שאפשר להמשיך לעבוד על לידים
+   * אחרים בזמן שהשמירה באוויר. פעולות קבוצתיות (FilterBar, מחיקה
+   * מרובה) ממשיכות להשתמש ב-`pending` הגלובלי.
+   */
+  const [busyIds, setBusyIds] = useState<ReadonlySet<string>>(new Set());
+
+  /**
+   * ה-server actions זורקים — לא מחזירים `{ok:false}` — כשהסשן פג
+   * או שה-DB לא זמין. בלי ה-catch הזה השגיאה הייתה נבלעת בשקט בתוך
+   * ה-transition והמשתמש היה בטוח שהשינוי נשמר.
+   */
+  async function guarded(fn: () => Promise<void>) {
+    try {
+      await fn();
+    } catch {
+      notify("השמירה נכשלה — בדוק את החיבור ונסה שוב", "bad");
+    }
+  }
+
+  /** מסמן את הלידים כעסוקים למשך המוטציה, ומשחרר תמיד — גם על שגיאה. */
+  async function withBusy(ids: string[], fn: () => Promise<void>) {
+    setBusyIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
+    try {
+      await guarded(fn);
+    } finally {
+      setBusyIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+    }
+  }
+
+  /**
+   * שכבה אופטימית (React 19): השינוי נצבע מיד על המסך, לפני שהשרת
+   * ענה. כשה-transition מסתיים השכבה מתאפסת — אם השרת הצליח,
+   * `leads` המרוענן כבר מכיל את השינוי; אם נכשל, התצוגה חוזרת לבד
+   * לערך האמיתי והטוסט של `guarded` מסביר מה קרה.
+   * חובה לקרוא ל-`applyOptimistic` בתוך transition (וכך אנחנו עושים).
+   */
+  const [optimisticLeads, applyOptimistic] = useOptimistic(
+    leads,
+    (state, p: { ids: string[]; patch: Partial<Lead> }) =>
+      state.map((l) => (p.ids.includes(l.id) ? { ...l, ...p.patch } : l)),
+  );
+
   /* ── רענון אוטומטי ───────────────────────────────────────────────── */
 
   /**
@@ -165,10 +227,13 @@ export function LeadsClient({
   const router = useRouter();
   const knownLeadIds = useRef<Set<string> | null>(null);
   const awaitingPoll = useRef(false);
+  /** מתי רועננו לאחרונה — מרסן את רענון-החזרה-ללשונית שלמטה. */
+  const lastRefreshAt = useRef(0);
 
   useEffect(() => {
     function pull() {
       awaitingPoll.current = true;
+      lastRefreshAt.current = Date.now();
       router.refresh();
     }
 
@@ -179,8 +244,15 @@ export function LeadsClient({
 
     // חזרה ללשונית מרעננת מיד ולא מחכה לטיק הבא: מסך שהיה מוסתר
     // חצי שעה מציג נתונים בני חצי שעה, וזו בדיוק הנקודה שבה מסתכלים.
+    //
+    // אבל לא על כל חזרה: המעבר הנפוץ ביותר הוא יציאה לשיחת `tel:`
+    // וחזרה אחרי שניות — רענון בכל חזרה כזו היה יורה קריאת DB מיותרת
+    // (ומהבהב את המסך) עשרות פעמים ביום. אם רועננו ב-30 השניות
+    // האחרונות, מדלגים.
     function onVisible() {
-      if (!document.hidden) pull();
+      if (document.hidden) return;
+      if (Date.now() - lastRefreshAt.current < 30_000) return;
+      pull();
     }
     document.addEventListener("visibilitychange", onVisible);
 
@@ -208,13 +280,35 @@ export function LeadsClient({
 
   /* ── קיצורי מקלדת ────────────────────────────────────────────────── */
 
+  /**
+   * כשמשהו פתוח מעל המסך, הקיצורים כבויים: `n` בזמן מגירה פתוחה היה
+   * פותח מודל מעל מודל, ו-`/` היה ממקד חיפוש שמוסתר מאחורי המגירה.
+   */
+  const overlayOpen =
+    addOpen ||
+    editOpen ||
+    importOpen ||
+    costsOpen ||
+    statusSheetOpen ||
+    moreOpen ||
+    statusTarget !== null ||
+    openLeadId !== null ||
+    deleteTarget !== null;
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (overlayOpen) return;
+      // קיצור עם modifier הוא של הדפדפן (Ctrl+N = חלון חדש) — לא שלנו
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
       const el = e.target as HTMLElement;
       if (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT")
         return;
+      if (el.isContentEditable) return;
 
-      if (e.key === "n") {
+      // `e.code` ולא `e.key` — בפריסת מקלדת עברית המקש הזה פולט "מ",
+      // ו-`e.key === "n"` פשוט לא היה יורה אף פעם
+      if (e.code === "KeyN") {
         e.preventDefault();
         setAddOpen(true);
       }
@@ -225,7 +319,7 @@ export function LeadsClient({
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  }, [overlayOpen]);
 
   /* ── נגזרות ──────────────────────────────────────────────────────── */
 
@@ -239,10 +333,12 @@ export function LeadsClient({
     return d.getTime();
   }, [now]);
 
+  // התצוגה כולה נגזרת מהשכבה האופטימית — כך שינוי סטטוס/עדיפות/כוכב
+  // נראה מיד, עוד לפני שהשרת אישר
   const filtered = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
 
-    return leads.filter((lead) => {
+    return optimisticLeads.filter((lead) => {
       if (filters.openOnly && STATUS_CONFIG[lead.status].terminal) return false;
 
       if (filters.dueToday) {
@@ -274,7 +370,7 @@ export function LeadsClient({
 
       return true;
     });
-  }, [leads, filters, endOfToday]);
+  }, [optimisticLeads, filters, endOfToday]);
 
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
@@ -335,9 +431,11 @@ export function LeadsClient({
     [filters],
   );
 
+  // גם המגירה קוראת מהשכבה האופטימית — אחרת שינוי מתוכה היה נראה
+  // בטבלה אבל לא במגירה עצמה
   const openLead = useMemo(
-    () => leads.find((l) => l.id === openLeadId) ?? null,
-    [leads, openLeadId],
+    () => optimisticLeads.find((l) => l.id === openLeadId) ?? null,
+    [optimisticLeads, openLeadId],
   );
 
   const userById = useMemo(
@@ -415,44 +513,65 @@ export function LeadsClient({
     followUpDate?: string,
   ) {
     startTransition(async () => {
-      const res = await changeStatusManyAction(leadIds, to, detail, followUpDate);
-      if (!res.ok) return notify(res.error, "bad");
+      // לפני ה-await — הסטטוס החדש נצבע מיד; אם השרת ייכשל השכבה
+      // האופטימית תתאפס לבד בסוף ה-transition
+      applyOptimistic({ ids: leadIds, patch: { status: to } });
 
-      setStatusTarget(null);
+      await withBusy(leadIds, async () => {
+        const res = await changeStatusManyAction(leadIds, to, detail, followUpDate);
+        if (!res.ok) return notify(res.error, "bad");
 
-      const { updated, failed } = res.data!;
-      const label = STATUS_CONFIG[to].label;
+        setStatusTarget(null);
 
-      // הצלחה חלקית היא תוצאה אמיתית ולא שגיאה — הדיווח אומר בדיוק
-      // מה קרה, כדי שהמשתמש לא ינסה שוב ויכפיל את מה שכבר הצליח
-      if (failed > 0) {
-        notify(`${updated} עודכנו ל"${label}", ${failed} נכשלו`, "warn");
-      } else {
-        notify(
-          updated === 1
-            ? `הסטטוס עודכן ל"${label}"`
-            : `${updated} לידים עודכנו ל"${label}"`,
-        );
-      }
+        const { updated, failed } = res.data!;
+        const label = STATUS_CONFIG[to].label;
+
+        // הצלחה חלקית היא תוצאה אמיתית ולא שגיאה — הדיווח אומר בדיוק
+        // מה קרה, כדי שהמשתמש לא ינסה שוב ויכפיל את מה שכבר הצליח
+        if (failed > 0) {
+          notify(`${updated} עודכנו ל"${label}", ${failed} נכשלו`, "warn");
+        } else {
+          notify(
+            updated === 1
+              ? `הסטטוס עודכן ל"${label}"`
+              : `${updated} לידים עודכנו ל"${label}"`,
+          );
+        }
+      });
     });
   }
 
   function assign(leadIds: string[], assigneeId: string | null) {
     startTransition(async () => {
-      const res = await assignAction(leadIds, assigneeId);
-      if (!res.ok) return notify(res.error, "bad");
+      applyOptimistic({
+        ids: leadIds,
+        patch: { assigneeId: assigneeId ?? undefined },
+      });
 
-      const name = assigneeId ? userById.get(assigneeId)?.name : null;
-      notify(name ? `שויך ל${name}` : "השיוך הוסר");
-      setSelected(new Set());
+      await withBusy(leadIds, async () => {
+        const res = await assignAction(leadIds, assigneeId);
+        if (!res.ok) return notify(res.error, "bad");
+
+        const name = assigneeId ? userById.get(assigneeId)?.name : null;
+        notify(name ? `שויך ל${name}` : "השיוך הוסר");
+        // מנקים רק את הלידים שפעלנו עליהם — שיוך בודד מהמגירה לא
+        // צריך למחוק בחירה מרובה שנבנתה בטבלה
+        setSelected((prev) => {
+          const next = new Set(prev);
+          leadIds.forEach((id) => next.delete(id));
+          return next;
+        });
+      });
     });
   }
 
   function setCost(leadId: string, cost: number | null) {
     startTransition(async () => {
-      const res = await setLeadCostAction(leadId, cost);
-      if (!res.ok) return notify(res.error, "bad");
-      notify(cost === null ? "העלות אופסה לברירת המחדל" : "העלות עודכנה");
+      await withBusy([leadId], async () => {
+        const res = await setLeadCostAction(leadId, cost);
+        if (!res.ok) return notify(res.error, "bad");
+        notify(cost === null ? "העלות אופסה לברירת המחדל" : "העלות עודכנה");
+      });
     });
   }
 
@@ -465,15 +584,34 @@ export function LeadsClient({
    */
   function patchLead(leadId: string, patch: LeadPatch) {
     startTransition(async () => {
-      const res = await patchLeadAction(leadId, patch);
-      if (!res.ok) notify(res.error, "bad");
+      // תרגום `LeadPatch` (צורת ה-action) לשדות `Lead` (צורת התצוגה):
+      // `null` פירושו "נקה את השדה", וב-`Lead` שדה נקי הוא `undefined`
+      const optimistic: Partial<Lead> = {};
+      if (patch.priority !== undefined) optimistic.priority = patch.priority;
+      if (patch.kind !== undefined) optimistic.kind = patch.kind;
+      if (patch.category !== undefined)
+        optimistic.category = patch.category ?? undefined;
+      if (patch.assigneeId !== undefined)
+        optimistic.assigneeId = patch.assigneeId ?? undefined;
+      if (patch.followUpDate !== undefined)
+        optimistic.followUpAt = patch.followUpDate ?? undefined;
+      applyOptimistic({ ids: [leadId], patch: optimistic });
+
+      await withBusy([leadId], async () => {
+        const res = await patchLeadAction(leadId, patch);
+        if (!res.ok) notify(res.error, "bad");
+      });
     });
   }
 
   function toggleStar(leadId: string, next: boolean) {
     startTransition(async () => {
-      const res = await toggleStarAction(leadId, next);
-      if (!res.ok) notify(res.error, "bad");
+      applyOptimistic({ ids: [leadId], patch: { isStarred: next } });
+
+      await withBusy([leadId], async () => {
+        const res = await toggleStarAction(leadId, next);
+        if (!res.ok) notify(res.error, "bad");
+      });
     });
   }
 
@@ -486,14 +624,18 @@ export function LeadsClient({
     notify(`${sorted.length} לידים יוצאו`);
   }
 
+  // בכוונה בלי שכבה אופטימית: מחיקה שנעלמת ואז "קופצת חזרה" על כישלון
+  // מבלבלת יותר מספינר קצר
   function remove(leadIds: string[]) {
     startTransition(async () => {
-      const res = await deleteLeadsAction(leadIds);
-      if (!res.ok) return notify(res.error, "bad");
+      await withBusy(leadIds, async () => {
+        const res = await deleteLeadsAction(leadIds);
+        if (!res.ok) return notify(res.error, "bad");
 
-      notify(leadIds.length === 1 ? "הליד נמחק" : `${leadIds.length} לידים נמחקו`);
-      setSelected(new Set());
-      setOpenLeadId(null);
+        notify(leadIds.length === 1 ? "הליד נמחק" : `${leadIds.length} לידים נמחקו`);
+        setSelected(new Set());
+        setOpenLeadId(null);
+      });
     });
   }
 
@@ -573,7 +715,7 @@ export function LeadsClient({
           users={users}
           selected={selected}
           onSelectedChange={setSelected}
-          busy={pending}
+          busyIds={busyIds}
           onOpen={setOpenLeadId}
           onStatus={(id, to) => requestStatus([id], to)}
           onStar={toggleStar}
@@ -607,7 +749,7 @@ export function LeadsClient({
           users={users}
           onAdd={() => setAddOpen(true)}
           hasFilters={hasActiveFilters}
-          busy={pending}
+          busyIds={busyIds}
         />
       )}
 
@@ -706,9 +848,14 @@ export function LeadsClient({
         onNotify={notify}
       />
 
-      {/* ה-key טוען מחדש את ערכי ברירת המחדל של הטופס לכל ליד */}
+      {/*
+        ה-key טוען מחדש את ערכי ברירת המחדל של הטופס לכל ליד.
+        ⚠️ בכוונה בלי `updatedAt` — הרענון האוטומטי (כל דקה) משנה את
+        updatedAt, וכשהוא היה חלק מה-key המודל היה מתרנדר מחדש ומוחק
+        טופס שמולא חלקית. אל תחזיר אותו לכאן.
+      */}
       <EditLeadModal
-        key={`edit:${openLead?.id ?? "none"}:${openLead?.updatedAt ?? ""}`}
+        key={`edit:${openLead?.id ?? "none"}`}
         open={editOpen}
         lead={openLead}
         users={users}

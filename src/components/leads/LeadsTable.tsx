@@ -34,7 +34,7 @@ export function LeadsTable({
   users,
   onAdd,
   hasFilters,
-  busy,
+  busyIds,
 }: {
   leads: Lead[];
   userById: Map<string, User>;
@@ -53,7 +53,8 @@ export function LeadsTable({
   users: User[];
   onAdd: () => void;
   hasFilters: boolean;
-  busy: boolean;
+  /** הלידים שיש להם כתיבה בטיסה — רק השורות שלהם ננעלות, לא כל הטבלה */
+  busyIds: ReadonlySet<string>;
 }) {
   const now = useNow();
 
@@ -174,7 +175,7 @@ export function LeadsTable({
               columns={shown}
               cost={leadCost(lead, leadCosts)}
               checked={selected.has(lead.id)}
-              busy={busy}
+              busy={busyIds.has(lead.id)}
               onToggle={() => toggleOne(lead.id)}
               onOpen={() => onOpen(lead.id)}
               onStatus={(to) => onStatus(lead.id, to)}

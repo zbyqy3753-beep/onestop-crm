@@ -19,7 +19,7 @@ export function LeadCardList({
   users,
   selected,
   onSelectedChange,
-  busy,
+  busyIds,
   onOpen,
   onStatus,
   onStar,
@@ -37,7 +37,8 @@ export function LeadCardList({
   users: User[];
   selected: Set<string>;
   onSelectedChange: (s: Set<string>) => void;
-  busy: boolean;
+  /** הלידים שיש להם כתיבה בטיסה — רק הכרטיסים שלהם ננעלים, לא כל הרשימה */
+  busyIds: ReadonlySet<string>;
   onOpen: (id: string) => void;
   onStatus: (id: string, to: LeadStatus) => void;
   onStar: (id: string, next: boolean) => void;
@@ -77,6 +78,10 @@ export function LeadCardList({
 
   const allChecked = leads.length > 0 && leads.every((l) => selected.has(l.id));
 
+  // פקדי הסרגל הם פעולות **קבוצתיות** — הם ננעלים כשיש כתיבה כלשהי
+  // בטיסה, בשונה מהכרטיסים שכל אחד ננעל רק על הליד שלו
+  const bulkBusy = busyIds.size > 0;
+
   return (
     <>
       {/*
@@ -115,7 +120,7 @@ export function LeadCardList({
               now={now}
               checked={selected.has(lead.id)}
               selecting={selecting}
-              busy={busy}
+              busy={busyIds.has(lead.id)}
               onToggle={() => toggle(lead.id)}
               onOpen={() => onOpen(lead.id)}
               onStatus={(to) => onStatus(lead.id, to)}
@@ -169,7 +174,7 @@ export function LeadCardList({
             <select
               className={`${inputClass} h-10 w-auto flex-1`}
               defaultValue=""
-              disabled={busy}
+              disabled={bulkBusy}
               onChange={(e) => {
                 const v = e.target.value;
                 if (v) onBulkAssign(v === "unassigned" ? null : v);
@@ -188,7 +193,7 @@ export function LeadCardList({
             <select
               className={`${inputClass} h-10 w-auto flex-1`}
               defaultValue=""
-              disabled={busy}
+              disabled={bulkBusy}
               onChange={(e) => {
                 const v = e.target.value as LeadStatus;
                 if (v) onBulkStatus(v);
@@ -207,7 +212,7 @@ export function LeadCardList({
               variant="ghost"
               icon="trash"
               onClick={onBulkDelete}
-              disabled={busy}
+              disabled={bulkBusy}
               className="h-10"
             >
               מחיקה

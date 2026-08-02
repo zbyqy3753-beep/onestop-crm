@@ -157,7 +157,7 @@ export function LeadRow({
       case "status":
         return (
           <>
-            <StatusPicker current={lead.status} onPick={onStatus} />
+            <StatusPicker current={lead.status} onPick={onStatus} busy={busy} />
             {lastDetail && (
               // ink-3 ולא ink-4: זה הטקסט שהסוכן קורא לפני חיוג
               <p
