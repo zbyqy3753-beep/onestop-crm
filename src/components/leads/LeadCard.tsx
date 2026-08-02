@@ -5,6 +5,7 @@ import {
   LEAD_CATEGORY_CONFIG,
   PRIORITY_CONFIG,
   PRIORITY_ORDER,
+  PROVIDER_CONFIG,
   STATUS_CONFIG,
 } from "@/lib/domain/types";
 import { TONE_VAR, phone, relative, until } from "@/lib/format";
@@ -63,9 +64,20 @@ export function LeadCard({
   const priority = PRIORITY_CONFIG[lead.priority];
   const status = STATUS_CONFIG[lead.status];
 
+  // ⚠️ הספק והחבילה מוצגים **ביחד**. הם מגיעים מהשותף כמחרוזת אחת
+  // ("ULTIMATE – YES") ונשמרים בשתי עמודות, ולכן החבילה לבדה נראית
+  // חתוכה: "ULTIMATE" בלי "YES" הוא לא שם חבילה שאפשר לעבוד איתו.
+  // הפיצול נכון לנתונים (אפשר לסנן לפי ספק), ההצגה חייבת לאחד בחזרה.
+  const packageLabel = [
+    lead.currentProvider ? PROVIDER_CONFIG[lead.currentProvider].label : "",
+    lead.packageName?.trim() ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   const interest = [
     lead.category ? LEAD_CATEGORY_CONFIG[lead.category].label : "",
-    lead.packageName?.trim() ?? "",
+    packageLabel,
   ]
     .filter(Boolean)
     .join(" · ");

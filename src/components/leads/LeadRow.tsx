@@ -296,12 +296,20 @@ export function LeadRow({
 
       case "packageName": {
         const pkg = lead.packageName?.trim();
-        return pkg ? (
-          <span className="block max-w-[180px] truncate" title={pkg}>
-            {pkg}
+        if (!pkg) return dash;
+
+        // ⚠️ הספק נכלל בתווית. השותפים שולחים "ULTIMATE – YES" כמחרוזת
+        // אחת, ואנחנו מפרקים אותה לשתי עמודות — נכון לסינון, אבל החבילה
+        // לבדה נראית חתוכה: "ULTIMATE" בלי "YES" הוא לא שם חבילה.
+        // עמודת "ספק נוכחי" כבויה כברירת מחדל, ולכן בלי האיחוד כאן
+        // המידע פשוט לא מופיע במסך.
+        const label = lead.currentProvider
+          ? `${PROVIDER_CONFIG[lead.currentProvider].label} ${pkg}`
+          : pkg;
+        return (
+          <span className="block max-w-[180px] truncate" title={label}>
+            {label}
           </span>
-        ) : (
-          dash
         );
       }
 
