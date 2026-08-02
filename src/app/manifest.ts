@@ -41,7 +41,9 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
 
     background_color: "#081421", // --c-bg בתמה הכהה, כדי שמסך הפתיחה לא יהבהב בלבן
-    theme_color: "#0d1f37", // Dark Navy — זהה לרקע האייקון
+    // זהה ל-`background_color` ול-`--c-bg` האפל, ולערך ב-`viewport`
+    // שב-layout.tsx. כשהם נבדלים יש קפיצת צבע מהמסך הפותח לאפליקציה.
+    theme_color: "#081421", // Dark Navy — זהה לרקע האייקון
 
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },

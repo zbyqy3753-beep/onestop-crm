@@ -8,7 +8,7 @@ import { ROLE_CONFIG } from "@/lib/domain/types";
 import type { User } from "@/lib/domain/types";
 import { useNow } from "@/lib/clock";
 import { endSession } from "@/app/login/actions";
-import { visibleFor } from "./nav";
+import { NAV, visibleFor } from "./nav";
 import {
   applyTheme,
   readServerTheme,
@@ -160,7 +160,9 @@ function Sidebar({
           )}
         </nav>
 
-        <div className="shrink-0 border-t border-line p-3">
+        {/* כפתור היציאה יושב בתחתית מסך מלא — עם `viewportFit: cover`
+            הוא היה נופל אל מתחת למחוון הבית בלי הריפוד הזה */}
+        <div className="shrink-0 border-t border-line p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5">
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand text-xs font-bold text-on-brand">
               {user.name.slice(0, 2)}
@@ -204,6 +206,13 @@ function Wordmark() {
 
 /* ── סרגל עליון ───────────────────────────────────────────────────────── */
 
+/**
+ * הכותרת שמופיעה בסרגל העליון בטלפון.
+ *
+ * מפה מפורשת ולא גזירה מ-`nav.ts`, כי הכותרות כאן תיאוריות יותר
+ * מתוויות התפריט ("תור העבודה" מול "לידים") — בסרגל צד רוצים מילה
+ * אחת, בכותרת מסך רוצים משפט.
+ */
 const PAGE_TITLES: Record<string, string> = {
   "/": "בית",
   "/leads": "תור העבודה",
@@ -216,6 +225,21 @@ const PAGE_TITLES: Record<string, string> = {
   "/feedback": "משוב",
 };
 
+/**
+ * ⚠️ נופל חזרה לתווית מ-`nav.ts` לפי הקידומת הארוכה ביותר.
+ *
+ * בלי זה כל תת-נתיב (`/leads/123` וכל מסך עתידי) מחזיר מחרוזת ריקה,
+ * וסרגל הניווט בטלפון — הכותרת היחידה שיש שם — פשוט ריק.
+ */
+function pageTitle(pathname: string): string {
+  const exact = PAGE_TITLES[pathname];
+  if (exact) return exact;
+
+  return NAV.flatMap((g) => g.items)
+    .filter((i) => i.href !== "/" && pathname.startsWith(i.href))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.label ?? "";
+}
+
 function TopBar({
   user,
   onMenu,
@@ -224,10 +248,13 @@ function TopBar({
   onMenu: () => void;
 }) {
   const pathname = usePathname();
-  const title = PAGE_TITLES[pathname] ?? "";
+  const title = pageTitle(pathname);
 
   return (
-    <header className="sticky top-0 z-20 flex h-[60px] shrink-0 items-center gap-3 border-b border-line bg-surface px-4 sm:px-6">
+    // הריפוד האופקי משתמש ב-`max()` ולא בערך קבוע: עם `viewportFit:
+    // cover` (layout.tsx) המסך מגיע עד הפינות המעוגלות, ובמצב נוף
+    // ה-inset הצדדי אינו אפס. `max` שומר על 1rem כשאין inset.
+    <header className="sticky top-0 z-20 flex h-[60px] shrink-0 items-center gap-3 border-b border-line bg-surface ps-[max(1rem,env(safe-area-inset-right))] pe-[max(1rem,env(safe-area-inset-left))] sm:ps-6 sm:pe-6">
       <button
         onClick={onMenu}
         // `after:-inset-2` מרחיב את איזור הלחיצה מ-34px ל-44px, בלי

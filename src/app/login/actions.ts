@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { GATE_COOKIE, GATE_COOKIE_OPTIONS } from "@/lib/gate";
+import { NEXT_PARAM, safeReturnTo } from "@/lib/returnTo";
 import {
   SESSION_COOKIE,
   SESSION_COOKIE_OPTIONS,
@@ -38,7 +39,9 @@ export async function signIn(_prev: string | null, formData: FormData) {
   // עוגייה. בלי השורה הזו היא הייתה נכנסת ומיד חוטפת 404 מהשער.
   store.set(GATE_COOKIE, "1", GATE_COOKIE_OPTIONS);
 
-  redirect("/");
+  // ⚠️ `safeReturnTo` שוב, ולא רק בשרת שרינדר את הטופס: השדה הנסתר
+  // הוא קלט של המשתמש ואפשר לערוך אותו לפני השליחה.
+  redirect(safeReturnTo(String(formData.get(NEXT_PARAM) ?? "")));
 }
 
 export async function endSession() {

@@ -22,9 +22,12 @@ export function ImpersonationBanner({
   const [pending, startExit] = useTransition();
 
   return (
-    <div className="sticky top-0 z-50 flex items-center justify-center gap-3 bg-warn px-4 py-1.5 text-sm font-medium text-[#1a1200]">
+    // `flex-wrap` ו-`min-w-0`: בטלפון של 360px השורה הזו לא נכנסת
+    // בשורה אחת, ובלי העטיפה הכפתור נדחק אל מחוץ למסך — כלומר הדרך
+    // היחידה לצאת מהתחזות נעלמת דווקא במכשיר שבו קל לשכוח שאתה בתוכה
+    <div className="sticky top-0 z-[60] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-warn px-4 py-1.5 text-sm font-medium text-[#1a1200]">
       <Icon name="admin" size={15} />
-      <span>
+      <span className="min-w-0 truncate">
         מחובר בתור <b>{impersonatedName}</b>
         <span className="opacity-70"> (אתה {realName})</span>
       </span>

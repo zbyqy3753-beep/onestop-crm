@@ -3,26 +3,22 @@ import "server-only";
 import { cookies } from "next/headers";
 import { db } from "@/server/repositories";
 import type { User } from "@/lib/domain/types";
+import { SESSION_COOKIE } from "@/lib/gate";
 import { verifySupabasePassword } from "./supabase";
 
-export const SESSION_COOKIE = "os_session";
+/**
+ * שם העוגייה ואפשרויותיה חיים ב-`lib/gate.ts` ולא כאן: `proxy.ts` רץ
+ * ב-Edge ומחדש אותן בכל ניווט, והוא לא יכול לייבא את הקובץ הזה (הוא
+ * נושא `server-only` ואת כל שכבת ה-DB). מיוצאים מחדש כדי שהקוראים
+ * הקיימים לא ידעו על ההזזה.
+ */
+export { SESSION_COOKIE, SESSION_COOKIE_OPTIONS } from "@/lib/gate";
 
 /**
  * עוגיית ההתחזות — שומרת את מזהה הבעלים **האמיתי** בזמן שהוא מחובר
  * בתור משתמש אחר. קיומה = מצב התחזות פעיל. ראה admin/impersonation.ts.
  */
 export const IMPERSONATION_COOKIE = "os_real";
-
-/** שבוע — מספיק לסבב בדיקות, קצר מספיק שקישור ישן לא יחיה לנצח. */
-const MAX_AGE = 60 * 60 * 24 * 7;
-
-export const SESSION_COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: "lax",
-  path: "/",
-  maxAge: MAX_AGE,
-  secure: process.env.NODE_ENV === "production",
-} as const;
 
 /**
  * מאמת מול Supabase Auth (auth.users), ואז מוצא את המשתמש המקביל

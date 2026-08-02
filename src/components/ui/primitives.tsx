@@ -194,7 +194,11 @@ export function ToastStack({
   onDismiss: (id: number) => void;
 }) {
   return (
-    <div className="pointer-events-none fixed bottom-4 left-4 z-50 flex flex-col gap-2">
+    // ⚠️ `z-70` ו-`bottom` שמכבד את ה-inset: הטוסטים נחתו קודם ב-z-50
+    // מעל סרגל הפעולות הקבוצתיות (z-40) והסתירו את כפתור המחיקה, ועל
+    // מכשירי מחוות הם ישבו בתוך רצועת המחווה. סדר השכבות מוגדר
+    // ב-globals.css.
+    <div className="pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-[70] flex flex-col gap-2">
       {toasts.map((t) => (
         <ToastRow key={t.id} toast={t} onDismiss={onDismiss} />
       ))}

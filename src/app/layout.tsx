@@ -45,6 +45,15 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  /*
+   * מותח את התוכן אל מתחת לפינות המעוגלות ולמחוון הבית.
+   *
+   * ⚠️ בלעדיו `env(safe-area-inset-*)` מחזיר **אפס** — כלומר כל ריפוד
+   * בטיחות באפליקציה הוא חסר תועלת. לכן הוא נוסף יחד עם הריפודים
+   * עצמם ב-`AppShell`, ב-`ToastStack`, בסרגל הפעולות ובסרגל התחתון;
+   * להפעיל אותו בלעדיהם פירושו לדחוף פקדים אל מתחת למחוון.
+   */
+  viewportFit: "cover",
   // צובע את שורת הסטטוס של הדפדפן. שתי רשומות כי לאפליקציה יש שתי
   // תמות, והערכים זהים ל-`--c-bg` ב-globals.css.
   themeColor: [

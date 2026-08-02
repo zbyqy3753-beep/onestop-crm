@@ -3,13 +3,18 @@
 import { useActionState } from "react";
 import { Button, Field, inputClass } from "@/components/ui/primitives";
 import { signIn } from "@/app/login/actions";
+import { NEXT_PARAM } from "@/lib/returnTo";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next: string }) {
   const [error, formAction, pending] = useActionState(signIn, null);
 
   return (
     <div className="rounded-xl border border-line bg-surface p-6">
       <form action={formAction} className="space-y-4">
+        {/* היעד עבר כבר דרך `safeReturnTo` בשרת, ונבדק שם שוב אחרי
+            השליחה — שדה נסתר הוא קלט של המשתמש לכל דבר */}
+        <input type="hidden" name={NEXT_PARAM} value={next} />
+
         <Field label="אימייל">
           <input
             name="email"

@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { GATE_COOKIE, GATE_COOKIE_OPTIONS } from "@/lib/gate";
+import {
+  GATE_COOKIE,
+  GATE_COOKIE_OPTIONS,
+  SESSION_COOKIE,
+  SESSION_COOKIE_OPTIONS,
+} from "@/lib/gate";
+import { NEXT_PARAM } from "@/lib/returnTo";
 
 /**
  * שער הגישה לגרסת הבדיקה — שתי שכבות.
@@ -21,7 +27,6 @@ import { GATE_COOKIE, GATE_COOKIE_OPTIONS } from "@/lib/gate";
  * או בצילום מסך. 404 (ולא הפניה) כדי לא להסגיר שיש כאן מערכת בכלל.
  */
 
-const SESSION_COOKIE = "os_session";
 const KEY_PARAM = "k";
 
 /**
@@ -56,6 +61,7 @@ const PUBLIC_PREFIXES = [
 const GATE_EXEMPT = [
   "/login",
   "/manifest.webmanifest",
+  // מכסה גם את `/icons/*` שהמניפסט מצביע אליו — `startsWith("/icon")`
   "/icon",
   "/apple-icon",
   "/apple-touch-icon",
@@ -67,6 +73,18 @@ const GATE_EXEMPT = [
    */
   "/.well-known",
 ];
+
+/**
+ * `start_url` של האפליקציה המותקנת.
+ *
+ * ⚠️ הוא פטור **משער המפתח בלבד, ולא מהסשן** — ולכן הוא ברשימה נפרדת
+ * מ-`GATE_EXEMPT`, שנתיביה מדלגים על שתי הבדיקות. הפעלה ממסך הבית
+ * חייבת לנחות על מסך התחברות ולא על 404, אבל היא בהחלט חייבת להתחבר.
+ *
+ * זה לא מדליף כלום: מי שמגיע בלי מפתח מקבל בדיוק את אותה הפניה
+ * ל-`/login` שהוא היה מקבל מהנתיב `/login` עצמו, שפטור ממילא.
+ */
+const START_URL = "/leads";
 
 /**
  * השוואה בזמן קבוע. `node:crypto` לא זמין ב-Edge runtime, אז
@@ -102,8 +120,11 @@ export function proxy(req: NextRequest) {
    */
   const gateConfigured = Boolean(expected);
   const gateOpen = !gateConfigured || Boolean(req.cookies.get(GATE_COOKIE));
+  const gateExempt =
+    GATE_EXEMPT.some((p) => pathname.startsWith(p)) ||
+    pathname === START_URL;
 
-  if (!gateOpen && !GATE_EXEMPT.some((p) => pathname.startsWith(p))) {
+  if (!gateOpen && !gateExempt) {
     const provided = searchParams.get(KEY_PARAM);
     if (!provided || !safeEqual(provided, expected!)) {
       return new NextResponse(null, { status: 404 });
@@ -116,7 +137,8 @@ export function proxy(req: NextRequest) {
     return res;
   }
 
-  if (pathname === "/login") return NextResponse.next();
+  // נכסים ומסך ההתחברות — מדלגים גם על בדיקת הסשן.
+  // `START_URL` **לא** נכלל כאן בכוונה; ראה ההערה עליו.
   if (GATE_EXEMPT.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
@@ -125,10 +147,47 @@ export function proxy(req: NextRequest) {
     const login = req.nextUrl.clone();
     login.pathname = "/login";
     login.search = "";
+    // לאן לחזור אחרי ההתחברות. בלי זה משתמש שנשלח מ-`/leads` נוחת
+    // בדשבורד ונאלץ לנווט חזרה — ובטלפון זו הדרך הארוכה.
+    if (pathname !== "/") login.searchParams.set(NEXT_PARAM, pathname);
     return NextResponse.redirect(login);
   }
 
-  return NextResponse.next();
+  return withRolledCookies(req, NextResponse.next());
+}
+
+/**
+ * מאריך את תוקף העוגיות בכל ניווט מסמך — הסשן המתגלגל.
+ *
+ * ⚠️ **רק לניווטי מסמך.** בלי הבדיקה הזו כל שליפת RSC וכל
+ * `router.refresh()` (מסך הלידים מרענן את עצמו כל 60 שניות) היו נושאים
+ * `Set-Cookie` מיותר — תעבורת כותרות מתמדת בלי שום תועלת.
+ *
+ * `sec-fetch-dest` נתמך בכל דפדפן שהאפליקציה רצה בו. דפדפן שלא שולח
+ * אותו פשוט לא מקבל חידוש ומתנהג כמו קודם — פג אחרי שבוע.
+ */
+function withRolledCookies(
+  req: NextRequest,
+  res: NextResponse,
+): NextResponse {
+  if (req.headers.get("sec-fetch-dest") !== "document") return res;
+
+  res.cookies.set(
+    SESSION_COOKIE,
+    req.cookies.get(SESSION_COOKIE)!.value,
+    SESSION_COOKIE_OPTIONS,
+  );
+
+  /*
+   * עוגיית השער נקבעת גם אם לא הייתה קודם — **סשן תקף הוא ראיה חזקה
+   * יותר מהמפתח המשותף**, ומי שיש לו אחד ראוי גם לשני.
+   *
+   * זה מה שמציל את האפליקציה המותקנת: היא נפתחת ב-`/leads` (פטור
+   * מהשער), ובלי השורה הזו כל שאר הניווט היה מחזיר 404 עד שהמשתמש
+   * היה מוצא את הקישור הסודי מחדש.
+   */
+  res.cookies.set(GATE_COOKIE, "1", GATE_COOKIE_OPTIONS);
+  return res;
 }
 
 export const config = {
