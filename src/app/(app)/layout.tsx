@@ -1,8 +1,10 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/AppShell";
 import { ImpersonationBanner } from "@/components/shell/ImpersonationBanner";
 import { db } from "@/server/repositories";
 import { getImpersonatorId, getSessionUser } from "@/server/auth/session";
+import { NARROW_VALUE, WIDTH_COOKIE } from "@/lib/widthCookie";
 
 /**
  * מעטפת ה-shell (סרגל צד + סרגל עליון) — חלה על כל מסך שדורש אותה.
@@ -32,6 +34,13 @@ export default async function AppLayout({
   const realId = await getImpersonatorId();
   const realUser = realId ? await db.users.getById(realId) : null;
 
+  /*
+   * רמז הרוחב מהביקור הקודם — מה שמונע מהטלפון לצייר טבלה של 900px
+   * ואז להחליף אותה. הנתיב כבר דינמי (הוא קורא את עוגיית הסשן),
+   * ולכן קריאה נוספת לא עולה כלום מבחינת caching.
+   */
+  const narrow = (await cookies()).get(WIDTH_COOKIE)?.value === NARROW_VALUE;
+
   return (
     /*
      * `--chrome-h` = כמה גובה תופס ה-chrome הדביק מעל התוכן.
@@ -51,7 +60,9 @@ export default async function AppLayout({
           realName={realUser.name}
         />
       )}
-      <AppShell user={user}>{children}</AppShell>
+      <AppShell user={user} initialNarrow={narrow}>
+        {children}
+      </AppShell>
     </div>
   );
 }

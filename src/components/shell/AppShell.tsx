@@ -2,11 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { ROLE_CONFIG } from "@/lib/domain/types";
 import type { User } from "@/lib/domain/types";
 import { useNow } from "@/lib/clock";
+import {
+  InitialNarrowProvider,
+  syncWidthCookie,
+  useIsNarrow,
+} from "@/lib/media";
 import { endSession } from "@/app/login/actions";
 import { NAV, visibleFor } from "./nav";
 import { BottomNav } from "./BottomNav";
@@ -29,9 +34,12 @@ import {
 export function AppShell({
   user,
   children,
+  initialNarrow,
 }: {
   user: User;
   children: React.ReactNode;
+  /** רמז הרוחב מהעוגייה — ראה `lib/media.ts` */
+  initialNarrow: boolean;
 }) {
   const pathname = usePathname();
   const groups = visibleFor(user.role);
@@ -53,6 +61,8 @@ export function AppShell({
   }
 
   return (
+    <InitialNarrowProvider value={initialNarrow}>
+    <WidthCookieSync />
     <div className="flex min-h-dvh flex-col">
       {/* הגרדיאנט הרשמי — הנוכחות היחידה שלו במלואו */}
       <div className="brand-rule h-[3px] shrink-0" />
@@ -85,7 +95,20 @@ export function AppShell({
         pathname={pathname}
       />
     </div>
+    </InitialNarrowProvider>
   );
+}
+
+/**
+ * כותב את רוחב המסך לעוגייה, כדי שהרינדור הבא בשרת כבר יידע.
+ *
+ * קומפוננטה נפרדת ולא effect ב-`AppShell`: היא לא מרנדרת כלום, ולכן
+ * שינוי הרוחב לא מפעיל רינדור מחדש של כל המעטפת.
+ */
+function WidthCookieSync() {
+  const narrow = useIsNarrow();
+  useEffect(() => syncWidthCookie(narrow), [narrow]);
+  return null;
 }
 
 /* ── סרגל צד ──────────────────────────────────────────────────────────── */

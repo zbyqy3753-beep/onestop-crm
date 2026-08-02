@@ -1,14 +1,13 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { createContext, useContext, useSyncExternalStore } from "react";
+import { NARROW_VALUE, WIDE_VALUE, WIDTH_COOKIE } from "./widthCookie";
 
 /**
  * רוחב המסך כמקור חיצוני.
  *
- * אותו דפוס כמו `clock.ts`: `useSyncExternalStore` עם
- * `getServerSnapshot` שמחזיר את ערך השולחן, כך שהשרת והרינדור הראשון
- * בלקוח מסכימים ואין אי-התאמת הידרציה. הרוחב האמיתי נכנס רק אחרי
- * שהלקוח נרשם.
+ * אותו דפוס כמו `clock.ts`: `useSyncExternalStore`, כך שהשרת והרינדור
+ * הראשון בלקוח מסכימים ואין אי-התאמת הידרציה.
  *
  * ⚠️ למה JS ולא CSS (`lg:hidden` + `hidden lg:block`)?
  *
@@ -17,8 +16,14 @@ import { useSyncExternalStore } from "react";
  * עם 15 `<option>` — כאלף וחצי צמתי DOM מיותרים, דווקא על המכשיר החלש
  * ביותר. בנוסף קורא מסך היה מקריא את הטבלה המוסתרת.
  *
- * המחיר: בטלפון נצבעת הטבלה למסגרת אחת לפני ההחלפה. זה מקובל — היא
- * יושבת מתחת לכותרת גבוהה וממילא מחוץ למסך בציור הראשון.
+ * ⚠️ **המחיר הזה שולם, ועכשיו הוא מוחזר.** קודם `getServerSnapshot`
+ * החזיר תמיד `false`, ולכן כל טעינה בטלפון ציירה קודם טבלה של 900px
+ * והחליפה אותה בהידרציה. ההערה כאן טענה שזה מקובל כי הטבלה יושבת
+ * מתחת לכותרת גבוהה וממילא מחוץ למסך — הכותרת הזו כווצה מ-396px
+ * ל-250, והתירוץ נעלם איתה.
+ *
+ * הפתרון: הלקוח כותב את הרוחב לעוגייה, ה-layout קורא אותה ומזריק
+ * אותה כערך ההתחלתי. ביקור ראשון עדיין מהבהב; כל ביקור אחריו לא.
  */
 
 /** מתחת לזה עוברים לתצוגת כרטיסים. תואם ל-`lg` של Tailwind. */
@@ -41,12 +46,30 @@ function getSnapshot(): boolean {
   return getQuery().matches;
 }
 
-/** השרת תמיד מרנדר את תצוגת השולחן. */
-function getServerSnapshot(): boolean {
-  return false;
+/**
+ * מה שהשרת ידע בזמן הרינדור — הרמז מהעוגייה של הביקור הקודם.
+ *
+ * ⚠️ Context ולא משתנה מודול: משתנה מודול משותף בין בקשות בשרת,
+ * ושני משתמשים במקביל היו דורסים זה את הרוחב של זה.
+ */
+const InitialNarrow = createContext(false);
+
+export const InitialNarrowProvider = InitialNarrow.Provider;
+
+/** `true` כשהמסך צר מ-1024px. */
+export function useIsNarrow(): boolean {
+  const initial = useContext(InitialNarrow);
+  return useSyncExternalStore(subscribe, getSnapshot, () => initial);
 }
 
-/** `true` כשהמסך צר מ-1024px. `false` בשרת ובציור הראשון. */
-export function useIsNarrow(): boolean {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+/**
+ * מעדכן את העוגייה כשהיא לא תואמת למציאות.
+ *
+ * נקרא מ-`AppShell` בכל רינדור; כותב רק כשיש פער, כדי שהמקרה הרגיל
+ * (ההערכה נכונה) לא יעשה כלום.
+ */
+export function syncWidthCookie(narrow: boolean): void {
+  const want = narrow ? NARROW_VALUE : WIDE_VALUE;
+  if (document.cookie.includes(`${WIDTH_COOKIE}=${want}`)) return;
+  document.cookie = `${WIDTH_COOKIE}=${want}; path=/; max-age=31536000; samesite=lax`;
 }
