@@ -62,7 +62,18 @@ export function QueueHeader({
 
   return (
     <header className="mb-3">
-      {/* הכותרת והמונים באותה שורה עם הכפתורים — היו שלוש שורות נפרדות */}
+      {/*
+        ⚠️ בטלפון הבלוק הזה **לא מרונדר בכלל**, ולא "מתכווץ".
+        הוא עלה 111px מתוך 812 — 14% מהמסך — והכיל שלושה דברים
+        מיותרים שם: כותרת שזהה מילה במילה למה שהסרגל העליון מציג
+        60px מעליה, מונים שקוביות הסטטוס אומרות טוב יותר, ושלושה
+        כפתורים של עבודה ממחשב (ייבוא/ייצוא/פיננסי) שעברו לגיליון
+        ה-`⋯` שב-`FilterBar`. "ליד חדש" הפך ל-FAB בגובה האגודל.
+
+        בכוונה תת-עץ נפרד ולא מחלקות `lg:` על הקיים — כך התנהגות
+        ה-wrap בשולחן ב-1024–1280px לא יכולה להישבר בטעות.
+      */}
+      {!compact && (
       <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h1 className="font-display text-[22px] font-bold leading-none tracking-tight">
@@ -124,6 +135,7 @@ export function QueueHeader({
           </Button>
         </div>
       </div>
+      )}
 
       {/* תצוגות מהירות — "מה אני צריך לעשות עכשיו" */}
       <div

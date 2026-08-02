@@ -28,7 +28,8 @@ import {
   performanceByAgent,
   totalLeadCostForLeads,
 } from "@/server/services/economics";
-import { Modal, ToastStack, type Toast } from "@/components/ui/primitives";
+import { Button, Modal, ToastStack, type Toast } from "@/components/ui/primitives";
+import { Icon } from "@/components/ui/Icon";
 import { LeadCostsModal } from "@/components/settings/LeadCostsModal";
 import { LeadsFinancePanel } from "./LeadsFinancePanel";
 import { LeadsPerformancePanel } from "./LeadsPerformancePanel";
@@ -37,6 +38,7 @@ import { QueueHeader } from "./QueueHeader";
 import { FilterBar, type Filters, EMPTY_FILTERS } from "./FilterBar";
 import { LeadsTable } from "./LeadsTable";
 import { LeadCardList } from "./LeadCardList";
+import { LeadsMoreSheet } from "./LeadsMoreSheet";
 import { StatusTiles } from "./StatusTiles";
 import { Pagination, PAGE_SIZES } from "./Pagination";
 import { ColumnPicker } from "./ColumnPicker";
@@ -117,6 +119,13 @@ export function LeadsClient({
   const [statsOpen, setStatsOpen] = useState(false);
   /** גיליון "כל הסטטוסים" — קיים רק במסך צר, ראה StatusTiles */
   const [statusSheetOpen, setStatusSheetOpen] = useState(false);
+  /** גיליון ה-`⋯` — ייבוא/ייצוא/פיננסי/בחירה, ראה LeadsMoreSheet */
+  const [moreOpen, setMoreOpen] = useState(false);
+  /**
+   * מצב בחירה מרובה בתצוגת הכרטיסים. יושב כאן ולא ב-`LeadCardList`
+   * כי מי שמדליק אותו הוא גיליון ה-`⋯`, שהוא אח שלה ולא ילד.
+   */
+  const [selecting, setSelecting] = useState(false);
 
   /** מסך צר = תצוגת כרטיסים במקום טבלה */
   const narrow = useIsNarrow();
@@ -531,6 +540,20 @@ export function LeadsClient({
             <ColumnPicker visible={visibleColumns} onChange={setVisibleColumns} />
           )
         }
+        overflow={
+          narrow ? (
+            <Button
+              variant="secondary"
+              onClick={() => setMoreOpen(true)}
+              aria-label="פעולות נוספות"
+              className="size-11 shrink-0 px-0"
+            >
+              <span aria-hidden className="text-lg leading-none">
+                ⋯
+              </span>
+            </Button>
+          ) : undefined
+        }
         busy={pending}
       />
 
@@ -555,6 +578,8 @@ export function LeadsClient({
           onBulkAssign={(id) => assign([...selected], id)}
           onBulkStatus={(to) => requestStatus([...selected], to)}
           onBulkDelete={() => remove([...selected])}
+          selecting={selecting}
+          onSelectingChange={setSelecting}
         />
       ) : (
         <LeadsTable
@@ -587,6 +612,34 @@ export function LeadsClient({
           onPageSizeChange={applyPageSize}
         />
       )}
+
+      {/*
+        "ליד חדש" כ-FAB — בטלפון בלבד.
+
+        זו הפעולה היחידה מבין הארבע שהיו בכותרת שנעשית תוך כדי שיחה,
+        ולכן היא היחידה שנשארה על המסך. `bottom-[72px]` משאיר מקום
+        לסרגל הפעולות הקבוצתיות, והיא נעלמת בזמן בחירה כדי לא להתנגש בו.
+      */}
+      {narrow && !selecting && (
+        <button
+          onClick={() => setAddOpen(true)}
+          aria-label="ליד חדש"
+          className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] end-4 z-40 grid size-14 place-items-center rounded-full bg-brand text-on-brand shadow-pop transition-transform active:scale-95"
+        >
+          <Icon name="plus" size={24} />
+        </button>
+      )}
+
+      <LeadsMoreSheet
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        onImport={() => setImportOpen(true)}
+        onExport={exportCsv}
+        onToggleStats={() => setStatsOpen((v) => !v)}
+        statsOpen={statsOpen}
+        onStartSelection={() => setSelecting(true)}
+        canExport={sorted.length > 0}
+      />
 
       {/* ה-key מאפס את מצב המגירה (הערה, אישור מחיקה) בכל ליד חדש */}
       <LeadDrawer

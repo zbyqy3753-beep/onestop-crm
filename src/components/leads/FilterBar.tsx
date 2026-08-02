@@ -47,6 +47,7 @@ export function FilterBar({
   onBulkDelete,
   onClearSelection,
   columnPicker,
+  overflow,
   busy,
 }: {
   filters: Filters;
@@ -54,6 +55,11 @@ export function FilterBar({
   users: User[];
   /** בורר העמודות, מוזרק מבחוץ כדי ש-FilterBar יישאר על סינון בלבד */
   columnPicker?: React.ReactNode;
+  /**
+   * כפתור ה-`⋯` של הטלפון. יושב בשורת החיפוש ולא בשורה משלו — שורה
+   * נוספת היא 44px מתוך המסך, ושורת החיפוש ממילא לא מנוצלת עד הסוף.
+   */
+  overflow?: React.ReactNode;
   searchRef: RefObject<HTMLInputElement | null>;
   selectedCount: number;
   onBulkAssign: (assigneeId: string | null) => void;
@@ -142,7 +148,10 @@ export function FilterBar({
           className={`${inputClass} ps-8`}
           aria-label="חיפוש לידים"
         />
-        <kbd className="pointer-events-none absolute inset-y-0 end-2.5 my-auto hidden h-4 items-center rounded border border-line px-1 text-[10px] text-ink-4 sm:flex">
+        {/* `lg:` ולא `sm:` — קיצור המקלדת קיים רק במסך עם מקלדת, וזה
+            אותו סף שבו `useIsNarrow` מחליף לתצוגת כרטיסים (1024px).
+            ב-`sm:` הרמז הופיע גם בטאבלט ובטלפון גדול בנוף. */}
+        <kbd className="pointer-events-none absolute inset-y-0 end-2.5 my-auto hidden h-4 items-center rounded border border-line px-1 text-[10px] text-ink-4 lg:flex">
           /
         </kbd>
       </div>
@@ -165,7 +174,10 @@ export function FilterBar({
       )}
 
       {/* בורר העמודות בקצה השורה — הוא שולט בתצוגה, לא מסנן */}
-      <div className="ms-auto">{columnPicker}</div>
+      <div className="ms-auto flex items-center gap-2">
+        {columnPicker}
+        {overflow}
+      </div>
     </div>
   );
 }

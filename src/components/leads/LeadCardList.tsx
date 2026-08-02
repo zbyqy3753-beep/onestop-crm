@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { Lead, LeadStatus, User } from "@/lib/domain/types";
 import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
@@ -30,6 +29,8 @@ export function LeadCardList({
   onBulkAssign,
   onBulkStatus,
   onBulkDelete,
+  selecting,
+  onSelectingChange,
 }: {
   leads: Lead[];
   users: User[];
@@ -45,22 +46,23 @@ export function LeadCardList({
   onBulkAssign: (assigneeId: string | null) => void;
   onBulkStatus: (to: LeadStatus) => void;
   onBulkDelete: () => void;
+  /*
+   * מצב הבחירה הוא מפורש ומופעל בכפתור — לא בלחיצה ארוכה. לחיצה
+   * ארוכה מתנגשת בבחירת טקסט ובתפריט ההקשר של iOS, ובעיקר אי אפשר
+   * לגלות אותה.
+   *
+   * ⚠️ הוא **נשלט מבחוץ** ולא מצב פנימי: הכפתור שמפעיל אותו עבר
+   * לגיליון ה-`⋯`, כי שורה שלמה של 36px בראש כל מסך עבור פעולה
+   * שנעשית מדי פעם היא בדיוק סוג הדבר שדחק את הליד הראשון ל-49%
+   * מגובה המסך.
+   */
+  selecting: boolean;
+  onSelectingChange: (v: boolean) => void;
 }) {
   const now = useNow();
 
-  /*
-   * מצב הבחירה הוא מפורש ומופעל בכפתור — לא בלחיצה ארוכה.
-   *
-   * לחיצה ארוכה מתנגשת בבחירת הטקסט ובתפריט ההקשר של iOS, ובעיקר
-   * אי אפשר לגלות אותה: אין שום דבר על המסך שמרמז שהיא קיימת.
-   *
-   * כשהמצב כבוי הכרטיס לא נושא צ׳קבוקס בכלל — זה חוסך 44px מתוך 358
-   * שיש, בדיוק במקום שבו נמצא השם.
-   */
-  const [selecting, setSelecting] = useState(false);
-
   function exitSelection() {
-    setSelecting(false);
+    onSelectingChange(false);
     onSelectedChange(new Set());
   }
 
@@ -97,31 +99,8 @@ export function LeadCardList({
 
   return (
     <>
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <Button
-          variant={selecting ? "primary" : "ghost"}
-          onClick={() => (selecting ? exitSelection() : setSelecting(true))}
-          className="h-9"
-        >
-          {selecting ? "סיום בחירה" : "בחירה"}
-        </Button>
-
-        {selecting && (
-          <Button
-            variant="ghost"
-            onClick={() =>
-              onSelectedChange(
-                allChecked ? new Set() : new Set(leads.map((l) => l.id)),
-              )
-            }
-            className="h-9"
-          >
-            {allChecked ? "נקה הכל" : `בחר הכל (${leads.length})`}
-          </Button>
-        )}
-      </div>
-
-      <ul className="flex flex-col gap-2">
+      {/* מרווח בתחתית כדי שסרגל הפעולות הקבוע לא יכסה את הכרטיס האחרון */}
+      <ul className={`flex flex-col gap-2 ${selecting ? "pb-40" : ""}`}>
         {leads.map((lead) => (
           <LeadCard
             key={lead.id}
@@ -145,18 +124,35 @@ export function LeadCardList({
         `pb-[env(safe-area-inset-bottom)]` כדי שהוא לא ייחתך מתחת לפס
         הבית באייפון.
       */}
-      {selecting && selected.size > 0 && (
+      {selecting && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface-2 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 shadow-card">
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-2 flex items-center justify-between gap-2">
             <span className="text-sm font-semibold text-brand">
               {selected.size} נבחרו
             </span>
-            <Button variant="ghost" onClick={exitSelection} className="h-9">
-              ביטול
-            </Button>
+            {/* "בחר הכל" חי כאן ולא בשורה נפרדת בראש המסך — הוא רלוונטי
+                רק בזמן בחירה, ובזמן בחירה הסרגל הזה ממילא על המסך */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  onSelectedChange(
+                    allChecked ? new Set() : new Set(leads.map((l) => l.id)),
+                  )
+                }
+                className="h-9"
+              >
+                {allChecked ? "נקה הכל" : `בחר הכל (${leads.length})`}
+              </Button>
+              <Button variant="ghost" onClick={exitSelection} className="h-9">
+                סיום
+              </Button>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div
+            className={`flex flex-wrap gap-2 ${selected.size === 0 ? "pointer-events-none opacity-40" : ""}`}
+          >
             <select
               className={`${inputClass} h-10 w-auto flex-1`}
               defaultValue=""
