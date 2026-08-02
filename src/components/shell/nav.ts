@@ -10,6 +10,20 @@ export interface NavItem {
   roles?: Role[];
   /** המסך עדיין לא נבנה — יוצג כמושבת */
   planned?: boolean;
+  /**
+   * מיקום בסרגל התחתון בטלפון. מספר נמוך = שמאלי יותר.
+   *
+   * ⚠️ פריט **בלי** הערך הזה נוחת אוטומטית בגיליון "עוד". זו הנקודה:
+   * אין רשימה שנייה שאפשר לשכוח לעדכן — יעד חדש ב-`NAV` תמיד נגיש,
+   * גם אם אף אחד לא חשב על הטלפון כשהוסיף אותו.
+   */
+  mobileOrder?: number;
+  /**
+   * תווית קצרה לסרגל התחתון, כשהמלאה לא נכנסת ב-75px.
+   * ⚠️ רק לסרגל — הגיליון והסרגל הצדדי מציגים תמיד את התווית המלאה,
+   * כי שם יש מקום ושתי תוויות שונות לאותו יעד מבלבלות.
+   */
+  shortLabel?: string;
 }
 
 export type IconName =
@@ -46,18 +60,24 @@ export const NAV: NavGroup[] = [
         label: "לידים",
         hint: "תור העבודה — מי לחייג עכשיו",
         icon: "leads",
+        // ראשון בסרגל התחתון לכל תפקיד — זה גם `start_url` של האפליקציה
+        mobileOrder: 1,
       },
       {
         href: "/packages",
         label: "חבילות",
         hint: "קטלוג הספקים והעמלות",
         icon: "packages",
+        // מה שהעובד פותח באמצע שיחה כדי לבדוק מחיר
+        mobileOrder: 4,
       },
       {
         href: "/my-deals",
         label: "העסקאות שלי",
+        shortLabel: "שלי",
         hint: "מה סגרתי וכמה הרווחתי",
         icon: "myDeals",
+        mobileOrder: 5,
       },
       {
         href: "/feedback",
@@ -73,9 +93,12 @@ export const NAV: NavGroup[] = [
       {
         href: "/deals",
         label: "מעקב עסקאות",
+        shortLabel: "עסקאות",
         hint: "כל העסקאות בארגון",
         icon: "deals",
         roles: ["owner", "manager", "bizManager", "shopOwner"],
+        // גובר על "חבילות" למי שרואה אותו — זה מסך הניהול היומי
+        mobileOrder: 2,
       },
       {
         href: "/deals-dashboard",
@@ -87,9 +110,11 @@ export const NAV: NavGroup[] = [
       {
         href: "/registrations",
         label: "טפסי רישום",
+        shortLabel: "רישום",
         hint: "פניות שהגיעו מטפסים",
         icon: "registrations",
         roles: ["owner", "manager", "operator"],
+        mobileOrder: 3,
       },
       {
         href: "/admin",
@@ -107,4 +132,22 @@ export function visibleFor(role: Role): NavGroup[] {
     ...g,
     items: g.items.filter((i) => !i.roles || i.roles.includes(role)),
   })).filter((g) => g.items.length > 0);
+}
+
+/** כמה יעדים נכנסים לסרגל התחתון לפני שהרביעי הופך ל"עוד". */
+export const MOBILE_TABS = 4;
+
+/**
+ * היעדים שיופיעו בסרגל התחתון בטלפון, לפי תפקיד.
+ *
+ * ⚠️ נגזר מ-`NAV` ולא מרשימה נפרדת. בעלים רואה 9 יעדים ועובד 5, ואי
+ * אפשר להציג את שניהם בסרגל אחד — אבל אפשר להציג את הארבעה הראשונים
+ * שרלוונטיים לכל תפקיד, וכל השאר נגיש דרך "עוד".
+ */
+export function mobileTabsFor(role: Role): NavItem[] {
+  return visibleFor(role)
+    .flatMap((g) => g.items)
+    .filter((i) => !i.planned && i.mobileOrder !== undefined)
+    .sort((a, b) => a.mobileOrder! - b.mobileOrder!)
+    .slice(0, MOBILE_TABS);
 }
