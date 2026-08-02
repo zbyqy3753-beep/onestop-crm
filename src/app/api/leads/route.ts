@@ -188,6 +188,51 @@ function readSource(raw: string): ParsedSource {
   return category ? { provider, category } : { provider, packageName: rest };
 }
 
+/** כל שם שדה שהחוזה מכיר ומטפל בו. כל השאר נחשב "לא זוהה". */
+const KNOWN_FIELDS: ReadonlySet<string> = new Set([
+  "fullName",
+  "phone",
+  "email",
+  "source",
+  "category",
+  "message",
+  "packageName",
+  "package",
+  "plan",
+  "providerName",
+  "price",
+]);
+
+/**
+ * שדות שהשותף שלח ואנחנו לא מכירים — לתוך ההערה, במקום לאבד בשקט.
+ *
+ * ⚠️ הסיבה שזה קיים: כשליד נכנס בלי חבילה אי אפשר היה לדעת אם השותף
+ * לא שלח אחת, או ששלח אותה תחת שם שדה שאנחנו מתעלמים ממנו. אנחנו לא
+ * שומרים את גוף הבקשה הגולמי, ולכן ההבדל הזה היה בלתי ניתן לבירור
+ * אחרי המעשה — והשאלה "למה אין פה חבילה" נשארה בלי תשובה.
+ *
+ * הרשימה חתוכה בכוונה: המטרה היא רמז לתחקיר, לא ארכיון. שדה שמופיע
+ * כאן שוב ושוב הוא סימן שצריך למפות אותו לעמודה אמיתית.
+ */
+const MAX_UNKNOWN_FIELDS = 10;
+const MAX_UNKNOWN_VALUE = 120;
+
+function unknownFields(body: LeadPayload): string {
+  const seen: string[] = [];
+
+  for (const [key, value] of Object.entries(body)) {
+    if (KNOWN_FIELDS.has(key)) continue;
+    if (value === null || value === undefined || value === "") continue;
+    if (seen.length === MAX_UNKNOWN_FIELDS) break;
+
+    const shown =
+      typeof value === "object" ? JSON.stringify(value) : String(value);
+    seen.push(`${key}=${shown.slice(0, MAX_UNKNOWN_VALUE)}`);
+  }
+
+  return seen.length ? `שדות שלא זוהו: ${seen.join(", ")}` : "";
+}
+
 /**
  * כל מה שהשותף שלח ואין לו עמודה משלו — לתוך ההערה הראשונה של הליד.
  * עדיף מלאבד את המידע: הנציג שמרים טלפון רואה מה הלקוח ביקש.
@@ -211,6 +256,9 @@ function buildNote(body: LeadPayload, provider: ProviderKey | undefined): string
   } else if (text(price)) {
     lines.push(`מחיר: ${text(price)}`);
   }
+
+  const unknown = unknownFields(body);
+  if (unknown) lines.push(unknown);
 
   return lines.join("\n");
 }
