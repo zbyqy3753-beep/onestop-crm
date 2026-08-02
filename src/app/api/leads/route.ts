@@ -115,8 +115,8 @@ function buildNote(body: LeadPayload, provider: ProviderKey | undefined): string
   const message = text(body.message);
   if (message) lines.push(message);
 
-  const packageName = text(body.packageName);
-  if (packageName) lines.push(`חבילה: ${packageName}`);
+  // שם החבילה **לא** נכנס להערה — יש לו עמודה משלו (`packageName`),
+  // וכפילות הייתה יוצרת שני מקומות שיכולים להיפרד בעריכה
 
   // שם ספק שזוהה כבר יושב בעמודה `currentProvider` — לא כופלים אותו
   const providerName = text(body.providerName);
@@ -262,6 +262,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ל-`sourceDetail`, העמודה החופשית שמוצגת בטבלה כ"מקור"
     source: "campaign",
     sourceDetail: text(body.source) || partner.name,
+    packageName: text(body.packageName) || undefined,
     note: buildNote(body, currentProvider) || undefined,
     assigneeId: await nextAssignee(),
     createdById,

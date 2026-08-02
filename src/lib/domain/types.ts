@@ -429,6 +429,11 @@ export interface Lead {
    * `source` אומר *איך* הוא נקלט (ידני/ייבוא/טופס); זה אומר *ממה*.
    */
   sourceDetail?: string;
+  /**
+   * החבילה שהלקוח התעניין בה, בטקסט חופשי ("500GB 5G Together").
+   * לא מקושר לקטלוג — ראה ההסבר ב-schema.prisma.
+   */
+  packageName?: string;
   assigneeId?: UserId;
   createdById: UserId;
   createdAt: string;
@@ -457,7 +462,8 @@ export type LeadImportField =
   | "city"
   | "category"
   | "note"
-  | "sourceDetail";
+  | "sourceDetail"
+  | "packageName";
 
 /**
  * כותרות מוכרות בקבצי ייבוא, בעברית ובאנגלית.
@@ -512,9 +518,18 @@ const LEAD_IMPORT_HEADER_ALIASES: Record<string, LeadImportField> = {
 
   מקור: "sourceDetail",
   קמפיין: "sourceDetail",
-  חבילה: "sourceDetail",
   source: "sourceDetail",
   campaign: "sourceDetail",
+
+  // "חבילה" מיפתה קודם ל-sourceDetail, כשלא היה שדה חבילה נפרד.
+  // עכשיו יש, וזה המקום הנכון שלה.
+  חבילה: "packageName",
+  מסלול: "packageName",
+  תוכנית: "packageName",
+  תכנית: "packageName",
+  package: "packageName",
+  packagename: "packageName",
+  plan: "packageName",
 };
 
 /**

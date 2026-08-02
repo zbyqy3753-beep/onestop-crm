@@ -93,6 +93,7 @@ export async function createLeadAction(
   const category = String(formData.get("category") ?? "").trim();
   const currentProvider = String(formData.get("currentProvider") ?? "").trim();
   const sourceDetail = String(formData.get("sourceDetail") ?? "").trim();
+  const packageName = String(formData.get("packageName") ?? "").trim();
   const actorId = await actor();
 
   await db.leads.create({
@@ -109,6 +110,7 @@ export async function createLeadAction(
     category: (category as LeadCategoryKey) || undefined,
     currentProvider: (currentProvider as ProviderKey) || undefined,
     sourceDetail: sourceDetail || undefined,
+    packageName: packageName || undefined,
     // ללא בחירה = משויך ליוצר, לא ל"ללא שיוך" — תואם לטופס האמיתי
     assigneeId: assigneeId || actorId,
     source: "manual",
@@ -126,9 +128,6 @@ export async function createLeadAction(
  *
  * מריץ את אותה ולידציה כמו היצירה — אימות בצד הלקוח הוא נוחות, ופה
  * זו נקודת קצה שאפשר לקרוא לה ישירות.
- *
- * ⚠️ אין בדיקת הרשאות — כל משתמש מחובר יכול לערוך כל ליד, גם כזה
- * שמשויך למישהו אחר.
  */
 export async function updateLeadAction(
   leadId: string,
@@ -150,6 +149,7 @@ export async function updateLeadAction(
   const category = String(formData.get("category") ?? "").trim();
   const currentProvider = String(formData.get("currentProvider") ?? "").trim();
   const sourceDetail = String(formData.get("sourceDetail") ?? "").trim();
+  const packageName = String(formData.get("packageName") ?? "").trim();
 
   // `null` ולא `undefined`: שדה ריק בטופס הוא בקשה מפורשת *לנקות*.
   // עם `undefined` הבקשה הזו נבלעה ב-Postgres והמשתמש קיבל טוסט
@@ -164,6 +164,7 @@ export async function updateLeadAction(
     category: (category as LeadCategoryKey) || null,
     currentProvider: (currentProvider as ProviderKey) || null,
     sourceDetail: sourceDetail || null,
+    packageName: packageName || null,
     // בעריכה "ללא שיוך" הוא בחירה מפורשת, לא ברירת מחדל ליוצר
     assigneeId: assigneeId || null,
   });
@@ -500,8 +501,10 @@ export interface ImportRow {
   category?: LeadCategoryKey;
   kind?: LeadKind;
   note?: string;
-  /** עמודת "מקור" בקובץ — שם הקמפיין/החבילה */
+  /** עמודת "מקור" בקובץ — שם הקמפיין */
   sourceDetail?: string;
+  /** עמודת "חבילה" בקובץ */
+  packageName?: string;
 }
 
 export interface ImportResult {
@@ -578,6 +581,7 @@ export async function importLeadsAction(
       city: r.city?.trim() || undefined,
       note: r.note?.trim() || undefined,
       sourceDetail: r.sourceDetail?.trim() || undefined,
+      packageName: r.packageName?.trim() || undefined,
       category: r.category,
       kind: r.kind ?? "data",
       priority: "normal" as const,

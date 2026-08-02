@@ -48,6 +48,7 @@ const CELL_CLASS: Record<ColumnKey, string> = {
   cost: "px-3 py-2.5",
   assignee: "px-3 py-2.5",
   activity: "px-3 py-2.5",
+  packageName: "px-3 py-2.5 text-xs text-ink-2",
   source: "px-3 py-2.5 text-xs text-ink-2",
   provider: "whitespace-nowrap px-3 py-2.5 text-xs text-ink-2",
   city: "whitespace-nowrap px-3 py-2.5 text-xs text-ink-2",
@@ -292,6 +293,17 @@ export function LeadRow({
             </button>
           </>
         );
+
+      case "packageName": {
+        const pkg = lead.packageName?.trim();
+        return pkg ? (
+          <span className="block max-w-[180px] truncate" title={pkg}>
+            {pkg}
+          </span>
+        ) : (
+          dash
+        );
+      }
 
       case "source": {
         // הטקסט החופשי הוא מה שמעניין ("פלאפון – 300GB Perfect");

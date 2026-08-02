@@ -22,6 +22,7 @@ export type ColumnKey =
   | "cost"
   | "assignee"
   | "activity"
+  | "packageName"
   | "source"
   | "provider"
   | "city"
@@ -47,6 +48,9 @@ export const COLUMNS: ColumnDef[] = [
   { key: "updatedAt", label: "עודכן", sort: "updatedAt", defaultOn: true },
   { key: "followUpAt", label: "חזרה", sort: "followUpAt", defaultOn: true },
   { key: "category", label: "קטגוריה", defaultOn: true },
+  // דלוקה כברירת מחדל: זה מה שהסוכן צריך לדעת לפני שהוא מרים טלפון,
+  // ובלידים שמגיעים מה-API זה השדה שנושא את פרטי ההתעניינות
+  { key: "packageName", label: "חבילה", defaultOn: true },
   { key: "cost", label: "עלות", defaultOn: true },
   { key: "assignee", label: "משויך ל", defaultOn: true },
   { key: "activity", label: "פעילות", defaultOn: true },

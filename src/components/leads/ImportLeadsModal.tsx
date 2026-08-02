@@ -308,6 +308,7 @@ function buildRow(cells: string[], mapping: Mapping): ImportRow {
     city: at("city") || undefined,
     note: at("note") || undefined,
     sourceDetail: at("sourceDetail") || undefined,
+    packageName: at("packageName") || undefined,
     category,
   };
 }

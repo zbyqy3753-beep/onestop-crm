@@ -114,11 +114,20 @@ export function LeadFields({
         </select>
       </Field>
 
-      <Field label="מקור" hint="קמפיין, חבילה או ספק שהליד הגיע ממנו">
+      <Field label="חבילה" hint="החבילה שהלקוח התעניין בה">
+        <input
+          name="packageName"
+          defaultValue={lead?.packageName ?? ""}
+          placeholder="500GB 5G Together"
+          className={inputClass}
+        />
+      </Field>
+
+      <Field label="מקור" hint="הקמפיין או הערוץ שהליד הגיע ממנו">
         <input
           name="sourceDetail"
           defaultValue={lead?.sourceDetail ?? ""}
-          placeholder="פלאפון – 300GB Perfect"
+          placeholder="קמפיין פייסבוק"
           className={inputClass}
         />
       </Field>

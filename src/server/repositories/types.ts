@@ -80,8 +80,10 @@ export interface CreateLeadInput {
   city?: string;
   assigneeId?: UserId;
   source: Lead["source"];
-  /** טקסט חופשי: שם הקמפיין/החבילה שהליד הגיע ממנה */
+  /** טקסט חופשי: שם הקמפיין שהליד הגיע ממנו */
   sourceDetail?: string;
+  /** טקסט חופשי: החבילה שהלקוח התעניין בה */
+  packageName?: string;
   createdById: UserId;
   /** הערה ראשונית, אופציונלית */
   note?: string;
@@ -115,6 +117,7 @@ export interface UpdateLeadInput {
   assigneeId?: UserId | null;
   followUpAt?: string | null;
   sourceDetail?: string | null;
+  packageName?: string | null;
   /** `null` מנקה את העלות הפרטנית ומחזיר לעלות הקטגוריה. */
   cost?: number | null;
 }

@@ -65,6 +65,7 @@ export function leadFromPrisma(
     cost: row.cost === null ? undefined : toNumber(row.cost),
     isStarred: row.isStarred,
     sourceDetail: row.sourceDetail ?? undefined,
+    packageName: row.packageName ?? undefined,
     assigneeId: row.assigneeId ?? undefined,
     createdById: row.createdById,
     createdAt: row.createdAt.toISOString(),

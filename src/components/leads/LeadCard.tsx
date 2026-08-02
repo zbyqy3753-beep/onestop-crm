@@ -112,6 +112,13 @@ export function LeadCard({
           <span className="ltr-num mt-0.5 block text-[13px] text-ink-3">
             {phone(lead.phone)}
           </span>
+          {/* החבילה שהתעניין בה — מה שהסוכן צריך לדעת לפני שהוא מחייג,
+              ובלידים מה-API זה השדה שנושא את פרטי ההתעניינות */}
+          {lead.packageName?.trim() && (
+            <span className="mt-0.5 block truncate text-[12px] text-ink-2">
+              {lead.packageName.trim()}
+            </span>
+          )}
         </button>
 
         {/* מתי נגעו בו לאחרונה — מסביר למה הוא במקום שהוא בו בתור */}

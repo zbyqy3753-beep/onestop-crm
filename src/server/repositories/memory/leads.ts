@@ -143,6 +143,7 @@ export const memoryLeadRepository: LeadRepository = {
       priority: input.priority,
       source: input.source,
       sourceDetail: input.sourceDetail,
+      packageName: input.packageName,
       isStarred: false,
       category: input.category,
       currentProvider: input.currentProvider,

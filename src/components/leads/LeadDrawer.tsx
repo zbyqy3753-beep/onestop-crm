@@ -215,6 +215,7 @@ export function LeadDrawer({
                 : "—"}
             </Detail>
             <Detail label="עיר">{lead.city ?? "—"}</Detail>
+            <Detail label="חבילה">{lead.packageName?.trim() || "—"}</Detail>
             <Detail label="מקור">
               {lead.sourceDetail?.trim() || SOURCE_CONFIG[lead.source].label}
             </Detail>
