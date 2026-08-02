@@ -126,6 +126,11 @@ export function LeadsClient({
    * כי מי שמדליק אותו הוא גיליון ה-`⋯`, שהוא אח שלה ולא ילד.
    */
   const [selecting, setSelecting] = useState(false);
+  /**
+   * לידים שממתינים לאישור מחיקה קבוצתית; null = אין בקשה פתוחה.
+   * מחיקה בודדת מהמגירה לא עוברת כאן — יש לה אישור דו-שלבי משלה.
+   */
+  const [deleteTarget, setDeleteTarget] = useState<string[] | null>(null);
 
   /** מסך צר = תצוגת כרטיסים במקום טבלה */
   const narrow = useIsNarrow();
@@ -532,7 +537,7 @@ export function LeadsClient({
         selectedCount={narrow ? 0 : visibleSelected.length}
         onBulkAssign={(id) => assign(visibleSelected, id)}
         onBulkStatus={(to) => requestStatus(visibleSelected, to)}
-        onBulkDelete={() => remove(visibleSelected)}
+        onBulkDelete={() => setDeleteTarget(visibleSelected)}
         onClearSelection={() => setSelected(new Set())}
         columnPicker={
           // בורר העמודות הוא כלי של הטבלה בלבד — לכרטיס אין עמודות
@@ -575,9 +580,12 @@ export function LeadsClient({
           onPatch={patchLead}
           onAdd={() => setAddOpen(true)}
           hasFilters={hasActiveFilters}
-          onBulkAssign={(id) => assign([...selected], id)}
-          onBulkStatus={(to) => requestStatus([...selected], to)}
-          onBulkDelete={() => remove([...selected])}
+          onClearFilters={() => applyFilters(EMPTY_FILTERS)}
+          /* דווקא visibleSelected ולא selected — פעולה קבוצתית חייבת
+             לפגוע רק בלידים שהמשתמש רואה כרגע בחתך המסונן */
+          onBulkAssign={(id) => assign(visibleSelected, id)}
+          onBulkStatus={(to) => requestStatus(visibleSelected, to)}
+          onBulkDelete={() => setDeleteTarget(visibleSelected)}
           selecting={selecting}
           onSelectingChange={setSelecting}
         />
@@ -641,14 +649,19 @@ export function LeadsClient({
         "ליד חדש" כ-FAB — בטלפון בלבד.
 
         זו הפעולה היחידה מבין הארבע שהיו בכותרת שנעשית תוך כדי שיחה,
-        ולכן היא היחידה שנשארה על המסך. `bottom-[72px]` משאיר מקום
-        לסרגל הפעולות הקבוצתיות, והיא נעלמת בזמן בחירה כדי לא להתנגש בו.
+        ולכן היא היחידה שנשארה על המסך.
+
+        ה-bottom חייב לפנות את ה-BottomNav: הניווט הוא `fixed bottom-0`
+        בגובה 3.5rem + safe-area, באותו z-40, ומרונדר אחרי ה-FAB ב-DOM —
+        כלומר בלי המרווח הזה הוא פשוט נצבע מעליו. לכן 3.5rem (הניווט)
+        + safe-area + 0.75rem רווח. ה-FAB גם נעלם בזמן בחירה כדי לא
+        להתנגש בסרגל הפעולות הקבוצתיות.
       */}
       {narrow && !selecting && (
         <button
           onClick={() => setAddOpen(true)}
           aria-label="ליד חדש"
-          className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] end-4 z-40 grid size-14 place-items-center rounded-full bg-brand text-on-brand shadow-pop transition-transform active:scale-95"
+          className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] end-4 z-40 grid size-14 place-items-center rounded-full bg-brand text-on-brand shadow-pop transition-transform active:scale-95"
         >
           <Icon name="plus" size={24} />
         </button>
@@ -753,6 +766,38 @@ export function LeadsClient({
         }
         busy={pending}
       />
+
+      {/*
+        אישור מחיקה קבוצתית. מחיקה בודדת מהמגירה כבר עטופה באישור
+        דו-שלבי משלה — כאן סוגרים את הפער עבור המחיקה הקבוצתית,
+        שעד עכשיו מחקה עשרות לידים בלחיצה אחת בלי שאלה.
+      */}
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title="מחיקת לידים"
+      >
+        <p className="text-sm text-ink-2">
+          {deleteTarget?.length === 1
+            ? "למחוק ליד אחד? הפעולה אינה הפיכה."
+            : `למחוק ${deleteTarget?.length ?? 0} לידים? הפעולה אינה הפיכה.`}
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
+            ביטול
+          </Button>
+          <Button
+            variant="danger"
+            disabled={pending}
+            onClick={() => {
+              if (deleteTarget) remove(deleteTarget);
+              setDeleteTarget(null);
+            }}
+          >
+            מחיקה
+          </Button>
+        </div>
+      </Modal>
 
       <ToastStack toasts={toasts} onDismiss={dismiss} />
     </div>

@@ -222,7 +222,14 @@ export function ToastStack({
     // מעל סרגל הפעולות הקבוצתיות (z-40) והסתירו את כפתור המחיקה, ועל
     // מכשירי מחוות הם ישבו בתוך רצועת המחווה. סדר השכבות מוגדר
     // ב-globals.css.
-    <div className="pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-[70] flex flex-col gap-2">
+    // ⚠️ עיגון בצד ההתחלה (`start`) ולא ב-`left`: הדף RTL, כך שכפתור
+    // ההוספה הצף (`end-4` ב-LeadsClient) יושב בשמאל הפיזי — טוסט מעוגן
+    // ל-left נחת בדיוק עליו. `start` ב-RTL = ימין פיזי, הפינה הנגדית.
+    // ה-inset הוא safe-area-inset-right כי האפליקציה תמיד RTL (dir="rtl"
+    // קבוע), ולכן start הוא תמיד הצד הימני הפיזי.
+    // ⚠️ ה-bottom במובייל מפנה מקום ל-BottomNav (min-h-14 = 3.5rem +
+    // safe-area, מוסתר ב-lg ומעלה) — בדסקטופ נשאר ההיסט המקורי.
+    <div className="pointer-events-none fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.5rem)] start-[max(1rem,env(safe-area-inset-right))] z-[70] flex flex-col gap-2 lg:bottom-[max(1rem,env(safe-area-inset-bottom))]">
       {toasts.map((t) => (
         <ToastRow key={t.id} toast={t} onDismiss={onDismiss} />
       ))}

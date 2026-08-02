@@ -26,6 +26,7 @@ export function LeadCardList({
   onPatch,
   onAdd,
   hasFilters,
+  onClearFilters,
   onBulkAssign,
   onBulkStatus,
   onBulkDelete,
@@ -43,6 +44,7 @@ export function LeadCardList({
   onPatch: (id: string, patch: LeadPatch) => void;
   onAdd: () => void;
   hasFilters: boolean;
+  onClearFilters: () => void;
   onBulkAssign: (assigneeId: string | null) => void;
   onBulkStatus: (to: LeadStatus) => void;
   onBulkDelete: () => void;
@@ -73,59 +75,69 @@ export function LeadCardList({
     onSelectedChange(next);
   }
 
-  if (leads.length === 0) {
-    return (
-      <div className="rounded-card border border-line bg-surface">
-        <EmptyState
-          title={hasFilters ? "אין לידים שתואמים לסינון" : "אין לידים עדיין"}
-          body={
-            hasFilters
-              ? "נסה להסיר חלק מהמסננים או לשנות את מילת החיפוש."
-              : "הוסף את הליד הראשון או ייבא רשימה מקובץ CSV."
-          }
-          action={
-            !hasFilters && (
-              <Button variant="primary" icon="plus" onClick={onAdd}>
-                ליד חדש
-              </Button>
-            )
-          }
-        />
-      </div>
-    );
-  }
-
-  const allChecked = leads.every((l) => selected.has(l.id));
+  const allChecked = leads.length > 0 && leads.every((l) => selected.has(l.id));
 
   return (
     <>
-      {/* מרווח בתחתית כדי שסרגל הפעולות הקבוע לא יכסה את הכרטיס האחרון */}
-      <ul className={`flex flex-col gap-2 ${selecting ? "pb-40" : ""}`}>
-        {leads.map((lead) => (
-          <LeadCard
-            key={lead.id}
-            lead={lead}
-            now={now}
-            checked={selected.has(lead.id)}
-            selecting={selecting}
-            busy={busy}
-            onToggle={() => toggle(lead.id)}
-            onOpen={() => onOpen(lead.id)}
-            onStatus={(to) => onStatus(lead.id, to)}
-            onStar={(next) => onStar(lead.id, next)}
-            onPatch={(patch) => onPatch(lead.id, patch)}
+      {/*
+        מצב ריק מרונדר בתוך ה-fragment ולא ב-return מוקדם: אם המשתמש
+        נכנס למצב בחירה ואז חיפש משהו בלי תוצאות, return מוקדם היה
+        מעלים גם את סרגל הבחירה עם כפתור "סיום" — ובלי FAB (שמוסתר
+        בזמן בחירה) לא נשארת שום דרך לצאת מהמצב.
+      */}
+      {leads.length === 0 ? (
+        <div className="rounded-card border border-line bg-surface">
+          <EmptyState
+            title={hasFilters ? "אין לידים שתואמים לסינון" : "אין לידים עדיין"}
+            body={
+              hasFilters
+                ? "נסה להסיר חלק מהמסננים או לשנות את מילת החיפוש."
+                : "הוסף את הליד הראשון או ייבא רשימה מקובץ CSV."
+            }
+            action={
+              hasFilters ? (
+                <Button onClick={onClearFilters}>ניקוי מסננים</Button>
+              ) : (
+                <Button variant="primary" icon="plus" onClick={onAdd}>
+                  ליד חדש
+                </Button>
+              )
+            }
           />
-        ))}
-      </ul>
+        </div>
+      ) : (
+        /* מרווח בתחתית כדי שסרגל הפעולות הקבוע + ניווט התחתית לא יכסו את הכרטיס האחרון */
+        <ul className={`flex flex-col gap-2 ${selecting ? "pb-56" : ""}`}>
+          {leads.map((lead) => (
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              now={now}
+              checked={selected.has(lead.id)}
+              selecting={selecting}
+              busy={busy}
+              onToggle={() => toggle(lead.id)}
+              onOpen={() => onOpen(lead.id)}
+              onStatus={(to) => onStatus(lead.id, to)}
+              onStar={(next) => onStar(lead.id, next)}
+              onPatch={(patch) => onPatch(lead.id, patch)}
+            />
+          ))}
+        </ul>
+      )}
 
       {/*
         סרגל הפעולות דביק לתחתית ולא לראש: בטלפון האגודל נמצא שם, וגם
         אין תחרות עם סרגל הכתובת שנפתח ונסגר בגלילה.
-        `pb-[env(safe-area-inset-bottom)]` כדי שהוא לא ייחתך מתחת לפס
-        הבית באייפון.
+
+        ⚠️ הוא יושב **מעל** ניווט התחתית ולא ב-`bottom-0`: ה-BottomNav
+        של המעטפת גם הוא `fixed bottom-0 z-40` אטום ומרונדר אחרי הרכיב
+        הזה ב-DOM, כך שהוא היה מכסה בדיוק את שורת השיוך/סטטוס/מחיקה.
+        ההיסט הוא גובה הניווט (3.5rem) + ה-safe-area, והניווט שמתחת הוא
+        זה שסופג את ה-safe-area — לכן כאן רק ריפוד רגיל.
       */}
       {selecting && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface-2 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 shadow-card">
+        <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t border-line bg-surface-2 px-3 pb-2 pt-2 shadow-card">
           <div className="mb-2 flex items-center justify-between gap-2">
             <span className="text-sm font-semibold text-brand">
               {selected.size} נבחרו
@@ -135,6 +147,7 @@ export function LeadCardList({
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
+                disabled={leads.length === 0}
                 onClick={() =>
                   onSelectedChange(
                     allChecked ? new Set() : new Set(leads.map((l) => l.id)),
