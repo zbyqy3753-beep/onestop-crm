@@ -19,16 +19,15 @@ export default async function LeadsPage() {
   const currentUser = await requireSessionUser();
 
   /*
-   * `null` ברשימה = גם לידים ללא שיוך.
+   * עובד רואה **אך ורק** לידים שמשויכים אליו — גם לא לידים ללא שיוך.
    *
-   * בלי זה, ליד שנכנס מה-API ולא שויך אוטומטית (אין נציג פעיל, או
-   * שהחלוקה כבויה) היה בלתי נראה לכל העובדים — הוא היה יושב בתור
-   * ואף אחד לא היה יודע שהוא קיים. המאגר המשותף הוא בדיוק המקום
-   * שממנו עובד לוקח ליד חדש לטיפול.
+   * המשמעות התפעולית: חלוקת הלידים היא באחריות ההנהלה בלבד. ליד
+   * שנכנס מה-API ולא שויך אוטומטית יושב במאגר וגלוי רק למנהלים, עד
+   * שמישהו מהם משייך אותו. עובד לא לוקח לעצמו לידים.
    */
   const scope: LeadFilter = canSeeAllLeads(currentUser.role)
     ? {}
-    : { assigneeId: [currentUser.id, null] };
+    : { assigneeId: [currentUser.id] };
 
   const [{ rows: leads }, users, counts, leadCosts, deals, packages] =
     await Promise.all([

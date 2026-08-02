@@ -53,8 +53,9 @@ const FORBIDDEN = "אין לך הרשאה לערוך את הליד הזה";
  * ולכן בלי הבדיקה כאן עובד היה יכול לערוך או למחוק ליד של עמית
  * פשוט על ידי ניחוש מזהה.
  *
- * ליד ללא שיוך מותר לעריכה — הוא במאגר המשותף, וזו הדרך שבה עובד
- * לוקח אותו לטיפול.
+ * ליד ללא שיוך **גם הוא חסום** לעובד, בהתאמה מלאה למה שהוא רואה
+ * במסך: חלוקת לידים היא באחריות ההנהלה, ועובד לא לוקח לעצמו ליד
+ * מהמאגר.
  *
  * מחזיר `null` כשמותר, או הודעת שגיאה כשאסור.
  */
@@ -67,7 +68,7 @@ async function assertCanEdit(leadIds: string[]): Promise<string | null> {
     // ליד שלא קיים נבלע כאן בשקט — הפעולה עצמה תיכשל עליו ממילא,
     // ואין סיבה להסגיר לעובד אילו מזהים קיימים במערכת
     if (!lead) continue;
-    if (lead.assigneeId && lead.assigneeId !== user.id) return FORBIDDEN;
+    if (lead.assigneeId !== user.id) return FORBIDDEN;
   }
   return null;
 }
@@ -390,8 +391,8 @@ export async function assignAction(
 ): Promise<ActionResult> {
   if (leadIds.length === 0) return { ok: false, error: "לא נבחרו לידים" };
 
-  // עובד יכול לקחת לעצמו ליד מהמאגר המשותף, אבל לא לחטוף ליד
-  // שכבר משויך לעמית — `assertCanEdit` חוסם בדיוק את זה
+  // שיוך הוא פעולה ניהולית: עובד לא משייך לעצמו ליד מהמאגר ולא
+  // מעביר ליד לעמית. `assertCanEdit` מתיר לו רק לידים שכבר שלו.
   const denied = await assertCanEdit(leadIds);
   if (denied) return { ok: false, error: denied };
 
