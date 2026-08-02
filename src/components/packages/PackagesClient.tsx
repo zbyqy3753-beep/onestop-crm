@@ -33,6 +33,7 @@ const PACKAGE_TO_LEAD_CATEGORY: Record<CategoryKey, LeadCategoryKey> = {
   electricity: "electricity",
 };
 import { money, number } from "@/lib/format";
+import { useIsNarrow } from "@/lib/media";
 import {
   Button,
   EmptyState,
@@ -60,6 +61,8 @@ export function PackagesClient({
   const [provider, setProvider] = useState<ProviderKey | "all">("all");
   const [category, setCategory] = useState<CategoryKey | "all">("all");
   const [view, setView] = useState<"cards" | "table">("cards");
+  // בטלפון תמיד כרטיסים, גם אם נבחרה טבלה במחשב באותו דפדפן
+  const narrow = useIsNarrow();
   const [costsOpen, setCostsOpen] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -101,7 +104,9 @@ export function PackagesClient({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-md border border-line p-0.5">
+          {/* ⚠️ מוסתר בטלפון: הטבלה שמאחוריו היא `min-w-[720px]`, כלומר
+              המסך היה נגלל לצדדים. הבורר עצמו היה גם 26px גובה. */}
+          <div className="hidden rounded-md border border-line p-0.5 lg:inline-flex">
             <button
               type="button"
               onClick={() => setView("cards")}
@@ -193,7 +198,7 @@ export function PackagesClient({
             body="נסה לשנות את החיפוש או להסיר את המסננים."
           />
         </div>
-      ) : view === "table" ? (
+      ) : view === "table" && !narrow ? (
         <PackagesTable
           packages={filtered}
           leadCosts={leadCosts}

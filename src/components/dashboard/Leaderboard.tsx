@@ -39,8 +39,11 @@ export function Leaderboard({
       {rows.length === 0 ? (
         <EmptyState icon="user" title="אין עדיין עובדים פעילים" />
       ) : (
+        // ⚠️ `min-w-[420px]` היה הופך את **מסך הבית** לנגלל לצדדים
+        // בטלפון. ארבע עמודות של ערכים קצרים לא צריכות רוחב מינימלי —
+        // הן פשוט מתכווצות, וגם ב-330px הן קריאות.
         <div className="scroll-thin overflow-x-auto">
-          <table className="w-full min-w-[420px] border-collapse text-sm">
+          <table className="w-full border-collapse text-sm lg:min-w-[420px]">
             <thead>
               <tr className="border-b border-line text-right text-xs text-ink-3">
                 <th className="py-2 font-medium">שם</th>

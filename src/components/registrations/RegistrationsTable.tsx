@@ -127,7 +127,11 @@ function StatusPicker({
   const meta = REGISTRATION_STATUS_CONFIG[current];
 
   return (
-    <span className="relative inline-flex">
+    // ⚠️ `min-h-11 min-w-11` מתחת ל-lg — בלעדיו ה-`<select>` השקוף יורש
+    // את גודל ה-`Badge` ונותן אזור לחיצה של ~43×20, פחות ממחצית מ-44px
+    // הנדרש. זה הפקד **היחיד** לשינוי סטטוס של פנייה. אותה שמירה כבר
+    // הייתה ב-`leads/cells.tsx` ולא הועתקה לכאן.
+    <span className="relative inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0">
       <Badge tone={meta.tone} className="pe-4">
         {meta.label}
       </Badge>
