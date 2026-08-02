@@ -63,11 +63,25 @@ export function EditUserModal({
           </select>
         </Field>
 
-        <Field label="אימייל" hint="לא ניתן לשינוי — משמש להתחברות">
+        <Field label="אימייל" hint="משמש להתחברות — שינוי מעדכן גם את חשבון הכניסה">
           <input
-            value={user.email}
-            disabled
-            className={`${inputClass} opacity-60`}
+            name="email"
+            type="email"
+            dir="ltr"
+            autoComplete="off"
+            defaultValue={user.email}
+            className={`${inputClass} text-start`}
+          />
+        </Field>
+
+        <Field label="סיסמה חדשה" hint="להשאיר ריק כדי לא לשנות">
+          <input
+            name="password"
+            type="password"
+            dir="ltr"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            className={`${inputClass} text-start`}
           />
         </Field>
 

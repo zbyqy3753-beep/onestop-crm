@@ -2,7 +2,7 @@
 
 import { db } from "@/server/repositories";
 import { requireSessionUser } from "@/server/auth/session";
-import { createAuthUser } from "@/server/auth/supabaseAdmin";
+import { createAuthUser, updateAuthUser } from "@/server/auth/supabaseAdmin";
 import type { Role } from "@/lib/domain/types";
 import { isRole } from "@/lib/domain/types";
 import { revalidateUserSurfaces } from "@/app/(app)/_revalidate";
@@ -68,10 +68,15 @@ export async function createUserAction(
 }
 
 /**
- * עריכת משתמש קיים: שם, טלפון, חנות, תפקיד ופעיל/לא פעיל.
+ * עריכת משתמש קיים: שם, אימייל, סיסמה, טלפון, חנות, תפקיד ופעיל/לא.
  *
- * אימייל לא ניתן לעריכה — הוא המפתח לחשבון ה-Supabase Auth, ושינוי
- * שלו רק אצלנו היה מנתק את המשתמש מהחשבון שהוא מתחבר איתו.
+ * ⚠️ **אימייל וסיסמה חיים בשתי מערכות.** המייל הוא המפתח שמקשר בין
+ * שורת ה-`User` שלנו לחשבון ה-Supabase Auth: `verifyCredentials`
+ * מאמת את הסיסמה מול Supabase ואז מחפש אצלנו לפי אותו מייל. אם רק
+ * צד אחד מתעדכן — המשתמש ננעל בחוץ.
+ *
+ * לכן הסדר כאן הוא: Supabase קודם (הקריאה החיצונית שעלולה להיכשל),
+ * המסד שלנו אחריו, **וגלגול אחורה של Supabase אם המסד נכשל**.
  *
  * אותם כללי סמכות כמו ביצירה, ועוד שניים שקיימים רק בעריכה:
  *  - **על חשבון בעלים רק בעלים נוגע** — לכל שינוי, לא רק לתפקיד.
@@ -100,10 +105,26 @@ export async function updateUserAction(
   const store = String(formData.get("store") ?? "").trim();
   const rawRole = String(formData.get("role") ?? "");
   const active = formData.get("active") === "on";
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
 
   if (name.length < 2) return { ok: false, error: "שם מלא הוא שדה חובה" };
   if (!isRole(rawRole)) return { ok: false, error: "תפקיד לא מוכר" };
   const role: Role = rawRole;
+
+  if (!email.includes("@")) return { ok: false, error: "אימייל לא תקין" };
+  // שדה ריק = "אל תשנה את הסיסמה", ולכן הבדיקה חלה רק כשהוזן משהו
+  if (password && password.length < 6) {
+    return { ok: false, error: "סיסמה חייבת להכיל לפחות 6 תווים" };
+  }
+
+  const emailChanged = email.toLowerCase() !== target.email.toLowerCase();
+  if (emailChanged) {
+    const taken = await db.users.getByEmail(email);
+    if (taken && taken.id !== userId) {
+      return { ok: false, error: "כבר קיים משתמש עם האימייל הזה" };
+    }
+  }
 
   if (role === "owner" && actor.role !== "owner") {
     return { ok: false, error: "רק מנהל ראשי יכול להעניק תפקיד מנהל ראשי" };
@@ -116,13 +137,53 @@ export async function updateUserAction(
     }
   }
 
-  await db.users.update(userId, {
-    name,
-    phone: phone || null,
-    store: store || null,
-    role,
-    active,
-  });
+  // Supabase קודם: זו הקריאה החיצונית שעלולה להיכשל (מייל תפוס,
+  // חשבון חסר, רשת). אם היא נכשלת — לא נגענו בכלום אצלנו.
+  if (emailChanged || password) {
+    try {
+      await updateAuthUser(target.email, {
+        email: emailChanged ? email : undefined,
+        password: password || undefined,
+      });
+    } catch (e) {
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : "עדכון חשבון ההתחברות נכשל",
+      };
+    }
+  }
+
+  try {
+    await db.users.update(userId, {
+      name,
+      email,
+      phone: phone || null,
+      store: store || null,
+      role,
+      active,
+    });
+  } catch (e) {
+    // ⚠️ המסד נכשל אחרי ש-Supabase כבר עודכן — בלי גלגול אחורה
+    // המשתמש היה נשאר עם מייל אחד ב-Auth ומייל אחר אצלנו, כלומר
+    // ננעל בחוץ. מחזירים את Supabase למייל הישן.
+    if (emailChanged) {
+      try {
+        await updateAuthUser(email, { email: target.email });
+      } catch {
+        return {
+          ok: false,
+          error:
+            `העדכון נכשל וגם השחזור נכשל. חשבון ההתחברות של ${target.name} ` +
+            `נמצא כעת על ${email} בעוד המערכת מכירה את ${target.email} — ` +
+            `צריך לתקן ידנית ב-Supabase.`,
+        };
+      }
+    }
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "עדכון המשתמש נכשל",
+    };
+  }
 
   revalidateUserSurfaces();
   return { ok: true };

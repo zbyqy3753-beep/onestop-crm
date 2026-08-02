@@ -36,3 +36,62 @@ export async function createAuthUser(
   });
   if (error) throw new Error(error.message);
 }
+
+/**
+ * מאתר חשבון Auth לפי מייל.
+ *
+ * ל-Supabase אין `getUserByEmail` — רק שליפה לפי מזהה או רשימה. אנחנו
+ * לא שומרים את מזהה ה-Auth בטבלת `User` שלנו, ולכן המייל הוא הקישור
+ * היחיד בין שתי המערכות. בסדר הגודל כאן (עשרות משתמשים) עמוד אחד
+ * מספיק; אם המספר יגדל, זה המקום שיצטרך עימוד.
+ */
+async function findAuthUserId(email: string): Promise<string | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+  if (error) throw new Error(error.message);
+
+  const target = email.trim().toLowerCase();
+  const found = data.users.find((u) => u.email?.toLowerCase() === target);
+  return found?.id ?? null;
+}
+
+/** האם למייל הזה יש בכלל חשבון התחברות. */
+export async function hasAuthUser(email: string): Promise<boolean> {
+  return (await findAuthUserId(email)) !== null;
+}
+
+/**
+ * שינוי מייל ו/או סיסמה של חשבון Auth קיים.
+ *
+ * ⚠️ המייל הוא המפתח שמקשר בין `User` שלנו לחשבון ההתחברות
+ * (`verifyCredentials` מאמת מול Supabase ואז מחפש אצלנו לפי אותו
+ * מייל). אם השניים יתפצלו — המשתמש ננעל בחוץ: הסיסמה תתקבל אבל
+ * לא תימצא לו שורה, או להפך. לכן הקורא **חייב** לעדכן את שתי
+ * המערכות, ולגלגל אחורה אם השנייה נכשלה.
+ *
+ * `email_confirm: true` כדי שהמייל החדש ייחשב מאומת מיד — אחרת
+ * Supabase שולח מייל אישור והמשתמש לא יוכל להיכנס עד שילחץ עליו.
+ */
+export async function updateAuthUser(
+  currentEmail: string,
+  changes: { email?: string; password?: string },
+): Promise<void> {
+  if (!changes.email && !changes.password) return;
+
+  const id = await findAuthUserId(currentEmail);
+  if (!id) {
+    throw new Error(
+      `לא נמצא חשבון התחברות עבור ${currentEmail} — לא ניתן לעדכן מייל או סיסמה`,
+    );
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.auth.admin.updateUserById(id, {
+    ...(changes.email ? { email: changes.email, email_confirm: true } : {}),
+    ...(changes.password ? { password: changes.password } : {}),
+  });
+  if (error) throw new Error(error.message);
+}

@@ -200,6 +200,11 @@ export interface CreateUserInput {
  */
 export interface UpdateUserInput {
   name?: string;
+  /**
+   * ⚠️ המייל הוא המפתח לחשבון ה-Supabase Auth. שינוי כאן בלי שינוי
+   * מקביל ב-Auth נועל את המשתמש בחוץ — ראה `updateUserAction`.
+   */
+  email?: string;
   phone?: string | null;
   role?: User["role"];
   store?: string | null;
