@@ -32,6 +32,9 @@ interface LeadPayload {
   category?: unknown;
   message?: unknown;
   packageName?: unknown;
+  /** כינויים נפוצים ל-`packageName` — ראה `pickPackage` */
+  package?: unknown;
+  plan?: unknown;
   providerName?: unknown;
   price?: unknown;
 }
@@ -78,8 +81,16 @@ function overRateLimit(partnerName: string): boolean {
 
 /* ── עזרי נרמול ───────────────────────────────────────────────────────── */
 
+/**
+ * תווי בקרת כיווניות (LRM/RLM/isolates). מערכות שמרכיבות מחרוזות
+ * מעורבות עברית-אנגלית מזריקות אותם כדי שהתצוגה שלהן תיראה נכון, והם
+ * מגיעים אלינו בתוך הערך. הם בלתי נראים אבל אמיתיים: בלי ניקוי,
+ * `"‎פלאפון"` לא שווה ל-`"פלאפון"` בזיהוי הספק, והם נשמרים ל-DB.
+ */
+const BIDI_MARKS = /[‎‏‪-‮⁦-⁩]/g;
+
 function text(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
+  return typeof value === "string" ? value.replace(BIDI_MARKS, "").trim() : "";
 }
 
 /**
@@ -103,6 +114,49 @@ function matchProvider(raw: string): ProviderKey | undefined {
       key === normalized ||
       PROVIDER_CONFIG[key].label.toLowerCase() === normalized,
   );
+}
+
+/**
+ * שם החבילה, תחת כל אחד מהשמות שהשותפים משתמשים בהם בפועל.
+ * `packageName` הוא החוזה המתועד; השאר הם קליטה סלחנית.
+ */
+function pickPackage(body: LeadPayload): string {
+  return text(body.packageName) || text(body.package) || text(body.plan);
+}
+
+/**
+ * מפריד שדה `source` מהצורה `"חבילה – ספק"` לשני חלקיו.
+ *
+ * ⚠️ זה לא ניחוש: השותפים דוחפים בפועל `"ULTIMATE – YES"` ו-
+ * `"פלאפון – 500GB 5G Together"` לתוך `source`, בלי לשלוח `packageName`
+ * או `providerName` בכלל. בלי הפירוק כאן שני שדות אמיתיים נשארים ריקים
+ * והמידע קבור בעמודה חופשית שכבויה כברירת מחדל.
+ *
+ * **סדר החלקים הפוך בין השותפים** (בדוגמאות למעלה הספק פעם שני ופעם
+ * ראשון), ולכן אין כאן הנחה על מיקום: הצד שמזוהה כספק מוכר הוא הספק,
+ * והשני הוא החבילה. אם אף צד או שני הצדדים מזוהים — לא נוגעים בכלום,
+ * כי אז אין דרך לדעת מה זה מה.
+ */
+const SOURCE_SPLIT = /\s+[–—|-]\s+/;
+
+function splitSource(raw: string): {
+  packageName?: string;
+  provider?: ProviderKey;
+} {
+  const parts = raw.split(SOURCE_SPLIT).map((p) => p.trim()).filter(Boolean);
+  if (parts.length !== 2) return {};
+
+  const [first, second] = parts;
+  const firstIsProvider = matchProvider(first);
+  const secondIsProvider = matchProvider(second);
+
+  if (firstIsProvider && !secondIsProvider) {
+    return { provider: firstIsProvider, packageName: second };
+  }
+  if (secondIsProvider && !firstIsProvider) {
+    return { provider: secondIsProvider, packageName: first };
+  }
+  return {};
 }
 
 /**
@@ -251,8 +305,21 @@ export async function POST(request: NextRequest): Promise<Response> {
     return fail(503, "אין משתמשים במערכת — לא ניתן לשייך את הליד");
   }
 
-  const currentProvider = matchProvider(text(body.providerName));
   const email = text(body.email);
+
+  // החבילה והספק: קודם מה שנשלח מפורשות, ומה שחסר — מתוך `source`.
+  const rawSource = text(body.source);
+  const fromSource = splitSource(rawSource);
+  const explicitPackage = pickPackage(body);
+  const packageName = explicitPackage || fromSource.packageName || "";
+  const currentProvider = matchProvider(text(body.providerName)) ?? fromSource.provider;
+
+  // אם `source` פורק ושני חלקיו נחתו בעמודות אמיתיות, השארתו כ"מקור"
+  // הייתה כפילות משולשת. במקרה כזה המקור הוא פשוט שם השותף.
+  const sourceDetail =
+    fromSource.packageName && !explicitPackage
+      ? partner.name
+      : rawSource || partner.name;
 
   const lead = await db.leads.create({
     name,
@@ -266,8 +333,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     // `source` נשאר "campaign" (איך הליד נקלט); שם השותף נכנס
     // ל-`sourceDetail`, העמודה החופשית שמוצגת בטבלה כ"מקור"
     source: "campaign",
-    sourceDetail: text(body.source) || partner.name,
-    packageName: text(body.packageName) || undefined,
+    sourceDetail,
+    packageName: packageName || undefined,
     note: buildNote(body, currentProvider) || undefined,
     assigneeId: await nextAssignee(),
     createdById,

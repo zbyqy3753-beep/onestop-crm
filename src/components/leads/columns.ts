@@ -73,6 +73,23 @@ export const TOGGLEABLE = COLUMNS.filter((c) => !c.alwaysOn);
 const STORAGE_KEY = "onestop.leads.columns";
 
 /**
+ * הצורה השמורה.
+ *
+ * ⚠️ `known` הוא הסיבה שזה אובייקט ולא מערך. קודם נשמר רק `visible`,
+ * ואז **עמודה חדשה לא הופיעה אף פעם** אצל מי שכבר נגע בבורר: היא לא
+ * ברשימה השמורה, ואי אפשר להבחין בין "המשתמש כיבה אותה" לבין "היא
+ * נוספה אחרי שהוא שמר". זה מה שקרה עם עמודת "חבילה" — היא נולדה
+ * `defaultOn`, וכל מי שהיה לו אחסון קיים לא ראה אותה מעולם.
+ *
+ * `known` הוא צילום של העמודות שהיו קיימות בזמן השמירה, ולכן עמודה
+ * חדשה מזוהה כחדשה ונכנסת לפי ברירת המחדל שלה, בלי לדרוס בחירות.
+ */
+interface StoredColumns {
+  visible: ColumnKey[];
+  known: ColumnKey[];
+}
+
+/**
  * קריאת הבחירה השמורה.
  *
  * מחזיר `null` בשרת ובריצה הראשונה — הקורא מתחיל מברירת המחדל ומעדכן
@@ -83,16 +100,29 @@ export function readStoredColumns(): ColumnKey[] | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
 
-    const known = new Set(COLUMNS.map((c) => c.key));
-    const valid = parsed.filter(
-      (k): k is ColumnKey => typeof k === "string" && known.has(k as ColumnKey),
+    const parsed: unknown = JSON.parse(raw);
+    const isLegacy = Array.isArray(parsed);
+    const stored: unknown = isLegacy ? parsed : (parsed as StoredColumns)?.visible;
+    if (!Array.isArray(stored)) return null;
+
+    const catalog = new Set(COLUMNS.map((c) => c.key));
+    const visible = stored.filter(
+      (k): k is ColumnKey => typeof k === "string" && catalog.has(k as ColumnKey),
     );
-    // העמודות הקבועות תמיד נכנסות, גם אם נשמרה בחירה ישנה בלעדיהן
-    for (const c of COLUMNS) if (c.alwaysOn && !valid.includes(c.key)) valid.push(c.key);
-    return valid;
+
+    // בפורמט הישן אין רישום של מה היה קיים בזמן השמירה. ההנחה
+    // השמרנית היא שכל מה שחסר הוא חדש — פעם אחת בלבד, כי הכתיבה
+    // הבאה כבר תשמור `known`.
+    const known: unknown = isLegacy ? null : (parsed as StoredColumns)?.known;
+    const seen = new Set<string>(Array.isArray(known) ? (known as string[]) : []);
+
+    for (const c of COLUMNS) {
+      if (visible.includes(c.key)) continue;
+      const isNewToUser = !seen.has(c.key);
+      if (c.alwaysOn || (isNewToUser && c.defaultOn)) visible.push(c.key);
+    }
+    return visible;
   } catch {
     return null;
   }
@@ -101,7 +131,11 @@ export function readStoredColumns(): ColumnKey[] | null {
 function writeStoredColumns(keys: ColumnKey[]): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
+    const payload: StoredColumns = {
+      visible: keys,
+      known: COLUMNS.map((c) => c.key),
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {
     // מצב פרטי / אחסון מלא — הבחירה פשוט לא תישמר בין רענונים
   }

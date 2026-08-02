@@ -2,6 +2,7 @@
 
 import type { Lead, LeadStatus, Priority } from "@/lib/domain/types";
 import {
+  LEAD_CATEGORY_CONFIG,
   PRIORITY_CONFIG,
   PRIORITY_ORDER,
   STATUS_CONFIG,
@@ -28,10 +29,10 @@ import {
  * `RowActions`…) — אותם רכיבים בדיוק שהשורה משתמשת בהם, כך שהתנהגות
  * העריכה זהה בשתי התצוגות ואין שני מימושים שיכולים להיפרד.
  *
- * מה שעל הכרטיס עונה על שאלה אחת: **למי אני מתקשר עכשיו.** שם, טלפון,
- * סטטוס, עדיפות, מתי לחזור, וארבע דרכי הקשר.
+ * מה שעל הכרטיס עונה על שאלה אחת: **למי אני מתקשר עכשיו, ובשביל מה.**
+ * שם, טלפון, קטגוריה וחבילה, סטטוס, עדיפות, מתי לחזור, ודרכי הקשר.
  *
- * מה שלא עליו — קטגוריה, עלות, שיוך, פעילות, מקור, ספק, עיר, אימייל —
+ * מה שלא עליו — עלות, שיוך, פעילות, מקור, ספק, עיר, אימייל —
  * נמצא במגירה, שכבר היום נפתחת כגיליון מסך-מלא ב-390px. זו לא פשרה:
  * שתי רמות מידע, לא אחת מקוצצת.
  */
@@ -61,6 +62,13 @@ export function LeadCard({
 }) {
   const priority = PRIORITY_CONFIG[lead.priority];
   const status = STATUS_CONFIG[lead.status];
+
+  const interest = [
+    lead.category ? LEAD_CATEGORY_CONFIG[lead.category].label : "",
+    lead.packageName?.trim() ?? "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <li
@@ -112,11 +120,13 @@ export function LeadCard({
           <span className="ltr-num mt-0.5 block text-[13px] text-ink-3">
             {phone(lead.phone)}
           </span>
-          {/* החבילה שהתעניין בה — מה שהסוכן צריך לדעת לפני שהוא מחייג,
-              ובלידים מה-API זה השדה שנושא את פרטי ההתעניינות */}
-          {lead.packageName?.trim() && (
+          {/* במה הוא מתעניין — הקטגוריה והחבילה בשורה אחת.
+              זה מה שהסוכן צריך לדעת לפני שהוא מחייג, ובלידים שנכנסים
+              מה-API אלה שני השדות שנושאים את פרטי ההתעניינות. שורה
+              אחת ולא שתיים, כדי שגובה הכרטיס לא ישתנה. */}
+          {interest && (
             <span className="mt-0.5 block truncate text-[12px] text-ink-2">
-              {lead.packageName.trim()}
+              {interest}
             </span>
           )}
         </button>
