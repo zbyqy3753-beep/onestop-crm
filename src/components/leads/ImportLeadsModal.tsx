@@ -5,10 +5,13 @@ import { importLeadsAction, type ImportRow } from "@/app/(app)/leads/actions";
 import { decodeSpreadsheetText, parseDelimited } from "@/lib/csv";
 import { readXlsxSheet } from "@/lib/xlsx";
 import {
+  LEAD_CATEGORY_CONFIG,
+  PROVIDER_CONFIG,
   matchImportField,
   matchLeadCategory,
   type LeadImportField,
 } from "@/lib/domain/types";
+import { cleanText, matchProvider, parseInterest } from "@/lib/domain/interest";
 import { isIsraeliPhone, phone as formatPhone } from "@/lib/format";
 import { Button, Modal, type Toast } from "@/components/ui/primitives";
 
@@ -174,6 +177,11 @@ export function ImportLeadsModal({
             שורת כותרות בעברית או באנגלית תזוהה אוטומטית. אם אין כותרות, העמודה
             הראשונה תיקרא כשם והשנייה כטלפון.
           </p>
+          <p className="mt-2 text-xs text-ink-4">
+            עמודות שנקלטות: שם · טלפון · אימייל · עיר · קטגוריה · חבילה (או
+            &quot;שם חבילה&quot;) · ספק (או &quot;שם חברה&quot;) · מקור · הערה ·
+            מזהה
+          </p>
           <div className="mt-4">
             <Button
               variant="primary"
@@ -219,6 +227,11 @@ export function ImportLeadsModal({
                 <tr className="border-b border-line">
                   <th className="px-3 py-2 text-start font-medium">שם</th>
                   <th className="px-3 py-2 text-start font-medium">טלפון</th>
+                  {/* קטגוריה וחבילה מוצגות כי הן מה שנגזר מהקובץ ולא
+                      נקרא ממנו ישירות — זו הנקודה היחידה לראות שהפענוח
+                      של "פלאפון – 300GB Perfect" יצא נכון, לפני הכתיבה */}
+                  <th className="px-3 py-2 text-start font-medium">קטגוריה</th>
+                  <th className="px-3 py-2 text-start font-medium">חבילה</th>
                   <th className="px-3 py-2 text-start font-medium">אימייל</th>
                   <th className="px-3 py-2 text-start font-medium">עיר</th>
                 </tr>
@@ -229,6 +242,12 @@ export function ImportLeadsModal({
                     <td className="px-3 py-2 text-ink-1">{row.name}</td>
                     <td className="ltr-num px-3 py-2 text-ink-2">
                       {formatPhone(row.phone)}
+                    </td>
+                    <td className="px-3 py-2 text-ink-3">
+                      {row.category ? LEAD_CATEGORY_CONFIG[row.category].label : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-ink-3">
+                      {packageLabel(row) || "—"}
                     </td>
                     <td className="px-3 py-2 text-ink-3">{row.email ?? "—"}</td>
                     <td className="px-3 py-2 text-ink-3">{row.city ?? "—"}</td>
@@ -269,6 +288,19 @@ export function ImportLeadsModal({
   );
 }
 
+/**
+ * ספק + חבילה כמחרוזת אחת — אותה תצוגה כמו בטבלת הלידים ובכרטיס.
+ * "ULTIMATE" בלי "יס" הוא לא שם חבילה שאפשר לאמת מולו את הקובץ.
+ */
+function packageLabel(row: ImportRow): string {
+  return [
+    row.currentProvider ? PROVIDER_CONFIG[row.currentProvider].label : "",
+    row.packageName ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /* ── זיהוי עמודות ─────────────────────────────────────────────────────── */
 
 type Mapping = Partial<Record<LeadImportField, number>>;
@@ -293,22 +325,52 @@ function detectColumns(first: string[]): { mapping: Mapping; hadHeader: boolean 
   return { mapping: { name: 0, phone: 1, email: 2, city: 3 }, hadHeader: false };
 }
 
+/**
+ * מזהה חיצוני נכנס להערה — אין לו עמודה משלנו, והוא הדרך היחידה
+ * להצליב ליד מול המערכת שהוא הגיע ממנה.
+ *
+ * הסף קיים כי עמודת `#` היא לפעמים מזהה אמיתי ולפעמים סתם מונה שורות.
+ * "מזהה חיצוני: 3" הוא רעש; "מזהה חיצוני: 42557025" הוא מידע.
+ */
+const MIN_EXTERNAL_ID_LENGTH = 4;
+
 function buildRow(cells: string[], mapping: Mapping): ImportRow {
   const at = (field: LeadImportField): string => {
     const i = mapping[field];
-    return i === undefined ? "" : (cells[i] ?? "").trim();
+    return i === undefined ? "" : cleanText(cells[i] ?? "");
   };
 
-  const category = matchLeadCategory(at("category"));
+  // ⚠️ עמודת החבילה של השותף מכילה בפועל **שני** פרטים במחרוזת אחת
+  // ("פלאפון – 300GB Perfect"), ולפעמים דווקא קטגוריה ("טריפל").
+  // אותו פענוח בדיוק שמשמש את `POST /api/leads` — ראה domain/interest.
+  const rawPackage = at("packageName");
+  const parsed = parseInterest(rawPackage);
+
+  // עמודת ספק מפורשת גוברת על מה שנחלץ מתוך שם החבילה
+  const provider = matchProvider(at("provider")) ?? parsed.provider;
+  const category = matchLeadCategory(at("category")) ?? parsed.category;
+
+  // אם הפענוח לא זיהה כלום, שם החבילה נשמר כפי שהוא — עדיף ערך גולמי
+  // מאשר לאבד אותו רק כי לא הצלחנו לפרק אותו
+  const packageName = parsed.packageName ?? (parsed.category ? "" : rawPackage);
+
+  const externalId = at("externalId");
+  const notes = [
+    at("note"),
+    externalId.length >= MIN_EXTERNAL_ID_LENGTH
+      ? `מזהה חיצוני: ${externalId}`
+      : "",
+  ].filter(Boolean);
 
   return {
     name: at("name"),
     phone: at("phone"),
     email: at("email") || undefined,
     city: at("city") || undefined,
-    note: at("note") || undefined,
+    note: notes.join("\n") || undefined,
     sourceDetail: at("sourceDetail") || undefined,
-    packageName: at("packageName") || undefined,
+    packageName: packageName || undefined,
+    currentProvider: provider,
     category,
   };
 }

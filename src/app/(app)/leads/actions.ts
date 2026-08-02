@@ -15,6 +15,7 @@ import {
   isLeadKind,
   isLeadStatus,
   isPriority,
+  isProvider,
 } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
 import { canSeeAllLeads } from "@/lib/domain/permissions";
@@ -505,6 +506,8 @@ export interface ImportRow {
   sourceDetail?: string;
   /** עמודת "חבילה" בקובץ */
   packageName?: string;
+  /** עמודת "ספק"/"שם חברה" בקובץ, או מה שנחלץ משם החבילה */
+  currentProvider?: ProviderKey;
 }
 
 export interface ImportResult {
@@ -540,7 +543,8 @@ export async function importLeadsAction(
       r.name?.trim().length >= 2 &&
       isIsraeliPhone(r.phone ?? "") &&
       (r.category === undefined || isLeadCategory(r.category)) &&
-      (r.kind === undefined || isLeadKind(r.kind)),
+      (r.kind === undefined || isLeadKind(r.kind)) &&
+      (r.currentProvider === undefined || isProvider(r.currentProvider)),
   );
   const skipped = rows.length - valid.length;
 
@@ -582,6 +586,7 @@ export async function importLeadsAction(
       note: r.note?.trim() || undefined,
       sourceDetail: r.sourceDetail?.trim() || undefined,
       packageName: r.packageName?.trim() || undefined,
+      currentProvider: r.currentProvider,
       category: r.category,
       kind: r.kind ?? "data",
       priority: "normal" as const,

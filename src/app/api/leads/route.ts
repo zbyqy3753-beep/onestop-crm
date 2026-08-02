@@ -3,11 +3,12 @@ import type { NextRequest } from "next/server";
 import { db } from "@/server/repositories";
 import { partnerFromKey, type ApiPartner } from "@/server/auth/apiKeys";
 import type { LeadCategoryKey, ProviderKey, Role } from "@/lib/domain/types";
+import { matchLeadCategory } from "@/lib/domain/types";
 import {
-  PROVIDER_CONFIG,
-  PROVIDER_ORDER,
-  matchLeadCategory,
-} from "@/lib/domain/types";
+  cleanText,
+  matchProvider,
+  parseInterest,
+} from "@/lib/domain/interest";
 
 /**
  * `POST /api/leads` — קליטת לידים משותפים חיצוניים.
@@ -85,17 +86,8 @@ function overRateLimit(partnerName: string): boolean {
 
 /* ── עזרי נרמול ───────────────────────────────────────────────────────── */
 
-/**
- * תווי בקרת כיווניות (LRM/RLM/isolates). מערכות שמרכיבות מחרוזות
- * מעורבות עברית-אנגלית מזריקות אותם כדי שהתצוגה שלהן תיראה נכון, והם
- * מגיעים אלינו בתוך הערך. הם בלתי נראים אבל אמיתיים: בלי ניקוי,
- * `"‎פלאפון"` לא שווה ל-`"פלאפון"` בזיהוי הספק, והם נשמרים ל-DB.
- */
-const BIDI_MARKS = /[‎‏‪-‮⁦-⁩]/g;
-
-function text(value: unknown): string {
-  return typeof value === "string" ? value.replace(BIDI_MARKS, "").trim() : "";
-}
+/** ניקוי תווי כיווניות + trim — ראה `lib/domain/interest.ts`. */
+const text = cleanText;
 
 /**
  * טלפון ישראלי לספרות בלבד, או `null` אם הוא לא תקין.
@@ -108,84 +100,12 @@ function normalizePhone(raw: string): string | null {
   return /^0\d{8,9}$/.test(digits) ? digits : null;
 }
 
-/** שם ספק בטקסט חופשי → מפתח ספק מוכר, אם יש התאמה. */
-function matchProvider(raw: string): ProviderKey | undefined {
-  const normalized = raw.trim().toLowerCase();
-  if (!normalized) return undefined;
-
-  return PROVIDER_ORDER.find(
-    (key) =>
-      key === normalized ||
-      PROVIDER_CONFIG[key].label.toLowerCase() === normalized,
-  );
-}
-
 /**
  * שם החבילה, תחת כל אחד מהשמות שהשותפים משתמשים בהם בפועל.
  * `packageName` הוא החוזה המתועד; השאר הם קליטה סלחנית.
  */
 function pickPackage(body: LeadPayload): string {
   return text(body.packageName) || text(body.package) || text(body.plan);
-}
-
-/**
- * מפענח את שדה `source` החופשי לעמודות אמיתיות.
- *
- * ⚠️ זה לא ניחוש. `source` הוא בפועל השדה שהשותפים דוחפים אליו כל מה
- * שאין לו מקום אחר, בשלוש צורות שנצפו:
- *
- * | מה שהגיע                       | מה שהתכוונו           |
- * | ------------------------------ | --------------------- |
- * | `"ULTIMATE – YES"`             | חבילה + ספק           |
- * | `"פלאפון – 500GB 5G Together"` | ספק + חבילה           |
- * | `"טריפל"`                      | קטגוריה               |
- *
- * בלי הפענוח כאן המידע נשאר קבור בעמודה חופשית שכבויה כברירת מחדל,
- * ושלושה שדות אמיתיים נשארים ריקים.
- *
- * **סדר החלקים הפוך בין השותפים**, ולכן אין הנחה על מיקום: מה שמזוהה
- * כספק מוכר הוא הספק, ומה שמזוהה כשם קטגוריה הוא הקטגוריה. מה שנשאר
- * הוא החבילה. אם שני הצדדים מזוהים כספק, או אף אחד מהם — לא נוגעים
- * בכלום, כי אז אין דרך לדעת מה זה מה, ו"מקור" הוא ברירת מחדל בטוחה.
- */
-const SOURCE_SPLIT = /\s+[–—|-]\s+/;
-
-interface ParsedSource {
-  category?: LeadCategoryKey;
-  provider?: ProviderKey;
-  packageName?: string;
-}
-
-function readSource(raw: string): ParsedSource {
-  const parts = raw.split(SOURCE_SPLIT).map((p) => p.trim()).filter(Boolean);
-
-  // ערך יחיד: או שם קטגוריה בעברית, או שם קמפיין רגיל שלא נוגעים בו
-  if (parts.length === 1) {
-    const category = matchLeadCategory(parts[0]);
-    return category ? { category } : {};
-  }
-  if (parts.length !== 2) return {};
-
-  const [first, second] = parts;
-  const firstProvider = matchProvider(first);
-  const secondProvider = matchProvider(second);
-
-  let provider: ProviderKey;
-  let rest: string;
-  if (firstProvider && !secondProvider) {
-    provider = firstProvider;
-    rest = second;
-  } else if (secondProvider && !firstProvider) {
-    provider = secondProvider;
-    rest = first;
-  } else {
-    return {};
-  }
-
-  // `"טריפל – יס"` הוא קטגוריה+ספק, לא חבילה+ספק. בלי הבדיקה הזו
-  // "טריפל" היה נרשם כשם חבילה, וזה שקר שנראה כמו נתון.
-  const category = matchLeadCategory(rest);
-  return category ? { provider, category } : { provider, packageName: rest };
 }
 
 /** כל שם שדה שהחוזה מכיר ומטפל בו. כל השאר נחשב "לא זוהה". */
@@ -392,7 +312,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // קטגוריה, חבילה וספק: קודם מה שנשלח מפורשות, ומה שחסר — מתוך `source`.
   const rawSource = text(body.source);
-  const fromSource = readSource(rawSource);
+  const fromSource = parseInterest(rawSource);
   const explicitPackage = pickPackage(body);
   const packageName = explicitPackage || fromSource.packageName || "";
   const currentProvider =

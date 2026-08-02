@@ -463,7 +463,9 @@ export type LeadImportField =
   | "category"
   | "note"
   | "sourceDetail"
-  | "packageName";
+  | "packageName"
+  | "provider"
+  | "externalId";
 
 /**
  * כותרות מוכרות בקבצי ייבוא, בעברית ובאנגלית.
@@ -524,12 +526,35 @@ const LEAD_IMPORT_HEADER_ALIASES: Record<string, LeadImportField> = {
   // "חבילה" מיפתה קודם ל-sourceDetail, כשלא היה שדה חבילה נפרד.
   // עכשיו יש, וזה המקום הנכון שלה.
   חבילה: "packageName",
+  שםחבילה: "packageName",
   מסלול: "packageName",
+  שםמסלול: "packageName",
   תוכנית: "packageName",
   תכנית: "packageName",
   package: "packageName",
   packagename: "packageName",
+  packagetitle: "packageName",
   plan: "packageName",
+
+  // הספק שהלקוח נמצא אצלו היום. בקבצים של השותף העמודה נקראת
+  // "שם חברה", ולכן היא כאן ולא רק "ספק".
+  ספק: "provider",
+  חברה: "provider",
+  שםחברה: "provider",
+  ספקנוכחי: "provider",
+  provider: "provider",
+  company: "provider",
+  carrier: "provider",
+
+  // מזהה הליד במערכת של השותף. אין לו עמודה משלנו — הוא נשמר בהערה,
+  // כדי שאפשר יהיה להצליב ליד מול המקור שלו.
+  "#": "externalId",
+  מזהה: "externalId",
+  מזההליד: "externalId",
+  מספרליד: "externalId",
+  id: "externalId",
+  leadid: "externalId",
+  externalid: "externalId",
 };
 
 /**
