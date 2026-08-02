@@ -34,9 +34,10 @@ export function RegistrationsTable({
   }
 
   return (
-    <div className="scroll-thin overflow-x-auto rounded-card border border-line bg-surface shadow-card">
+    /* ראה ההערה ב-`DealsTable` — אותה בעיית scrollport בדיוק */
+    <div className="scroll-thin max-h-[calc(100dvh-var(--chrome-h,60px)-180px)] min-h-[240px] overflow-auto rounded-card border border-line bg-surface shadow-card">
       <table className="w-full min-w-[860px] border-collapse text-sm">
-        <thead className="sticky top-[60px] z-10 bg-surface-2">
+        <thead className="sticky top-0 z-10 bg-surface-2">
           <tr className="border-b border-line text-xs text-ink-3">
             <th className="px-3 py-2.5 text-start font-medium">עסק</th>
             <th className="px-3 py-2.5 text-start font-medium">איש קשר</th>

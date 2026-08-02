@@ -66,9 +66,16 @@ export function DealsTable({
   }
 
   return (
-    <div className="scroll-thin overflow-x-auto rounded-card border border-line bg-surface shadow-card">
+    /*
+      גובה מוגבל = scrollport אמיתי. `overflow-x-auto` לבדו כבר הפך את
+      העוטף ל-scrollport בשני הצירים, אבל בלי תקרת גובה הוא מעולם לא
+      גלל אנכית — ולכן ה-thead ה"נדבק" פשוט נעלם עם גלילת העמוד. אותו
+      תיקון שכבר קיים ב-`LeadsTable`, שלא הועתק לכאן.
+    */
+    <div className="scroll-thin max-h-[calc(100dvh-var(--chrome-h,60px)-180px)] min-h-[240px] overflow-auto rounded-card border border-line bg-surface shadow-card">
       <table className="w-full min-w-[760px] border-collapse text-sm">
-        <thead className="sticky top-[60px] z-10 bg-surface-2">
+        {/* נדבקת לראש מיכל הגלילה, לא לסרגל העליון של הדף */}
+        <thead className="sticky top-0 z-10 bg-surface-2">
           <tr className="border-b border-line text-xs text-ink-3">
             <th className="px-3 py-2.5 text-start font-medium">לקוח</th>
             <th className="px-3 py-2.5 text-start font-medium">חבילות</th>

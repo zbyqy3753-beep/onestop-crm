@@ -14,6 +14,7 @@ import {
 } from "@/lib/domain/types";
 import { addNoteAction } from "@/app/(app)/leads/actions";
 import { dateTime, money, phone, relative, waLink } from "@/lib/format";
+import { useBodyScrollLock } from "@/lib/overlay";
 import { Badge, Button, inputClass, useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { ActivityFeed } from "./ActivityFeed";
@@ -52,6 +53,10 @@ export function LeadDrawer({
   const [note, setNote] = useState("");
   const [savingNote, startNote] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // המגירה היא גיליון מסך-מלא ב-390px. בלי הנעילה, החלקה שעברה את סוף
+  // הגוף שלה ממשיכה לגלול את תור הלידים שמאחוריה.
+  useBodyScrollLock(Boolean(lead));
 
   useEffect(() => {
     if (!lead) return;
@@ -113,17 +118,19 @@ export function LeadDrawer({
               </div>
             </div>
 
+            {/* שני יעדי המגע היחידים בראש גיליון מסך-מלא — מורחבים
+                ל-44px דרך `after:-inset-*`, בלי לשנות את הפריסה */}
             <div className="flex items-center gap-1">
               <button
                 onClick={onEdit}
-                className="rounded-md px-2 py-1.5 text-xs text-ink-3 hover:bg-surface-3 hover:text-ink-1"
+                className="relative rounded-md px-2 py-1.5 text-xs text-ink-3 after:absolute after:-inset-2 after:content-[''] hover:bg-surface-3 hover:text-ink-1 active:scale-95"
                 aria-label={`עריכת ${lead.name}`}
               >
                 עריכה
               </button>
               <button
                 onClick={onClose}
-                className="rounded-md p-1.5 text-ink-3 hover:bg-surface-3 hover:text-ink-1"
+                className="relative rounded-md p-1.5 text-ink-3 after:absolute after:-inset-2.5 after:content-[''] hover:bg-surface-3 hover:text-ink-1 active:scale-95"
                 aria-label="סגירה"
               >
                 <Icon name="close" size={18} />
@@ -163,7 +170,7 @@ export function LeadDrawer({
         </header>
 
         {/* גוף */}
-        <div className="scroll-thin flex-1 overflow-y-auto px-5 py-4">
+        <div className="scroll-thin flex-1 overflow-y-auto overscroll-contain px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {/* בקרות */}
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">

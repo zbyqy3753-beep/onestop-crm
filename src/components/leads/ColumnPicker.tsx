@@ -1,6 +1,8 @@
 "use client";
 
+import { useRef } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { useDetailsAutoClose } from "@/lib/overlay";
 import {
   DEFAULT_VISIBLE,
   TOGGLEABLE,
@@ -11,7 +13,8 @@ import {
  * בורר העמודות של הטבלה.
  *
  * בנוי על `<details>` כמו `MultiSelect` שבשאר המסך, כדי שההתנהגות
- * תהיה זהה ובלי מאזיני לחיצה גלובליים.
+ * תהיה זהה — כולל הסגירה בלחיצה בחוץ, שאינה מובנית ב-`<details>`
+ * ומגיעה מ-`useDetailsAutoClose`.
  */
 export function ColumnPicker({
   visible,
@@ -30,9 +33,12 @@ export function ColumnPicker({
     );
   }
 
+  const ref = useRef<HTMLDetailsElement>(null);
+  useDetailsAutoClose(ref);
+
   return (
-    <details className="group relative">
-      <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border border-line px-2.5 text-sm text-ink-2 hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
+    <details ref={ref} className="group relative">
+      <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border border-line px-2.5 text-sm text-ink-2 hover:bg-surface-2 active:bg-surface-2 [&::-webkit-details-marker]:hidden">
         <Icon name="filter" size={15} />
         עמודות
         {extras.length > 0 && (

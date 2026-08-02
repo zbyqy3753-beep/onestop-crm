@@ -115,7 +115,7 @@ export function LeadsTable({
       הגבלת גובה הוא מעולם לא גלל, ולכן ה-thead ה"נדבק" פשוט נעלם עם
       הגלילה. הגבלת הגובה היא מה שמחזירה לו משמעות.
     */
-    <div className="scroll-thin max-h-[calc(100dvh-340px)] min-h-[240px] overflow-auto rounded-card border border-line bg-surface shadow-card">
+    <div className="scroll-thin max-h-[calc(100dvh-var(--chrome-h,60px)-280px)] min-h-[240px] overflow-auto rounded-card border border-line bg-surface shadow-card">
       {/*
         הרוחב הטבעי של התוכן נמדד ב-986px רגיל ו-1062px במקרה הקיצון,
         ולכן 900 הוא רצפה שלא כופה גלילה אופקית על מסך 1280.

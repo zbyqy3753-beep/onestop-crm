@@ -33,7 +33,18 @@ export default async function AppLayout({
   const realUser = realId ? await db.users.getById(realId) : null;
 
   return (
-    <>
+    /*
+     * `--chrome-h` = כמה גובה תופס ה-chrome הדביק מעל התוכן.
+     *
+     * ⚠️ קיים כי כל `sticky` באפליקציה קידד `top-[60px]` בקשיחות, וכל
+     * אחד מהם היה שגוי בדיוק כשהבאנר נוכח — כלומר במצב שבו הכי חשוב
+     * לראות את הכותרות. מקור אחד, שמחושב במקום שיודע אם יש באנר.
+     */
+    <div
+      style={
+        { "--chrome-h": realUser ? "92px" : "60px" } as React.CSSProperties
+      }
+    >
       {realUser && (
         <ImpersonationBanner
           impersonatedName={user.name}
@@ -41,6 +52,6 @@ export default async function AppLayout({
         />
       )}
       <AppShell user={user}>{children}</AppShell>
-    </>
+    </div>
   );
 }

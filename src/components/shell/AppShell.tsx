@@ -120,7 +120,7 @@ function Sidebar({
                     // ב-effect על pathname, כדי שלא יהיה מצב נגזר.
                     onClick={onClose}
                     aria-current={active ? "page" : undefined}
-                    className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                    className={`group relative flex min-h-11 items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors active:bg-surface-2 lg:min-h-0 ${
                       active
                         ? "bg-brand-soft font-semibold text-brand"
                         : "text-ink-2 hover:bg-surface-2 hover:text-ink-1"

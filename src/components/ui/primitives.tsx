@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { StatusTone } from "@/lib/domain/types";
 import { TONE_CLASS } from "@/lib/format";
+import { useBodyScrollLock, useDetailsAutoClose } from "@/lib/overlay";
 import { Icon, type IconKey } from "./Icon";
 
 /* ── תגית ─────────────────────────────────────────────────────────────── */
@@ -29,12 +30,21 @@ export function Badge({
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 
+/**
+ * ⚠️ לכל וריאנט יש `active:` ולא רק `hover:`.
+ *
+ * Tailwind v4 מקמפל כל `hover:` לתוך `@media (hover: hover)`, כלומר
+ * **בטלפון כללי ה-hover פשוט לא קיימים**. בלי `active:` ללחיצה על
+ * כפתור אין שום תגובה חזותית, והמסך מרגיש מת — בדיוק מה שכתוב
+ * ב-`leads/cells.tsx` על `active:scale-95`, רק שזה מעולם לא הוכלל
+ * לשכבת הפרימיטיבים שמאחורי כל כפתור באפליקציה.
+ */
 const VARIANT: Record<Variant, string> = {
-  primary: "bg-brand text-on-brand hover:bg-brand-hover",
+  primary: "bg-brand text-on-brand hover:bg-brand-hover active:bg-brand-hover",
   secondary:
-    "border border-line-strong bg-surface text-ink-1 hover:bg-surface-2",
-  ghost: "text-ink-2 hover:bg-surface-3 hover:text-ink-1",
-  danger: "bg-bad text-white hover:opacity-90",
+    "border border-line-strong bg-surface text-ink-1 hover:bg-surface-2 active:bg-surface-3",
+  ghost: "text-ink-2 hover:bg-surface-3 hover:text-ink-1 active:bg-surface-3 active:text-ink-1",
+  danger: "bg-bad text-white hover:opacity-90 active:opacity-80",
 };
 
 export function Button({
@@ -49,7 +59,15 @@ export function Button({
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${VARIANT[variant]} ${className}`}
+      /*
+       * `min-h-11 lg:min-h-0` — רצפה של 44px למגע, שנעלמת בשולחן.
+       * הקוראים שמעבירים `h-9` הופכים ל-44px בטלפון ונשארים 36px בשולחן,
+       * בלי לגעת באף אחד מהם בנפרד.
+       *
+       * `touch-manipulation` מבטל את השהיית ה-300ms של זיהוי לחיצה כפולה,
+       * ו-`select-none` מונע את סימון הטקסט שקורה בלחיצה ארוכה בטעות.
+       */
+      className={`inline-flex min-h-11 touch-manipulation select-none items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 lg:min-h-0 lg:active:scale-100 ${VARIANT[variant]} ${className}`}
       {...rest}
     >
       {icon && <Icon name={icon} size={16} />}
@@ -145,10 +163,14 @@ export function Modal({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  useBodyScrollLock(open);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:p-8">
+    // `overscroll-contain` בנוסף לנעילת הגלילה: הוא מה שמונע מהחלקה
+    // שהגיעה לסוף המודאל להמשיך ולהזיז את מה שמאחוריו
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8">
       <button
         className="fixed inset-0 bg-ink-1/45"
         onClick={onClose}
@@ -164,9 +186,11 @@ export function Modal({
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
           <h2 className="font-display text-base font-bold">{title}</h2>
+          {/* `after:-inset-2.5` מרחיב את אזור הלחיצה מ-30px ל-44px בלי
+              לשנות את הפריסה — פסאודו-אלמנט לא תופס מקום */}
           <button
             onClick={onClose}
-            className="rounded-md p-1.5 text-ink-3 hover:bg-surface-3 hover:text-ink-1"
+            className="relative rounded-md p-1.5 text-ink-3 after:absolute after:-inset-2.5 after:content-[''] hover:bg-surface-3 hover:text-ink-1 active:scale-95"
             aria-label="סגירה"
           >
             <Icon name="close" size={18} />
@@ -232,8 +256,13 @@ function ToastRow({
 /* ── בורר מרובה־ערכים ─────────────────────────────────────────────────── */
 
 /**
- * `<details>` נותן פתיחה/סגירה וסגירה ב-Esc בלי לנהל מצב או
- * מאזיני מקלדת. משותף בין מסך הלידים ומסך העסקאות.
+ * `<details>` נותן פתיחה/סגירה בלי לנהל מצב. משותף בין מסך הלידים
+ * ומסך העסקאות.
+ *
+ * ⚠️ כאן היה כתוב ש-`<details>` נסגר גם ב-Esc. **הוא לא** — לא בשום
+ * דפדפן — וגם לא בלחיצה בחוץ. האמונה השגויה הזו היא הסיבה שמעולם לא
+ * נוסף מטפל, והפאנל הצף היה נשאר פתוח מעל התוכן עד לחיצה חוזרת על
+ * הכותרת. `useDetailsAutoClose` מוסיף את שניהם.
  */
 export function MultiSelect({
   label,
@@ -246,6 +275,9 @@ export function MultiSelect({
   selected: string[];
   onChange: (v: string[]) => void;
 }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  useDetailsAutoClose(ref);
+
   function toggle(value: string) {
     onChange(
       selected.includes(value)
@@ -255,9 +287,9 @@ export function MultiSelect({
   }
 
   return (
-    <details className="relative">
+    <details ref={ref} className="relative">
       <summary
-        className={`flex cursor-pointer list-none items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm transition-colors ${
+        className={`flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm transition-colors active:bg-surface-2 lg:min-h-0 ${
           selected.length
             ? "border-brand/40 bg-brand-soft font-medium text-brand"
             : "border-line text-ink-2 hover:bg-surface-2"
@@ -272,7 +304,9 @@ export function MultiSelect({
         <Icon name="chevronDown" size={14} />
       </summary>
 
-      <div className="scroll-thin absolute z-30 mt-1 max-h-72 w-52 overflow-y-auto rounded-card border border-line bg-surface p-1 shadow-pop">
+      {/* `max-w-[calc(100vw-2rem)]` — פאנל של 208px ממוקם מוחלט חורג
+          מהמסך ב-360px כשהבורר יושב בקצה השורה */}
+      <div className="scroll-thin absolute z-30 mt-1 max-h-72 w-52 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-card border border-line bg-surface p-1 shadow-pop">
         {options.map((opt) => (
           <label
             key={opt.value}

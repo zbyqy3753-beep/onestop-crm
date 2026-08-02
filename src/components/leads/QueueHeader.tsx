@@ -138,7 +138,9 @@ export function QueueHeader({
               key={view.key}
               onClick={() => onFiltersChange(view.patch(currentUserId))}
               aria-pressed={active}
-              className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
+              // `min-h-11` בטלפון: אלה הפקדים שהעובד נוגע בהם הכי הרבה,
+              // והם היו 34px. בשולחן חוזרים ל-30px ושום דבר לא זז.
+              className={`min-h-11 shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors active:scale-95 lg:min-h-0 lg:active:scale-100 ${
                 active
                   ? "border-brand bg-brand text-on-brand"
                   : "border-line bg-surface text-ink-2 hover:border-line-strong hover:text-ink-1"
