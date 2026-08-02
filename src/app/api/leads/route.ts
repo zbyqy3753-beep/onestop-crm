@@ -3,7 +3,11 @@ import type { NextRequest } from "next/server";
 import { db } from "@/server/repositories";
 import { partnerFromKey, type ApiPartner } from "@/server/auth/apiKeys";
 import type { LeadCategoryKey, ProviderKey, Role } from "@/lib/domain/types";
-import { PROVIDER_CONFIG, PROVIDER_ORDER } from "@/lib/domain/types";
+import {
+  PROVIDER_CONFIG,
+  PROVIDER_ORDER,
+  matchLeadCategory,
+} from "@/lib/domain/types";
 
 /**
  * `POST /api/leads` — קליטת לידים משותפים חיצוניים.
@@ -125,38 +129,63 @@ function pickPackage(body: LeadPayload): string {
 }
 
 /**
- * מפריד שדה `source` מהצורה `"חבילה – ספק"` לשני חלקיו.
+ * מפענח את שדה `source` החופשי לעמודות אמיתיות.
  *
- * ⚠️ זה לא ניחוש: השותפים דוחפים בפועל `"ULTIMATE – YES"` ו-
- * `"פלאפון – 500GB 5G Together"` לתוך `source`, בלי לשלוח `packageName`
- * או `providerName` בכלל. בלי הפירוק כאן שני שדות אמיתיים נשארים ריקים
- * והמידע קבור בעמודה חופשית שכבויה כברירת מחדל.
+ * ⚠️ זה לא ניחוש. `source` הוא בפועל השדה שהשותפים דוחפים אליו כל מה
+ * שאין לו מקום אחר, בשלוש צורות שנצפו:
  *
- * **סדר החלקים הפוך בין השותפים** (בדוגמאות למעלה הספק פעם שני ופעם
- * ראשון), ולכן אין כאן הנחה על מיקום: הצד שמזוהה כספק מוכר הוא הספק,
- * והשני הוא החבילה. אם אף צד או שני הצדדים מזוהים — לא נוגעים בכלום,
- * כי אז אין דרך לדעת מה זה מה.
+ * | מה שהגיע                       | מה שהתכוונו           |
+ * | ------------------------------ | --------------------- |
+ * | `"ULTIMATE – YES"`             | חבילה + ספק           |
+ * | `"פלאפון – 500GB 5G Together"` | ספק + חבילה           |
+ * | `"טריפל"`                      | קטגוריה               |
+ *
+ * בלי הפענוח כאן המידע נשאר קבור בעמודה חופשית שכבויה כברירת מחדל,
+ * ושלושה שדות אמיתיים נשארים ריקים.
+ *
+ * **סדר החלקים הפוך בין השותפים**, ולכן אין הנחה על מיקום: מה שמזוהה
+ * כספק מוכר הוא הספק, ומה שמזוהה כשם קטגוריה הוא הקטגוריה. מה שנשאר
+ * הוא החבילה. אם שני הצדדים מזוהים כספק, או אף אחד מהם — לא נוגעים
+ * בכלום, כי אז אין דרך לדעת מה זה מה, ו"מקור" הוא ברירת מחדל בטוחה.
  */
 const SOURCE_SPLIT = /\s+[–—|-]\s+/;
 
-function splitSource(raw: string): {
-  packageName?: string;
+interface ParsedSource {
+  category?: LeadCategoryKey;
   provider?: ProviderKey;
-} {
+  packageName?: string;
+}
+
+function readSource(raw: string): ParsedSource {
   const parts = raw.split(SOURCE_SPLIT).map((p) => p.trim()).filter(Boolean);
+
+  // ערך יחיד: או שם קטגוריה בעברית, או שם קמפיין רגיל שלא נוגעים בו
+  if (parts.length === 1) {
+    const category = matchLeadCategory(parts[0]);
+    return category ? { category } : {};
+  }
   if (parts.length !== 2) return {};
 
   const [first, second] = parts;
-  const firstIsProvider = matchProvider(first);
-  const secondIsProvider = matchProvider(second);
+  const firstProvider = matchProvider(first);
+  const secondProvider = matchProvider(second);
 
-  if (firstIsProvider && !secondIsProvider) {
-    return { provider: firstIsProvider, packageName: second };
+  let provider: ProviderKey;
+  let rest: string;
+  if (firstProvider && !secondProvider) {
+    provider = firstProvider;
+    rest = second;
+  } else if (secondProvider && !firstProvider) {
+    provider = secondProvider;
+    rest = first;
+  } else {
+    return {};
   }
-  if (secondIsProvider && !firstIsProvider) {
-    return { provider: secondIsProvider, packageName: first };
-  }
-  return {};
+
+  // `"טריפל – יס"` הוא קטגוריה+ספק, לא חבילה+ספק. בלי הבדיקה הזו
+  // "טריפל" היה נרשם כשם חבילה, וזה שקר שנראה כמו נתון.
+  const category = matchLeadCategory(rest);
+  return category ? { provider, category } : { provider, packageName: rest };
 }
 
 /**
@@ -276,8 +305,14 @@ export async function POST(request: NextRequest): Promise<Response> {
   const phone = normalizePhone(text(body.phone));
   if (!phone) return fail(400, "phone לא תקין — נדרש מספר ישראלי");
 
-  const rawCategory = text(body.category).toLowerCase();
-  if (rawCategory && !(rawCategory in CATEGORY_MAP)) {
+  // גם התווית העברית מתקבלת ("טריפל"), ולא רק מפתח החוזה ("triple").
+  // קודם היא החזירה 400 — כלומר שותף שראה את הקטגוריות בממשק ושלח את
+  // מה שכתוב שם קיבל דחייה, בלי שום דו-משמעות בערך עצמו.
+  const rawCategory = text(body.category);
+  const category = rawCategory
+    ? (CATEGORY_MAP[rawCategory.toLowerCase()] ?? matchLeadCategory(rawCategory))
+    : undefined;
+  if (rawCategory && !category) {
     return fail(
       400,
       `category לא מוכר: "${rawCategory}". ערכים אפשריים: ${Object.keys(CATEGORY_MAP).join(" | ")}`,
@@ -307,19 +342,19 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const email = text(body.email);
 
-  // החבילה והספק: קודם מה שנשלח מפורשות, ומה שחסר — מתוך `source`.
+  // קטגוריה, חבילה וספק: קודם מה שנשלח מפורשות, ומה שחסר — מתוך `source`.
   const rawSource = text(body.source);
-  const fromSource = splitSource(rawSource);
+  const fromSource = readSource(rawSource);
   const explicitPackage = pickPackage(body);
   const packageName = explicitPackage || fromSource.packageName || "";
-  const currentProvider = matchProvider(text(body.providerName)) ?? fromSource.provider;
+  const currentProvider =
+    matchProvider(text(body.providerName)) ?? fromSource.provider;
 
-  // אם `source` פורק ושני חלקיו נחתו בעמודות אמיתיות, השארתו כ"מקור"
-  // הייתה כפילות משולשת. במקרה כזה המקור הוא פשוט שם השותף.
-  const sourceDetail =
-    fromSource.packageName && !explicitPackage
-      ? partner.name
-      : rawSource || partner.name;
+  // אם `source` פוענח לעמודות אמיתיות, השארתו גם כ"מקור" הייתה כפילות.
+  // כשנשלחה חבילה מפורשת משאירים אותו כמו שהוא — אז הוא לא נצרך.
+  const consumedSource =
+    Boolean(fromSource.category ?? fromSource.packageName) && !explicitPackage;
+  const sourceDetail = consumedSource ? partner.name : rawSource || partner.name;
 
   const lead = await db.leads.create({
     name,
@@ -328,7 +363,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ליד שמגיע מטופס חי הוא ליד חם, לא רשומת דאטה
     kind: "hot",
     priority: "normal",
-    category: rawCategory ? CATEGORY_MAP[rawCategory] : undefined,
+    category: category ?? fromSource.category,
     currentProvider,
     // `source` נשאר "campaign" (איך הליד נקלט); שם השותף נכנס
     // ל-`sourceDetail`, העמודה החופשית שמוצגת בטבלה כ"מקור"
