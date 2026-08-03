@@ -1,0 +1,321 @@
+import "server-only";
+
+import { prisma } from "@/server/db/client";
+import { STATUS_CONFIG } from "@/lib/domain/types";
+import { isIsraeliPhone, toE164 } from "@/lib/format";
+import { followUpReminder } from "@/lib/domain/whatsapp";
+import { leadFromPrisma } from "@/server/repositories/prisma/mappers";
+import { israelHourMinute, startOfDay } from "@/lib/tz";
+
+/**
+ * מנוע התור של תזכורות הוואטסאפ.
+ *
+ * כל ההיגיון כאן ולא בבוט: מי זכאי לתזכורת, מה כתוב בה, ומתי מותר
+ * לשלוח. הבוט מקבל שורות מוכנות ומדווח תוצאה — הוא לא מכיר את מודל
+ * הנתונים ולא מחזיק את פרטי החיבור למסד.
+ *
+ * הבוט הוא גם **השעון היחיד**: אין cron. כשהמחשב במשרד כבוי התור
+ * מצטבר, וכשהוא חוזר הוא מתנקז. שני שעונים בלתי תלויים היו יכולים
+ * שניהם להחליט ששורה בשלה.
+ */
+
+/** שעות שבהן מותר לשלוח. מחוצה להן שורות נכנסות לתור אך לא נתבעות. */
+const SEND_WINDOW_START_HOUR = 8;
+const SEND_WINDOW_END_HOUR = 21;
+
+/** שורה שנתבעה ולא דווחה — הבוט קרס באמצע. משוחררת אחרי זה. */
+const CLAIM_TIMEOUT_MS = 5 * 60_000;
+
+/** מעל זה ההודעה כבר לא רלוונטית — עדיף כלום מאשר תזכורת מלפני יומיים. */
+const STALE_AFTER_MS = 48 * 3_600_000;
+
+/** מספר הניסיונות לפני ויתור, כדי ששורה תקועה לא תסתובב לנצח. */
+const MAX_ATTEMPTS = 3;
+
+/** מעל חצי שעה בלי דופק = נפילה אמיתית ולא רק פספוס סקר אחד. */
+const RECOVERY_THRESHOLD_MS = 30 * 60_000;
+
+export interface ClaimedMessage {
+  id: string;
+  toPhone: string;
+  body: string;
+}
+
+/** מפתח ה-exactly-once: תזמון מחדש = חובה חדשה, אותה שעה = no-op. */
+function dedupeKeyFor(leadId: string, followUpAt: Date): string {
+  return `followup:${leadId}:${followUpAt.toISOString()}`;
+}
+
+/** האם השעה הנוכחית בתוך חלון השליחה, בשעון ישראל. */
+export function insideSendWindow(now = Date.now()): boolean {
+  const hour = Number(israelHourMinute(now).slice(0, 2));
+  return hour >= SEND_WINDOW_START_HOUR && hour < SEND_WINDOW_END_HOUR;
+}
+
+/**
+ * הרגע הבא שבו מותר לשלוח. תזכורת שנקבעה ל-03:00 בטעות נדחית
+ * ל-08:00 ולא נעלמת.
+ */
+function nextSendableInstant(scheduled: Date): Date {
+  if (insideSendWindow(scheduled.getTime())) return scheduled;
+
+  const hour = Number(israelHourMinute(scheduled).slice(0, 2));
+  const dayStart = startOfDay(scheduled);
+  // אחרי סגירת החלון — מחר בבוקר; לפני פתיחתו — הבוקר הזה
+  const base = hour >= SEND_WINDOW_END_HOUR ? dayStart + 86_400_000 : dayStart;
+  return new Date(base + SEND_WINDOW_START_HOUR * 3_600_000);
+}
+
+/**
+ * ממלא את התור מלידים שהגיע זמן החזרה שלהם.
+ *
+ * תנאי הזכאות: תאריך חזרה שהגיע, סטטוס לא סופי, משויך לעובד פעיל
+ * עם טלפון תקין. ליד ללא שיוך **מדולג בכוונה** — אין למי לשלוח,
+ * וחלוקת לידים היא החלטה ניהולית שהבוט לא אמור לקבל.
+ */
+async function enqueueDueFollowUps(appUrl: string): Promise<number> {
+  const due = await prisma.lead.findMany({
+    where: {
+      followUpAt: { not: null, lte: new Date() },
+      assigneeId: { not: null },
+      assignee: { active: true, phone: { not: null } },
+    },
+    include: {
+      notes: true,
+      history: { orderBy: { createdAt: "asc" } },
+      activity: { orderBy: { createdAt: "asc" } },
+      assignee: true,
+    },
+  });
+
+  let created = 0;
+  for (const row of due) {
+    if (STATUS_CONFIG[row.status].terminal) continue;
+    const recipient = row.assignee;
+    if (!recipient?.phone || !isIsraeliPhone(recipient.phone)) continue;
+
+    const scheduled = row.followUpAt!;
+    const key = dedupeKeyFor(row.id, scheduled);
+
+    try {
+      await prisma.whatsAppMessage.create({
+        data: {
+          dedupeKey: key,
+          toPhone: toE164(recipient.phone),
+          body: followUpReminder(leadFromPrisma(row), { appUrl }),
+          scheduledFor: nextSendableInstant(scheduled),
+          leadId: row.id,
+          recipientUserId: recipient.id,
+        },
+      });
+      created++;
+    } catch {
+      // הפרת ייחודיות = התזכורת הזו כבר בתור או כבר נשלחה. זה המצב
+      // הרגיל בכל סקר אחרי הראשון, ולא שגיאה.
+    }
+  }
+  return created;
+}
+
+/**
+ * מבטל שורות ממתינות שכבר לא משקפות את מצב הליד.
+ *
+ * רץ על **כל** השורות הממתינות ולא רק על מה שנוצר עכשיו, כי כאן
+ * נתפסים גם: תאריך חזרה שנוקה, סטטוס שהפך לסופי, שיוך שהוסר, ועובד
+ * שהושבת. הבחירה לסרוק כאן ולא לחבר hook ל-`patchLeadAction` היא
+ * מכוונת: hook היה מצמיד את נתיב הכתיבה החם לתור ומוסיף מצב כשל לכל
+ * שינוי סטטוס, תמורת חלון של עד דקה שהנזק בו הוא הודעה פנימית אחת.
+ */
+async function cancelSuperseded(): Promise<number> {
+  const pending = await prisma.whatsAppMessage.findMany({
+    where: { status: "queued", leadId: { not: null } },
+    select: {
+      id: true,
+      dedupeKey: true,
+      lead: {
+        select: {
+          id: true,
+          followUpAt: true,
+          status: true,
+          assigneeId: true,
+          assignee: { select: { active: true, phone: true } },
+        },
+      },
+    },
+  });
+
+  const stale: string[] = [];
+  for (const msg of pending) {
+    const lead = msg.lead;
+    const invalid =
+      !lead ||
+      !lead.followUpAt ||
+      STATUS_CONFIG[lead.status].terminal ||
+      !lead.assigneeId ||
+      !lead.assignee?.active ||
+      !lead.assignee.phone ||
+      dedupeKeyFor(lead.id, lead.followUpAt) !== msg.dedupeKey;
+
+    if (invalid) stale.push(msg.id);
+  }
+
+  if (stale.length === 0) return 0;
+  const { count } = await prisma.whatsAppMessage.updateMany({
+    where: { id: { in: stale }, status: "queued" },
+    data: { status: "cancelled", lastError: "superseded" },
+  });
+  return count;
+}
+
+/** מוותר על תזכורות ישנות מדי — עדיף כלום מאשר הצפה אחרי סוף שבוע. */
+async function cancelStale(): Promise<number> {
+  const { count } = await prisma.whatsAppMessage.updateMany({
+    where: {
+      status: "queued",
+      scheduledFor: { lt: new Date(Date.now() - STALE_AFTER_MS) },
+    },
+    data: { status: "cancelled", lastError: "stale" },
+  });
+  return count;
+}
+
+/** משחרר שורות שנתבעו ולא דווחו — הבוט קרס או איבד חיבור באמצע. */
+async function reclaimAbandoned(): Promise<void> {
+  const cutoff = new Date(Date.now() - CLAIM_TIMEOUT_MS);
+
+  await prisma.whatsAppMessage.updateMany({
+    where: {
+      status: "sending",
+      claimedAt: { lt: cutoff },
+      attempts: { gte: MAX_ATTEMPTS },
+    },
+    data: { status: "failed", lastError: "אבד אחרי מספר ניסיונות" },
+  });
+
+  await prisma.whatsAppMessage.updateMany({
+    where: { status: "sending", claimedAt: { lt: cutoff } },
+    data: { status: "queued" },
+  });
+}
+
+/**
+ * תובע שורות לשליחה.
+ *
+ * התביעה היא `updateMany` מותנה על `status: "queued"` — שני מופעי בוט
+ * לא יכולים פיזית לתבוע את אותה שורה, ולכן הרצה כפולה בטוחה מעצם
+ * הבנייה ואין צורך בנעילה.
+ */
+async function claim(limit: number): Promise<ClaimedMessage[]> {
+  if (!insideSendWindow()) return [];
+
+  const candidates = await prisma.whatsAppMessage.findMany({
+    where: { status: "queued", scheduledFor: { lte: new Date() } },
+    orderBy: { scheduledFor: "asc" },
+    take: Math.min(limit, 20),
+    select: { id: true },
+  });
+  if (candidates.length === 0) return [];
+
+  const claimed: ClaimedMessage[] = [];
+  for (const { id } of candidates) {
+    const { count } = await prisma.whatsAppMessage.updateMany({
+      where: { id, status: "queued" },
+      data: {
+        status: "sending",
+        claimedAt: new Date(),
+        attempts: { increment: 1 },
+      },
+    });
+    if (count === 0) continue; // מופע אחר הקדים — לא שלנו
+
+    const row = await prisma.whatsAppMessage.findUnique({
+      where: { id },
+      select: { id: true, toPhone: true, body: true },
+    });
+    if (row) claimed.push(row);
+  }
+  return claimed;
+}
+
+export interface PullResult {
+  messages: ClaimedMessage[];
+  queued: number;
+  /** דקות שהבוט היה שקוע, אם זו חזרה מנפילה — אחרת null */
+  recoveredAfterMinutes: number | null;
+}
+
+/**
+ * הסקר שהבוט קורא לו. עושה הכול בסדר אחד ומחזיר מה לשלוח.
+ */
+export async function pull(input: {
+  instanceId?: string;
+  waConnected: boolean;
+  waNumber?: string;
+  limit: number;
+  appUrl: string;
+}): Promise<PullResult> {
+  const previous = await prisma.botHeartbeat.findUnique({
+    where: { id: "default" },
+    select: { lastSeenAt: true },
+  });
+  const downMs = previous
+    ? Date.now() - previous.lastSeenAt.getTime()
+    : Number.POSITIVE_INFINITY;
+
+  await enqueueDueFollowUps(input.appUrl);
+  await cancelSuperseded();
+  await cancelStale();
+  await reclaimAbandoned();
+
+  // בלי חיבור לוואטסאפ אין טעם לתבוע — התביעה הייתה מבזבזת ניסיון
+  const messages = input.waConnected ? await claim(input.limit) : [];
+  const queued = await prisma.whatsAppMessage.count({
+    where: { status: "queued" },
+  });
+
+  await prisma.botHeartbeat.upsert({
+    where: { id: "default" },
+    create: {
+      id: "default",
+      lastSeenAt: new Date(),
+      waConnected: input.waConnected,
+      waNumber: input.waNumber,
+      instanceId: input.instanceId,
+      queuedCount: queued,
+    },
+    update: {
+      lastSeenAt: new Date(),
+      waConnected: input.waConnected,
+      waNumber: input.waNumber,
+      instanceId: input.instanceId,
+      queuedCount: queued,
+    },
+  });
+
+  return {
+    messages,
+    queued,
+    recoveredAfterMinutes:
+      previous && downMs > RECOVERY_THRESHOLD_MS
+        ? Math.round(downMs / 60_000)
+        : null,
+  };
+}
+
+/** קולט את תוצאות השליחה מהבוט. */
+export async function report(
+  results: { id: string; status: "sent" | "failed"; error?: string }[],
+): Promise<number> {
+  let applied = 0;
+  for (const r of results) {
+    const { count } = await prisma.whatsAppMessage.updateMany({
+      where: { id: r.id, status: "sending" },
+      data:
+        r.status === "sent"
+          ? { status: "sent", sentAt: new Date(), lastError: null }
+          : { status: "failed", lastError: r.error?.slice(0, 300) ?? "שגיאה" },
+    });
+    applied += count;
+  }
+  return applied;
+}

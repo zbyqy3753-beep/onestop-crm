@@ -27,8 +27,8 @@ interface Registered extends ApiPartner {
   key: string;
 }
 
-function registry(): Registered[] {
-  const raw = process.env.LEADS_API_KEYS?.trim();
+function registry(envVar: string): Registered[] {
+  const raw = process.env[envVar]?.trim();
   if (!raw) return [];
 
   return raw
@@ -66,10 +66,27 @@ function safeEqual(a: string, b: string): boolean {
  * לא יסגיר כמה מפתחות רשומים ואיפה ברשימה נמצא המפתח שנשלח.
  */
 export function partnerFromKey(provided: string | null): ApiPartner | null {
+  return fromKey(provided, "LEADS_API_KEYS");
+}
+
+/**
+ * מזהה את בוט הוואטסאפ מכותרת `x-api-key`.
+ *
+ * ⚠️ רישום **נפרד** מ-`LEADS_API_KEYS` בכוונה. הבוט רץ על מחשב לא
+ * מאובטח במשרד, ואין שום סיבה שמפתח שיושב שם יוכל גם ליצור לידים.
+ * הפרדה כאן היא ההבדל בין "המחשב במשרד נפרץ" ל"אפשר להזריק לידים".
+ *
+ *   WHATSAPP_API_KEYS="os_bot_a1b2c3d4:בוט המשרד"
+ */
+export function botFromKey(provided: string | null): ApiPartner | null {
+  return fromKey(provided, "WHATSAPP_API_KEYS");
+}
+
+function fromKey(provided: string | null, envVar: string): ApiPartner | null {
   if (!provided) return null;
 
   let match: ApiPartner | null = null;
-  for (const partner of registry()) {
+  for (const partner of registry(envVar)) {
     if (safeEqual(provided, partner.key)) match = { name: partner.name };
   }
   return match;
