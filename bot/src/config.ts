@@ -51,22 +51,25 @@ export const SEND_GAP_MAX_MS = 8_000;
  * ⚠️ **לא** מספיק לבדוק שהקובץ קיים. Baileys כותב `creds.json` כבר
  * ברגע יצירת החיבור, לפני שמישהו סרק משהו — כך שניסיון צימוד שנקטע
  * באמצע (סגירת החלון, Ctrl+C) משאיר קובץ שנראה כמו חיבור תקין.
- * התוצאה הייתה `pair` שמסרב לרוץ ו-`serve` שעולה בלי סשן אמיתי,
- * מתחבר לשום מקום, ומשאיר את הרצועה ענברית בלי הסבר.
  *
- * `registered` נכתב על ידי Baileys רק אחרי צימוד שהצליח.
+ * ⚠️⚠️ וגם **לא** `registered`. השדה הזה נראה כמו התשובה הנכונה והוא
+ * מלכודת: הוא נקבע ל-true רק בזרימת קוד-הצימוד הטלפוני
+ * (`messages-recv.js`), ובצימוד QR הוא נשאר `false` לנצח. הסימן
+ * האמיתי הוא `me.id`, שנכתב ב-`configureSuccessfulPairing` בדיוק
+ * כשהצימוד מצליח. שתי הזרימות נתמכות כאן.
  */
 export function isPaired(): boolean {
   const file = resolve(AUTH_DIR, "creds.json");
   if (!existsSync(file)) return false;
 
   try {
-    const creds: unknown = JSON.parse(readFileSync(file, "utf8"));
-    return (
-      typeof creds === "object" &&
-      creds !== null &&
-      (creds as { registered?: unknown }).registered === true
-    );
+    const creds = JSON.parse(readFileSync(file, "utf8")) as {
+      registered?: unknown;
+      me?: { id?: unknown };
+    } | null;
+    if (typeof creds !== "object" || creds === null) return false;
+
+    return creds.registered === true || typeof creds.me?.id === "string";
   } catch {
     // קובץ פגום = אין חיבור שאפשר לסמוך עליו
     return false;
