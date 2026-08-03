@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
@@ -45,7 +45,30 @@ export const POLL_INTERVAL_MS = 60_000;
 export const SEND_GAP_MIN_MS = 3_000;
 export const SEND_GAP_MAX_MS = 8_000;
 
-/** האם כבר בוצעה סריקת QR. */
+/**
+ * האם הצימוד באמת הושלם.
+ *
+ * ⚠️ **לא** מספיק לבדוק שהקובץ קיים. Baileys כותב `creds.json` כבר
+ * ברגע יצירת החיבור, לפני שמישהו סרק משהו — כך שניסיון צימוד שנקטע
+ * באמצע (סגירת החלון, Ctrl+C) משאיר קובץ שנראה כמו חיבור תקין.
+ * התוצאה הייתה `pair` שמסרב לרוץ ו-`serve` שעולה בלי סשן אמיתי,
+ * מתחבר לשום מקום, ומשאיר את הרצועה ענברית בלי הסבר.
+ *
+ * `registered` נכתב על ידי Baileys רק אחרי צימוד שהצליח.
+ */
 export function isPaired(): boolean {
-  return existsSync(resolve(AUTH_DIR, "creds.json"));
+  const file = resolve(AUTH_DIR, "creds.json");
+  if (!existsSync(file)) return false;
+
+  try {
+    const creds: unknown = JSON.parse(readFileSync(file, "utf8"));
+    return (
+      typeof creds === "object" &&
+      creds !== null &&
+      (creds as { registered?: unknown }).registered === true
+    );
+  } catch {
+    // קובץ פגום = אין חיבור שאפשר לסמוך עליו
+    return false;
+  }
 }
