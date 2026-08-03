@@ -1,5 +1,5 @@
 import type { StatusTone } from "./domain/types";
-import { TZ, calendarDaysBetween } from "./tz";
+import { TZ, calendarDaysBetween, israelHourMinute } from "./tz";
 
 /** מיפוי טון סמנטי למחלקות Tailwind. מקור אמת יחיד לצבעי תגיות. */
 export const TONE_CLASS: Record<StatusTone, string> = {
@@ -100,13 +100,17 @@ export function relative(iso: string, now: number): string {
  * `Math.ceil(diff / 86_400_000)`, ולכן תזכורת שנקבעה ל**היום** ב-09:00
  * הוצגה "מחר" כל עוד השעה הייתה לפני 09:00 — בזמן שהמסנן "לחזור היום"
  * כן כלל אותה. אותו ליד, שתי אמירות סותרות באותו מסך.
+ *
+ * היום ומחר נושאים גם שעה: מרגע שהיא ניתנת לבחירה היא הנתון המבצעי —
+ * "היום" לבדו לא אומר אם להרים טלפון עכשיו. מעבר ליומיים היא רעש.
  */
 export function until(iso: string, now: number): string {
-  const days = calendarDaysBetween(now, Date.parse(iso));
+  const instant = Date.parse(iso);
+  const days = calendarDaysBetween(now, instant);
 
   if (days < 0) return `באיחור ${Math.abs(days)} ימים`;
-  if (days === 0) return "היום";
-  if (days === 1) return "מחר";
+  if (days === 0) return `היום ${israelHourMinute(instant)}`;
+  if (days === 1) return `מחר ${israelHourMinute(instant)}`;
   return `בעוד ${days} ימים`;
 }
 

@@ -18,7 +18,7 @@ import {
 } from "@/lib/domain/types";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
 import { TONE_VAR, date, phone, relative, until } from "@/lib/format";
-import { calendarDaysBetween, dayKey } from "@/lib/tz";
+import { dateTimeInputValue } from "@/lib/tz";
 import { Badge } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import {
@@ -32,9 +32,9 @@ import {
 import { buildTimeline } from "./ActivityFeed";
 import type { ColumnDef, ColumnKey } from "./columns";
 
-/** ISO → `YYYY-MM-DD` בשעון ישראל, כפי ש-`<input type="date">` מצפה. */
-function isoToDateInput(iso: string): string {
-  return dayKey(Date.parse(iso));
+/** ISO → `YYYY-MM-DDTHH:mm` בשעון ישראל, כפי ש-`datetime-local` מצפה. */
+function isoToDateTimeInput(iso: string): string {
+  return dateTimeInputValue(Date.parse(iso));
 }
 
 /** מחלקות התא לכל עמודה — נשמר כאן ולא ב-columns.ts כדי ש-columns.ts יישאר נטול JSX. */
@@ -196,15 +196,13 @@ export function LeadRow({
       case "followUpAt": {
         if (now === null) return skeleton("w-14");
         // באיחור — אדום ומודגש. חזרה שעברה היא לא "תזכורת", היא חוב.
-        // `until()` כבר אומר "באיחור X ימים"; היום/עתיד נשארים בצהוב.
+        // ⚠️ ההשוואה היא לרגע ולא ליום קלנדרי: מרגע שיש שעה, חזרה
+        // שנקבעה להיום 09:00 היא באיחור ב-11:00 — לא בחצות.
         const followUpOverdue =
-          lead.followUpAt !== undefined &&
-          calendarDaysBetween(now, Date.parse(lead.followUpAt)) < 0;
+          lead.followUpAt !== undefined && Date.parse(lead.followUpAt) < now;
         return (
           <FollowUpCell
-            // `<input type="date">` מצפה ל-YYYY-MM-DD בשעון המקומי,
-            // ו-toISOString היה מחזיר UTC ומזיז יום סביב חצות
-            value={lead.followUpAt ? isoToDateInput(lead.followUpAt) : ""}
+            value={lead.followUpAt ? isoToDateTimeInput(lead.followUpAt) : ""}
             busy={busy}
             onPick={(v) => onPatch({ followUpDate: v || null })}
           >

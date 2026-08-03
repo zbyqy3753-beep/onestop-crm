@@ -6,7 +6,7 @@ import {
   SOURCE_CONFIG,
   STATUS_CONFIG,
 } from "@/lib/domain/types";
-import { date, phone } from "@/lib/format";
+import { date, dateTime, phone } from "@/lib/format";
 import { leadCost } from "@/server/services/economics";
 
 /**
@@ -58,7 +58,8 @@ export function leadsToCsvRows(
     STATUS_CONFIG[lead.status].label,
     date(lead.createdAt),
     date(lead.updatedAt),
-    lead.followUpAt ? date(lead.followUpAt) : "",
+    // dateTime ולא date — לתאריך חזרה יש שעה, וזו השעה שהתזכורת יוצאת בה
+    lead.followUpAt ? dateTime(lead.followUpAt) : "",
   ]);
 
   return [HEADER, ...rows];

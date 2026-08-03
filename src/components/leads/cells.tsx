@@ -132,10 +132,12 @@ export function InlinePicker({
 }
 
 /**
- * תאריך חזרה, עם עריכה במקום.
+ * תאריך **ושעת** חזרה, עם עריכה במקום.
  *
- * `<input type="date">` שקוף מעל התצוגה — אותו היגיון כמו `InlinePicker`,
- * אבל עם בורר תאריכים מקורי במקום רשימה.
+ * `<input type="datetime-local">` שקוף מעל התצוגה — אותו היגיון כמו
+ * `InlinePicker`, אבל עם בורר מקורי במקום רשימה. השעה נדרשת כי התזכורת
+ * בוואטסאפ יוצאת בשעה הזו בדיוק; `step` של רבע שעה כי אף אחד לא קובע
+ * חזרה ל-14:37.
  */
 export function FollowUpCell({
   value,
@@ -143,7 +145,7 @@ export function FollowUpCell({
   busy,
   children,
 }: {
-  /** `YYYY-MM-DD` או מחרוזת ריקה */
+  /** `YYYY-MM-DDTHH:mm` או מחרוזת ריקה */
   value: string;
   onPick: (value: string) => void;
   busy?: boolean;
@@ -156,11 +158,12 @@ export function FollowUpCell({
     <span className="relative inline-flex min-h-11 min-w-11 items-center rounded hover:bg-surface-3 lg:min-h-0 lg:min-w-0">
       {children}
       <input
-        type="date"
+        type="datetime-local"
+        step={900}
         value={value}
         disabled={busy}
         onChange={(e) => onPick(e.target.value)}
-        aria-label="תאריך חזרה"
+        aria-label="תאריך ושעת חזרה"
         className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-wait"
       />
     </span>

@@ -369,11 +369,16 @@ export async function changeStatusAction(
 const DEFAULT_FOLLOW_UP_HOUR = 9;
 
 /**
- * `YYYY-MM-DD` מ-`<input type="date">` → חותמת זמן ב-09:00 **בשעון ישראל**.
+ * תאריך חזרה מהלקוח → חותמת זמן **בשעון ישראל**.
  *
- * לא חצות ולא סוף היום: `until()` מעגל כלפי מעלה את הפרש הימים, והסינון
- * "לחזור היום" משווה מול סוף היום. 09:00 הוא הערך היחיד שגורם לשניהם
- * להציג את אותו יום — חצות היה נופל ליום הקודם, וסוף יום היה מקדים ביום.
+ * מקבל שתי צורות:
+ *  - `YYYY-MM-DDTHH:mm` מ-`<input type="datetime-local">` — הנתיב הרגיל.
+ *  - `YYYY-MM-DD` בלבד → 09:00. משמש את ייבוא ה-CSV ואת כל לקוח שעדיין
+ *    מריץ גרסה ישנה, ולכן לא הוסר.
+ *
+ * למה 09:00 ולא חצות או סוף היום: `until()` מעגל כלפי מעלה את הפרש
+ * הימים, והסינון "לחזור היום" משווה מול סוף היום. 09:00 הוא הערך היחיד
+ * שגורם לשניהם להציג את אותו יום.
  *
  * ⚠️ הגרסה הקודמת בנתה `new Date(y, m, d, 9)`, כלומר 09:00 באזור הזמן של
  * **התהליך**. במחשב מקומי זה נראה תקין, אבל ב-Vercel התהליך רץ ב-UTC
@@ -381,13 +386,14 @@ const DEFAULT_FOLLOW_UP_HOUR = 9;
  * ההסתמכות על `instantFromIsraelDateTime` — ראה את ההסבר שם.
  */
 function parseFollowUpDate(raw: string): string | undefined {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw.trim());
+  const match = /^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2}))?$/.exec(raw.trim());
   if (!match) return undefined;
 
+  const [, dateStr, hh, mm] = match;
   const instant = instantFromIsraelDateTime(
-    match[0],
-    DEFAULT_FOLLOW_UP_HOUR,
-    0,
+    dateStr,
+    hh === undefined ? DEFAULT_FOLLOW_UP_HOUR : Number(hh),
+    mm === undefined ? 0 : Number(mm),
   );
   if (instant === null) return undefined;
 

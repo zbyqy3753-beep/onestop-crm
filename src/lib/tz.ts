@@ -70,6 +70,26 @@ export function startOfMonth(instant: number | Date = Date.now()): number {
   return Date.UTC(y, m - 1, 1) - offsetMinutes(instant) * 60_000;
 }
 
+const timeFmt = new Intl.DateTimeFormat("en-GB", {
+  timeZone: TZ,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** `HH:mm` בשעון ישראל. */
+export function israelHourMinute(instant: number | Date): string {
+  return timeFmt.format(instant);
+}
+
+/**
+ * `YYYY-MM-DDTHH:mm` בשעון ישראל — הפורמט ש-`<input type="datetime-local">`
+ * מצפה לו. המקבילה של `dayKey` לשדה עם שעה.
+ */
+export function dateTimeInputValue(instant: number | Date): string {
+  return `${dayKey(instant)}T${israelHourMinute(instant)}`;
+}
+
 /**
  * `YYYY-MM-DD` + שעה ודקה בשעון **ישראל** → חותמת זמן.
  *

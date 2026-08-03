@@ -14,7 +14,7 @@ import {
 } from "@/lib/domain/types";
 import { addNoteAction } from "@/app/(app)/leads/actions";
 import { dateTime, money, phone, relative, waLink } from "@/lib/format";
-import { dayKey } from "@/lib/tz";
+import { dateTimeInputValue } from "@/lib/tz";
 import { useBodyScrollLock } from "@/lib/overlay";
 import { Badge, Button, inputClass, useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
@@ -261,7 +261,11 @@ export function LeadDrawer({
             */}
             <Detail label="חזרה מתוכננת">
               <FollowUpCell
-                value={lead.followUpAt ? dayKey(Date.parse(lead.followUpAt)) : ""}
+                value={
+                  lead.followUpAt
+                    ? dateTimeInputValue(Date.parse(lead.followUpAt))
+                    : ""
+                }
                 busy={busy}
                 onPick={(v) => onPatchFollowUp?.(v || null)}
               >

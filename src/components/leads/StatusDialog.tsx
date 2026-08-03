@@ -87,12 +87,19 @@ export function StatusDialog({
           <div className="mb-2 flex gap-1.5">
             {FOLLOW_UP_PRESETS.map((preset) => {
               const date = inDays(preset.days);
-              const active = followUpDate === date;
+              // רק היום מושווה, לא השעה — אחרת נגיעה בצ׳יפ שעה הייתה
+              // מכבה את צ׳יפ היום שנבחר רגע לפניו
+              const active = followUpDate.slice(0, 10) === date.slice(0, 10);
               return (
                 <button
                   key={preset.days}
                   type="button"
-                  onClick={() => setFollowUpDate(date)}
+                  // שומר שעה שכבר נבחרה; בלי בחירה — 09:00 של `inDays`
+                  onClick={() =>
+                    setFollowUpDate(
+                      followUpDate ? withDay(followUpDate, date) : date,
+                    )
+                  }
                   aria-pressed={active}
                   className={`min-h-9 rounded-full border px-3 text-xs font-medium transition-colors active:scale-95 ${
                     active
@@ -105,15 +112,39 @@ export function StatusDialog({
               );
             })}
           </div>
+          {/* שעות נפוצות — משנות רק את השעה ומשאירות את התאריך שנבחר */}
+          <div className="mb-2 flex gap-1.5">
+            {HOUR_PRESETS.map((hour) => {
+              const active = followUpDate.endsWith(`T${hour}`);
+              return (
+                <button
+                  key={hour}
+                  type="button"
+                  onClick={() => setFollowUpDate(withHour(followUpDate, hour))}
+                  aria-pressed={active}
+                  className={`nums min-h-9 rounded-full border px-3 text-xs font-medium transition-colors active:scale-95 ${
+                    active
+                      ? "border-brand bg-brand-soft text-brand"
+                      : "border-line bg-surface text-ink-2 hover:border-line-strong hover:text-ink-1"
+                  }`}
+                >
+                  {hour}
+                </button>
+              );
+            })}
+          </div>
           <input
-            type="date"
+            type="datetime-local"
+            step={900}
             value={followUpDate}
-            min={today()}
+            // תחילת היום ולא 09:00 — אחרת אי אפשר לקבוע חזרה להיום ב-08:00
+            min={`${today().slice(0, 10)}T00:00`}
             onChange={(e) => setFollowUpDate(e.target.value)}
             className={`${inputClass} nums`}
           />
           <span className="mt-1 block text-xs text-ink-4">
-            הליד יופיע בתצוגה ״לחזור היום״ בתאריך שנבחר.
+            הליד יופיע בתצוגה ״לחזור היום״, והעובד המשויך יקבל תזכורת
+            בוואטסאפ בשעה שנבחרה.
           </span>
         </label>
       )}
@@ -134,8 +165,14 @@ export function StatusDialog({
   );
 }
 
+/** ברירת המחדל של צ׳יפי התאריך — תחילת יום עבודה. */
+const DEFAULT_HOUR = "09:00";
+
+/** השעות שסוכן באמת בוחר: פתיחה, לפני הצהריים, אחרי, וסוף יום. */
+const HOUR_PRESETS = ["09:00", "12:00", "16:00", "18:00"];
+
 /**
- * היום בפורמט של `<input type="date">`, בשעון המקומי.
+ * עכשיו בפורמט של `<input type="datetime-local">`, בשעון המקומי.
  * `toISOString()` היה מחזיר UTC ובישראל זה נופל ליום הקודם בלילה.
  */
 function today(): string {
@@ -143,14 +180,29 @@ function today(): string {
 }
 
 /**
- * תאריך בעוד `days` ימים, באותו פורמט ובאותו שעון מקומי —
+ * תאריך בעוד `days` ימים ב-09:00, באותו פורמט ובאותו שעון מקומי —
  * `setDate` מטפל בגלישת חודש/שנה בעצמו.
  */
 function inDays(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${DEFAULT_HOUR}`;
+}
+
+/**
+ * מחליף רק את השעה ומשאיר את התאריך. כשעדיין לא נבחר תאריך — היום,
+ * כדי שנגיעה בצ׳יפ שעה לבדה תיתן ערך שלם ולא שדה חצי-מלא.
+ */
+function withHour(value: string, hour: string): string {
+  const day = value.slice(0, 10) || today().slice(0, 10);
+  return `${day}T${hour}`;
+}
+
+/** מחליף רק את היום ומשאיר את השעה שכבר נבחרה. */
+function withDay(value: string, dayValue: string): string {
+  const hour = value.slice(11) || DEFAULT_HOUR;
+  return `${dayValue.slice(0, 10)}T${hour}`;
 }
 
 // קיצורי הדרך שמעל שדה התאריך

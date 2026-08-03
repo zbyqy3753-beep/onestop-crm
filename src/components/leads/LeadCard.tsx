@@ -10,7 +10,7 @@ import {
 } from "@/lib/domain/types";
 import { TONE_VAR, phone, relative, until, waLink } from "@/lib/format";
 import { whatsappGreeting } from "@/lib/domain/types";
-import { calendarDaysBetween, dayKey } from "@/lib/tz";
+import { dateTimeInputValue } from "@/lib/tz";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
 import { Badge } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
@@ -79,11 +79,16 @@ export function LeadCard({
   /** הפירוט האחרון שהסוכן הזין — אותה נגזרת כמו ב-`LeadRow`. */
   const lastDetail = [...lead.history].reverse().find((h) => h.detail)?.detail;
 
-  /** תאריך החזרה כבר עבר (בימי לוח) — הליד זועק, לא ממתין. */
+  /**
+   * שעת החזרה כבר עברה — הליד זועק, לא ממתין.
+   *
+   * ⚠️ השוואת רגעים ולא ימי לוח: מרגע שיש שעה, חזרה שנקבעה להיום
+   * 09:00 היא באיחור כבר ב-11:00, ולא רק למחרת בחצות.
+   */
   const overdue =
     now !== null &&
     lead.followUpAt !== undefined &&
-    calendarDaysBetween(now, Date.parse(lead.followUpAt)) < 0;
+    Date.parse(lead.followUpAt) < now;
 
   // ⚠️ הספק והחבילה מוצגים **ביחד**. הם מגיעים מהשותף כמחרוזת אחת
   // ("ULTIMATE – YES") ונשמרים בשתי עמודות, ולכן החבילה לבדה נראית
@@ -213,7 +218,9 @@ export function LeadCard({
         </InlinePicker>
 
         <FollowUpCell
-          value={lead.followUpAt ? dayKey(Date.parse(lead.followUpAt)) : ""}
+          value={
+            lead.followUpAt ? dateTimeInputValue(Date.parse(lead.followUpAt)) : ""
+          }
           busy={busy}
           onPick={(v) => onPatch({ followUpDate: v || null })}
         >
