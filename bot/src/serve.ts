@@ -1,3 +1,4 @@
+import { DisconnectReason } from "@whiskeysockets/baileys";
 import { connect, type WaClient } from "./wa.js";
 import { pull, report, type OutboxMessage } from "./crm.js";
 import {
@@ -122,9 +123,19 @@ function createSupervisor() {
           process.exit(1);
         },
         onClosed: (reason) => {
+          wa = null;
+
+          // 515 = restartRequired. וואטסאפ סוגרים את החיבור מיד אחרי
+          // צימוד ראשון ודורשים חיבור מחדש — זה תקין ומצופה, ולכן
+          // מתחברים מיד ובלי להעניש את מונה הניסיונות.
+          if (reason === DisconnectReason.restartRequired) {
+            log("↻ וואטסאפ ביקשו חיבור מחדש (515) — מתחבר");
+            setTimeout(() => void open(), 500);
+            return;
+          }
+
           const wait = backoffMs(attempt++);
           log(`⚠ החיבור נפל (${reason ?? "?"}) · ניסיון חוזר בעוד ${wait / 1000}ש׳`);
-          wa = null;
           setTimeout(() => void open(), wait);
         },
       });
