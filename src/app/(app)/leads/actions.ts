@@ -64,11 +64,14 @@ async function assertCanEdit(leadIds: string[]): Promise<string | null> {
   const user = await requireSessionUser();
   if (canSeeAllLeads(user.role)) return null;
 
-  for (const id of leadIds) {
-    const lead = await db.leads.getById(id);
-    // ליד שלא קיים נבלע כאן בשקט — הפעולה עצמה תיכשל עליו ממילא,
-    // ואין סיבה להסגיר לעובד אילו מזהים קיימים במערכת
-    if (!lead) continue;
+  // שאילתה אחת לכל המזהים, ורק עמודת הבעלות. קודם זו הייתה שליפה
+  // מלאה פר-ליד ובסדרה — פעולה קבוצתית של עובד על 50 לידים שילמה
+  // 50 שליפות שמנות לפני שנכתב משהו.
+  const owners = await db.leads.listOwnership(leadIds);
+
+  // ליד שלא קיים נבלע כאן בשקט — הפעולה עצמה תיכשל עליו ממילא,
+  // ואין סיבה להסגיר לעובד אילו מזהים קיימים במערכת
+  for (const lead of owners) {
     if (lead.assigneeId !== user.id) return FORBIDDEN;
   }
   return null;

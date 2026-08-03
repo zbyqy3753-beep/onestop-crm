@@ -108,6 +108,12 @@ export const memoryLeadRepository: LeadRepository = {
     return found ? structuredClone(found) : null;
   },
 
+  async listOwnership(ids: LeadId[]) {
+    return state.leads
+      .filter((l) => ids.includes(l.id))
+      .map((l) => ({ id: l.id, assigneeId: l.assigneeId }));
+  },
+
   async countByStatus(filter: LeadFilter = {}) {
     const counts = Object.fromEntries(
       STATUS_ORDER.map((s) => [s, 0]),

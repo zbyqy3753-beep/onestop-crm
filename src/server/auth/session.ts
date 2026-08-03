@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { db } from "@/server/repositories";
 import type { User } from "@/lib/domain/types";
@@ -34,13 +35,21 @@ export async function verifyCredentials(
   return db.users.getByEmail(email);
 }
 
-/** המשתמש שהסשן מייצג. תוכן העוגייה הוא מזהה המשתמש עצמו. */
-export async function getSessionUser(): Promise<User | null> {
+/**
+ * המשתמש שהסשן מייצג. תוכן העוגייה הוא מזהה המשתמש עצמו.
+ *
+ * עטוף ב-`cache()` של React — לא כמטמון בין בקשות אלא כדדופליקציה
+ * **בתוך** בקשה אחת. כל Server Action קורא לו לפחות פעמיים
+ * (`assertCanEdit` ואז `actor()`), ובלי זה כל כתיבה שילמה שתי
+ * שאילתות משתמש מיותרות. ה-cache חי לאורך הבקשה בלבד, כך שהתנתקות
+ * או החלפת משתמש נראות מיד בבקשה הבאה.
+ */
+export const getSessionUser = cache(async (): Promise<User | null> => {
   const store = await cookies();
   const userId = store.get(SESSION_COOKIE)?.value;
   if (!userId) return null;
   return db.users.getById(userId);
-}
+});
 
 /**
  * כמו `getSessionUser`, אבל זורק אם אין סשן תקין — לשימוש בפעולות

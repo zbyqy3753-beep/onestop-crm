@@ -144,6 +144,16 @@ export interface LeadRepository {
     page?: Page,
   ): Promise<Paginated<Lead>>;
   getById(id: LeadId): Promise<Lead | null>;
+  /**
+   * מי מחזיק כל אחד מהלידים — לבדיקת הרשאה בלבד.
+   *
+   * קיים כדי ש-`assertCanEdit` לא ישלוף ליד מלא (עם הערות, היסטוריה
+   * ופעילות) פר-מזהה ובאופן סדרתי. פעולה קבוצתית של עובד על 50
+   * לידים שילמה 50 שליפות שמנות לפני שנכתב משהו.
+   *
+   * מזהים שלא קיימים פשוט חסרים מהתוצאה.
+   */
+  listOwnership(ids: LeadId[]): Promise<{ id: LeadId; assigneeId?: UserId }[]>;
   /** ספירה לפי סטטוס — משמש לכרטיסי הסיכום בלי לשלוף את כל השורות */
   countByStatus(filter?: LeadFilter): Promise<Record<LeadStatus, number>>;
   /**

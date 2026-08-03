@@ -145,6 +145,20 @@ export const prismaLeadRepository: LeadRepository = {
     return row ? leadFromPrisma(row) : null;
   },
 
+  async listOwnership(ids: LeadId[]) {
+    if (ids.length === 0) return [];
+    // `select` ולא `include` — בכוונה בלי הערות/היסטוריה/פעילות.
+    // זו שאילתה בנתיב של בדיקת הרשאה, לא של תצוגה.
+    const rows = await prisma.lead.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, assigneeId: true },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      assigneeId: r.assigneeId ?? undefined,
+    }));
+  },
+
   async countByStatus(filter: LeadFilter = {}) {
     const where = buildWhere(filter);
     const grouped = await prisma.lead.groupBy({
