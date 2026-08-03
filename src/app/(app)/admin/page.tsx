@@ -3,6 +3,8 @@ import { AdminClient } from "@/components/admin/AdminClient";
 import { db } from "@/server/repositories";
 import { prisma } from "@/server/db/client";
 import { requireSessionUser } from "@/server/auth/session";
+import { readSettings } from "@/server/whatsapp/settings";
+import { sentToday } from "@/server/whatsapp/outbox";
 
 /**
  * רכיב שרת. שולף דרך שכבת ה-repository בלבד ומעביר למטה.
@@ -20,25 +22,42 @@ export default async function AdminPage() {
   const actor = await requireSessionUser();
   if (!ALLOWED.includes(actor.role as (typeof ALLOWED)[number])) notFound();
 
-  const [users, { rows: leads }, health, failures] = await Promise.all([
-    db.users.list(),
-    db.leads.list(),
-    // הדופק והכשלים נקראים ישירות מ-Prisma ולא דרך repository: אין
-    // להם מימוש בזיכרון ואין להם קורא שני. שכבת repository כאן הייתה
-    // הפשטה לצרכן יחיד.
-    prisma.botHeartbeat.findUnique({ where: { id: "default" } }),
-    prisma.whatsAppMessage.findMany({
-      where: { status: "failed" },
-      orderBy: { scheduledFor: "desc" },
-      take: 20,
-      select: {
-        id: true,
-        toPhone: true,
-        lastError: true,
-        scheduledFor: true,
-      },
-    }),
-  ]);
+  const [users, { rows: leads }, health, failures, settings, queue, todayCount] =
+    await Promise.all([
+      db.users.list(),
+      db.leads.list(),
+      // הדופק, הכשלים והתור נקראים ישירות מ-Prisma ולא דרך repository:
+      // אין להם מימוש בזיכרון ואין להם קורא שני. שכבת repository כאן
+      // הייתה הפשטה לצרכן יחיד.
+      prisma.botHeartbeat.findUnique({ where: { id: "default" } }),
+      prisma.whatsAppMessage.findMany({
+        where: { status: "failed" },
+        orderBy: { scheduledFor: "desc" },
+        take: 20,
+        select: {
+          id: true,
+          toPhone: true,
+          lastError: true,
+          scheduledFor: true,
+        },
+      }),
+      readSettings(),
+      // 50 ולא הכול: כשהתור ארוך באמת (מחשב שהיה כבוי סוף שבוע) הרשימה
+      // המלאה מנפחת את ה-HTML של המסך בלי להוסיף החלטה שאפשר לקבל ממנה
+      prisma.whatsAppMessage.findMany({
+        where: { status: "queued" },
+        orderBy: { scheduledFor: "asc" },
+        take: 50,
+        select: {
+          id: true,
+          toPhone: true,
+          body: true,
+          scheduledFor: true,
+          recipient: { select: { name: true } },
+        },
+      }),
+      sentToday(),
+    ]);
 
   return (
     <AdminClient
@@ -61,6 +80,18 @@ export default async function AdminPage() {
         ...f,
         scheduledFor: f.scheduledFor.toISOString(),
       }))}
+      botSettings={{
+        ...settings,
+        pausedAt: settings.pausedAt?.toISOString() ?? null,
+      }}
+      botQueue={queue.map((m) => ({
+        id: m.id,
+        toPhone: m.toPhone,
+        body: m.body,
+        scheduledFor: m.scheduledFor.toISOString(),
+        recipientName: m.recipient?.name ?? null,
+      }))}
+      botSentToday={todayCount}
     />
   );
 }

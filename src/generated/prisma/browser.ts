@@ -93,3 +93,15 @@ export type WhatsAppMessage = Prisma.WhatsAppMessageModel
  * "לא הגיעו תזכורות" ו"לא היו תזכורות" נראים בדיוק אותו דבר.
  */
 export type BotHeartbeat = Prisma.BotHeartbeatModel
+/**
+ * Model BotSettings
+ * הגדרות הבוט שמנהל יכול לשנות מהאתר — שורה יחידה (`id = "default"`).
+ * 
+ * עד עכשיו כל אלה היו קבועים בקוד, כלומר כל שינוי דרש `git push`
+ * ופריסה. הבעיה האמיתית היא לא הנוחות אלא הזמן: כשמתברר שהבוט שולח
+ * משהו שגוי, "לעצור" חייב להיות לחיצה אחת ולא מחזור פריסה.
+ * 
+ * השורה נקראת בכל סקר של הבוט (כל 60 שניות), ולכן שינוי כאן נכנס
+ * לתוקף תוך דקה בלי להפעיל שום דבר מחדש.
+ */
+export type BotSettings = Prisma.BotSettingsModel

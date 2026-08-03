@@ -17,6 +17,11 @@ export interface PullResponse {
   messages: OutboxMessage[];
   queued: number;
   recoveredAfterMinutes: number | null;
+  /**
+   * מנהל השהה את השליחה מהאתר. אופציונלי כי בוט שלא עודכן מדבר מול
+   * שרת שכן — ובגרסה ישנה של השדה הזה פשוט אין.
+   */
+  paused?: boolean;
 }
 
 async function call<T>(path: string, body: unknown): Promise<T> {

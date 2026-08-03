@@ -6,6 +6,11 @@ import { Button, inputClass } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { AdminSummaryTiles } from "./AdminSummaryTiles";
 import { BotStatus, type BotFailure, type BotHealth } from "./BotStatus";
+import {
+  BotControls,
+  type BotSettings,
+  type QueuedMessage,
+} from "./BotControls";
 import { UsersTable } from "./UsersTable";
 import { AddUserModal } from "./AddUserModal";
 import { EditUserModal } from "./EditUserModal";
@@ -24,6 +29,9 @@ export function AdminClient({
   currentUserId,
   botHealth,
   botFailures,
+  botSettings,
+  botQueue,
+  botSentToday,
 }: {
   users: User[];
   leads: Lead[];
@@ -33,6 +41,9 @@ export function AdminClient({
   /** `null` = הבוט מעולם לא דיווח דופק */
   botHealth: BotHealth | null;
   botFailures: BotFailure[];
+  botSettings: BotSettings;
+  botQueue: QueuedMessage[];
+  botSentToday: number;
 }) {
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
@@ -76,7 +87,17 @@ export function AdminClient({
         </Button>
       </header>
 
-      <BotStatus health={botHealth} failures={botFailures} />
+      <BotStatus
+        health={botHealth}
+        failures={botFailures}
+        paused={botSettings.paused}
+      />
+
+      <BotControls
+        settings={botSettings}
+        queued={botQueue}
+        sentToday={botSentToday}
+      />
 
       <AdminSummaryTiles users={users} />
 

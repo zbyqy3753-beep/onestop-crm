@@ -6,6 +6,7 @@ import { isIsraeliPhone, toE164 } from "@/lib/format";
 import { followUpReminder } from "@/lib/domain/whatsapp";
 import { leadFromPrisma } from "@/server/repositories/prisma/mappers";
 import { israelHourMinute, startOfDay } from "@/lib/tz";
+import { readSettings, type BotSettingsView } from "./settings";
 
 /**
  * מנוע התור של תזכורות הוואטסאפ.
@@ -18,10 +19,6 @@ import { israelHourMinute, startOfDay } from "@/lib/tz";
  * מצטבר, וכשהוא חוזר הוא מתנקז. שני שעונים בלתי תלויים היו יכולים
  * שניהם להחליט ששורה בשלה.
  */
-
-/** שעות שבהן מותר לשלוח. מחוצה להן שורות נכנסות לתור אך לא נתבעות. */
-const SEND_WINDOW_START_HOUR = 8;
-const SEND_WINDOW_END_HOUR = 21;
 
 /** שורה שנתבעה ולא דווחה — הבוט קרס באמצע. משוחררת אחרי זה. */
 const CLAIM_TIMEOUT_MS = 5 * 60_000;
@@ -46,24 +43,49 @@ function dedupeKeyFor(leadId: string, followUpAt: Date): string {
   return `followup:${leadId}:${followUpAt.toISOString()}`;
 }
 
-/** האם השעה הנוכחית בתוך חלון השליחה, בשעון ישראל. */
-export function insideSendWindow(now = Date.now()): boolean {
+/** חלון השליחה, כפי שהמנהל הגדיר אותו. */
+interface SendWindow {
+  sendWindowStartHour: number;
+  sendWindowEndHour: number;
+}
+
+/** האם רגע נתון נופל בתוך חלון השליחה, בשעון ישראל. */
+export function insideSendWindow(now: number, win: SendWindow): boolean {
   const hour = Number(israelHourMinute(now).slice(0, 2));
-  return hour >= SEND_WINDOW_START_HOUR && hour < SEND_WINDOW_END_HOUR;
+  return hour >= win.sendWindowStartHour && hour < win.sendWindowEndHour;
 }
 
 /**
  * הרגע הבא שבו מותר לשלוח. תזכורת שנקבעה ל-03:00 בטעות נדחית
  * ל-08:00 ולא נעלמת.
  */
-function nextSendableInstant(scheduled: Date): Date {
-  if (insideSendWindow(scheduled.getTime())) return scheduled;
+function nextSendableInstant(scheduled: Date, win: SendWindow): Date {
+  if (insideSendWindow(scheduled.getTime(), win)) return scheduled;
 
   const hour = Number(israelHourMinute(scheduled).slice(0, 2));
   const dayStart = startOfDay(scheduled);
   // אחרי סגירת החלון — מחר בבוקר; לפני פתיחתו — הבוקר הזה
-  const base = hour >= SEND_WINDOW_END_HOUR ? dayStart + 86_400_000 : dayStart;
-  return new Date(base + SEND_WINDOW_START_HOUR * 3_600_000);
+  const base = hour >= win.sendWindowEndHour ? dayStart + 86_400_000 : dayStart;
+  return new Date(base + win.sendWindowStartHour * 3_600_000);
+}
+
+/**
+ * כמה הודעות כבר יצאו היום (שעון ישראל).
+ *
+ * נספרות `sent` **ו-`sending`** יחד: שורה שנתבעה ועדיין לא דווחה כבר
+ * עזבה את השרת מבחינת התקרה. ספירה של `sent` בלבד הייתה מאפשרת לחרוג
+ * בגודל אצווה שלם בכל סקר.
+ */
+export async function sentToday(): Promise<number> {
+  return prisma.whatsAppMessage.count({
+    where: {
+      status: { in: ["sent", "sending"] },
+      OR: [
+        { sentAt: { gte: new Date(startOfDay(Date.now())) } },
+        { sentAt: null, claimedAt: { gte: new Date(startOfDay(Date.now())) } },
+      ],
+    },
+  });
 }
 
 /**
@@ -73,7 +95,10 @@ function nextSendableInstant(scheduled: Date): Date {
  * עם טלפון תקין. ליד ללא שיוך **מדולג בכוונה** — אין למי לשלוח,
  * וחלוקת לידים היא החלטה ניהולית שהבוט לא אמור לקבל.
  */
-async function enqueueDueFollowUps(appUrl: string): Promise<number> {
+async function enqueueDueFollowUps(
+  appUrl: string,
+  win: SendWindow,
+): Promise<number> {
   const due = await prisma.lead.findMany({
     where: {
       followUpAt: { not: null, lte: new Date() },
@@ -103,7 +128,7 @@ async function enqueueDueFollowUps(appUrl: string): Promise<number> {
           dedupeKey: key,
           toPhone: toE164(recipient.phone),
           body: followUpReminder(leadFromPrisma(row), { appUrl }),
-          scheduledFor: nextSendableInstant(scheduled),
+          scheduledFor: nextSendableInstant(scheduled, win),
           leadId: row.id,
           recipientUserId: recipient.id,
         },
@@ -205,13 +230,25 @@ async function reclaimAbandoned(): Promise<void> {
  * לא יכולים פיזית לתבוע את אותה שורה, ולכן הרצה כפולה בטוחה מעצם
  * הבנייה ואין צורך בנעילה.
  */
-async function claim(limit: number): Promise<ClaimedMessage[]> {
-  if (!insideSendWindow()) return [];
+async function claim(
+  limit: number,
+  settings: BotSettingsView,
+): Promise<ClaimedMessage[]> {
+  // שלוש בלימות, כולן "לא לתבוע" ולא "לבטל": התור נשמר וממשיך
+  // להתנקז כשהתנאי חוזר להיות מתקיים, בדיוק כמו מחשב שכובה.
+  if (settings.paused) return [];
+  if (!insideSendWindow(Date.now(), settings)) return [];
+
+  let room = Math.min(limit, 20);
+  if (settings.dailyCap > 0) {
+    room = Math.min(room, settings.dailyCap - (await sentToday()));
+    if (room <= 0) return [];
+  }
 
   const candidates = await prisma.whatsAppMessage.findMany({
     where: { status: "queued", scheduledFor: { lte: new Date() } },
     orderBy: { scheduledFor: "asc" },
-    take: Math.min(limit, 20),
+    take: room,
     select: { id: true },
   });
   if (candidates.length === 0) return [];
@@ -242,6 +279,8 @@ export interface PullResult {
   queued: number;
   /** דקות שהבוט היה שקוע, אם זו חזרה מנפילה — אחרת null */
   recoveredAfterMinutes: number | null;
+  /** מנהל עצר את השליחה מהאתר. הבוט מדפיס את זה במקום "0 בתור". */
+  paused: boolean;
 }
 
 /**
@@ -254,21 +293,27 @@ export async function pull(input: {
   limit: number;
   appUrl: string;
 }): Promise<PullResult> {
-  const previous = await prisma.botHeartbeat.findUnique({
-    where: { id: "default" },
-    select: { lastSeenAt: true },
-  });
+  const [previous, settings] = await Promise.all([
+    prisma.botHeartbeat.findUnique({
+      where: { id: "default" },
+      select: { lastSeenAt: true },
+    }),
+    readSettings(),
+  ]);
   const downMs = previous
     ? Date.now() - previous.lastSeenAt.getTime()
     : Number.POSITIVE_INFINITY;
 
-  await enqueueDueFollowUps(input.appUrl);
+  // ⚠️ המילוי רץ **גם כשעצור**. עצירה חוסמת שליחה, לא צבירה: כשמנהל
+  // משחרר את המתג הוא מצפה למצוא את מה שהצטבר, ולא לגלות שהתזכורות
+  // של השעתיים האחרונות פשוט לא קיימות.
+  await enqueueDueFollowUps(input.appUrl, settings);
   await cancelSuperseded();
   await cancelStale();
   await reclaimAbandoned();
 
   // בלי חיבור לוואטסאפ אין טעם לתבוע — התביעה הייתה מבזבזת ניסיון
-  const messages = input.waConnected ? await claim(input.limit) : [];
+  const messages = input.waConnected ? await claim(input.limit, settings) : [];
   const queued = await prisma.whatsAppMessage.count({
     where: { status: "queued" },
   });
@@ -299,6 +344,7 @@ export async function pull(input: {
       previous && downMs > RECOVERY_THRESHOLD_MS
         ? Math.round(downMs / 60_000)
         : null,
+    paused: settings.paused,
   };
 }
 

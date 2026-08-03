@@ -396,7 +396,8 @@ export const ModelName = {
   LeadCost: 'LeadCost',
   Registration: 'Registration',
   WhatsAppMessage: 'WhatsAppMessage',
-  BotHeartbeat: 'BotHeartbeat'
+  BotHeartbeat: 'BotHeartbeat',
+  BotSettings: 'BotSettings'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -412,7 +413,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat"
+    modelProps: "user" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "botSettings"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1378,6 +1379,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    BotSettings: {
+      payload: Prisma.$BotSettingsPayload<ExtArgs>
+      fields: Prisma.BotSettingsFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.BotSettingsFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotSettingsPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.BotSettingsFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotSettingsPayload>
+        }
+        findFirst: {
+          args: Prisma.BotSettingsFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotSettingsPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.BotSettingsFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotSettingsPayload>
+        }
+        findMany: {
+          args: Prisma.BotSettingsFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotSettingsPayload>[]
+        }
+        create: {
+          args: Prisma.BotSettingsCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotSettingsPayload>
+        }
+        createMany: {
+          args: Prisma.BotSettingsCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.BotSettingsCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotSettingsPayload>[]
+        }
+        delete: {
+          args: Prisma.BotSettingsDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotSettingsPayload>
+        }
+        update: {
+          args: Prisma.BotSettingsUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotSettingsPayload>
+        }
+        deleteMany: {
+          args: Prisma.BotSettingsDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.BotSettingsUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.BotSettingsUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotSettingsPayload>[]
+        }
+        upsert: {
+          args: Prisma.BotSettingsUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotSettingsPayload>
+        }
+        aggregate: {
+          args: Prisma.BotSettingsAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateBotSettings>
+        }
+        groupBy: {
+          args: Prisma.BotSettingsGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BotSettingsGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.BotSettingsCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BotSettingsCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1606,6 +1681,21 @@ export const BotHeartbeatScalarFieldEnum = {
 } as const
 
 export type BotHeartbeatScalarFieldEnum = (typeof BotHeartbeatScalarFieldEnum)[keyof typeof BotHeartbeatScalarFieldEnum]
+
+
+export const BotSettingsScalarFieldEnum = {
+  id: 'id',
+  paused: 'paused',
+  pausedReason: 'pausedReason',
+  pausedAt: 'pausedAt',
+  sendWindowStartHour: 'sendWindowStartHour',
+  sendWindowEndHour: 'sendWindowEndHour',
+  dailyCap: 'dailyCap',
+  updatedAt: 'updatedAt',
+  updatedById: 'updatedById'
+} as const
+
+export type BotSettingsScalarFieldEnum = (typeof BotSettingsScalarFieldEnum)[keyof typeof BotSettingsScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -2035,6 +2125,7 @@ export type GlobalOmitConfig = {
   registration?: Prisma.RegistrationOmit
   whatsAppMessage?: Prisma.WhatsAppMessageOmit
   botHeartbeat?: Prisma.BotHeartbeatOmit
+  botSettings?: Prisma.BotSettingsOmit
 }
 
 /* Types for Logging */

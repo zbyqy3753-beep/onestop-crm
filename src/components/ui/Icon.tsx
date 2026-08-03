@@ -34,6 +34,8 @@ export type IconKey =
   | "trash"
   | "user"
   | "clock"
+  | "pause"
+  | "play"
   | "note"
   | "feedback"
   | "logout";
@@ -170,6 +172,14 @@ const PATHS: Record<IconKey, React.ReactNode> = {
       <path d="M12 7v5l3 2" />
     </>
   ),
+  pause: (
+    <>
+      <path d="M9.5 5v14" />
+      <path d="M14.5 5v14" />
+    </>
+  ),
+  /* משולש מלא — בקו בלבד הוא נקרא כחץ ולא כ"הפעל" */
+  play: <path d="M7.5 5.5l11 6.5-11 6.5z" fill="currentColor" />,
   note: (
     <>
       <path d="M5 4h14v11l-5 5H5z" />

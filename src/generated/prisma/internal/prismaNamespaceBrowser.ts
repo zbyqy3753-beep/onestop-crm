@@ -63,7 +63,8 @@ export const ModelName = {
   LeadCost: 'LeadCost',
   Registration: 'Registration',
   WhatsAppMessage: 'WhatsAppMessage',
-  BotHeartbeat: 'BotHeartbeat'
+  BotHeartbeat: 'BotHeartbeat',
+  BotSettings: 'BotSettings'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -271,6 +272,21 @@ export const BotHeartbeatScalarFieldEnum = {
 } as const
 
 export type BotHeartbeatScalarFieldEnum = (typeof BotHeartbeatScalarFieldEnum)[keyof typeof BotHeartbeatScalarFieldEnum]
+
+
+export const BotSettingsScalarFieldEnum = {
+  id: 'id',
+  paused: 'paused',
+  pausedReason: 'pausedReason',
+  pausedAt: 'pausedAt',
+  sendWindowStartHour: 'sendWindowStartHour',
+  sendWindowEndHour: 'sendWindowEndHour',
+  dailyCap: 'dailyCap',
+  updatedAt: 'updatedAt',
+  updatedById: 'updatedById'
+} as const
+
+export type BotSettingsScalarFieldEnum = (typeof BotSettingsScalarFieldEnum)[keyof typeof BotSettingsScalarFieldEnum]
 
 
 export const SortOrder = {

@@ -3,6 +3,7 @@
 import { useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { relative } from "@/lib/format";
+import { RetryFailedButton } from "./BotControls";
 
 /**
  * רצועת מצב בוט תזכורות הוואטסאפ.
@@ -38,9 +39,12 @@ const RED_AFTER_MS = 10 * 60_000;
 export function BotStatus({
   health,
   failures,
+  paused = false,
 }: {
   health: BotHealth | null;
   failures: BotFailure[];
+  /** מנהל השהה את השליחה — הרצועה לא תתיימר להיות ירוקה */
+  paused?: boolean;
 }) {
   // אותו דפוס כמו בכל תצוגת זמן יחסי במערכת — שעון מהלקוח, אחרי
   // ההרכבה, כדי שהשרת והלקוח לא ירנדרו טקסט שונה
@@ -70,7 +74,12 @@ export function BotStatus({
         ? "bad"
         : sinceMs > AMBER_AFTER_MS || !health.waConnected
           ? "warn"
-          : "good";
+          : // השהיה ידנית אינה תקלה, אבל היא גם לא "עובד". ניטרלי ולא
+            // ענבר כדי לא להציב שתי רצועות אזהרה זו מעל זו — לוח
+            // השליטה שמתחת כבר צועק את זה בצבע.
+            paused
+            ? "neutral"
+            : "good";
 
   const title =
     tone === "bad"
@@ -79,7 +88,9 @@ export function BotStatus({
         ? "הבוט פעיל אך וואטסאפ מנותק"
         : tone === "warn"
           ? `הבוט לא דיווח כבר ${duration}`
-          : `הבוט מחובר · נראה ${seen}`;
+          : paused
+            ? `הבוט מחובר · השליחה מושהית`
+            : `הבוט מחובר · נראה ${seen}`;
 
   const details = [
     health.waNumber ? `שולח מ-${health.waNumber}` : null,
@@ -103,9 +114,15 @@ export function BotStatus({
           </summary>
           <ul className="mt-2 flex flex-col gap-1">
             {failures.map((f) => (
-              <li key={f.id} className="flex gap-2 text-xs text-ink-4">
+              <li
+                key={f.id}
+                className="flex items-center gap-2 text-xs text-ink-4"
+              >
                 <span className="ltr-num shrink-0">{f.toPhone}</span>
-                <span className="truncate">{f.lastError ?? "—"}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {f.lastError ?? "—"}
+                </span>
+                <RetryFailedButton id={f.id} />
               </li>
             ))}
           </ul>

@@ -86,6 +86,13 @@ async function tick(wa: WaClient): Promise<void> {
     return;
   }
 
+  // ⚠️ בלי השורה הזו בוט מושהה נראה בדיוק כמו בוט בלי עבודה. מי
+  // שמסתכל על החלון במשרד היה מחפש תקלה שלא קיימת.
+  if (res.paused) {
+    log(`⏸ השליחה מושהית ממסך הניהול · ${res.queued} בתור`);
+    return;
+  }
+
   if (res.messages.length === 0) return;
 
   log(`→ ${res.messages.length} תזכורות לשליחה`);
