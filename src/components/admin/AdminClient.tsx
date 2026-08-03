@@ -5,12 +5,7 @@ import type { Lead, User } from "@/lib/domain/types";
 import { Button, inputClass } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { AdminSummaryTiles } from "./AdminSummaryTiles";
-import { BotStatus, type BotFailure, type BotHealth } from "./BotStatus";
-import {
-  BotControls,
-  type BotSettings,
-  type QueuedMessage,
-} from "./BotControls";
+import { BotStatus, type BotHealth } from "./BotStatus";
 import { UsersTable } from "./UsersTable";
 import { AddUserModal } from "./AddUserModal";
 import { EditUserModal } from "./EditUserModal";
@@ -28,10 +23,9 @@ export function AdminClient({
   canImpersonate,
   currentUserId,
   botHealth,
-  botFailures,
-  botSettings,
-  botQueue,
-  botSentToday,
+  botPaused,
+  botFailureCount,
+  botQueuedCount,
 }: {
   users: User[];
   leads: Lead[];
@@ -40,10 +34,9 @@ export function AdminClient({
   currentUserId: string;
   /** `null` = הבוט מעולם לא דיווח דופק */
   botHealth: BotHealth | null;
-  botFailures: BotFailure[];
-  botSettings: BotSettings;
-  botQueue: QueuedMessage[];
-  botSentToday: number;
+  botPaused: boolean;
+  botFailureCount: number;
+  botQueuedCount: number;
 }) {
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
@@ -87,16 +80,14 @@ export function AdminClient({
         </Button>
       </header>
 
+      {/* הרצועה בלבד. השליטה עברה למסך `/bots` — היא גדלה מעבר למה
+          שמסך המשתמשים אמור להחזיק, ופיצול הוא לא רק סדר: מנהל שמחפש
+          "למה X לא קיבל תזכורת" לא אמור לגלול טבלת משתמשים כדי להגיע. */}
       <BotStatus
         health={botHealth}
-        failures={botFailures}
-        paused={botSettings.paused}
-      />
-
-      <BotControls
-        settings={botSettings}
-        queued={botQueue}
-        sentToday={botSentToday}
+        failureCount={botFailureCount}
+        paused={botPaused}
+        queuedCount={botQueuedCount}
       />
 
       <AdminSummaryTiles users={users} />

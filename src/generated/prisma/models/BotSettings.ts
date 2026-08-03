@@ -36,12 +36,14 @@ export type AggregateBotSettings = {
 export type BotSettingsAvgAggregateOutputType = {
   sendWindowStartHour: number | null
   sendWindowEndHour: number | null
+  reminderLeadMinutes: number | null
   dailyCap: number | null
 }
 
 export type BotSettingsSumAggregateOutputType = {
   sendWindowStartHour: number | null
   sendWindowEndHour: number | null
+  reminderLeadMinutes: number | null
   dailyCap: number | null
 }
 
@@ -52,6 +54,7 @@ export type BotSettingsMinAggregateOutputType = {
   pausedAt: Date | null
   sendWindowStartHour: number | null
   sendWindowEndHour: number | null
+  reminderLeadMinutes: number | null
   dailyCap: number | null
   updatedAt: Date | null
   updatedById: string | null
@@ -64,6 +67,7 @@ export type BotSettingsMaxAggregateOutputType = {
   pausedAt: Date | null
   sendWindowStartHour: number | null
   sendWindowEndHour: number | null
+  reminderLeadMinutes: number | null
   dailyCap: number | null
   updatedAt: Date | null
   updatedById: string | null
@@ -76,6 +80,7 @@ export type BotSettingsCountAggregateOutputType = {
   pausedAt: number
   sendWindowStartHour: number
   sendWindowEndHour: number
+  reminderLeadMinutes: number
   dailyCap: number
   updatedAt: number
   updatedById: number
@@ -86,12 +91,14 @@ export type BotSettingsCountAggregateOutputType = {
 export type BotSettingsAvgAggregateInputType = {
   sendWindowStartHour?: true
   sendWindowEndHour?: true
+  reminderLeadMinutes?: true
   dailyCap?: true
 }
 
 export type BotSettingsSumAggregateInputType = {
   sendWindowStartHour?: true
   sendWindowEndHour?: true
+  reminderLeadMinutes?: true
   dailyCap?: true
 }
 
@@ -102,6 +109,7 @@ export type BotSettingsMinAggregateInputType = {
   pausedAt?: true
   sendWindowStartHour?: true
   sendWindowEndHour?: true
+  reminderLeadMinutes?: true
   dailyCap?: true
   updatedAt?: true
   updatedById?: true
@@ -114,6 +122,7 @@ export type BotSettingsMaxAggregateInputType = {
   pausedAt?: true
   sendWindowStartHour?: true
   sendWindowEndHour?: true
+  reminderLeadMinutes?: true
   dailyCap?: true
   updatedAt?: true
   updatedById?: true
@@ -126,6 +135,7 @@ export type BotSettingsCountAggregateInputType = {
   pausedAt?: true
   sendWindowStartHour?: true
   sendWindowEndHour?: true
+  reminderLeadMinutes?: true
   dailyCap?: true
   updatedAt?: true
   updatedById?: true
@@ -225,6 +235,7 @@ export type BotSettingsGroupByOutputType = {
   pausedAt: Date | null
   sendWindowStartHour: number
   sendWindowEndHour: number
+  reminderLeadMinutes: number
   dailyCap: number
   updatedAt: Date
   updatedById: string | null
@@ -260,6 +271,7 @@ export type BotSettingsWhereInput = {
   pausedAt?: Prisma.DateTimeNullableFilter<"BotSettings"> | Date | string | null
   sendWindowStartHour?: Prisma.IntFilter<"BotSettings"> | number
   sendWindowEndHour?: Prisma.IntFilter<"BotSettings"> | number
+  reminderLeadMinutes?: Prisma.IntFilter<"BotSettings"> | number
   dailyCap?: Prisma.IntFilter<"BotSettings"> | number
   updatedAt?: Prisma.DateTimeFilter<"BotSettings"> | Date | string
   updatedById?: Prisma.StringNullableFilter<"BotSettings"> | string | null
@@ -272,6 +284,7 @@ export type BotSettingsOrderByWithRelationInput = {
   pausedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   sendWindowStartHour?: Prisma.SortOrder
   sendWindowEndHour?: Prisma.SortOrder
+  reminderLeadMinutes?: Prisma.SortOrder
   dailyCap?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   updatedById?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -287,6 +300,7 @@ export type BotSettingsWhereUniqueInput = Prisma.AtLeast<{
   pausedAt?: Prisma.DateTimeNullableFilter<"BotSettings"> | Date | string | null
   sendWindowStartHour?: Prisma.IntFilter<"BotSettings"> | number
   sendWindowEndHour?: Prisma.IntFilter<"BotSettings"> | number
+  reminderLeadMinutes?: Prisma.IntFilter<"BotSettings"> | number
   dailyCap?: Prisma.IntFilter<"BotSettings"> | number
   updatedAt?: Prisma.DateTimeFilter<"BotSettings"> | Date | string
   updatedById?: Prisma.StringNullableFilter<"BotSettings"> | string | null
@@ -299,6 +313,7 @@ export type BotSettingsOrderByWithAggregationInput = {
   pausedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   sendWindowStartHour?: Prisma.SortOrder
   sendWindowEndHour?: Prisma.SortOrder
+  reminderLeadMinutes?: Prisma.SortOrder
   dailyCap?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   updatedById?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -319,6 +334,7 @@ export type BotSettingsScalarWhereWithAggregatesInput = {
   pausedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"BotSettings"> | Date | string | null
   sendWindowStartHour?: Prisma.IntWithAggregatesFilter<"BotSettings"> | number
   sendWindowEndHour?: Prisma.IntWithAggregatesFilter<"BotSettings"> | number
+  reminderLeadMinutes?: Prisma.IntWithAggregatesFilter<"BotSettings"> | number
   dailyCap?: Prisma.IntWithAggregatesFilter<"BotSettings"> | number
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"BotSettings"> | Date | string
   updatedById?: Prisma.StringNullableWithAggregatesFilter<"BotSettings"> | string | null
@@ -331,6 +347,7 @@ export type BotSettingsCreateInput = {
   pausedAt?: Date | string | null
   sendWindowStartHour?: number
   sendWindowEndHour?: number
+  reminderLeadMinutes?: number
   dailyCap?: number
   updatedAt?: Date | string
   updatedById?: string | null
@@ -343,6 +360,7 @@ export type BotSettingsUncheckedCreateInput = {
   pausedAt?: Date | string | null
   sendWindowStartHour?: number
   sendWindowEndHour?: number
+  reminderLeadMinutes?: number
   dailyCap?: number
   updatedAt?: Date | string
   updatedById?: string | null
@@ -355,6 +373,7 @@ export type BotSettingsUpdateInput = {
   pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sendWindowStartHour?: Prisma.IntFieldUpdateOperationsInput | number
   sendWindowEndHour?: Prisma.IntFieldUpdateOperationsInput | number
+  reminderLeadMinutes?: Prisma.IntFieldUpdateOperationsInput | number
   dailyCap?: Prisma.IntFieldUpdateOperationsInput | number
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -367,6 +386,7 @@ export type BotSettingsUncheckedUpdateInput = {
   pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sendWindowStartHour?: Prisma.IntFieldUpdateOperationsInput | number
   sendWindowEndHour?: Prisma.IntFieldUpdateOperationsInput | number
+  reminderLeadMinutes?: Prisma.IntFieldUpdateOperationsInput | number
   dailyCap?: Prisma.IntFieldUpdateOperationsInput | number
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -379,6 +399,7 @@ export type BotSettingsCreateManyInput = {
   pausedAt?: Date | string | null
   sendWindowStartHour?: number
   sendWindowEndHour?: number
+  reminderLeadMinutes?: number
   dailyCap?: number
   updatedAt?: Date | string
   updatedById?: string | null
@@ -391,6 +412,7 @@ export type BotSettingsUpdateManyMutationInput = {
   pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sendWindowStartHour?: Prisma.IntFieldUpdateOperationsInput | number
   sendWindowEndHour?: Prisma.IntFieldUpdateOperationsInput | number
+  reminderLeadMinutes?: Prisma.IntFieldUpdateOperationsInput | number
   dailyCap?: Prisma.IntFieldUpdateOperationsInput | number
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -403,6 +425,7 @@ export type BotSettingsUncheckedUpdateManyInput = {
   pausedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sendWindowStartHour?: Prisma.IntFieldUpdateOperationsInput | number
   sendWindowEndHour?: Prisma.IntFieldUpdateOperationsInput | number
+  reminderLeadMinutes?: Prisma.IntFieldUpdateOperationsInput | number
   dailyCap?: Prisma.IntFieldUpdateOperationsInput | number
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -415,6 +438,7 @@ export type BotSettingsCountOrderByAggregateInput = {
   pausedAt?: Prisma.SortOrder
   sendWindowStartHour?: Prisma.SortOrder
   sendWindowEndHour?: Prisma.SortOrder
+  reminderLeadMinutes?: Prisma.SortOrder
   dailyCap?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   updatedById?: Prisma.SortOrder
@@ -423,6 +447,7 @@ export type BotSettingsCountOrderByAggregateInput = {
 export type BotSettingsAvgOrderByAggregateInput = {
   sendWindowStartHour?: Prisma.SortOrder
   sendWindowEndHour?: Prisma.SortOrder
+  reminderLeadMinutes?: Prisma.SortOrder
   dailyCap?: Prisma.SortOrder
 }
 
@@ -433,6 +458,7 @@ export type BotSettingsMaxOrderByAggregateInput = {
   pausedAt?: Prisma.SortOrder
   sendWindowStartHour?: Prisma.SortOrder
   sendWindowEndHour?: Prisma.SortOrder
+  reminderLeadMinutes?: Prisma.SortOrder
   dailyCap?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   updatedById?: Prisma.SortOrder
@@ -445,6 +471,7 @@ export type BotSettingsMinOrderByAggregateInput = {
   pausedAt?: Prisma.SortOrder
   sendWindowStartHour?: Prisma.SortOrder
   sendWindowEndHour?: Prisma.SortOrder
+  reminderLeadMinutes?: Prisma.SortOrder
   dailyCap?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   updatedById?: Prisma.SortOrder
@@ -453,6 +480,7 @@ export type BotSettingsMinOrderByAggregateInput = {
 export type BotSettingsSumOrderByAggregateInput = {
   sendWindowStartHour?: Prisma.SortOrder
   sendWindowEndHour?: Prisma.SortOrder
+  reminderLeadMinutes?: Prisma.SortOrder
   dailyCap?: Prisma.SortOrder
 }
 
@@ -465,6 +493,7 @@ export type BotSettingsSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   pausedAt?: boolean
   sendWindowStartHour?: boolean
   sendWindowEndHour?: boolean
+  reminderLeadMinutes?: boolean
   dailyCap?: boolean
   updatedAt?: boolean
   updatedById?: boolean
@@ -477,6 +506,7 @@ export type BotSettingsSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   pausedAt?: boolean
   sendWindowStartHour?: boolean
   sendWindowEndHour?: boolean
+  reminderLeadMinutes?: boolean
   dailyCap?: boolean
   updatedAt?: boolean
   updatedById?: boolean
@@ -489,6 +519,7 @@ export type BotSettingsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   pausedAt?: boolean
   sendWindowStartHour?: boolean
   sendWindowEndHour?: boolean
+  reminderLeadMinutes?: boolean
   dailyCap?: boolean
   updatedAt?: boolean
   updatedById?: boolean
@@ -501,12 +532,13 @@ export type BotSettingsSelectScalar = {
   pausedAt?: boolean
   sendWindowStartHour?: boolean
   sendWindowEndHour?: boolean
+  reminderLeadMinutes?: boolean
   dailyCap?: boolean
   updatedAt?: boolean
   updatedById?: boolean
 }
 
-export type BotSettingsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "paused" | "pausedReason" | "pausedAt" | "sendWindowStartHour" | "sendWindowEndHour" | "dailyCap" | "updatedAt" | "updatedById", ExtArgs["result"]["botSettings"]>
+export type BotSettingsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "paused" | "pausedReason" | "pausedAt" | "sendWindowStartHour" | "sendWindowEndHour" | "reminderLeadMinutes" | "dailyCap" | "updatedAt" | "updatedById", ExtArgs["result"]["botSettings"]>
 
 export type $BotSettingsPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "BotSettings"
@@ -525,6 +557,13 @@ export type $BotSettingsPayload<ExtArgs extends runtime.Types.Extensions.Interna
      */
     sendWindowStartHour: number
     sendWindowEndHour: number
+    /**
+     * כמה דקות **לפני** מועד החזרה לשלוח את התזכורת.
+     * 
+     * תזכורת שמגיעה בדיוק בשעת החזרה כבר מאחרת: העובד צריך לקרוא
+     * אותה, לפתוח את הפרטים ולחייג. 0 = בדיוק בשעה.
+     */
+    reminderLeadMinutes: number
     /**
      * תקרת הודעות ליום קלנדרי (שעון ישראל). 0 = בלי תקרה.
      * 
@@ -964,6 +1003,7 @@ export interface BotSettingsFieldRefs {
   readonly pausedAt: Prisma.FieldRef<"BotSettings", 'DateTime'>
   readonly sendWindowStartHour: Prisma.FieldRef<"BotSettings", 'Int'>
   readonly sendWindowEndHour: Prisma.FieldRef<"BotSettings", 'Int'>
+  readonly reminderLeadMinutes: Prisma.FieldRef<"BotSettings", 'Int'>
   readonly dailyCap: Prisma.FieldRef<"BotSettings", 'Int'>
   readonly updatedAt: Prisma.FieldRef<"BotSettings", 'DateTime'>
   readonly updatedById: Prisma.FieldRef<"BotSettings", 'String'>

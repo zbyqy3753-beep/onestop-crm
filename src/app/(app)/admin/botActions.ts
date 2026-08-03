@@ -6,6 +6,12 @@ import { requireSessionUser } from "@/server/auth/session";
 import { writeSettings } from "@/server/whatsapp/settings";
 import type { ActionResult } from "./actions";
 
+/** שני המסכים שמציגים מצב בוט — `/bots` המלא, והרצועה ב-`/admin`. */
+function revalidateBotSurfaces(): void {
+  revalidatePath("/bots");
+  revalidatePath("/admin");
+}
+
 /**
  * שליטה בבוט הוואטסאפ ממסך הניהול.
  *
@@ -49,7 +55,7 @@ export async function setBotPausedAction(
     actor.id,
   );
 
-  revalidatePath("/admin");
+  revalidateBotSurfaces();
   return { ok: true };
 }
 
@@ -81,7 +87,30 @@ export async function setBotWindowAction(
     actor.id,
   );
 
-  revalidatePath("/admin");
+  revalidateBotSurfaces();
+  return { ok: true };
+}
+
+/**
+ * כמה דקות לפני מועד החזרה לשלוח.
+ *
+ * ⚠️ משפיע רק על תזכורות שטרם נכנסו לתור. שורה שכבר ממתינה נשמרה עם
+ * `scheduledFor` מחושב ועם גוף שכתוב בו "בעוד X דק׳" — שניהם snapshot,
+ * ושינוי ההגדרה לא כותב אותם מחדש. תקרה של 180 דקות כי מעבר לזה זו
+ * כבר לא תזכורת לשיחה אלא הודעה על משהו אחר.
+ */
+export async function setBotLeadMinutesAction(
+  minutes: number,
+): Promise<ActionResult> {
+  const actor = await requireManager();
+  if (!actor) return DENIED;
+
+  if (!Number.isInteger(minutes) || minutes < 0 || minutes > 180) {
+    return { ok: false, error: "הקדמה חייבת להיות בין 0 ל-180 דקות" };
+  }
+
+  await writeSettings({ reminderLeadMinutes: minutes }, actor.id);
+  revalidateBotSurfaces();
   return { ok: true };
 }
 
@@ -95,7 +124,7 @@ export async function setBotDailyCapAction(cap: number): Promise<ActionResult> {
   }
 
   await writeSettings({ dailyCap: cap }, actor.id);
-  revalidatePath("/admin");
+  revalidateBotSurfaces();
   return { ok: true };
 }
 
@@ -122,7 +151,7 @@ export async function cancelQueuedMessageAction(
     return { ok: false, error: "ההודעה כבר נשלחה או בוטלה" };
   }
 
-  revalidatePath("/admin");
+  revalidateBotSurfaces();
   return { ok: true };
 }
 
@@ -155,6 +184,6 @@ export async function retryFailedMessageAction(
 
   if (count === 0) return { ok: false, error: "ההודעה כבר לא במצב כישלון" };
 
-  revalidatePath("/admin");
+  revalidateBotSurfaces();
   return { ok: true };
 }

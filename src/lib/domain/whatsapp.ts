@@ -72,17 +72,31 @@ function clamp(text: string, max = 160): string {
  */
 export function followUpReminder(
   lead: Lead,
-  opts: { appUrl: string; late?: boolean },
+  opts: { appUrl: string; late?: boolean; leadMinutes?: number },
 ): string {
   const scheduled = lead.followUpAt ? Date.parse(lead.followUpAt) : null;
   const lastDetail = [...lead.history].reverse().find((h) => h.detail)?.detail;
   const status = STATUS_CONFIG[lead.status];
   const priority = PRIORITY_CONFIG[lead.priority];
 
+  /*
+   * ⚠️ הכותרת **חייבת** לומר את השעה כשההודעה מוקדמת.
+   *
+   * "תזכורת חזרה" סתם, שמגיעה עשר דקות לפני, קוראת כמו "תחזור עכשיו"
+   * — והעובד או מחייג מוקדם מדי או מניח שיש לו זמן ומאחר. השעה
+   * בכותרת היא ההבדל בין הקדמה מועילה להודעה מבלבלת.
+   */
+  const at = scheduled !== null ? israelHourMinute(scheduled) : null;
+  const ahead = opts.leadMinutes ?? 0;
+
   const header =
-    opts.late && scheduled !== null
-      ? `⏰ תזכורת באיחור — הייתה אמורה לצאת ב-${israelHourMinute(scheduled)}`
-      : "⏰ תזכורת חזרה";
+    opts.late && at
+      ? `⏰ תזכורת באיחור — החזרה הייתה ב-${at}`
+      : ahead > 0 && at
+        ? `⏰ חזרה בעוד ${ahead} דק׳ — ${at}`
+        : at
+          ? `⏰ תזכורת חזרה — ${at}`
+          : "⏰ תזכורת חזרה";
 
   const body = [
     header,

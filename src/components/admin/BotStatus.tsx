@@ -1,16 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { relative } from "@/lib/format";
-import { RetryFailedButton } from "./BotControls";
 
 /**
- * רצועת מצב בוט תזכורות הוואטסאפ.
+ * רצועת מצב בוט תזכורות הוואטסאפ, במסך ניהול המערכת.
  *
  * הבוט רץ על מחשב במשרד שאף אחד לא מסתכל עליו, והכשל השקט הוא
  * המסוכן: "לא הגיעו תזכורות" ו"לא היו תזכורות" נראים בדיוק אותו דבר.
- * הרצועה הזו היא המקום היחיד שבו ההבדל נראה.
+ *
+ * ⚠️ זו **רק** הרצועה. ההגדרות, התור, ההיסטוריה והנמענים עברו למסך
+ * `/bots` — הם גדלו מעבר למה שמסך המשתמשים אמור להחזיק. הרצועה נשארה
+ * כאן כי היא התשובה ל"האם משהו דורש את תשומת ליבי", ומסך הניהול הוא
+ * המקום שנפתח כדי לשאול את זה.
  *
  * שלושה מצבים, לפי הזמן מאז הדופק האחרון — הבוט מדווח כל 60 שניות:
  *   ירוק  <3 דק׳  מחובר ועובד
@@ -26,25 +30,20 @@ export interface BotHealth {
   queuedCount: number;
 }
 
-export interface BotFailure {
-  id: string;
-  toPhone: string;
-  lastError: string | null;
-  scheduledFor: string;
-}
-
 const AMBER_AFTER_MS = 3 * 60_000;
 const RED_AFTER_MS = 10 * 60_000;
 
 export function BotStatus({
   health,
-  failures,
+  failureCount = 0,
   paused = false,
+  queuedCount = 0,
 }: {
   health: BotHealth | null;
-  failures: BotFailure[];
+  failureCount?: number;
   /** מנהל השהה את השליחה — הרצועה לא תתיימר להיות ירוקה */
   paused?: boolean;
+  queuedCount?: number;
 }) {
   // אותו דפוס כמו בכל תצוגת זמן יחסי במערכת — שעון מהלקוח, אחרי
   // ההרכבה, כדי שהשרת והלקוח לא ירנדרו טקסט שונה
@@ -54,7 +53,6 @@ export function BotStatus({
     return (
       <Strip
         tone="neutral"
-        icon="whatsapp"
         title="בוט התזכורות עדיין לא חובר"
         body="עד שהוא יחובר, תזכורות חזרה לא נשלחות בוואטסאפ."
       />
@@ -74,9 +72,7 @@ export function BotStatus({
         ? "bad"
         : sinceMs > AMBER_AFTER_MS || !health.waConnected
           ? "warn"
-          : // השהיה ידנית אינה תקלה, אבל היא גם לא "עובד". ניטרלי ולא
-            // ענבר כדי לא להציב שתי רצועות אזהרה זו מעל זו — לוח
-            // השליטה שמתחת כבר צועק את זה בצבע.
+          : // השהיה ידנית אינה תקלה, אבל היא גם לא "עובד"
             paused
             ? "neutral"
             : "good";
@@ -89,47 +85,16 @@ export function BotStatus({
         : tone === "warn"
           ? `הבוט לא דיווח כבר ${duration}`
           : paused
-            ? `הבוט מחובר · השליחה מושהית`
+            ? "הבוט מחובר · השליחה מושהית"
             : `הבוט מחובר · נראה ${seen}`;
 
   const details = [
     health.waNumber ? `שולח מ-${health.waNumber}` : null,
-    health.queuedCount > 0 ? `${health.queuedCount} תזכורות בתור` : null,
-    health.instanceId,
+    queuedCount > 0 ? `${queuedCount} תזכורות בתור` : null,
+    failureCount > 0 ? `${failureCount} כשלים` : null,
   ].filter(Boolean);
 
-  return (
-    <div className="mb-4">
-      <Strip
-        tone={tone}
-        icon="whatsapp"
-        title={title}
-        body={details.join(" · ")}
-      />
-
-      {failures.length > 0 && (
-        <details className="mt-2 rounded-card border border-line bg-surface px-3 py-2">
-          <summary className="cursor-pointer text-xs text-ink-3">
-            {failures.length} תזכורות שנכשלו לאחרונה
-          </summary>
-          <ul className="mt-2 flex flex-col gap-1">
-            {failures.map((f) => (
-              <li
-                key={f.id}
-                className="flex items-center gap-2 text-xs text-ink-4"
-              >
-                <span className="ltr-num shrink-0">{f.toPhone}</span>
-                <span className="min-w-0 flex-1 truncate">
-                  {f.lastError ?? "—"}
-                </span>
-                <RetryFailedButton id={f.id} />
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-    </div>
-  );
+  return <Strip tone={tone} title={title} body={details.join(" · ")} />;
 }
 
 type Tone = "good" | "warn" | "bad" | "neutral";
@@ -141,27 +106,32 @@ const TONE_CLASS: Record<Tone, string> = {
   neutral: "border-line bg-surface-2 text-ink-3",
 };
 
+/**
+ * הרצועה כולה קישור ל-`/bots`.
+ *
+ * כשהיא אדומה השאלה הבאה תמיד אותה שאלה — "מה קרה ומה עושים" —
+ * ולחיצה על מה שהתריע היא המקום שמחפשים בו את התשובה.
+ */
 function Strip({
   tone,
-  icon,
   title,
   body,
 }: {
   tone: Tone;
-  icon: "whatsapp";
   title: string;
   body?: string;
 }) {
   return (
-    <div
-      className={`flex items-center gap-2.5 rounded-card border px-3 py-2.5 ${TONE_CLASS[tone]}`}
-      role="status"
+    <Link
+      href="/bots"
+      className={`mb-4 flex items-center gap-2.5 rounded-card border px-3 py-2.5 transition-opacity hover:opacity-90 ${TONE_CLASS[tone]}`}
     >
-      <Icon name={icon} size={18} />
-      <div className="min-w-0">
+      <Icon name="whatsapp" size={18} />
+      <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold">{title}</p>
         {body && <p className="truncate text-xs opacity-80">{body}</p>}
       </div>
-    </div>
+      <Icon name="chevronLeft" size={16} className="shrink-0 opacity-60" />
+    </Link>
   );
 }

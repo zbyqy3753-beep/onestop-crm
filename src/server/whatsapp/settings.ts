@@ -20,6 +20,7 @@ export interface BotSettingsView {
   pausedAt: Date | null;
   sendWindowStartHour: number;
   sendWindowEndHour: number;
+  reminderLeadMinutes: number;
   dailyCap: number;
 }
 
@@ -36,6 +37,7 @@ export const BOT_DEFAULTS: BotSettingsView = {
   pausedAt: null,
   sendWindowStartHour: 8,
   sendWindowEndHour: 21,
+  reminderLeadMinutes: 10,
   dailyCap: 200,
 };
 
@@ -48,6 +50,7 @@ export async function readSettings(): Promise<BotSettingsView> {
       pausedAt: true,
       sendWindowStartHour: true,
       sendWindowEndHour: true,
+      reminderLeadMinutes: true,
       dailyCap: true,
     },
   });
@@ -63,7 +66,12 @@ export async function writeSettings(
   patch: Partial<
     Pick<
       BotSettingsView,
-      "paused" | "pausedReason" | "sendWindowStartHour" | "sendWindowEndHour" | "dailyCap"
+      | "paused"
+      | "pausedReason"
+      | "sendWindowStartHour"
+      | "sendWindowEndHour"
+      | "reminderLeadMinutes"
+      | "dailyCap"
     >
   > & { pausedAt?: Date | null },
   actorId: string,

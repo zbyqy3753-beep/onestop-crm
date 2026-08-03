@@ -1782,6 +1782,7 @@ export const BotSettingsScalarFieldEnum = {
   pausedAt: 'pausedAt',
   sendWindowStartHour: 'sendWindowStartHour',
   sendWindowEndHour: 'sendWindowEndHour',
+  reminderLeadMinutes: 'reminderLeadMinutes',
   dailyCap: 'dailyCap',
   updatedAt: 'updatedAt',
   updatedById: 'updatedById'

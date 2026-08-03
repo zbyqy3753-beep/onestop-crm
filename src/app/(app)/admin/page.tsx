@@ -4,7 +4,6 @@ import { db } from "@/server/repositories";
 import { prisma } from "@/server/db/client";
 import { requireSessionUser } from "@/server/auth/session";
 import { readSettings } from "@/server/whatsapp/settings";
-import { sentToday } from "@/server/whatsapp/outbox";
 
 /**
  * רכיב שרת. שולף דרך שכבת ה-repository בלבד ומעביר למטה.
@@ -22,41 +21,20 @@ export default async function AdminPage() {
   const actor = await requireSessionUser();
   if (!ALLOWED.includes(actor.role as (typeof ALLOWED)[number])) notFound();
 
-  const [users, { rows: leads }, health, failures, settings, queue, todayCount] =
+  // ⚠️ רק מה שהרצועה צריכה. הפירוט המלא — תור, היסטוריה, נמענים —
+  // חי ב-`/bots`, ושליפתו כאן הייתה עולה בכל טעינה של מסך המשתמשים
+  // בשביל נתונים שהמסך הזה לא מציג.
+  const [users, { rows: leads }, health, failureCount, queuedCount, settings] =
     await Promise.all([
       db.users.list(),
       db.leads.list(),
-      // הדופק, הכשלים והתור נקראים ישירות מ-Prisma ולא דרך repository:
-      // אין להם מימוש בזיכרון ואין להם קורא שני. שכבת repository כאן
-      // הייתה הפשטה לצרכן יחיד.
+      // הדופק והספירות נקראים ישירות מ-Prisma ולא דרך repository: אין
+      // להם מימוש בזיכרון ואין להם קורא שני. שכבת repository כאן הייתה
+      // הפשטה לצרכן יחיד.
       prisma.botHeartbeat.findUnique({ where: { id: "default" } }),
-      prisma.whatsAppMessage.findMany({
-        where: { status: "failed" },
-        orderBy: { scheduledFor: "desc" },
-        take: 20,
-        select: {
-          id: true,
-          toPhone: true,
-          lastError: true,
-          scheduledFor: true,
-        },
-      }),
+      prisma.whatsAppMessage.count({ where: { status: "failed" } }),
+      prisma.whatsAppMessage.count({ where: { status: "queued" } }),
       readSettings(),
-      // 50 ולא הכול: כשהתור ארוך באמת (מחשב שהיה כבוי סוף שבוע) הרשימה
-      // המלאה מנפחת את ה-HTML של המסך בלי להוסיף החלטה שאפשר לקבל ממנה
-      prisma.whatsAppMessage.findMany({
-        where: { status: "queued" },
-        orderBy: { scheduledFor: "asc" },
-        take: 50,
-        select: {
-          id: true,
-          toPhone: true,
-          body: true,
-          scheduledFor: true,
-          recipient: { select: { name: true } },
-        },
-      }),
-      sentToday(),
     ]);
 
   return (
@@ -76,22 +54,9 @@ export default async function AdminPage() {
             }
           : null
       }
-      botFailures={failures.map((f) => ({
-        ...f,
-        scheduledFor: f.scheduledFor.toISOString(),
-      }))}
-      botSettings={{
-        ...settings,
-        pausedAt: settings.pausedAt?.toISOString() ?? null,
-      }}
-      botQueue={queue.map((m) => ({
-        id: m.id,
-        toPhone: m.toPhone,
-        body: m.body,
-        scheduledFor: m.scheduledFor.toISOString(),
-        recipientName: m.recipient?.name ?? null,
-      }))}
-      botSentToday={todayCount}
+      botPaused={settings.paused}
+      botFailureCount={failureCount}
+      botQueuedCount={queuedCount}
     />
   );
 }

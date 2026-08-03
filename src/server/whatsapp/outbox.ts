@@ -94,14 +94,25 @@ export async function sentToday(): Promise<number> {
  * תנאי הזכאות: תאריך חזרה שהגיע, סטטוס לא סופי, משויך לעובד פעיל
  * עם טלפון תקין. ליד ללא שיוך **מדולג בכוונה** — אין למי לשלוח,
  * וחלוקת לידים היא החלטה ניהולית שהבוט לא אמור לקבל.
+ *
+ * ⚠️ התזכורת יוצאת `reminderLeadMinutes` **לפני** מועד החזרה, ולכן
+ * החלון כאן הוא `followUpAt <= now + lead` ולא `<= now`. בלי ההקדמה
+ * הזו התזכורת מגיעה בדיוק בשנייה שבה כבר היה צריך לחייג, והעובד
+ * מתחיל את השיחה באיחור של הזמן שלקח לו לקרוא אותה.
+ *
+ * ה-`dedupeKey` נשאר על `followUpAt` המקורי ולא על מועד השליחה:
+ * שינוי ההקדמה בהגדרות **לא** אמור לייצר תזכורת שנייה לאותה חזרה.
  */
 async function enqueueDueFollowUps(
   appUrl: string,
-  win: SendWindow,
+  settings: BotSettingsView,
 ): Promise<number> {
+  const win = settings;
+  const leadMs = Math.max(0, settings.reminderLeadMinutes) * 60_000;
+
   const due = await prisma.lead.findMany({
     where: {
-      followUpAt: { not: null, lte: new Date() },
+      followUpAt: { not: null, lte: new Date(Date.now() + leadMs) },
       assigneeId: { not: null },
       assignee: { active: true, phone: { not: null } },
     },
@@ -122,13 +133,23 @@ async function enqueueDueFollowUps(
     const scheduled = row.followUpAt!;
     const key = dedupeKeyFor(row.id, scheduled);
 
+    // מתי ההודעה אמורה לצאת — מוקדם ממועד החזרה, ומוסט קדימה אם
+    // ההקדמה הוציאה אותה מחוץ לחלון (חזרה ב-08:05 פחות 10 דקות)
+    const sendAt = new Date(scheduled.getTime() - leadMs);
+
     try {
       await prisma.whatsAppMessage.create({
         data: {
           dedupeKey: key,
           toPhone: toE164(recipient.phone),
-          body: followUpReminder(leadFromPrisma(row), { appUrl }),
-          scheduledFor: nextSendableInstant(scheduled, win),
+          body: followUpReminder(leadFromPrisma(row), {
+            appUrl,
+            leadMinutes: settings.reminderLeadMinutes,
+            // מועד החזרה כבר עבר ברגע הכניסה לתור = המחשב במשרד היה
+            // כבוי. "בעוד 10 דקות" על חזרה מלפני שעתיים הוא שקר
+            late: sendAt.getTime() < Date.now() - 60_000,
+          }),
+          scheduledFor: nextSendableInstant(sendAt, win),
           leadId: row.id,
           recipientUserId: recipient.id,
         },
@@ -308,6 +329,7 @@ export async function pull(input: {
   // משחרר את המתג הוא מצפה למצוא את מה שהצטבר, ולא לגלות שהתזכורות
   // של השעתיים האחרונות פשוט לא קיימות.
   await enqueueDueFollowUps(input.appUrl, settings);
+
   await cancelSuperseded();
   await cancelStale();
   await reclaimAbandoned();
