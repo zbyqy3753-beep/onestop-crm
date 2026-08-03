@@ -91,6 +91,55 @@ async function tick(wa: WaClient): Promise<void> {
   await deliver(wa, res.messages);
 }
 
+/** השהיה מדורגת בין ניסיונות חיבור, עד חצי דקה. */
+const backoffMs = (attempt: number) =>
+  Math.min(2_000 * 2 ** Math.min(attempt, 4), 30_000);
+
+/**
+ * מחזיק את החיבור החי ומחדש אותו כשהוא נופל.
+ *
+ * ⚠️ בלי זה נפילת רשת אחת הייתה משביתה את הבוט לצמיתות: הסוקט מת,
+ * `isConnected` מחזיר false לנצח, והתהליך ממשיך לדווח דופק ענבר בלי
+ * לשלוח כלום. על תהליך שאמור לרוץ חודשים זה לא תרחיש קצה.
+ */
+function createSupervisor() {
+  let wa: WaClient | null = null;
+  let attempt = 0;
+  let reconnecting = false;
+
+  async function open(): Promise<void> {
+    if (reconnecting) return;
+    reconnecting = true;
+    try {
+      wa = await connect({
+        onOpen: (number) => {
+          attempt = 0;
+          log(`✓ וואטסאפ מחובר: +${number ?? "?"}`);
+        },
+        onLoggedOut: () => {
+          // מחיקת החיבור מהטלפון — אין דרך לתקן את זה מכאן
+          log("✗ הסשן נותק מהטלפון. מחק את bot/auth והרץ npm run pair");
+          process.exit(1);
+        },
+        onClosed: (reason) => {
+          const wait = backoffMs(attempt++);
+          log(`⚠ החיבור נפל (${reason ?? "?"}) · ניסיון חוזר בעוד ${wait / 1000}ש׳`);
+          wa = null;
+          setTimeout(() => void open(), wait);
+        },
+      });
+    } catch (e) {
+      const wait = backoffMs(attempt++);
+      log(`⚠ החיבור נכשל: ${e instanceof Error ? e.message : e} · שוב בעוד ${wait / 1000}ש׳`);
+      setTimeout(() => void open(), wait);
+    } finally {
+      reconnecting = false;
+    }
+  }
+
+  return { open, current: () => wa };
+}
+
 async function main() {
   if (!isPaired()) {
     console.error("\n✗ הבוט לא מחובר לוואטסאפ.");
@@ -100,20 +149,27 @@ async function main() {
 
   log(`מתחיל · מופע ${INSTANCE_ID}`);
 
-  const wa = await connect({
-    onOpen: (number) => log(`✓ וואטסאפ מחובר: +${number ?? "?"}`),
-    onLoggedOut: () => {
-      // מחיקת החיבור מהטלפון — אין דרך לתקן את זה מכאן
-      log("✗ הסשן נותק מהטלפון. מחק את bot/auth והרץ npm run pair");
-      process.exit(1);
-    },
-  });
+  const supervisor = createSupervisor();
+  await supervisor.open();
 
-  // סקר ראשון מיד, כדי שדופק ייכתב בלי לחכות דקה
-  await tick(wa);
-  setInterval(() => {
-    void tick(wa);
-  }, POLL_INTERVAL_MS);
+  // הסקר רץ גם כשהחיבור נפל: הדופק הוא מה שהופך "הבוט מת" לנראה
+  // במסך הניהול במקום להיות שקט
+  const poll = async () => {
+    const wa = supervisor.current();
+    await tick(
+      wa ?? {
+        isConnected: () => false,
+        number: () => undefined,
+        send: async () => {
+          throw new Error("אין חיבור");
+        },
+        socket: null as never,
+      },
+    );
+  };
+
+  await poll();
+  setInterval(() => void poll(), POLL_INTERVAL_MS);
 }
 
 main().catch((e) => {

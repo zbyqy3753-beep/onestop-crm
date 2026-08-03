@@ -34,6 +34,11 @@ export interface ConnectOptions {
   /** נקרא כשהסשן נפסל — צריך מחיקת auth וסריקה מחדש. */
   onLoggedOut?: () => void;
   onOpen?: (number?: string) => void;
+  /**
+   * נקרא בכל ניתוק **שאינו** התנתקות מהטלפון — קוד QR שפג, נפילת
+   * רשת, או סגירה מהצד השני. הקורא מחליט אם להתחבר מחדש.
+   */
+  onClosed?: (reason?: number) => void;
 }
 
 export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
@@ -46,6 +51,9 @@ export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
     auth: state,
     // ה-QR מטופל אצלנו ולא מודפס אוטומטית
     printQRInTerminal: false,
+    // ברירת המחדל היא 60 שניות — קצר מדי למי שצריך גם למצוא את
+    // הטלפון וגם לנווט בתפריטי וואטסאפ
+    qrTimeout: 120_000,
     // בלי תצוגה מקדימה של קישורים — היא גוררת עיבוד תמונה מיותר
     generateHighQualityLinkPreview: false,
     logger: pino({ level: "silent" }),
@@ -73,6 +81,8 @@ export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
       // התנתקות מכוונת מהטלפון — הסשן מת ואין טעם לנסות שוב
       if (status === DisconnectReason.loggedOut) {
         opts.onLoggedOut?.();
+      } else {
+        opts.onClosed?.(status);
       }
     }
   });
