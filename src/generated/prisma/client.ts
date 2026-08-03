@@ -98,3 +98,22 @@ export type LeadCost = Prisma.LeadCostModel
  * לא ליד מכירה. ישות נפרדת לגמרי מ-Lead.
  */
 export type Registration = Prisma.RegistrationModel
+/**
+ * Model WhatsAppMessage
+ * תור ההודעות היוצאות לוואטסאפ.
+ * 
+ * ה-CRM מחליט מה נשלח ולמי ומרנדר את הטקסט; הבוט שרץ על המחשב במשרד
+ * רק מושך שורות, שולח, ומדווח. כל ההיגיון והעברית נשארים כאן.
+ * 
+ * `toPhone` ו-`body` הם snapshot ולא נגזרים בזמן השליחה: אחרי שההודעה
+ * יצאה, מה שנשלח בפועל הוא עובדה היסטורית שלא משתנה כשהליד מתעדכן.
+ */
+export type WhatsAppMessage = Prisma.WhatsAppMessageModel
+/**
+ * Model BotHeartbeat
+ * דופק הבוט — שורה יחידה (`id = "default"`).
+ * 
+ * הבוט רץ על מחשב במשרד שאף אחד לא מסתכל עליו. בלי הדופק הזה,
+ * "לא הגיעו תזכורות" ו"לא היו תזכורות" נראים בדיוק אותו דבר.
+ */
+export type BotHeartbeat = Prisma.BotHeartbeatModel

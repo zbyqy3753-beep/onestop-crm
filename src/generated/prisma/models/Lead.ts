@@ -350,6 +350,7 @@ export type LeadWhereInput = {
   history?: Prisma.LeadStatusEventListRelationFilter
   activity?: Prisma.LeadActivityListRelationFilter
   deal?: Prisma.XOR<Prisma.DealNullableScalarRelationFilter, Prisma.DealWhereInput> | null
+  whatsappMessages?: Prisma.WhatsAppMessageListRelationFilter
 }
 
 export type LeadOrderByWithRelationInput = {
@@ -380,6 +381,7 @@ export type LeadOrderByWithRelationInput = {
   history?: Prisma.LeadStatusEventOrderByRelationAggregateInput
   activity?: Prisma.LeadActivityOrderByRelationAggregateInput
   deal?: Prisma.DealOrderByWithRelationInput
+  whatsappMessages?: Prisma.WhatsAppMessageOrderByRelationAggregateInput
 }
 
 export type LeadWhereUniqueInput = Prisma.AtLeast<{
@@ -413,6 +415,7 @@ export type LeadWhereUniqueInput = Prisma.AtLeast<{
   history?: Prisma.LeadStatusEventListRelationFilter
   activity?: Prisma.LeadActivityListRelationFilter
   deal?: Prisma.XOR<Prisma.DealNullableScalarRelationFilter, Prisma.DealWhereInput> | null
+  whatsappMessages?: Prisma.WhatsAppMessageListRelationFilter
 }, "id">
 
 export type LeadOrderByWithAggregationInput = {
@@ -497,6 +500,7 @@ export type LeadCreateInput = {
   history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
   activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealCreateNestedOneWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutLeadInput
 }
 
 export type LeadUncheckedCreateInput = {
@@ -525,6 +529,7 @@ export type LeadUncheckedCreateInput = {
   history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
   activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutLeadInput
 }
 
 export type LeadUpdateInput = {
@@ -553,6 +558,7 @@ export type LeadUpdateInput = {
   history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
   activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadUncheckedUpdateInput = {
@@ -581,6 +587,7 @@ export type LeadUncheckedUpdateInput = {
   history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
   activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadCreateManyInput = {
@@ -746,6 +753,11 @@ export type LeadSumOrderByAggregateInput = {
 export type LeadScalarRelationFilter = {
   is?: Prisma.LeadWhereInput
   isNot?: Prisma.LeadWhereInput
+}
+
+export type LeadNullableScalarRelationFilter = {
+  is?: Prisma.LeadWhereInput | null
+  isNot?: Prisma.LeadWhereInput | null
 }
 
 export type LeadCreateNestedManyWithoutAssigneeInput = {
@@ -920,6 +932,22 @@ export type LeadUpdateOneRequiredWithoutDealNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.LeadUpdateToOneWithWhereWithoutDealInput, Prisma.LeadUpdateWithoutDealInput>, Prisma.LeadUncheckedUpdateWithoutDealInput>
 }
 
+export type LeadCreateNestedOneWithoutWhatsappMessagesInput = {
+  create?: Prisma.XOR<Prisma.LeadCreateWithoutWhatsappMessagesInput, Prisma.LeadUncheckedCreateWithoutWhatsappMessagesInput>
+  connectOrCreate?: Prisma.LeadCreateOrConnectWithoutWhatsappMessagesInput
+  connect?: Prisma.LeadWhereUniqueInput
+}
+
+export type LeadUpdateOneWithoutWhatsappMessagesNestedInput = {
+  create?: Prisma.XOR<Prisma.LeadCreateWithoutWhatsappMessagesInput, Prisma.LeadUncheckedCreateWithoutWhatsappMessagesInput>
+  connectOrCreate?: Prisma.LeadCreateOrConnectWithoutWhatsappMessagesInput
+  upsert?: Prisma.LeadUpsertWithoutWhatsappMessagesInput
+  disconnect?: Prisma.LeadWhereInput | boolean
+  delete?: Prisma.LeadWhereInput | boolean
+  connect?: Prisma.LeadWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.LeadUpdateToOneWithWhereWithoutWhatsappMessagesInput, Prisma.LeadUpdateWithoutWhatsappMessagesInput>, Prisma.LeadUncheckedUpdateWithoutWhatsappMessagesInput>
+}
+
 export type LeadCreateWithoutAssigneeInput = {
   id?: string
   name: string
@@ -945,6 +973,7 @@ export type LeadCreateWithoutAssigneeInput = {
   history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
   activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealCreateNestedOneWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutLeadInput
 }
 
 export type LeadUncheckedCreateWithoutAssigneeInput = {
@@ -972,6 +1001,7 @@ export type LeadUncheckedCreateWithoutAssigneeInput = {
   history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
   activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutLeadInput
 }
 
 export type LeadCreateOrConnectWithoutAssigneeInput = {
@@ -1009,6 +1039,7 @@ export type LeadCreateWithoutCreatedByInput = {
   history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
   activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealCreateNestedOneWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutLeadInput
 }
 
 export type LeadUncheckedCreateWithoutCreatedByInput = {
@@ -1036,6 +1067,7 @@ export type LeadUncheckedCreateWithoutCreatedByInput = {
   history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
   activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutLeadInput
 }
 
 export type LeadCreateOrConnectWithoutCreatedByInput = {
@@ -1132,6 +1164,7 @@ export type LeadCreateWithoutNotesInput = {
   history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
   activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealCreateNestedOneWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutLeadInput
 }
 
 export type LeadUncheckedCreateWithoutNotesInput = {
@@ -1159,6 +1192,7 @@ export type LeadUncheckedCreateWithoutNotesInput = {
   history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
   activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutLeadInput
 }
 
 export type LeadCreateOrConnectWithoutNotesInput = {
@@ -1202,6 +1236,7 @@ export type LeadUpdateWithoutNotesInput = {
   history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
   activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadUncheckedUpdateWithoutNotesInput = {
@@ -1229,6 +1264,7 @@ export type LeadUncheckedUpdateWithoutNotesInput = {
   history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
   activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadCreateWithoutActivityInput = {
@@ -1256,6 +1292,7 @@ export type LeadCreateWithoutActivityInput = {
   notes?: Prisma.LeadNoteCreateNestedManyWithoutLeadInput
   history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealCreateNestedOneWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutLeadInput
 }
 
 export type LeadUncheckedCreateWithoutActivityInput = {
@@ -1283,6 +1320,7 @@ export type LeadUncheckedCreateWithoutActivityInput = {
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutLeadInput
   history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutLeadInput
 }
 
 export type LeadCreateOrConnectWithoutActivityInput = {
@@ -1326,6 +1364,7 @@ export type LeadUpdateWithoutActivityInput = {
   notes?: Prisma.LeadNoteUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadUncheckedUpdateWithoutActivityInput = {
@@ -1353,6 +1392,7 @@ export type LeadUncheckedUpdateWithoutActivityInput = {
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadCreateWithoutHistoryInput = {
@@ -1380,6 +1420,7 @@ export type LeadCreateWithoutHistoryInput = {
   notes?: Prisma.LeadNoteCreateNestedManyWithoutLeadInput
   activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealCreateNestedOneWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutLeadInput
 }
 
 export type LeadUncheckedCreateWithoutHistoryInput = {
@@ -1407,6 +1448,7 @@ export type LeadUncheckedCreateWithoutHistoryInput = {
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutLeadInput
   activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
   deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutLeadInput
 }
 
 export type LeadCreateOrConnectWithoutHistoryInput = {
@@ -1450,6 +1492,7 @@ export type LeadUpdateWithoutHistoryInput = {
   notes?: Prisma.LeadNoteUpdateManyWithoutLeadNestedInput
   activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadUncheckedUpdateWithoutHistoryInput = {
@@ -1477,6 +1520,7 @@ export type LeadUncheckedUpdateWithoutHistoryInput = {
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutLeadNestedInput
   activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadCreateWithoutDealInput = {
@@ -1504,6 +1548,7 @@ export type LeadCreateWithoutDealInput = {
   notes?: Prisma.LeadNoteCreateNestedManyWithoutLeadInput
   history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
   activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutLeadInput
 }
 
 export type LeadUncheckedCreateWithoutDealInput = {
@@ -1531,6 +1576,7 @@ export type LeadUncheckedCreateWithoutDealInput = {
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutLeadInput
   history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
   activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutLeadInput
 }
 
 export type LeadCreateOrConnectWithoutDealInput = {
@@ -1574,6 +1620,7 @@ export type LeadUpdateWithoutDealInput = {
   notes?: Prisma.LeadNoteUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
   activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadUncheckedUpdateWithoutDealInput = {
@@ -1601,6 +1648,135 @@ export type LeadUncheckedUpdateWithoutDealInput = {
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutLeadNestedInput
   history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
   activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutLeadNestedInput
+}
+
+export type LeadCreateWithoutWhatsappMessagesInput = {
+  id?: string
+  name: string
+  phone: string
+  email?: string | null
+  city?: string | null
+  kind?: $Enums.LeadKind
+  status?: $Enums.LeadStatus
+  priority?: $Enums.Priority
+  source?: $Enums.LeadSource
+  category?: $Enums.LeadCategory | null
+  currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
+  sourceDetail?: string | null
+  packageName?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastContactAt?: Date | string | null
+  followUpAt?: Date | string | null
+  assignee?: Prisma.UserCreateNestedOneWithoutAssignedLeadsInput
+  createdBy: Prisma.UserCreateNestedOneWithoutCreatedLeadsInput
+  notes?: Prisma.LeadNoteCreateNestedManyWithoutLeadInput
+  history?: Prisma.LeadStatusEventCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityCreateNestedManyWithoutLeadInput
+  deal?: Prisma.DealCreateNestedOneWithoutLeadInput
+}
+
+export type LeadUncheckedCreateWithoutWhatsappMessagesInput = {
+  id?: string
+  name: string
+  phone: string
+  email?: string | null
+  city?: string | null
+  kind?: $Enums.LeadKind
+  status?: $Enums.LeadStatus
+  priority?: $Enums.Priority
+  source?: $Enums.LeadSource
+  category?: $Enums.LeadCategory | null
+  currentProvider?: $Enums.Provider | null
+  cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: boolean
+  sourceDetail?: string | null
+  packageName?: string | null
+  assigneeId?: string | null
+  createdById: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastContactAt?: Date | string | null
+  followUpAt?: Date | string | null
+  notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutLeadInput
+  history?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutLeadInput
+  activity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutLeadInput
+  deal?: Prisma.DealUncheckedCreateNestedOneWithoutLeadInput
+}
+
+export type LeadCreateOrConnectWithoutWhatsappMessagesInput = {
+  where: Prisma.LeadWhereUniqueInput
+  create: Prisma.XOR<Prisma.LeadCreateWithoutWhatsappMessagesInput, Prisma.LeadUncheckedCreateWithoutWhatsappMessagesInput>
+}
+
+export type LeadUpsertWithoutWhatsappMessagesInput = {
+  update: Prisma.XOR<Prisma.LeadUpdateWithoutWhatsappMessagesInput, Prisma.LeadUncheckedUpdateWithoutWhatsappMessagesInput>
+  create: Prisma.XOR<Prisma.LeadCreateWithoutWhatsappMessagesInput, Prisma.LeadUncheckedCreateWithoutWhatsappMessagesInput>
+  where?: Prisma.LeadWhereInput
+}
+
+export type LeadUpdateToOneWithWhereWithoutWhatsappMessagesInput = {
+  where?: Prisma.LeadWhereInput
+  data: Prisma.XOR<Prisma.LeadUpdateWithoutWhatsappMessagesInput, Prisma.LeadUncheckedUpdateWithoutWhatsappMessagesInput>
+}
+
+export type LeadUpdateWithoutWhatsappMessagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  kind?: Prisma.EnumLeadKindFieldUpdateOperationsInput | $Enums.LeadKind
+  status?: Prisma.EnumLeadStatusFieldUpdateOperationsInput | $Enums.LeadStatus
+  priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
+  category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
+  currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  assignee?: Prisma.UserUpdateOneWithoutAssignedLeadsNestedInput
+  createdBy?: Prisma.UserUpdateOneRequiredWithoutCreatedLeadsNestedInput
+  notes?: Prisma.LeadNoteUpdateManyWithoutLeadNestedInput
+  history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
+  deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
+}
+
+export type LeadUncheckedUpdateWithoutWhatsappMessagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  kind?: Prisma.EnumLeadKindFieldUpdateOperationsInput | $Enums.LeadKind
+  status?: Prisma.EnumLeadStatusFieldUpdateOperationsInput | $Enums.LeadStatus
+  priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  source?: Prisma.EnumLeadSourceFieldUpdateOperationsInput | $Enums.LeadSource
+  category?: Prisma.NullableEnumLeadCategoryFieldUpdateOperationsInput | $Enums.LeadCategory | null
+  currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
+  cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdById?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastContactAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followUpAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutLeadNestedInput
+  history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
+  activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
+  deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
 }
 
 export type LeadCreateManyAssigneeInput = {
@@ -1674,6 +1850,7 @@ export type LeadUpdateWithoutAssigneeInput = {
   history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
   activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadUncheckedUpdateWithoutAssigneeInput = {
@@ -1701,6 +1878,7 @@ export type LeadUncheckedUpdateWithoutAssigneeInput = {
   history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
   activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadUncheckedUpdateManyWithoutAssigneeInput = {
@@ -1751,6 +1929,7 @@ export type LeadUpdateWithoutCreatedByInput = {
   history?: Prisma.LeadStatusEventUpdateManyWithoutLeadNestedInput
   activity?: Prisma.LeadActivityUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUpdateOneWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadUncheckedUpdateWithoutCreatedByInput = {
@@ -1778,6 +1957,7 @@ export type LeadUncheckedUpdateWithoutCreatedByInput = {
   history?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutLeadNestedInput
   activity?: Prisma.LeadActivityUncheckedUpdateManyWithoutLeadNestedInput
   deal?: Prisma.DealUncheckedUpdateOneWithoutLeadNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutLeadNestedInput
 }
 
 export type LeadUncheckedUpdateManyWithoutCreatedByInput = {
@@ -1812,12 +1992,14 @@ export type LeadCountOutputType = {
   notes: number
   history: number
   activity: number
+  whatsappMessages: number
 }
 
 export type LeadCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   notes?: boolean | LeadCountOutputTypeCountNotesArgs
   history?: boolean | LeadCountOutputTypeCountHistoryArgs
   activity?: boolean | LeadCountOutputTypeCountActivityArgs
+  whatsappMessages?: boolean | LeadCountOutputTypeCountWhatsappMessagesArgs
 }
 
 /**
@@ -1851,6 +2033,13 @@ export type LeadCountOutputTypeCountActivityArgs<ExtArgs extends runtime.Types.E
   where?: Prisma.LeadActivityWhereInput
 }
 
+/**
+ * LeadCountOutputType without action
+ */
+export type LeadCountOutputTypeCountWhatsappMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.WhatsAppMessageWhereInput
+}
+
 
 export type LeadSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1880,6 +2069,7 @@ export type LeadSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   history?: boolean | Prisma.Lead$historyArgs<ExtArgs>
   activity?: boolean | Prisma.Lead$activityArgs<ExtArgs>
   deal?: boolean | Prisma.Lead$dealArgs<ExtArgs>
+  whatsappMessages?: boolean | Prisma.Lead$whatsappMessagesArgs<ExtArgs>
   _count?: boolean | Prisma.LeadCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["lead"]>
 
@@ -1967,6 +2157,7 @@ export type LeadInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   history?: boolean | Prisma.Lead$historyArgs<ExtArgs>
   activity?: boolean | Prisma.Lead$activityArgs<ExtArgs>
   deal?: boolean | Prisma.Lead$dealArgs<ExtArgs>
+  whatsappMessages?: boolean | Prisma.Lead$whatsappMessagesArgs<ExtArgs>
   _count?: boolean | Prisma.LeadCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type LeadIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1987,6 +2178,7 @@ export type $LeadPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     history: Prisma.$LeadStatusEventPayload<ExtArgs>[]
     activity: Prisma.$LeadActivityPayload<ExtArgs>[]
     deal: Prisma.$DealPayload<ExtArgs> | null
+    whatsappMessages: Prisma.$WhatsAppMessagePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2430,6 +2622,7 @@ export interface Prisma__LeadClient<T, Null = never, ExtArgs extends runtime.Typ
   history<T extends Prisma.Lead$historyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Lead$historyArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadStatusEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   activity<T extends Prisma.Lead$activityArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Lead$activityArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadActivityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   deal<T extends Prisma.Lead$dealArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Lead$dealArgs<ExtArgs>>): Prisma.Prisma__DealClient<runtime.Types.Result.GetResult<Prisma.$DealPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  whatsappMessages<T extends Prisma.Lead$whatsappMessagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Lead$whatsappMessagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WhatsAppMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2988,6 +3181,30 @@ export type Lead$dealArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs 
    */
   include?: Prisma.DealInclude<ExtArgs> | null
   where?: Prisma.DealWhereInput
+}
+
+/**
+ * Lead.whatsappMessages
+ */
+export type Lead$whatsappMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WhatsAppMessage
+   */
+  select?: Prisma.WhatsAppMessageSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WhatsAppMessage
+   */
+  omit?: Prisma.WhatsAppMessageOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WhatsAppMessageInclude<ExtArgs> | null
+  where?: Prisma.WhatsAppMessageWhereInput
+  orderBy?: Prisma.WhatsAppMessageOrderByWithRelationInput | Prisma.WhatsAppMessageOrderByWithRelationInput[]
+  cursor?: Prisma.WhatsAppMessageWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.WhatsAppMessageScalarFieldEnum | Prisma.WhatsAppMessageScalarFieldEnum[]
 }
 
 /**

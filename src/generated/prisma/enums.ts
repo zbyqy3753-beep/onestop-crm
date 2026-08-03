@@ -150,3 +150,14 @@ export const RegistrationStatus = {
 } as const
 
 export type RegistrationStatus = (typeof RegistrationStatus)[keyof typeof RegistrationStatus]
+
+
+export const WaMessageStatus = {
+  queued: 'queued',
+  sending: 'sending',
+  sent: 'sent',
+  failed: 'failed',
+  cancelled: 'cancelled'
+} as const
+
+export type WaMessageStatus = (typeof WaMessageStatus)[keyof typeof WaMessageStatus]

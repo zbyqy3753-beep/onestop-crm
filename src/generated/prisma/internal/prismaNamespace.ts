@@ -394,7 +394,9 @@ export const ModelName = {
   DealPackage: 'DealPackage',
   DealStageEvent: 'DealStageEvent',
   LeadCost: 'LeadCost',
-  Registration: 'Registration'
+  Registration: 'Registration',
+  WhatsAppMessage: 'WhatsAppMessage',
+  BotHeartbeat: 'BotHeartbeat'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -410,7 +412,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration"
+    modelProps: "user" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1228,6 +1230,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    WhatsAppMessage: {
+      payload: Prisma.$WhatsAppMessagePayload<ExtArgs>
+      fields: Prisma.WhatsAppMessageFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WhatsAppMessageFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppMessagePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WhatsAppMessageFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppMessagePayload>
+        }
+        findFirst: {
+          args: Prisma.WhatsAppMessageFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppMessagePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WhatsAppMessageFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppMessagePayload>
+        }
+        findMany: {
+          args: Prisma.WhatsAppMessageFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppMessagePayload>[]
+        }
+        create: {
+          args: Prisma.WhatsAppMessageCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppMessagePayload>
+        }
+        createMany: {
+          args: Prisma.WhatsAppMessageCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.WhatsAppMessageCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppMessagePayload>[]
+        }
+        delete: {
+          args: Prisma.WhatsAppMessageDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppMessagePayload>
+        }
+        update: {
+          args: Prisma.WhatsAppMessageUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppMessagePayload>
+        }
+        deleteMany: {
+          args: Prisma.WhatsAppMessageDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WhatsAppMessageUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.WhatsAppMessageUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppMessagePayload>[]
+        }
+        upsert: {
+          args: Prisma.WhatsAppMessageUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppMessagePayload>
+        }
+        aggregate: {
+          args: Prisma.WhatsAppMessageAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWhatsAppMessage>
+        }
+        groupBy: {
+          args: Prisma.WhatsAppMessageGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WhatsAppMessageGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WhatsAppMessageCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WhatsAppMessageCountAggregateOutputType> | number
+        }
+      }
+    }
+    BotHeartbeat: {
+      payload: Prisma.$BotHeartbeatPayload<ExtArgs>
+      fields: Prisma.BotHeartbeatFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.BotHeartbeatFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotHeartbeatPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.BotHeartbeatFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotHeartbeatPayload>
+        }
+        findFirst: {
+          args: Prisma.BotHeartbeatFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotHeartbeatPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.BotHeartbeatFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotHeartbeatPayload>
+        }
+        findMany: {
+          args: Prisma.BotHeartbeatFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotHeartbeatPayload>[]
+        }
+        create: {
+          args: Prisma.BotHeartbeatCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotHeartbeatPayload>
+        }
+        createMany: {
+          args: Prisma.BotHeartbeatCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.BotHeartbeatCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotHeartbeatPayload>[]
+        }
+        delete: {
+          args: Prisma.BotHeartbeatDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotHeartbeatPayload>
+        }
+        update: {
+          args: Prisma.BotHeartbeatUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotHeartbeatPayload>
+        }
+        deleteMany: {
+          args: Prisma.BotHeartbeatDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.BotHeartbeatUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.BotHeartbeatUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotHeartbeatPayload>[]
+        }
+        upsert: {
+          args: Prisma.BotHeartbeatUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotHeartbeatPayload>
+        }
+        aggregate: {
+          args: Prisma.BotHeartbeatAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateBotHeartbeat>
+        }
+        groupBy: {
+          args: Prisma.BotHeartbeatGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BotHeartbeatGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.BotHeartbeatCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BotHeartbeatCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1425,6 +1575,37 @@ export const RegistrationScalarFieldEnum = {
 } as const
 
 export type RegistrationScalarFieldEnum = (typeof RegistrationScalarFieldEnum)[keyof typeof RegistrationScalarFieldEnum]
+
+
+export const WhatsAppMessageScalarFieldEnum = {
+  id: 'id',
+  dedupeKey: 'dedupeKey',
+  toPhone: 'toPhone',
+  body: 'body',
+  status: 'status',
+  scheduledFor: 'scheduledFor',
+  attempts: 'attempts',
+  lastError: 'lastError',
+  claimedAt: 'claimedAt',
+  sentAt: 'sentAt',
+  leadId: 'leadId',
+  recipientUserId: 'recipientUserId',
+  createdAt: 'createdAt'
+} as const
+
+export type WhatsAppMessageScalarFieldEnum = (typeof WhatsAppMessageScalarFieldEnum)[keyof typeof WhatsAppMessageScalarFieldEnum]
+
+
+export const BotHeartbeatScalarFieldEnum = {
+  id: 'id',
+  lastSeenAt: 'lastSeenAt',
+  waConnected: 'waConnected',
+  waNumber: 'waNumber',
+  instanceId: 'instanceId',
+  queuedCount: 'queuedCount'
+} as const
+
+export type BotHeartbeatScalarFieldEnum = (typeof BotHeartbeatScalarFieldEnum)[keyof typeof BotHeartbeatScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1691,6 +1872,20 @@ export type ListEnumRegistrationStatusFieldRefInput<$PrismaModel> = FieldRefInpu
 
 
 /**
+ * Reference to a field of type 'WaMessageStatus'
+ */
+export type EnumWaMessageStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WaMessageStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'WaMessageStatus[]'
+ */
+export type ListEnumWaMessageStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WaMessageStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'Int'
  */
 export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
@@ -1701,6 +1896,20 @@ export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'In
  * Reference to a field of type 'Int[]'
  */
 export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Float'
+ */
+export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+/**
+ * Reference to a field of type 'Float[]'
+ */
+export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
 
 /**
@@ -1824,6 +2033,8 @@ export type GlobalOmitConfig = {
   dealStageEvent?: Prisma.DealStageEventOmit
   leadCost?: Prisma.LeadCostOmit
   registration?: Prisma.RegistrationOmit
+  whatsAppMessage?: Prisma.WhatsAppMessageOmit
+  botHeartbeat?: Prisma.BotHeartbeatOmit
 }
 
 /* Types for Logging */

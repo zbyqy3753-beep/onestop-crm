@@ -65,6 +65,7 @@ model User {
   dealStageEvents     DealStageEvent[]
   referredRegistrations   Registration[] @relation("RegistrationReferrer")
   handledRegistrations    Registration[] @relation("RegistrationHandler")
+  whatsappMessages        WhatsAppMessage[] @relation("WaRecipient")
 
   @@index([role, active])
 }
@@ -191,10 +192,11 @@ model Lead {
   lastContactAt DateTime?
   followUpAt    DateTime?
 
-  notes    LeadNote[]
-  history  LeadStatusEvent[]
-  activity LeadActivity[]
-  deal     Deal?
+  notes            LeadNote[]
+  history          LeadStatusEvent[]
+  activity         LeadActivity[]
+  deal             Deal?
+  whatsappMessages WhatsAppMessage[]
 
   // טלפון הוא מפתח הכפילות בפועל — ייבוא CSV נשען עליו
   @@index([phone])
@@ -416,4 +418,70 @@ model Registration {
 
   @@index([status, createdAt])
   @@index([referredByUserId])
+}
+
+/* ── תזכורות וואטסאפ ────────────────────────────────────────────────── */
+
+enum WaMessageStatus {
+  queued
+  sending
+  sent
+  failed
+  cancelled
+}
+
+/// תור ההודעות היוצאות לוואטסאפ.
+///
+/// ה-CRM מחליט מה נשלח ולמי ומרנדר את הטקסט; הבוט שרץ על המחשב במשרד
+/// רק מושך שורות, שולח, ומדווח. כל ההיגיון והעברית נשארים כאן.
+///
+/// `toPhone` ו-`body` הם snapshot ולא נגזרים בזמן השליחה: אחרי שההודעה
+/// יצאה, מה שנשלח בפועל הוא עובדה היסטורית שלא משתנה כשהליד מתעדכן.
+model WhatsAppMessage {
+  id String @id @default(cuid())
+
+  /// המפתח שמונע כפילות. לתזכורת חזרה: `followup:<leadId>:<followUpAt ISO>`.
+  /// תזמון מחדש מייצר מפתח חדש (= חובה חדשה), ואותה שעה פעמיים היא no-op.
+  dedupeKey String @unique
+
+  /// E.164 בלי הפלוס, כפי שוואטסאפ מזהה נמען
+  toPhone String
+  /// הטקסט המלא בעברית, מרונדר בשרת
+  body    String
+
+  status       WaMessageStatus @default(queued)
+  /// מתי ההודעה אמורה לצאת. הבוט לא תובע שורות עתידיות.
+  scheduledFor DateTime
+  /// עולה בכל תביעה. 3 כישלונות = failed, כדי ששורה תקועה לא תסתובב לנצח.
+  attempts     Int             @default(0)
+  lastError    String?
+  claimedAt    DateTime?
+  sentAt       DateTime?
+
+  /// SetNull ולא Cascade: הגוף והמספר הם snapshot, ומחיקת ליד לא צריכה
+  /// למחוק את הראיה שההודעה נשלחה
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  recipientUserId String?
+  recipient       User?   @relation("WaRecipient", fields: [recipientUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([status, scheduledFor])
+  @@index([leadId, status])
+}
+
+/// דופק הבוט — שורה יחידה (`id = "default"`).
+///
+/// הבוט רץ על מחשב במשרד שאף אחד לא מסתכל עליו. בלי הדופק הזה,
+/// "לא הגיעו תזכורות" ו"לא היו תזכורות" נראים בדיוק אותו דבר.
+model BotHeartbeat {
+  id          String   @id @default("default")
+  lastSeenAt  DateTime
+  /// האם החיבור לוואטסאפ עצמו חי — תהליך שרץ בלי חיבור לא שולח כלום
+  waConnected Boolean  @default(false)
+  waNumber    String?
+  instanceId  String?
+  queuedCount Int      @default(0)
 }

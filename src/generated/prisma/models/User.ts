@@ -231,6 +231,7 @@ export type UserWhereInput = {
   dealStageEvents?: Prisma.DealStageEventListRelationFilter
   referredRegistrations?: Prisma.RegistrationListRelationFilter
   handledRegistrations?: Prisma.RegistrationListRelationFilter
+  whatsappMessages?: Prisma.WhatsAppMessageListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -253,6 +254,7 @@ export type UserOrderByWithRelationInput = {
   dealStageEvents?: Prisma.DealStageEventOrderByRelationAggregateInput
   referredRegistrations?: Prisma.RegistrationOrderByRelationAggregateInput
   handledRegistrations?: Prisma.RegistrationOrderByRelationAggregateInput
+  whatsappMessages?: Prisma.WhatsAppMessageOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -278,6 +280,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   dealStageEvents?: Prisma.DealStageEventListRelationFilter
   referredRegistrations?: Prisma.RegistrationListRelationFilter
   handledRegistrations?: Prisma.RegistrationListRelationFilter
+  whatsappMessages?: Prisma.WhatsAppMessageListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -332,6 +335,7 @@ export type UserCreateInput = {
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -354,6 +358,7 @@ export type UserUncheckedCreateInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
 }
 
 export type UserUpdateInput = {
@@ -376,6 +381,7 @@ export type UserUpdateInput = {
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -398,6 +404,7 @@ export type UserUncheckedUpdateInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -644,6 +651,22 @@ export type UserUpdateOneWithoutHandledRegistrationsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutHandledRegistrationsInput, Prisma.UserUpdateWithoutHandledRegistrationsInput>, Prisma.UserUncheckedUpdateWithoutHandledRegistrationsInput>
 }
 
+export type UserCreateNestedOneWithoutWhatsappMessagesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutWhatsappMessagesInput, Prisma.UserUncheckedCreateWithoutWhatsappMessagesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutWhatsappMessagesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutWhatsappMessagesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutWhatsappMessagesInput, Prisma.UserUncheckedCreateWithoutWhatsappMessagesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutWhatsappMessagesInput
+  upsert?: Prisma.UserUpsertWithoutWhatsappMessagesInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutWhatsappMessagesInput, Prisma.UserUpdateWithoutWhatsappMessagesInput>, Prisma.UserUncheckedUpdateWithoutWhatsappMessagesInput>
+}
+
 export type UserCreateWithoutAssignedLeadsInput = {
   id?: string
   name: string
@@ -663,6 +686,7 @@ export type UserCreateWithoutAssignedLeadsInput = {
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
 }
 
 export type UserUncheckedCreateWithoutAssignedLeadsInput = {
@@ -684,6 +708,7 @@ export type UserUncheckedCreateWithoutAssignedLeadsInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
 }
 
 export type UserCreateOrConnectWithoutAssignedLeadsInput = {
@@ -710,6 +735,7 @@ export type UserCreateWithoutCreatedLeadsInput = {
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
 }
 
 export type UserUncheckedCreateWithoutCreatedLeadsInput = {
@@ -731,6 +757,7 @@ export type UserUncheckedCreateWithoutCreatedLeadsInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
 }
 
 export type UserCreateOrConnectWithoutCreatedLeadsInput = {
@@ -768,6 +795,7 @@ export type UserUpdateWithoutAssignedLeadsInput = {
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAssignedLeadsInput = {
@@ -789,6 +817,7 @@ export type UserUncheckedUpdateWithoutAssignedLeadsInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserUpsertWithoutCreatedLeadsInput = {
@@ -821,6 +850,7 @@ export type UserUpdateWithoutCreatedLeadsInput = {
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedLeadsInput = {
@@ -842,6 +872,7 @@ export type UserUncheckedUpdateWithoutCreatedLeadsInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserCreateWithoutNotesInput = {
@@ -863,6 +894,7 @@ export type UserCreateWithoutNotesInput = {
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
 }
 
 export type UserUncheckedCreateWithoutNotesInput = {
@@ -884,6 +916,7 @@ export type UserUncheckedCreateWithoutNotesInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
 }
 
 export type UserCreateOrConnectWithoutNotesInput = {
@@ -921,6 +954,7 @@ export type UserUpdateWithoutNotesInput = {
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotesInput = {
@@ -942,6 +976,7 @@ export type UserUncheckedUpdateWithoutNotesInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserCreateWithoutLeadActivityInput = {
@@ -963,6 +998,7 @@ export type UserCreateWithoutLeadActivityInput = {
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
 }
 
 export type UserUncheckedCreateWithoutLeadActivityInput = {
@@ -984,6 +1020,7 @@ export type UserUncheckedCreateWithoutLeadActivityInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
 }
 
 export type UserCreateOrConnectWithoutLeadActivityInput = {
@@ -1021,6 +1058,7 @@ export type UserUpdateWithoutLeadActivityInput = {
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserUncheckedUpdateWithoutLeadActivityInput = {
@@ -1042,6 +1080,7 @@ export type UserUncheckedUpdateWithoutLeadActivityInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserCreateWithoutStatusEventsInput = {
@@ -1063,6 +1102,7 @@ export type UserCreateWithoutStatusEventsInput = {
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
 }
 
 export type UserUncheckedCreateWithoutStatusEventsInput = {
@@ -1084,6 +1124,7 @@ export type UserUncheckedCreateWithoutStatusEventsInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
 }
 
 export type UserCreateOrConnectWithoutStatusEventsInput = {
@@ -1121,6 +1162,7 @@ export type UserUpdateWithoutStatusEventsInput = {
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserUncheckedUpdateWithoutStatusEventsInput = {
@@ -1142,6 +1184,7 @@ export type UserUncheckedUpdateWithoutStatusEventsInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserCreateWithoutDealsInput = {
@@ -1163,6 +1206,7 @@ export type UserCreateWithoutDealsInput = {
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
 }
 
 export type UserUncheckedCreateWithoutDealsInput = {
@@ -1184,6 +1228,7 @@ export type UserUncheckedCreateWithoutDealsInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
 }
 
 export type UserCreateOrConnectWithoutDealsInput = {
@@ -1221,6 +1266,7 @@ export type UserUpdateWithoutDealsInput = {
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDealsInput = {
@@ -1242,6 +1288,7 @@ export type UserUncheckedUpdateWithoutDealsInput = {
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserCreateWithoutDealStageEventsInput = {
@@ -1263,6 +1310,7 @@ export type UserCreateWithoutDealStageEventsInput = {
   deals?: Prisma.DealCreateNestedManyWithoutAgentInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
 }
 
 export type UserUncheckedCreateWithoutDealStageEventsInput = {
@@ -1284,6 +1332,7 @@ export type UserUncheckedCreateWithoutDealStageEventsInput = {
   deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
 }
 
 export type UserCreateOrConnectWithoutDealStageEventsInput = {
@@ -1321,6 +1370,7 @@ export type UserUpdateWithoutDealStageEventsInput = {
   deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDealStageEventsInput = {
@@ -1342,6 +1392,7 @@ export type UserUncheckedUpdateWithoutDealStageEventsInput = {
   deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserCreateWithoutReferredRegistrationsInput = {
@@ -1363,6 +1414,7 @@ export type UserCreateWithoutReferredRegistrationsInput = {
   deals?: Prisma.DealCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
 }
 
 export type UserUncheckedCreateWithoutReferredRegistrationsInput = {
@@ -1384,6 +1436,7 @@ export type UserUncheckedCreateWithoutReferredRegistrationsInput = {
   deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
 }
 
 export type UserCreateOrConnectWithoutReferredRegistrationsInput = {
@@ -1410,6 +1463,7 @@ export type UserCreateWithoutHandledRegistrationsInput = {
   deals?: Prisma.DealCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
 }
 
 export type UserUncheckedCreateWithoutHandledRegistrationsInput = {
@@ -1431,6 +1485,7 @@ export type UserUncheckedCreateWithoutHandledRegistrationsInput = {
   deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
   dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
 }
 
 export type UserCreateOrConnectWithoutHandledRegistrationsInput = {
@@ -1468,6 +1523,7 @@ export type UserUpdateWithoutReferredRegistrationsInput = {
   deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReferredRegistrationsInput = {
@@ -1489,6 +1545,7 @@ export type UserUncheckedUpdateWithoutReferredRegistrationsInput = {
   deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserUpsertWithoutHandledRegistrationsInput = {
@@ -1521,6 +1578,7 @@ export type UserUpdateWithoutHandledRegistrationsInput = {
   deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
 }
 
 export type UserUncheckedUpdateWithoutHandledRegistrationsInput = {
@@ -1542,6 +1600,111 @@ export type UserUncheckedUpdateWithoutHandledRegistrationsInput = {
   deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
   dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
+}
+
+export type UserCreateWithoutWhatsappMessagesInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+}
+
+export type UserUncheckedCreateWithoutWhatsappMessagesInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+}
+
+export type UserCreateOrConnectWithoutWhatsappMessagesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutWhatsappMessagesInput, Prisma.UserUncheckedCreateWithoutWhatsappMessagesInput>
+}
+
+export type UserUpsertWithoutWhatsappMessagesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutWhatsappMessagesInput, Prisma.UserUncheckedUpdateWithoutWhatsappMessagesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutWhatsappMessagesInput, Prisma.UserUncheckedCreateWithoutWhatsappMessagesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutWhatsappMessagesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutWhatsappMessagesInput, Prisma.UserUncheckedUpdateWithoutWhatsappMessagesInput>
+}
+
+export type UserUpdateWithoutWhatsappMessagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutWhatsappMessagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
 }
 
 
@@ -1559,6 +1722,7 @@ export type UserCountOutputType = {
   dealStageEvents: number
   referredRegistrations: number
   handledRegistrations: number
+  whatsappMessages: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1571,6 +1735,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   dealStageEvents?: boolean | UserCountOutputTypeCountDealStageEventsArgs
   referredRegistrations?: boolean | UserCountOutputTypeCountReferredRegistrationsArgs
   handledRegistrations?: boolean | UserCountOutputTypeCountHandledRegistrationsArgs
+  whatsappMessages?: boolean | UserCountOutputTypeCountWhatsappMessagesArgs
 }
 
 /**
@@ -1646,6 +1811,13 @@ export type UserCountOutputTypeCountHandledRegistrationsArgs<ExtArgs extends run
   where?: Prisma.RegistrationWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountWhatsappMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.WhatsAppMessageWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1667,6 +1839,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   dealStageEvents?: boolean | Prisma.User$dealStageEventsArgs<ExtArgs>
   referredRegistrations?: boolean | Prisma.User$referredRegistrationsArgs<ExtArgs>
   handledRegistrations?: boolean | Prisma.User$handledRegistrationsArgs<ExtArgs>
+  whatsappMessages?: boolean | Prisma.User$whatsappMessagesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -1720,6 +1893,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   dealStageEvents?: boolean | Prisma.User$dealStageEventsArgs<ExtArgs>
   referredRegistrations?: boolean | Prisma.User$referredRegistrationsArgs<ExtArgs>
   handledRegistrations?: boolean | Prisma.User$handledRegistrationsArgs<ExtArgs>
+  whatsappMessages?: boolean | Prisma.User$whatsappMessagesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1737,6 +1911,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     dealStageEvents: Prisma.$DealStageEventPayload<ExtArgs>[]
     referredRegistrations: Prisma.$RegistrationPayload<ExtArgs>[]
     handledRegistrations: Prisma.$RegistrationPayload<ExtArgs>[]
+    whatsappMessages: Prisma.$WhatsAppMessagePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2155,6 +2330,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   dealStageEvents<T extends Prisma.User$dealStageEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$dealStageEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DealStageEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   referredRegistrations<T extends Prisma.User$referredRegistrationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$referredRegistrationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RegistrationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   handledRegistrations<T extends Prisma.User$handledRegistrationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$handledRegistrationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RegistrationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  whatsappMessages<T extends Prisma.User$whatsappMessagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$whatsappMessagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WhatsAppMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2800,6 +2976,30 @@ export type User$handledRegistrationsArgs<ExtArgs extends runtime.Types.Extensio
   take?: number
   skip?: number
   distinct?: Prisma.RegistrationScalarFieldEnum | Prisma.RegistrationScalarFieldEnum[]
+}
+
+/**
+ * User.whatsappMessages
+ */
+export type User$whatsappMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WhatsAppMessage
+   */
+  select?: Prisma.WhatsAppMessageSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WhatsAppMessage
+   */
+  omit?: Prisma.WhatsAppMessageOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WhatsAppMessageInclude<ExtArgs> | null
+  where?: Prisma.WhatsAppMessageWhereInput
+  orderBy?: Prisma.WhatsAppMessageOrderByWithRelationInput | Prisma.WhatsAppMessageOrderByWithRelationInput[]
+  cursor?: Prisma.WhatsAppMessageWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.WhatsAppMessageScalarFieldEnum | Prisma.WhatsAppMessageScalarFieldEnum[]
 }
 
 /**

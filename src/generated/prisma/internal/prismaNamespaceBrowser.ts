@@ -61,7 +61,9 @@ export const ModelName = {
   DealPackage: 'DealPackage',
   DealStageEvent: 'DealStageEvent',
   LeadCost: 'LeadCost',
-  Registration: 'Registration'
+  Registration: 'Registration',
+  WhatsAppMessage: 'WhatsAppMessage',
+  BotHeartbeat: 'BotHeartbeat'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -238,6 +240,37 @@ export const RegistrationScalarFieldEnum = {
 } as const
 
 export type RegistrationScalarFieldEnum = (typeof RegistrationScalarFieldEnum)[keyof typeof RegistrationScalarFieldEnum]
+
+
+export const WhatsAppMessageScalarFieldEnum = {
+  id: 'id',
+  dedupeKey: 'dedupeKey',
+  toPhone: 'toPhone',
+  body: 'body',
+  status: 'status',
+  scheduledFor: 'scheduledFor',
+  attempts: 'attempts',
+  lastError: 'lastError',
+  claimedAt: 'claimedAt',
+  sentAt: 'sentAt',
+  leadId: 'leadId',
+  recipientUserId: 'recipientUserId',
+  createdAt: 'createdAt'
+} as const
+
+export type WhatsAppMessageScalarFieldEnum = (typeof WhatsAppMessageScalarFieldEnum)[keyof typeof WhatsAppMessageScalarFieldEnum]
+
+
+export const BotHeartbeatScalarFieldEnum = {
+  id: 'id',
+  lastSeenAt: 'lastSeenAt',
+  waConnected: 'waConnected',
+  waNumber: 'waNumber',
+  instanceId: 'instanceId',
+  queuedCount: 'queuedCount'
+} as const
+
+export type BotHeartbeatScalarFieldEnum = (typeof BotHeartbeatScalarFieldEnum)[keyof typeof BotHeartbeatScalarFieldEnum]
 
 
 export const SortOrder = {
