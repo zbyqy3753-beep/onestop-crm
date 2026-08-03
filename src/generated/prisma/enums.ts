@@ -24,6 +24,7 @@ export type Role = (typeof Role)[keyof typeof Role]
 
 export const LeadStatus = {
   new: 'new',
+  recycled: 'recycled',
   inProgress: 'inProgress',
   contacted: 'contacted',
   quoteSent: 'quoteSent',
@@ -92,7 +93,8 @@ export const LeadCategory = {
   tv: 'tv',
   triple: 'triple',
   electricity: 'electricity',
-  general: 'general'
+  general: 'general',
+  recycled: 'recycled'
 } as const
 
 export type LeadCategory = (typeof LeadCategory)[keyof typeof LeadCategory]

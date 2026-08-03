@@ -16,4 +16,7 @@ export const SEED_LEAD_COSTS: LeadCostTable = {
   triple: 0,
   electricity: 0,
   general: 0,
+  // ליד ממחזור הוא לקוח עבר — כבר שילמנו על רכישתו פעם אחת, ואין
+  // עלות רכישה חדשה. 0 כאן הוא הערך הנכון ולא "טרם הוגדר".
+  recycled: 0,
 };

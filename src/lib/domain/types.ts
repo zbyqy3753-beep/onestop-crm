@@ -48,6 +48,7 @@ export const ROLE_ORDER: Role[] = [
 
 export type LeadStatus =
   | "new" // חדש
+  | "recycled" // ממחזור
   | "inProgress" // בטיפול
   | "contacted" // נוצר קשר
   | "quoteSent" // הצעה נשלחה
@@ -85,6 +86,17 @@ export interface StatusMeta {
 export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   new: {
     label: "חדש",
+    tone: "info",
+    terminal: false,
+  },
+  /**
+   * ליד שנוצר ממסמך חידוש — לקוח עבר שהשנה שלו הסתיימה.
+   *
+   * בלי `prompt`, כמו `new`: זה מצב פתיחה שנוצר אוטומטית ולא בחירה
+   * שסוכן עושה, ואין לו על מה לדווח ברגע היצירה.
+   */
+  recycled: {
+    label: "ממחזור",
     tone: "info",
     terminal: false,
   },
@@ -265,6 +277,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
  */
 export const STATUS_ORDER: LeadStatus[] = [
   "new",
+  "recycled",
   "inProgress",
   "contacted",
   "quoteSent",
@@ -628,7 +641,8 @@ export type LeadCategoryKey =
   | "tv"
   | "triple"
   | "electricity"
-  | "general";
+  | "general"
+  | "recycled";
 
 export const LEAD_CATEGORY_CONFIG: Record<LeadCategoryKey, { label: string }> = {
   mobile: { label: "סלולר" },
@@ -637,6 +651,12 @@ export const LEAD_CATEGORY_CONFIG: Record<LeadCategoryKey, { label: string }> = 
   triple: { label: "טריפל" },
   electricity: { label: "חשמל" },
   general: { label: "כללי" },
+  /**
+   * ⚠️ לא קטגוריית מוצר אלא **מקור**: הליד הגיע ממסמך חידוש של לקוח
+   * עבר. הוא יושב באותה רשימה כי כך אפשר לסנן אליו במסך הלידים בלי
+   * ציר סינון נוסף — אבל הוא לא מתאר במה הלקוח מתעניין, ולכן אחרון.
+   */
+  recycled: { label: "ממחזור" },
 };
 
 export const LEAD_CATEGORY_ORDER: LeadCategoryKey[] = [
@@ -646,6 +666,7 @@ export const LEAD_CATEGORY_ORDER: LeadCategoryKey[] = [
   "triple",
   "electricity",
   "general",
+  "recycled",
 ];
 
 /* ── קטלוג: ספקים וקטגוריות חבילה ─────────────────────────────────────── */
@@ -917,6 +938,13 @@ export const STAGE_PIPELINE_FOR_CATEGORY: Record<LeadCategoryKey, DealStage[]> =
   ],
   electricity: ["new", "inProgress", "registered", "active", "approved"],
   general: ["new", "inProgress", "active", "approved"],
+  /**
+   * ⚠️ זהה ל-`general` בכוונה. "ממחזור" הוא מקור הליד ולא סוג המוצר,
+   * ולכן אי אפשר לדעת ממנו אם העסקה תדרוש משלוח, ניוד או התקנה —
+   * זה יתברר רק כשייבחר מה בעצם נמכר. רצף מינימלי שתמיד תקף עדיף
+   * על stepper שמבטיח שלב שלא יקרה.
+   */
+  recycled: ["new", "inProgress", "active", "approved"],
 };
 
 /**
