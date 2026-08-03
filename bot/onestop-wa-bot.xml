@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>בוט תזכורות וואטסאפ של ONE STOP CRM. שולח לעובד המשויך תזכורת כשמגיע זמן החזרה שנקבע לליד.</Description>
+    <URI>\OneStopWaBot</URI>
+  </RegistrationInfo>
+  <Triggers>
+    <!--
+      At startup ולא At logon: הבוט חייב לחזור אחרי הפסקת חשמל
+      ואחרי אתחול של Windows Update, גם אם אף אחד לא התחבר למחשב.
+    -->
+    <BootTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT1M</Delay>
+    </BootTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <!-- הפעלה מחדש אחרי כל נפילה, כמעט ללא הגבלה -->
+    <RestartOnFailure>
+      <Interval>PT1M</Interval>
+      <Count>999</Count>
+    </RestartOnFailure>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <!--
+      ⚠️ ריק ולא PT72H. ברירת המחדל של Windows היא לעצור משימה שרצה
+      יותר משלושה ימים — כלומר הבוט היה נהרג בשקט כל 72 שעות.
+    -->
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <Priority>7</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>cmd.exe</Command>
+      <Arguments>/c npm run serve</Arguments>
+      <WorkingDirectory>__BOT_DIR__</WorkingDirectory>
+    </Exec>
+  </Actions>
+</Task>
