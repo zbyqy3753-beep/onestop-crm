@@ -35,6 +35,8 @@ export const LeadStatus = {
   notInterested: 'notInterested',
   existingCustomer: 'existingCustomer',
   noAnswer: 'noAnswer',
+  noAnswer1: 'noAnswer1',
+  noAnswer2: 'noAnswer2',
   returning: 'returning',
   soldByCompetitor: 'soldByCompetitor',
   denies: 'denies',

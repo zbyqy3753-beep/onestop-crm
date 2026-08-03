@@ -110,7 +110,6 @@ export const LeadScalarFieldEnum = {
   currentProvider: 'currentProvider',
   cost: 'cost',
   isStarred: 'isStarred',
-  noAnswerCount: 'noAnswerCount',
   sourceDetail: 'sourceDetail',
   packageName: 'packageName',
   assigneeId: 'assigneeId',

@@ -21,6 +21,9 @@ import {
   StatusPicker,
 } from "./cells";
 
+/** סולם ניסיונות "אין מענה" — הצ׳יפ המהיר מתקדם בו שלב בכל נגיעה. */
+const NO_ANSWER_SEQUENCE: LeadStatus[] = ["noAnswer", "noAnswer1", "noAnswer2"];
+
 /**
  * ליד אחד ככרטיס — תצוגת הטלפון.
  *
@@ -190,12 +193,7 @@ export function LeadCard({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <StatusPicker
-          current={lead.status}
-          onPick={onStatus}
-          busy={busy}
-          noAnswerCount={lead.noAnswerCount}
-        />
+        <StatusPicker current={lead.status} onPick={onStatus} busy={busy} />
 
         <InlinePicker
           value={lead.priority}
@@ -241,26 +239,31 @@ export function LeadCard({
         {/*
           התוצאה הנפוצה ביותר של חיוג — "אין מענה" — בלחיצה אחת,
           בלי לפתוח את בורר הסטטוסים. דרך `onQuickStatus` היא גם
-          מדלגת על הדיאלוג (השאלה שם אינה חובה); בלעדיו נופלים
-          ל-`onStatus` הרגיל.
+          מדלגת על הדיאלוג; בלעדיו נופלים ל-`onStatus` הרגיל.
 
-          ⚠️ **לא** מוסתר כשהליד כבר "אין מענה" — נשאר כדי לרשום
-          ניסיון נוסף (הצ׳יפ עצמו מציג את המספר הבא), ורק סטטוס סופי
-          מסתיר אותו.
+          שלושה סטטוסים מפורשים ולא מונה: "אין מענה" → "אין מענה 1" →
+          "אין מענה 2". הצ׳יפ תמיד מציג את השלב **הבא** בסולם, כך
+          שלחיצה חוזרת מתקדמת בו; מכל סטטוס אחר הלחיצה מתחילה מהתחלה.
+          נעלם כשמגיעים לסוף הסולם או שהליד נסגר.
         */}
-        {!status.terminal && (
-          <button
-            onClick={() => (onQuickStatus ?? onStatus)("noAnswer")}
-            disabled={busy}
-            // 36px גובה ויזואלי, 44px אזור לחיצה: הפסאודו-אלמנט מרחיב
-            // בלי להוסיף גובה לשורה — אותו דפוס כמו הכוכב והוואטסאפ
-            className="relative min-h-9 rounded-full border border-line px-2.5 text-xs text-ink-2 transition-transform after:absolute after:-inset-1 after:content-[''] active:scale-95 disabled:opacity-50"
-          >
-            {lead.status === "noAnswer"
-              ? `ניסיון נוסף (${lead.noAnswerCount + 1})`
-              : "אין מענה"}
-          </button>
-        )}
+        {!status.terminal &&
+          (() => {
+            const idx = NO_ANSWER_SEQUENCE.indexOf(lead.status);
+            const next =
+              idx === -1 ? NO_ANSWER_SEQUENCE[0] : NO_ANSWER_SEQUENCE[idx + 1];
+            if (!next) return null;
+            return (
+              <button
+                onClick={() => (onQuickStatus ?? onStatus)(next)}
+                disabled={busy}
+                // 36px גובה ויזואלי, 44px אזור לחיצה: הפסאודו-אלמנט מרחיב
+                // בלי להוסיף גובה לשורה — אותו דפוס כמו הכוכב והוואטסאפ
+                className="relative min-h-9 rounded-full border border-line px-2.5 text-xs text-ink-2 transition-transform after:absolute after:-inset-1 after:content-[''] active:scale-95 disabled:opacity-50"
+              >
+                {STATUS_CONFIG[next].label}
+              </button>
+            );
+          })()}
 
         {/*
           וואטסאפ והזמן היחסי בקצה אותה שורה.

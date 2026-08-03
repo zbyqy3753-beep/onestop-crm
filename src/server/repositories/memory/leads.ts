@@ -146,7 +146,6 @@ export const memoryLeadRepository: LeadRepository = {
       email: input.email,
       kind: input.kind,
       status: "new",
-      noAnswerCount: 0,
       priority: input.priority,
       source: input.source,
       sourceDetail: input.sourceDetail,
@@ -253,15 +252,6 @@ export const memoryLeadRepository: LeadRepository = {
       actorId,
       createdAt: ts,
     });
-
-    // עולה ב-1 בכל חזרה ל"אין מענה", מתאפס בכל מעבר לסטטוס אחר —
-    // אותה סמנטיקה כמו במימוש Prisma (ראה docblock על השדה ב-types.ts).
-    lead.noAnswerCount =
-      to === "noAnswer"
-        ? from === "noAnswer"
-          ? lead.noAnswerCount + 1
-          : 1
-        : 0;
 
     lead.status = to;
     lead.updatedAt = ts;

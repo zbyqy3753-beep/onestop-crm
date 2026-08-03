@@ -59,6 +59,8 @@ export type LeadStatus =
   | "notInterested" // לא מעוניין
   | "existingCustomer" // לקוח קיים
   | "noAnswer" // אין מענה
+  | "noAnswer1" // אין מענה 1
+  | "noAnswer2" // אין מענה 2
   | "returning" // ליד חוזר
   | "soldByCompetitor" // נמכר ע״י משווק מקביל
   | "denies" // מתכחש לפנייה
@@ -196,6 +198,19 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
       required: false,
     },
   },
+  // שני השלבים הבאים בסולם — ניסיון חיוג שני ושלישי שגם הם לא נענו.
+  // סטטוסים מפורשים ולא מונה אוטומטי: קל יותר לבחור מהרשימה, וקל
+  // יותר לקרוא בהיסטוריה של הליד "עבר ל-אין מענה 2" מאשר מספר סתום.
+  noAnswer1: {
+    label: "אין מענה 1",
+    tone: "warn",
+    terminal: false,
+  },
+  noAnswer2: {
+    label: "אין מענה 2",
+    tone: "warn",
+    terminal: false,
+  },
   returning: {
     label: "ליד חוזר",
     tone: "warn",
@@ -245,7 +260,8 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
  * עם ספירות שסוכמות בדיוק לכלל הלידים). `followUp` ו-`lost` לא הופיעו
  * ברשימה החיה שנצפתה, אך לא הוסרו — אין הוכחה שהם לא קיימים במקום אחר
  * במערכת האמיתית, ומחיקתם הייתה רגרסיה בלי הצדקה. הם משובצים כאן ליד
- * השכנים הסמנטיים שלהם. `existingCustomer` נוסף מאוחר יותר (15 היום).
+ * השכנים הסמנטיים שלהם. `existingCustomer`, `noAnswer1` ו-`noAnswer2`
+ * נוספו מאוחר יותר (17 היום).
  */
 export const STATUS_ORDER: LeadStatus[] = [
   "new",
@@ -260,6 +276,8 @@ export const STATUS_ORDER: LeadStatus[] = [
   "notInterested",
   "existingCustomer",
   "noAnswer",
+  "noAnswer1",
+  "noAnswer2",
   "returning",
   "soldByCompetitor",
   "denies",
@@ -424,12 +442,6 @@ export interface Lead {
   email?: string;
   kind: LeadKind;
   status: LeadStatus;
-  /**
-   * כמה פעמים ברצף סומן "אין מענה" מאז הסטטוס האמיתי האחרון.
-   * מתאפס ל-0 בכל מעבר לסטטוס אחר; עולה ב-1 בכל חזרה ל-`noAnswer`.
-   * משמש להצגת "אין מענה 2", "אין מענה 3" בלי טקסט חופשי.
-   */
-  noAnswerCount: number;
   priority: Priority;
   source: LeadSource;
   /** קטגוריית העניין של הליד — מפתח מתוך LEAD_CATEGORY_CONFIG */
