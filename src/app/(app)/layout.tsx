@@ -5,6 +5,7 @@ import { ImpersonationBanner } from "@/components/shell/ImpersonationBanner";
 import { db } from "@/server/repositories";
 import { getImpersonatorId, getSessionUser } from "@/server/auth/session";
 import { NARROW_VALUE, WIDTH_COOKIE } from "@/lib/widthCookie";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 
 /**
  * מעטפת ה-shell (סרגל צד + סרגל עליון) — חלה על כל מסך שדורש אותה.
@@ -63,6 +64,14 @@ export default async function AppLayout({
       <AppShell user={user} initialNarrow={narrow}>
         {children}
       </AppShell>
+
+      {/*
+        כאן ולא ב-layout השורשי: מחוץ ל-route group הזה יושב
+        `/form/[token]`, טופס ציבורי שלקוחות ממלאים. הצעה להתקין את
+        מערכת הניהול הפנימית שלנו על הטלפון של לקוח היא בדיוק הדבר
+        שאסור שיקרה.
+      */}
+      <InstallPrompt />
     </div>
   );
 }

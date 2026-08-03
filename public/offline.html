@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>אין חיבור · ONE STOP</title>
+<style>
+  /*
+   * ⚠️ הכול מוטבע בקובץ הזה — בלי גופן חיצוני, בלי CSS חיצוני, בלי
+   * תמונה. העמוד הזה נטען בדיוק כשאין רשת, וכל הפניה החוצה הייתה
+   * נכשלת ומשאירה מסך שבור.
+   */
+  :root { color-scheme: dark; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #081421;
+    color: #e8eef5;
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    text-align: center;
+  }
+  .box { max-width: 320px; }
+  .dot {
+    width: 52px; height: 52px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    border: 2px solid #2b3f55;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  h1 { font-size: 19px; margin: 0 0 8px; }
+  p { font-size: 14px; line-height: 1.6; color: #93a4b8; margin: 0 0 22px; }
+  button {
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 12px 26px;
+    min-height: 46px;
+    border: 0;
+    border-radius: 9px;
+    background: #2f7de1;
+    color: #fff;
+  }
+  button:active { opacity: .85; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="dot">⚡</div>
+    <h1>אין חיבור לאינטרנט</h1>
+    <p>המערכת צריכה חיבור כדי להציג לידים מעודכנים. בדוק את החיבור ונסה שוב.</p>
+    <button onclick="location.reload()">נסה שוב</button>
+  </div>
+
+  <script>
+    // חוזר אוטומטית ברגע שהחיבור שב — בלי שצריך ללחוץ
+    addEventListener("online", () => location.reload());
+  </script>
+</body>
+</html>

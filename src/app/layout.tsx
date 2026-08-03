@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Assistant, Frank_Ruhl_Libre } from "next/font/google";
 import { THEME_INIT_SCRIPT } from "@/components/shell/theme";
+import {
+  INSTALL_CAPTURE_SCRIPT,
+  SW_REGISTER_SCRIPT,
+} from "@/components/pwa/register";
 import "./globals.css";
 
 const assistant = Assistant({
@@ -80,6 +84,15 @@ export default function RootLayout({
           הכרחי כאן — בלעדיו React יראה את התיקון כאי-התאמה ויצייר מחדש.
         */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+
+        {/*
+          ⚠️ תפיסת `beforeinstallprompt` חייבת להיות כאן ולא ב-useEffect.
+          כרום יורה את האירוע ברגע שהוא מחליט שהאתר בר-התקנה, לרוב לפני
+          ש-React הידרט — ואירוע שאיש לא תפס אבוד, כלומר ההצעה לא תופיע
+          לעולם ובלי שום שגיאה שתסביר למה.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: INSTALL_CAPTURE_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: SW_REGISTER_SCRIPT }} />
       </head>
       <body className="min-h-dvh">{children}</body>
     </html>
