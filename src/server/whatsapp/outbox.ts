@@ -49,6 +49,21 @@ interface SendWindow {
   sendWindowEndHour: number;
 }
 
+/**
+ * מתי התזכורת של חזרה נתונה תצא — לפי ההגדרות הנוכחיות.
+ *
+ * קיים בשביל מסך הבוטים. בלעדיו "יש חזרה ב-16:30" ו"אין כלום בתור"
+ * נראים כמו סתירה, כי השורה בתור נוצרת רק דקות לפני השליחה. הצגת
+ * המועד המתוכנן הופכת את זה ממה שנראה כמו באג למידע.
+ */
+export function plannedSendAt(
+  followUpAt: Date,
+  settings: BotSettingsView,
+): Date {
+  const leadMs = Math.max(0, settings.reminderLeadMinutes) * 60_000;
+  return nextSendableInstant(new Date(followUpAt.getTime() - leadMs), settings);
+}
+
 /** האם רגע נתון נופל בתוך חלון השליחה, בשעון ישראל. */
 export function insideSendWindow(now: number, win: SendWindow): boolean {
   const hour = Number(israelHourMinute(now).slice(0, 2));

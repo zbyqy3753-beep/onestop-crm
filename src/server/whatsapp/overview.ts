@@ -3,7 +3,9 @@ import "server-only";
 import { prisma } from "@/server/db/client";
 import { isIsraeliPhone } from "@/lib/format";
 import { startOfDay } from "@/lib/tz";
+import { STATUS_CONFIG } from "@/lib/domain/types";
 import { readSettings, type BotSettingsView } from "./settings";
+import { plannedSendAt } from "./outbox";
 
 /**
  * כל מה שמסך הבוטים מציג, בשליפה אחת מרוכזת.
@@ -35,6 +37,25 @@ export interface RecipientRow {
   openLeadsWithFollowUp: number;
 }
 
+/**
+ * חזרה עתידית שעדיין לא הפכה להודעה בתור.
+ *
+ * ⚠️ הקטגוריה הזו קיימת בגלל בלבול אמיתי: שורה בתור נוצרת רק דקות
+ * לפני השליחה, ולכן חזרה שנקבעה למחר לא מופיעה בשום מקום במסך — מה
+ * שנראה בדיוק כמו תזכורת שאבדה. כאן רואים גם *מתי* היא תצא, וגם
+ * *למה לא* תצא, במקום להסיק את זה משתיקה.
+ */
+export interface UpcomingRow {
+  leadId: string;
+  leadName: string;
+  followUpAt: string;
+  /** מתי התזכורת מתוכננת לצאת. null כשהיא חסומה ולא תצא כלל. */
+  sendAt: string | null;
+  assigneeName: string | null;
+  /** הסיבה שלא תישלח. null = תקין ותצא במועד. */
+  blockedReason: string | null;
+}
+
 export interface BotOverview {
   settings: BotSettingsView;
   health: {
@@ -53,6 +74,7 @@ export interface BotOverview {
     sentWeek: number;
   };
   queue: MessageRow[];
+  upcoming: UpcomingRow[];
   recent: MessageRow[];
   failures: MessageRow[];
   recipients: RecipientRow[];
@@ -96,6 +118,30 @@ function toRow(m: Raw): MessageRow {
   };
 }
 
+/**
+ * למה הליד הזה לא ייצר תזכורת. `null` = ייצר.
+ *
+ * ⚠️ הסדר והתנאים **חייבים** להישאר זהים ל-`enqueueDueFollowUps`.
+ * מסך שמבטיח "תצא ב-16:20" על ליד שהמנוע ידלג עליו גרוע ממסך שלא
+ * אומר כלום — הוא הופך כשל שקט לשקט מאושר.
+ */
+function blockedReasonFor(lead: {
+  status: string;
+  assigneeId: string | null;
+  assignee: { active: boolean; phone: string | null } | null;
+}): string | null {
+  if (STATUS_CONFIG[lead.status as keyof typeof STATUS_CONFIG]?.terminal) {
+    return "הליד סגור";
+  }
+  if (!lead.assigneeId) return "הליד לא משויך לאף אחד";
+  if (!lead.assignee?.active) return "העובד המשויך לא פעיל";
+  if (!lead.assignee.phone) return "לעובד המשויך אין מספר טלפון";
+  if (!isIsraeliPhone(lead.assignee.phone)) {
+    return "מספר הטלפון של העובד לא תקין";
+  }
+  return null;
+}
+
 export async function botOverview(): Promise<BotOverview> {
   const dayStart = new Date(startOfDay(Date.now()));
   const weekStart = new Date(startOfDay(Date.now()) - 6 * 86_400_000);
@@ -112,6 +158,7 @@ export async function botOverview(): Promise<BotOverview> {
     queue,
     recent,
     failures,
+    withFollowUp,
     users,
   ] = await Promise.all([
     readSettings(),
@@ -151,6 +198,26 @@ export async function botOverview(): Promise<BotOverview> {
       select: SELECT,
     }),
 
+    // כל ליד עם תאריך חזרה. הסינון לפי זכאות נעשה בקוד ולא בשאילתה
+    // **בכוונה** — ליד שנפסל הוא בדיוק מה שהמסך צריך להראות, עם הסיבה.
+    prisma.lead.findMany({
+      where: { followUpAt: { not: null } },
+      orderBy: { followUpAt: "asc" },
+      take: 100,
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        followUpAt: true,
+        assigneeId: true,
+        assignee: { select: { name: true, active: true, phone: true } },
+        whatsappMessages: {
+          where: { status: { notIn: ["cancelled"] } },
+          select: { id: true },
+        },
+      },
+    }),
+
     // מי בכלל זכאי לקבל: עובד פעיל. מספר לא תקין נספר כאן ולא מסונן,
     // כי "לא מקבל תזכורות" הוא בדיוק מה שהמסך אמור להראות
     prisma.user.findMany({
@@ -167,6 +234,24 @@ export async function botOverview(): Promise<BotOverview> {
       },
     }),
   ]);
+
+  // חזרות שעדיין לא הפכו להודעה. שורה שכבר קיימת בתור או שנשלחה
+  // מוצגת בלשוניות שלה, ולהופיע בשתיהן היה נראה ככפילות.
+  const upcoming: UpcomingRow[] = withFollowUp
+    .filter((l) => l.whatsappMessages.length === 0)
+    .map((l) => {
+      const followUpAt = l.followUpAt!;
+      const blocked = blockedReasonFor(l);
+
+      return {
+        leadId: l.id,
+        leadName: l.name,
+        followUpAt: followUpAt.toISOString(),
+        sendAt: blocked ? null : plannedSendAt(followUpAt, settings).toISOString(),
+        assigneeName: l.assignee?.name ?? null,
+        blockedReason: blocked,
+      };
+    });
 
   return {
     settings,
@@ -188,6 +273,7 @@ export async function botOverview(): Promise<BotOverview> {
       sentWeek,
     },
     queue: queue.map(toRow),
+    upcoming,
     recent: recent.map(toRow),
     failures: failures.map(toRow),
     recipients: users.map((u) => ({

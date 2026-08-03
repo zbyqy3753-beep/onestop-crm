@@ -3,9 +3,14 @@
 import { useState, useTransition } from "react";
 import { Badge, Button, Field, inputClass, useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
-import { phone as formatPhone, relative } from "@/lib/format";
+import { phone as formatPhone, relative, until } from "@/lib/format";
 import { ROLE_CONFIG } from "@/lib/domain/types";
-import type { BotOverview, MessageRow, RecipientRow } from "@/server/whatsapp/overview";
+import type {
+  BotOverview,
+  MessageRow,
+  RecipientRow,
+  UpcomingRow,
+} from "@/server/whatsapp/overview";
 import {
   cancelQueuedMessageAction,
   retryFailedMessageAction,
@@ -26,8 +31,22 @@ import {
 
 type ActionRes = Promise<{ ok: boolean; error?: string }>;
 
+/**
+ * תווית זמן שעובדת לשני הכיוונים.
+ *
+ * ⚠️ `relative()` מטפל **רק בעבר**: הוא מחשב `now - instant`, ולכן כל
+ * רגע עתידי נופל ל-`min < 1` ומוצג "עכשיו". במסך הזה רוב הזמנים
+ * עתידיים — מתי התזכורת תצא, מתי החזרה — וחזרה שנקבעה ל-16:30 הוצגה
+ * כ"עכשיו" ב-14:45. `until()` הוא הפונקציה הנכונה לכיוון הזה, והיא
+ * גם נותנת שעה מפורשת ("היום 16:20") במקום הפרש יחסי שצריך לחשב.
+ */
+function when(iso: string, now: number): string {
+  return Date.parse(iso) > now ? until(iso, now) : relative(iso, now);
+}
+
 export function BotsClient({ overview }: { overview: BotOverview }) {
-  const { settings, health, counts, queue, recent, failures, recipients } = overview;
+  const { settings, health, counts, queue, upcoming, recent, failures, recipients } =
+    overview;
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("queue");
@@ -77,6 +96,7 @@ export function BotsClient({ overview }: { overview: BotOverview }) {
         onTab={setTab}
         counts={{
           queue: queue.length,
+          upcoming: upcoming.length,
           recent: recent.length,
           failures: failures.length,
           recipients: recipients.length,
@@ -102,6 +122,8 @@ export function BotsClient({ overview }: { overview: BotOverview }) {
             )}
           />
         )}
+
+        {tab === "upcoming" && <Upcoming rows={upcoming} />}
 
         {tab === "recent" && (
           <MessageList
@@ -475,10 +497,11 @@ function Save({ pending, onClick }: { pending: boolean; onClick: () => void }) {
 
 /* ── לשוניות ──────────────────────────────────────────────────────────── */
 
-type TabKey = "queue" | "recent" | "failures" | "recipients";
+type TabKey = "queue" | "upcoming" | "recent" | "failures" | "recipients";
 
 const TAB_LABEL: Record<TabKey, string> = {
   queue: "בתור",
+  upcoming: "צפויות",
   recent: "נשלחו",
   failures: "כשלים",
   recipients: "נמענים",
@@ -562,7 +585,7 @@ function MessageList({
 
               <p className="mt-0.5 text-xs text-ink-4">
                 {timeLabel}{" "}
-                {now !== null ? relative(timeOf(m), now) : ""}
+                {now !== null ? when(timeOf(m), now) : ""}
               </p>
 
               {m.lastError && (
@@ -586,6 +609,82 @@ function MessageList({
         </li>
       ))}
     </ul>
+  );
+}
+
+/* ── חזרות צפויות ─────────────────────────────────────────────────────── */
+
+/**
+ * חזרות שנקבעו ועדיין לא הפכו להודעה בתור.
+ *
+ * ⚠️ הלשונית הזו קיימת בגלל בלבול אמיתי: שורה בתור נוצרת רק דקות
+ * לפני השליחה, ולכן חזרה שנקבעה למחר לא הופיעה בשום מקום — מה שנראה
+ * בדיוק כמו תזכורת שאבדה. "יוצא ב-16:20" הוא ההבדל בין באג לכאורה
+ * לבין מידע.
+ */
+function Upcoming({ rows }: { rows: UpcomingRow[] }) {
+  const now = useNow();
+  const blocked = rows.filter((r) => r.blockedReason);
+
+  if (rows.length === 0) {
+    return (
+      <p className="rounded-card border border-line bg-surface px-3 py-6 text-center text-sm text-ink-4">
+        אין חזרות עתידיות שממתינות לתזכורת
+      </p>
+    );
+  }
+
+  return (
+    <div>
+      {blocked.length > 0 && (
+        <p className="mb-2 rounded-card border border-warn/30 bg-warn-soft px-3 py-2 text-xs text-warn">
+          <span className="nums font-semibold">{blocked.length}</span> חזרות לא
+          יישלחו כלל. הסיבה מופיעה ליד כל אחת.
+        </p>
+      )}
+
+      <ul className="flex flex-col gap-1.5">
+        {rows.map((r) => (
+          <li
+            key={r.leadId}
+            className={`rounded-card border bg-surface px-3 py-2.5 ${
+              r.blockedReason ? "border-warn/40" : "border-line"
+            }`}
+          >
+            <p className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-ink-1">
+              {r.leadName}
+              {r.assigneeName ? (
+                <span className="text-xs font-normal text-ink-4">
+                  {r.assigneeName}
+                </span>
+              ) : (
+                <Badge tone="warn">ללא שיוך</Badge>
+              )}
+            </p>
+
+            <p className="mt-0.5 text-xs text-ink-4">
+              חזרה {now !== null ? when(r.followUpAt, now) : ""}
+              {r.sendAt && (
+                <>
+                  {" · "}
+                  <span className="text-ink-2">
+                    התזכורת יוצאת{" "}
+                    {now !== null ? when(r.sendAt, now) : ""}
+                  </span>
+                </>
+              )}
+            </p>
+
+            {r.blockedReason && (
+              <p className="mt-1 flex items-center gap-1 text-xs text-warn">
+                <Icon name="close" size={12} className="shrink-0" />
+                לא תישלח — {r.blockedReason}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
