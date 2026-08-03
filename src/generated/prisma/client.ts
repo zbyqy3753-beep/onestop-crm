@@ -118,6 +118,17 @@ export type WhatsAppMessage = Prisma.WhatsAppMessageModel
  */
 export type BotHeartbeat = Prisma.BotHeartbeatModel
 /**
+ * Model RenewalDocument
+ * מסמך PDF של לקוח שהשנה שלו הסתיימה, כפי שהועלה מהאתר.
+ * 
+ * שלב ראשון בזרימת החידושים: הקובץ נשמר ב-Supabase Storage (דלי
+ * פרטי `renewals`) והטקסט הגולמי נשמר כאן. חילוץ השדות עצמם — שם,
+ * טלפון, ספק, חבילה, מחיר — הוא שלב נפרד **בכוונה**: בלי לראות
+ * מסמכים אמיתיים כל parser שהיינו כותבים היה ניחוש, והטקסט הגולמי
+ * הוא מה שמאפשר לכתוב אותו נכון בלי להעלות הכול מחדש.
+ */
+export type RenewalDocument = Prisma.RenewalDocumentModel
+/**
  * Model BotSettings
  * הגדרות הבוט שמנהל יכול לשנות מהאתר — שורה יחידה (`id = "default"`).
  * 

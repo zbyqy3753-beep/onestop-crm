@@ -66,6 +66,7 @@ model User {
   referredRegistrations   Registration[] @relation("RegistrationReferrer")
   handledRegistrations    Registration[] @relation("RegistrationHandler")
   whatsappMessages        WhatsAppMessage[] @relation("WaRecipient")
+  renewalDocuments        RenewalDocument[] @relation("RenewalUploader")
 
   @@index([role, active])
 }
@@ -484,6 +485,54 @@ model BotHeartbeat {
   waNumber    String?
   instanceId  String?
   queuedCount Int      @default(0)
+}
+
+/* ── חידושים ────────────────────────────────────────────────────────── */
+
+enum RenewalDocStatus {
+  /// הקובץ נשמר, הטקסט טרם חולץ
+  uploaded
+  /// חולץ טקסט קריא
+  extracted
+  /// החילוץ נכשל — PDF סרוק, מוגן בסיסמה, או פגום
+  failed
+}
+
+/// מסמך PDF של לקוח שהשנה שלו הסתיימה, כפי שהועלה מהאתר.
+///
+/// שלב ראשון בזרימת החידושים: הקובץ נשמר ב-Supabase Storage (דלי
+/// פרטי `renewals`) והטקסט הגולמי נשמר כאן. חילוץ השדות עצמם — שם,
+/// טלפון, ספק, חבילה, מחיר — הוא שלב נפרד **בכוונה**: בלי לראות
+/// מסמכים אמיתיים כל parser שהיינו כותבים היה ניחוש, והטקסט הגולמי
+/// הוא מה שמאפשר לכתוב אותו נכון בלי להעלות הכול מחדש.
+model RenewalDocument {
+  id       String @id @default(cuid())
+  fileName String
+  byteSize Int
+
+  /// הנתיב בתוך הדלי. הקובץ עצמו לא במסד — חשבוניות במסד היו מנפחות
+  /// אותו לגיגה תוך מאות לקוחות.
+  storagePath String
+
+  status        RenewalDocStatus @default(uploaded)
+  /// הטקסט כפי שיצא מה-PDF, בלי עיבוד
+  extractedText String?
+  pageCount     Int?
+  error         String?
+
+  /// SHA-256 של תוכן הקובץ.
+  ///
+  /// ⚠️ ייחודי, וזו לא אופטימיזציית אחסון. אותה חשבונית שהועלתה
+  /// פעמיים היא בהמשך שתי הודעות וואטסאפ לאותו לקוח — וזו בדיוק
+  /// התלונה שהופכת דיוור לגיטימי לספאם בעיני המקבל.
+  contentHash String @unique
+
+  uploadedById String
+  uploadedBy   User   @relation("RenewalUploader", fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
 }
 
 /// הגדרות הבוט שמנהל יכול לשנות מהאתר — שורה יחידה (`id = "default"`).

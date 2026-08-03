@@ -161,3 +161,12 @@ export const WaMessageStatus = {
 } as const
 
 export type WaMessageStatus = (typeof WaMessageStatus)[keyof typeof WaMessageStatus]
+
+
+export const RenewalDocStatus = {
+  uploaded: 'uploaded',
+  extracted: 'extracted',
+  failed: 'failed'
+} as const
+
+export type RenewalDocStatus = (typeof RenewalDocStatus)[keyof typeof RenewalDocStatus]

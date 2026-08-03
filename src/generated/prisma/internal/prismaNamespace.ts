@@ -397,6 +397,7 @@ export const ModelName = {
   Registration: 'Registration',
   WhatsAppMessage: 'WhatsAppMessage',
   BotHeartbeat: 'BotHeartbeat',
+  RenewalDocument: 'RenewalDocument',
   BotSettings: 'BotSettings'
 } as const
 
@@ -413,7 +414,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "botSettings"
+    modelProps: "user" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "botSettings"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1379,6 +1380,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    RenewalDocument: {
+      payload: Prisma.$RenewalDocumentPayload<ExtArgs>
+      fields: Prisma.RenewalDocumentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RenewalDocumentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalDocumentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RenewalDocumentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalDocumentPayload>
+        }
+        findFirst: {
+          args: Prisma.RenewalDocumentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalDocumentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RenewalDocumentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalDocumentPayload>
+        }
+        findMany: {
+          args: Prisma.RenewalDocumentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalDocumentPayload>[]
+        }
+        create: {
+          args: Prisma.RenewalDocumentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalDocumentPayload>
+        }
+        createMany: {
+          args: Prisma.RenewalDocumentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RenewalDocumentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalDocumentPayload>[]
+        }
+        delete: {
+          args: Prisma.RenewalDocumentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalDocumentPayload>
+        }
+        update: {
+          args: Prisma.RenewalDocumentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalDocumentPayload>
+        }
+        deleteMany: {
+          args: Prisma.RenewalDocumentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RenewalDocumentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RenewalDocumentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalDocumentPayload>[]
+        }
+        upsert: {
+          args: Prisma.RenewalDocumentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalDocumentPayload>
+        }
+        aggregate: {
+          args: Prisma.RenewalDocumentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRenewalDocument>
+        }
+        groupBy: {
+          args: Prisma.RenewalDocumentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RenewalDocumentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RenewalDocumentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RenewalDocumentCountAggregateOutputType> | number
+        }
+      }
+    }
     BotSettings: {
       payload: Prisma.$BotSettingsPayload<ExtArgs>
       fields: Prisma.BotSettingsFieldRefs
@@ -1681,6 +1756,23 @@ export const BotHeartbeatScalarFieldEnum = {
 } as const
 
 export type BotHeartbeatScalarFieldEnum = (typeof BotHeartbeatScalarFieldEnum)[keyof typeof BotHeartbeatScalarFieldEnum]
+
+
+export const RenewalDocumentScalarFieldEnum = {
+  id: 'id',
+  fileName: 'fileName',
+  byteSize: 'byteSize',
+  storagePath: 'storagePath',
+  status: 'status',
+  extractedText: 'extractedText',
+  pageCount: 'pageCount',
+  error: 'error',
+  contentHash: 'contentHash',
+  uploadedById: 'uploadedById',
+  createdAt: 'createdAt'
+} as const
+
+export type RenewalDocumentScalarFieldEnum = (typeof RenewalDocumentScalarFieldEnum)[keyof typeof RenewalDocumentScalarFieldEnum]
 
 
 export const BotSettingsScalarFieldEnum = {
@@ -1990,6 +2082,20 @@ export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
 
 
 /**
+ * Reference to a field of type 'RenewalDocStatus'
+ */
+export type EnumRenewalDocStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RenewalDocStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'RenewalDocStatus[]'
+ */
+export type ListEnumRenewalDocStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RenewalDocStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -2125,6 +2231,7 @@ export type GlobalOmitConfig = {
   registration?: Prisma.RegistrationOmit
   whatsAppMessage?: Prisma.WhatsAppMessageOmit
   botHeartbeat?: Prisma.BotHeartbeatOmit
+  renewalDocument?: Prisma.RenewalDocumentOmit
   botSettings?: Prisma.BotSettingsOmit
 }
 

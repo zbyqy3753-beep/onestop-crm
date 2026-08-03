@@ -64,6 +64,7 @@ export const ModelName = {
   Registration: 'Registration',
   WhatsAppMessage: 'WhatsAppMessage',
   BotHeartbeat: 'BotHeartbeat',
+  RenewalDocument: 'RenewalDocument',
   BotSettings: 'BotSettings'
 } as const
 
@@ -272,6 +273,23 @@ export const BotHeartbeatScalarFieldEnum = {
 } as const
 
 export type BotHeartbeatScalarFieldEnum = (typeof BotHeartbeatScalarFieldEnum)[keyof typeof BotHeartbeatScalarFieldEnum]
+
+
+export const RenewalDocumentScalarFieldEnum = {
+  id: 'id',
+  fileName: 'fileName',
+  byteSize: 'byteSize',
+  storagePath: 'storagePath',
+  status: 'status',
+  extractedText: 'extractedText',
+  pageCount: 'pageCount',
+  error: 'error',
+  contentHash: 'contentHash',
+  uploadedById: 'uploadedById',
+  createdAt: 'createdAt'
+} as const
+
+export type RenewalDocumentScalarFieldEnum = (typeof RenewalDocumentScalarFieldEnum)[keyof typeof RenewalDocumentScalarFieldEnum]
 
 
 export const BotSettingsScalarFieldEnum = {

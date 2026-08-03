@@ -34,6 +34,7 @@ export type IconName =
   | "myDeals"
   | "registrations"
   | "admin"
+  | "upload"
   | "feedback";
 
 export interface NavGroup {
@@ -115,6 +116,13 @@ export const NAV: NavGroup[] = [
         icon: "registrations",
         roles: ["owner", "manager", "operator"],
         mobileOrder: 3,
+      },
+      {
+        href: "/renewals",
+        label: "חידושים",
+        hint: "העלאת מסמכי לקוחות שהשנה שלהם הסתיימה",
+        icon: "upload",
+        roles: ["owner", "manager"],
       },
       {
         href: "/admin",
