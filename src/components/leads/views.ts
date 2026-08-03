@@ -64,6 +64,11 @@ export const QUICK_VIEWS: QuickView[] = [
     fullAccessOnly: true,
   },
   {
+    key: "starred",
+    label: "מסומנים",
+    patch: () => ({ ...EMPTY_FILTERS, starred: true }),
+  },
+  {
     key: "hot",
     label: "לידים חמים",
     patch: () => ({ ...EMPTY_FILTERS, kind: ["hot"] }),
@@ -75,7 +80,13 @@ export const QUICK_VIEWS: QuickView[] = [
   },
 ];
 
-/** האם המסננים הנוכחיים זהים לתצוגה. משמש לסימון הצ׳יפ הפעיל. */
+/**
+ * האם המסננים הנוכחיים זהים לתצוגה. משמש לסימון הצ׳יפ הפעיל.
+ *
+ * ⚠️ `query` **לא** נכלל בהשוואה: החיפוש חי לצד התצוגה ולא מבטל אותה.
+ * כשהוא נכלל, הקלדת מילת חיפוש כיבתה את הצ׳יפ הפעיל, והמשתמש ראה
+ * "אין תצוגה פעילה" בזמן שהסינון בהחלט פעיל.
+ */
 export function isViewActive(
   view: QuickView,
   filters: Filters,
@@ -84,7 +95,7 @@ export function isViewActive(
   const target = view.patch(userId);
 
   return (
-    filters.query === target.query &&
+    filters.starred === target.starred &&
     filters.openOnly === target.openOnly &&
     filters.dueToday === target.dueToday &&
     sameSet(filters.status, target.status) &&

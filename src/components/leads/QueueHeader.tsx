@@ -148,7 +148,15 @@ export function QueueHeader({
           return (
             <button
               key={view.key}
-              onClick={() => onFiltersChange(view.patch(currentUserId))}
+              /* החיפוש שורד את המעבר בין תצוגות. `patch` מחזיר אובייקט
+                 מסננים שלם, ולכן בלי השורה הזו נגיעה בצ׳יפ מחקה בשקט
+                 מילת חיפוש שהמשתמש הרגע הקליד. */
+              onClick={() =>
+                onFiltersChange({
+                  ...view.patch(currentUserId),
+                  query: filters.query,
+                })
+              }
               aria-pressed={active}
               // `min-h-11` בטלפון: אלה הפקדים שהעובד נוגע בהם הכי הרבה,
               // והם היו 34px. בשולחן חוזרים ל-30px ושום דבר לא זז.

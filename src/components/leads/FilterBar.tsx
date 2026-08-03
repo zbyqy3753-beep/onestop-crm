@@ -23,6 +23,13 @@ export interface Filters {
   openOnly: boolean;
   /** רק לידים שתאריך החזרה שלהם היום או עבר */
   dueToday: boolean;
+  /**
+   * רק לידים מסומנים בכוכב.
+   *
+   * בלי השדה הזה הכוכב היה פיצ׳ר מת: אפשר היה לסמן ליד, אבל לא היה
+   * שום מסנן, מיון או תצוגה שמחזירים אותו — כלומר לסמן ולא למצוא.
+   */
+  starred: boolean;
 }
 
 export const EMPTY_FILTERS: Filters = {
@@ -34,6 +41,7 @@ export const EMPTY_FILTERS: Filters = {
   assignee: [],
   openOnly: false,
   dueToday: false,
+  starred: false,
 };
 
 export function FilterBar({
@@ -76,6 +84,7 @@ export function FilterBar({
     filters.assignee.length +
     (filters.openOnly ? 1 : 0) +
     (filters.dueToday ? 1 : 0) +
+    (filters.starred ? 1 : 0) +
     (filters.query ? 1 : 0);
 
   // סרגל הפעולות מחליף את המסננים כשיש בחירה — שני מצבים, לא שני סרגלים
@@ -136,7 +145,13 @@ export function FilterBar({
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2">
-      <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+      {/*
+        ⚠️ `min-w-[140px]` בצר ולא 200. שדה החיפוש הוא `flex-1` בתוך
+        `flex-wrap`, ולצידו יושבים בורר המיון וכפתור ה-`⋯` (יחד 181px).
+        עם רוחב מינימלי של 200 הסכום עבר את 343px הפנויים והשורה
+        נשברה לשתיים — 46px נוספים שדחפו כרטיס שלם מחוץ למסך.
+      */}
+      <div className="relative min-w-[140px] flex-1 sm:min-w-[200px] sm:max-w-xs">
         <span className="pointer-events-none absolute inset-y-0 start-2.5 flex items-center text-ink-4">
           <Icon name="search" size={16} />
         </span>
@@ -144,16 +159,36 @@ export function FilterBar({
           ref={searchRef}
           value={filters.query}
           onChange={(e) => onChange({ ...filters, query: e.target.value })}
-          placeholder="חיפוש לפי שם, טלפון או עיר…"
-          className={`${inputClass} ps-8`}
+          placeholder="חיפוש לפי שם, טלפון, חבילה או הערה…"
+          className={`${inputClass} ps-8 pe-9`}
           aria-label="חיפוש לידים"
         />
-        {/* `lg:` ולא `sm:` — קיצור המקלדת קיים רק במסך עם מקלדת, וזה
-            אותו סף שבו `useIsNarrow` מחליף לתצוגת כרטיסים (1024px).
-            ב-`sm:` הרמז הופיע גם בטאבלט ובטלפון גדול בנוף. */}
-        <kbd className="pointer-events-none absolute inset-y-0 end-2.5 my-auto hidden h-4 items-center rounded border border-line px-1 text-[10px] text-ink-4 lg:flex">
-          /
-        </kbd>
+        {/*
+          כפתור הניקוי והרמז מתחלפים באותו מקום — לעולם לא יחד.
+
+          ב-RTL ניקוי ידני של שדה חיפוש הוא הדבר הכי לא נוח שיש: סימון
+          טקסט בכיוון הפוך, או backspace עד הסוף. ולכן ה-`×` גובר על
+          רמז המקלדת כשיש טקסט.
+        */}
+        {filters.query ? (
+          <button
+            type="button"
+            onClick={() => {
+              onChange({ ...filters, query: "" });
+              searchRef.current?.focus();
+            }}
+            aria-label="ניקוי חיפוש"
+            className="absolute inset-y-0 end-2.5 my-auto grid size-5 place-items-center rounded-full text-ink-4 transition-colors after:absolute after:-inset-2.5 after:content-[''] hover:bg-surface-3 hover:text-ink-2 active:scale-90"
+          >
+            <Icon name="close" size={13} />
+          </button>
+        ) : (
+          /* `lg:` ולא `sm:` — קיצור המקלדת קיים רק במסך עם מקלדת, וזה
+             אותו סף שבו `useIsNarrow` מחליף לתצוגת כרטיסים (1024px). */
+          <kbd className="pointer-events-none absolute inset-y-0 end-2.5 my-auto hidden h-4 items-center rounded border border-line px-1 text-[10px] text-ink-4 lg:flex">
+            /
+          </kbd>
+        )}
       </div>
 
       {/*

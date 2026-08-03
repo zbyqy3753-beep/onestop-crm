@@ -49,6 +49,7 @@ export function LeadCard({
   onQuickStatus,
   onStar,
   onPatch,
+  assigneeName,
 }: {
   lead: Lead;
   now: number | null;
@@ -66,9 +67,14 @@ export function LeadCard({
   onQuickStatus?: (to: LeadStatus) => void;
   onStar: (next: boolean) => void;
   onPatch: (patch: LeadPatch) => void;
+  /** שם העובד המשויך. מוצג רק למי שרואה את כל הלידים. */
+  assigneeName?: string;
 }) {
   const priority = PRIORITY_CONFIG[lead.priority];
   const status = STATUS_CONFIG[lead.status];
+
+  /** הפירוט האחרון שהסוכן הזין — אותה נגזרת כמו ב-`LeadRow`. */
+  const lastDetail = [...lead.history].reverse().find((h) => h.detail)?.detail;
 
   /** תאריך החזרה כבר עבר (בימי לוח) — הליד זועק, לא ממתין. */
   const overdue =
@@ -150,6 +156,18 @@ export function LeadCard({
               <span className="truncate text-ink-4">· {interest}</span>
             )}
           </span>
+
+          {/*
+            הפירוט האחרון מההיסטוריה — מה שהסוכן קורא לפני שהוא מחייג.
+            הוא קיים בטבלה בשולחן (`LeadRow`), ודווקא בטלפון — המכשיר
+            שממנו מחייגים — הוא חסר, מה שאילץ פתיחת מגירה לכל ליד.
+            שורה אחת מקוצצת, רק כשיש מה להראות.
+          */}
+          {lastDetail && (
+            <span className="mt-0.5 block truncate text-[12px] text-ink-3">
+              {lastDetail}
+            </span>
+          )}
         </button>
 
         {/*
@@ -250,8 +268,17 @@ export function LeadCard({
           <Icon name="whatsapp" size={16} />
         </a>
 
-        <span className="shrink-0 whitespace-nowrap text-[11px] text-ink-4">
-          {now === null ? "" : relative(lead.updatedAt, now)}
+        {/*
+          מי מחזיק את הליד גובר על "עודכן לפני X".
+
+          למנהל שרואה את כל הארגון, כרטיס בלי שם עובד לא אומר אם הליד
+          מטופל בכלל — וזו השאלה שבגללה הוא פתח את המסך. הזמן היחסי
+          לעומת זאת אינו פעולתי, ושתי הפיסות לא נכנסות באותו קצה
+          במסך של 375px. לעובד (שרואה רק את שלו) אין שם מה להציג,
+          ולכן הוא ממשיך לראות את הזמן.
+        */}
+        <span className="shrink-0 truncate whitespace-nowrap text-[11px] text-ink-4">
+          {assigneeName ?? (now === null ? "" : relative(lead.updatedAt, now))}
         </span>
       </div>
     </li>

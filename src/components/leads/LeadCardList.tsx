@@ -28,6 +28,7 @@ export function LeadCardList({
   onAdd,
   hasFilters,
   onClearFilters,
+  canSeeAll,
   onBulkAssign,
   onBulkStatus,
   onBulkDelete,
@@ -49,6 +50,8 @@ export function LeadCardList({
   onAdd: () => void;
   hasFilters: boolean;
   onClearFilters: () => void;
+  /** רואה את כל הארגון — קובע גם את שם המשויך על הכרטיס וגם את המצב הריק */
+  canSeeAll: boolean;
   onBulkAssign: (assigneeId: string | null) => void;
   onBulkStatus: (to: LeadStatus) => void;
   onBulkDelete: () => void;
@@ -81,6 +84,8 @@ export function LeadCardList({
 
   const allChecked = leads.length > 0 && leads.every((l) => selected.has(l.id));
 
+  const userById = new Map(users.map((u) => [u.id, u]));
+
   // פקדי הסרגל הם פעולות **קבוצתיות** — הם ננעלים כשיש כתיבה כלשהי
   // בטיסה, בשונה מהכרטיסים שכל אחד ננעל רק על הליד שלו
   const bulkBusy = busyIds.size > 0;
@@ -95,21 +100,34 @@ export function LeadCardList({
       */}
       {leads.length === 0 ? (
         <div className="rounded-card border border-line bg-surface">
+          {/*
+            שלושה מצבים ריקים ולא שניים. עובד שרואה רק את הלידים שלו
+            וטרם שויך לו דבר קיבל "אין לידים עדיין / ייבא מקובץ CSV" —
+            אמירה שגויה (במערכת יש לידים) והצעה שאין לו הרשאה לבצע.
+          */}
           <EmptyState
-            title={hasFilters ? "אין לידים שתואמים לסינון" : "אין לידים עדיין"}
+            title={
+              hasFilters
+                ? "אין לידים שתואמים לסינון"
+                : canSeeAll
+                  ? "אין לידים עדיין"
+                  : "אין לידים משויכים אליך"
+            }
             body={
               hasFilters
                 ? "נסה להסיר חלק מהמסננים או לשנות את מילת החיפוש."
-                : "הוסף את הליד הראשון או ייבא רשימה מקובץ CSV."
+                : canSeeAll
+                  ? "הוסף את הליד הראשון או ייבא רשימה מקובץ CSV."
+                  : "לידים יופיעו כאן ברגע שמנהל ישייך אותם אליך."
             }
             action={
               hasFilters ? (
                 <Button onClick={onClearFilters}>ניקוי מסננים</Button>
-              ) : (
+              ) : canSeeAll ? (
                 <Button variant="primary" icon="plus" onClick={onAdd}>
                   ליד חדש
                 </Button>
-              )
+              ) : undefined
             }
           />
         </div>
@@ -130,6 +148,11 @@ export function LeadCardList({
               onQuickStatus={(to) => onQuickStatus(lead.id, to)}
               onStar={(next) => onStar(lead.id, next)}
               onPatch={(patch) => onPatch(lead.id, patch)}
+              assigneeName={
+                canSeeAll && lead.assigneeId
+                  ? userById.get(lead.assigneeId)?.name
+                  : undefined
+              }
             />
           ))}
         </ul>

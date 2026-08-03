@@ -34,6 +34,7 @@ export function LeadsTable({
   users,
   onAdd,
   hasFilters,
+  canSeeAll,
   busyIds,
 }: {
   leads: Lead[];
@@ -53,6 +54,8 @@ export function LeadsTable({
   users: User[];
   onAdd: () => void;
   hasFilters: boolean;
+  /** רואה את כל הארגון — קובע את נוסח המצב הריק */
+  canSeeAll: boolean;
   /** הלידים שיש להם כתיבה בטיסה — רק השורות שלהם ננעלות, לא כל הטבלה */
   busyIds: ReadonlySet<string>;
 }) {
@@ -89,15 +92,25 @@ export function LeadsTable({
   if (leads.length === 0) {
     return (
       <div className="rounded-card border border-line bg-surface">
+        {/* ראה ההערה ב-`LeadCardList` — שלושה מצבים ריקים, לא שניים */}
         <EmptyState
-          title={hasFilters ? "אין לידים שתואמים לסינון" : "אין לידים עדיין"}
+          title={
+            hasFilters
+              ? "אין לידים שתואמים לסינון"
+              : canSeeAll
+                ? "אין לידים עדיין"
+                : "אין לידים משויכים אליך"
+          }
           body={
             hasFilters
               ? "נסה להסיר חלק מהמסננים או לשנות את מילת החיפוש."
-              : "הוסף את הליד הראשון או ייבא רשימה מקובץ CSV."
+              : canSeeAll
+                ? "הוסף את הליד הראשון או ייבא רשימה מקובץ CSV."
+                : "לידים יופיעו כאן ברגע שמנהל ישייך אותם אליך."
           }
           action={
-            !hasFilters && (
+            !hasFilters &&
+            canSeeAll && (
               <Button variant="primary" icon="plus" onClick={onAdd}>
                 ליד חדש
               </Button>

@@ -18,7 +18,12 @@ import type {
   Package,
   User,
 } from "@/lib/domain/types";
-import { PRIORITY_CONFIG, STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
+import {
+  PRIORITY_CONFIG,
+  PROVIDER_CONFIG,
+  STATUS_CONFIG,
+  STATUS_ORDER,
+} from "@/lib/domain/types";
 import {
   assignAction,
   changeStatusManyAction,
@@ -372,9 +377,30 @@ export function LeadsClient({
         if (!filters.assignee.includes(key)) return false;
       }
 
+      if (filters.starred && !lead.isStarred) return false;
+
       if (q) {
-        const haystack =
-          `${lead.name} ${lead.phone} ${lead.email ?? ""} ${lead.city ?? ""}`.toLowerCase();
+        /*
+          החיפוש מכסה גם את מה שכתוב על הכרטיס עצמו: חבילה, ספק, מקור
+          והערות. קודם הוא היה שם/טלפון/מייל/עיר בלבד — כלומר חיפוש
+          "ULTIMATE" או "פלאפון" החזיר אפס תוצאות בזמן שהמילה הזו
+          מוצגת על המסך.
+        */
+        const provider = lead.currentProvider
+          ? PROVIDER_CONFIG[lead.currentProvider].label
+          : "";
+        const haystack = [
+          lead.name,
+          lead.phone,
+          lead.email ?? "",
+          lead.city ?? "",
+          lead.packageName ?? "",
+          provider,
+          lead.sourceDetail ?? "",
+          lead.notes.map((n) => n.body).join(" "),
+        ]
+          .join(" ")
+          .toLowerCase();
         if (!haystack.includes(q)) return false;
       }
 
@@ -468,6 +494,7 @@ export function LeadsClient({
       filters.query.trim() !== "" ||
       filters.openOnly ||
       filters.dueToday ||
+      filters.starred ||
       filters.status.length > 0 ||
       filters.kind.length > 0 ||
       filters.priority.length > 0 ||
@@ -806,6 +833,7 @@ export function LeadsClient({
           onAdd={() => setAddOpen(true)}
           hasFilters={hasActiveFilters}
           onClearFilters={() => applyFilters(EMPTY_FILTERS)}
+          canSeeAll={canSeeAll}
           /* דווקא visibleSelected ולא selected — פעולה קבוצתית חייבת
              לפגוע רק בלידים שהמשתמש רואה כרגע בחתך המסונן */
           onBulkAssign={(id) => assign(visibleSelected, id)}
@@ -832,6 +860,7 @@ export function LeadsClient({
           users={users}
           onAdd={() => setAddOpen(true)}
           hasFilters={hasActiveFilters}
+          canSeeAll={canSeeAll}
           busyIds={busyIds}
         />
       )}
