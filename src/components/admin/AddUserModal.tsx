@@ -61,7 +61,7 @@ export function AddUserModal({
           />
         </Field>
 
-        <Field label="טלפון">
+        <Field label="טלפון" hint="נדרש לקבלת תזכורות חזרה בוואטסאפ">
           <input
             name="phone"
             inputMode="tel"

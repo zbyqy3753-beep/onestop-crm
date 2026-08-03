@@ -5,6 +5,7 @@ import { requireSessionUser } from "@/server/auth/session";
 import { createAuthUser, updateAuthUser } from "@/server/auth/supabaseAdmin";
 import type { Role } from "@/lib/domain/types";
 import { isRole } from "@/lib/domain/types";
+import { isIsraeliPhone } from "@/lib/format";
 import { revalidateUserSurfaces } from "@/app/(app)/_revalidate";
 
 export type ActionResult<T = undefined> =
@@ -38,6 +39,11 @@ export async function createUserAction(
 
   if (name.length < 2) return { ok: false, error: "שם מלא הוא שדה חובה" };
   if (!email.includes("@")) return { ok: false, error: "אימייל לא תקין" };
+  // אופציונלי, אבל אם הוזן — חייב להיות תקין: זה היעד של תזכורות
+  // הוואטסאפ, ומספר שגוי נכשל בשקט אצל הבוט ולא כאן
+  if (phone && !isIsraeliPhone(phone)) {
+    return { ok: false, error: "מספר טלפון לא תקין" };
+  }
   if (!isRole(rawRole)) return { ok: false, error: "תפקיד לא מוכר" };
   const role: Role = rawRole;
   if (role === "owner" && actor.role !== "owner") {
@@ -58,7 +64,8 @@ export async function createUserAction(
   await db.users.create({
     name,
     email,
-    phone: phone || undefined,
+    // ספרות בלבד, כמו בלידים — הבוט ממיר ל-E.164 ולא מנקה מקפים
+    phone: phone ? phone.replace(/\D/g, "") : undefined,
     store: store || undefined,
     role,
   });
@@ -109,6 +116,9 @@ export async function updateUserAction(
   const password = String(formData.get("password") ?? "");
 
   if (name.length < 2) return { ok: false, error: "שם מלא הוא שדה חובה" };
+  if (phone && !isIsraeliPhone(phone)) {
+    return { ok: false, error: "מספר טלפון לא תקין" };
+  }
   if (!isRole(rawRole)) return { ok: false, error: "תפקיד לא מוכר" };
   const role: Role = rawRole;
 
@@ -157,7 +167,7 @@ export async function updateUserAction(
     await db.users.update(userId, {
       name,
       email,
-      phone: phone || null,
+      phone: phone ? phone.replace(/\D/g, "") : null,
       store: store || null,
       role,
       active,

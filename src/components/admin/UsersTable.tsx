@@ -172,10 +172,12 @@ function UserCard({
             {user.store && <> · {user.store}</>}
           </p>
           <p className="mt-0.5 truncate text-xs text-ink-4">{user.email}</p>
-          {user.phone && (
+          {user.phone ? (
             <p className="ltr-num truncate text-xs text-ink-4">
               {formatPhone(user.phone)}
             </p>
+          ) : (
+            user.active && <MissingPhone />
           )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -237,7 +239,11 @@ function Row({
 
       {/* יצירת קשר */}
       <td className="px-3 py-2.5 text-xs text-ink-2">
-        {user.phone && <p className="ltr-num">{formatPhone(user.phone)}</p>}
+        {user.phone ? (
+          <p className="ltr-num">{formatPhone(user.phone)}</p>
+        ) : (
+          user.active && <MissingPhone />
+        )}
         <p className="mt-0.5 truncate text-ink-3">{user.email}</p>
       </td>
 
@@ -260,5 +266,17 @@ function Row({
         />
       </td>
     </tr>
+  );
+}
+
+/**
+ * עובד פעיל בלי טלפון לא יקבל תזכורות חזרה בוואטסאפ — והכשל הזה
+ * שקט לגמרי מצד הבוט. התגית היא המקום היחיד שבו הוא נראה.
+ */
+function MissingPhone() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded bg-warn-soft px-1.5 py-0.5 text-[11px] font-medium text-warn">
+      אין טלפון
+    </span>
   );
 }

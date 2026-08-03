@@ -128,15 +128,23 @@ export function isIsraeliPhone(raw: string): boolean {
 }
 
 /**
- * קישור וואטסאפ. wa.me דורש E.164 בלי הפלוס, ולכן האפס המוביל של
- * מספר ישראלי מוחלף בקידומת 972: 0501234567 → 972501234567.
+ * מספר ישראלי → E.164 בלי הפלוס: 0501234567 → 972501234567.
+ *
+ * מחולץ מ-`waLink` כי הבוט צריך את המספר עצמו ולא קישור — וואטסאפ
+ * מזהה נמען לפי המספר הזה בדיוק.
+ */
+export function toE164(raw: string): string {
+  const d = raw.replace(/\D/g, "");
+  return d.startsWith("0") ? `972${d.slice(1)}` : d;
+}
+
+/**
+ * קישור וואטסאפ. wa.me דורש E.164 בלי הפלוס.
  *
  * ההודעה עצמה מגיעה מבחוץ (`whatsappGreeting` ב-domain/types) — כאן
  * לא יושבת עברית.
  */
 export function waLink(raw: string, message?: string): string {
-  const d = raw.replace(/\D/g, "");
-  const e164 = d.startsWith("0") ? `972${d.slice(1)}` : d;
-  const base = `https://wa.me/${e164}`;
+  const base = `https://wa.me/${toE164(raw)}`;
   return message ? `${base}?text=${encodeURIComponent(message)}` : base;
 }
