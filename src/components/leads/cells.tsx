@@ -26,19 +26,26 @@ export function StatusPicker({
   current,
   onPick,
   busy,
+  noAnswerCount,
 }: {
   current: LeadStatus;
   onPick: (to: LeadStatus) => void;
   busy?: boolean;
+  /** מונה ניסיונות "אין מענה" — מוצג כ"אין מענה 2" מהניסיון השני */
+  noAnswerCount?: number;
 }) {
   const meta = STATUS_CONFIG[current];
+  const label =
+    current === "noAnswer" && noAnswerCount && noAnswerCount > 1
+      ? `${meta.label} ${noAnswerCount}`
+      : meta.label;
 
   return (
     // אותה בעיה כמו InlinePicker: ה-<select> השקוף יורש את גודל
     // ה-badge הקטן שהוא עוטף — נמדד בפועל 43×20 בטלפון.
     <span className="relative inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0">
       <Badge tone={meta.tone} className="pe-4">
-        {meta.label}
+        {label}
       </Badge>
       <Icon
         name="chevronDown"

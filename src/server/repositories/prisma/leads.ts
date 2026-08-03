@@ -289,17 +289,27 @@ export const prismaLeadRepository: LeadRepository = {
     const row = await prisma.$transaction(async (tx) => {
       const current = await tx.lead.findUniqueOrThrow({
         where: { id: leadId },
-        select: { status: true },
+        select: { status: true, noAnswerCount: true },
       });
 
       await tx.leadStatusEvent.create({
         data: { leadId, from: current.status, to, detail, actorId },
       });
 
+      // עולה ב-1 בכל חזרה ל"אין מענה", מתאפס בכל מעבר לסטטוס אחר —
+      // ראה ההערה על השדה ב-schema.prisma.
+      const nextNoAnswerCount =
+        to === "noAnswer"
+          ? current.status === "noAnswer"
+            ? current.noAnswerCount + 1
+            : 1
+          : 0;
+
       return tx.lead.update({
         where: { id: leadId },
         data: {
           status: to,
+          noAnswerCount: nextNoAnswerCount,
           lastContactAt: new Date(),
           followUpAt: nextFollowUp,
         },

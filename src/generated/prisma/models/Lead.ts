@@ -28,10 +28,12 @@ export type AggregateLead = {
 
 export type LeadAvgAggregateOutputType = {
   cost: runtime.Decimal | null
+  noAnswerCount: number | null
 }
 
 export type LeadSumAggregateOutputType = {
   cost: runtime.Decimal | null
+  noAnswerCount: number | null
 }
 
 export type LeadMinAggregateOutputType = {
@@ -48,6 +50,7 @@ export type LeadMinAggregateOutputType = {
   currentProvider: $Enums.Provider | null
   cost: runtime.Decimal | null
   isStarred: boolean | null
+  noAnswerCount: number | null
   sourceDetail: string | null
   packageName: string | null
   assigneeId: string | null
@@ -72,6 +75,7 @@ export type LeadMaxAggregateOutputType = {
   currentProvider: $Enums.Provider | null
   cost: runtime.Decimal | null
   isStarred: boolean | null
+  noAnswerCount: number | null
   sourceDetail: string | null
   packageName: string | null
   assigneeId: string | null
@@ -96,6 +100,7 @@ export type LeadCountAggregateOutputType = {
   currentProvider: number
   cost: number
   isStarred: number
+  noAnswerCount: number
   sourceDetail: number
   packageName: number
   assigneeId: number
@@ -110,10 +115,12 @@ export type LeadCountAggregateOutputType = {
 
 export type LeadAvgAggregateInputType = {
   cost?: true
+  noAnswerCount?: true
 }
 
 export type LeadSumAggregateInputType = {
   cost?: true
+  noAnswerCount?: true
 }
 
 export type LeadMinAggregateInputType = {
@@ -130,6 +137,7 @@ export type LeadMinAggregateInputType = {
   currentProvider?: true
   cost?: true
   isStarred?: true
+  noAnswerCount?: true
   sourceDetail?: true
   packageName?: true
   assigneeId?: true
@@ -154,6 +162,7 @@ export type LeadMaxAggregateInputType = {
   currentProvider?: true
   cost?: true
   isStarred?: true
+  noAnswerCount?: true
   sourceDetail?: true
   packageName?: true
   assigneeId?: true
@@ -178,6 +187,7 @@ export type LeadCountAggregateInputType = {
   currentProvider?: true
   cost?: true
   isStarred?: true
+  noAnswerCount?: true
   sourceDetail?: true
   packageName?: true
   assigneeId?: true
@@ -289,6 +299,7 @@ export type LeadGroupByOutputType = {
   currentProvider: $Enums.Provider | null
   cost: runtime.Decimal | null
   isStarred: boolean
+  noAnswerCount: number
   sourceDetail: string | null
   packageName: string | null
   assigneeId: string | null
@@ -336,6 +347,7 @@ export type LeadWhereInput = {
   currentProvider?: Prisma.EnumProviderNullableFilter<"Lead"> | $Enums.Provider | null
   cost?: Prisma.DecimalNullableFilter<"Lead"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFilter<"Lead"> | boolean
+  noAnswerCount?: Prisma.IntFilter<"Lead"> | number
   sourceDetail?: Prisma.StringNullableFilter<"Lead"> | string | null
   packageName?: Prisma.StringNullableFilter<"Lead"> | string | null
   assigneeId?: Prisma.StringNullableFilter<"Lead"> | string | null
@@ -366,6 +378,7 @@ export type LeadOrderByWithRelationInput = {
   currentProvider?: Prisma.SortOrderInput | Prisma.SortOrder
   cost?: Prisma.SortOrderInput | Prisma.SortOrder
   isStarred?: Prisma.SortOrder
+  noAnswerCount?: Prisma.SortOrder
   sourceDetail?: Prisma.SortOrderInput | Prisma.SortOrder
   packageName?: Prisma.SortOrderInput | Prisma.SortOrder
   assigneeId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -399,6 +412,7 @@ export type LeadWhereUniqueInput = Prisma.AtLeast<{
   currentProvider?: Prisma.EnumProviderNullableFilter<"Lead"> | $Enums.Provider | null
   cost?: Prisma.DecimalNullableFilter<"Lead"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFilter<"Lead"> | boolean
+  noAnswerCount?: Prisma.IntFilter<"Lead"> | number
   sourceDetail?: Prisma.StringNullableFilter<"Lead"> | string | null
   packageName?: Prisma.StringNullableFilter<"Lead"> | string | null
   assigneeId?: Prisma.StringNullableFilter<"Lead"> | string | null
@@ -429,6 +443,7 @@ export type LeadOrderByWithAggregationInput = {
   currentProvider?: Prisma.SortOrderInput | Prisma.SortOrder
   cost?: Prisma.SortOrderInput | Prisma.SortOrder
   isStarred?: Prisma.SortOrder
+  noAnswerCount?: Prisma.SortOrder
   sourceDetail?: Prisma.SortOrderInput | Prisma.SortOrder
   packageName?: Prisma.SortOrderInput | Prisma.SortOrder
   assigneeId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -461,6 +476,7 @@ export type LeadScalarWhereWithAggregatesInput = {
   currentProvider?: Prisma.EnumProviderNullableWithAggregatesFilter<"Lead"> | $Enums.Provider | null
   cost?: Prisma.DecimalNullableWithAggregatesFilter<"Lead"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolWithAggregatesFilter<"Lead"> | boolean
+  noAnswerCount?: Prisma.IntWithAggregatesFilter<"Lead"> | number
   sourceDetail?: Prisma.StringNullableWithAggregatesFilter<"Lead"> | string | null
   packageName?: Prisma.StringNullableWithAggregatesFilter<"Lead"> | string | null
   assigneeId?: Prisma.StringNullableWithAggregatesFilter<"Lead"> | string | null
@@ -485,6 +501,7 @@ export type LeadCreateInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   createdAt?: Date | string
@@ -513,6 +530,7 @@ export type LeadUncheckedCreateInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   assigneeId?: string | null
@@ -541,6 +559,7 @@ export type LeadUpdateInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -569,6 +588,7 @@ export type LeadUncheckedUpdateInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -597,6 +617,7 @@ export type LeadCreateManyInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   assigneeId?: string | null
@@ -621,6 +642,7 @@ export type LeadUpdateManyMutationInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -643,6 +665,7 @@ export type LeadUncheckedUpdateManyInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -677,6 +700,7 @@ export type LeadCountOrderByAggregateInput = {
   currentProvider?: Prisma.SortOrder
   cost?: Prisma.SortOrder
   isStarred?: Prisma.SortOrder
+  noAnswerCount?: Prisma.SortOrder
   sourceDetail?: Prisma.SortOrder
   packageName?: Prisma.SortOrder
   assigneeId?: Prisma.SortOrder
@@ -689,6 +713,7 @@ export type LeadCountOrderByAggregateInput = {
 
 export type LeadAvgOrderByAggregateInput = {
   cost?: Prisma.SortOrder
+  noAnswerCount?: Prisma.SortOrder
 }
 
 export type LeadMaxOrderByAggregateInput = {
@@ -705,6 +730,7 @@ export type LeadMaxOrderByAggregateInput = {
   currentProvider?: Prisma.SortOrder
   cost?: Prisma.SortOrder
   isStarred?: Prisma.SortOrder
+  noAnswerCount?: Prisma.SortOrder
   sourceDetail?: Prisma.SortOrder
   packageName?: Prisma.SortOrder
   assigneeId?: Prisma.SortOrder
@@ -729,6 +755,7 @@ export type LeadMinOrderByAggregateInput = {
   currentProvider?: Prisma.SortOrder
   cost?: Prisma.SortOrder
   isStarred?: Prisma.SortOrder
+  noAnswerCount?: Prisma.SortOrder
   sourceDetail?: Prisma.SortOrder
   packageName?: Prisma.SortOrder
   assigneeId?: Prisma.SortOrder
@@ -741,6 +768,7 @@ export type LeadMinOrderByAggregateInput = {
 
 export type LeadSumOrderByAggregateInput = {
   cost?: Prisma.SortOrder
+  noAnswerCount?: Prisma.SortOrder
 }
 
 export type LeadScalarRelationFilter = {
@@ -864,6 +892,14 @@ export type NullableDecimalFieldUpdateOperationsInput = {
   divide?: runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
+export type IntFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type LeadCreateNestedOneWithoutNotesInput = {
   create?: Prisma.XOR<Prisma.LeadCreateWithoutNotesInput, Prisma.LeadUncheckedCreateWithoutNotesInput>
   connectOrCreate?: Prisma.LeadCreateOrConnectWithoutNotesInput
@@ -934,6 +970,7 @@ export type LeadCreateWithoutAssigneeInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   createdAt?: Date | string
@@ -961,6 +998,7 @@ export type LeadUncheckedCreateWithoutAssigneeInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   createdById: string
@@ -998,6 +1036,7 @@ export type LeadCreateWithoutCreatedByInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   createdAt?: Date | string
@@ -1025,6 +1064,7 @@ export type LeadUncheckedCreateWithoutCreatedByInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   assigneeId?: string | null
@@ -1081,6 +1121,7 @@ export type LeadScalarWhereInput = {
   currentProvider?: Prisma.EnumProviderNullableFilter<"Lead"> | $Enums.Provider | null
   cost?: Prisma.DecimalNullableFilter<"Lead"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFilter<"Lead"> | boolean
+  noAnswerCount?: Prisma.IntFilter<"Lead"> | number
   sourceDetail?: Prisma.StringNullableFilter<"Lead"> | string | null
   packageName?: Prisma.StringNullableFilter<"Lead"> | string | null
   assigneeId?: Prisma.StringNullableFilter<"Lead"> | string | null
@@ -1121,6 +1162,7 @@ export type LeadCreateWithoutNotesInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   createdAt?: Date | string
@@ -1148,6 +1190,7 @@ export type LeadUncheckedCreateWithoutNotesInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   assigneeId?: string | null
@@ -1191,6 +1234,7 @@ export type LeadUpdateWithoutNotesInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1218,6 +1262,7 @@ export type LeadUncheckedUpdateWithoutNotesInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1245,6 +1290,7 @@ export type LeadCreateWithoutActivityInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   createdAt?: Date | string
@@ -1272,6 +1318,7 @@ export type LeadUncheckedCreateWithoutActivityInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   assigneeId?: string | null
@@ -1315,6 +1362,7 @@ export type LeadUpdateWithoutActivityInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1342,6 +1390,7 @@ export type LeadUncheckedUpdateWithoutActivityInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1369,6 +1418,7 @@ export type LeadCreateWithoutHistoryInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   createdAt?: Date | string
@@ -1396,6 +1446,7 @@ export type LeadUncheckedCreateWithoutHistoryInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   assigneeId?: string | null
@@ -1439,6 +1490,7 @@ export type LeadUpdateWithoutHistoryInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1466,6 +1518,7 @@ export type LeadUncheckedUpdateWithoutHistoryInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1493,6 +1546,7 @@ export type LeadCreateWithoutDealInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   createdAt?: Date | string
@@ -1520,6 +1574,7 @@ export type LeadUncheckedCreateWithoutDealInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   assigneeId?: string | null
@@ -1563,6 +1618,7 @@ export type LeadUpdateWithoutDealInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1590,6 +1646,7 @@ export type LeadUncheckedUpdateWithoutDealInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1617,6 +1674,7 @@ export type LeadCreateManyAssigneeInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   createdById: string
@@ -1640,6 +1698,7 @@ export type LeadCreateManyCreatedByInput = {
   currentProvider?: $Enums.Provider | null
   cost?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: boolean
+  noAnswerCount?: number
   sourceDetail?: string | null
   packageName?: string | null
   assigneeId?: string | null
@@ -1663,6 +1722,7 @@ export type LeadUpdateWithoutAssigneeInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1690,6 +1750,7 @@ export type LeadUncheckedUpdateWithoutAssigneeInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1717,6 +1778,7 @@ export type LeadUncheckedUpdateManyWithoutAssigneeInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdById?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1740,6 +1802,7 @@ export type LeadUpdateWithoutCreatedByInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1767,6 +1830,7 @@ export type LeadUncheckedUpdateWithoutCreatedByInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1794,6 +1858,7 @@ export type LeadUncheckedUpdateManyWithoutCreatedByInput = {
   currentProvider?: Prisma.NullableEnumProviderFieldUpdateOperationsInput | $Enums.Provider | null
   cost?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isStarred?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  noAnswerCount?: Prisma.IntFieldUpdateOperationsInput | number
   sourceDetail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   packageName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   assigneeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1866,6 +1931,7 @@ export type LeadSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   currentProvider?: boolean
   cost?: boolean
   isStarred?: boolean
+  noAnswerCount?: boolean
   sourceDetail?: boolean
   packageName?: boolean
   assigneeId?: boolean
@@ -1897,6 +1963,7 @@ export type LeadSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   currentProvider?: boolean
   cost?: boolean
   isStarred?: boolean
+  noAnswerCount?: boolean
   sourceDetail?: boolean
   packageName?: boolean
   assigneeId?: boolean
@@ -1923,6 +1990,7 @@ export type LeadSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   currentProvider?: boolean
   cost?: boolean
   isStarred?: boolean
+  noAnswerCount?: boolean
   sourceDetail?: boolean
   packageName?: boolean
   assigneeId?: boolean
@@ -1949,6 +2017,7 @@ export type LeadSelectScalar = {
   currentProvider?: boolean
   cost?: boolean
   isStarred?: boolean
+  noAnswerCount?: boolean
   sourceDetail?: boolean
   packageName?: boolean
   assigneeId?: boolean
@@ -1959,7 +2028,7 @@ export type LeadSelectScalar = {
   followUpAt?: boolean
 }
 
-export type LeadOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "phone" | "email" | "city" | "kind" | "status" | "priority" | "source" | "category" | "currentProvider" | "cost" | "isStarred" | "sourceDetail" | "packageName" | "assigneeId" | "createdById" | "createdAt" | "updatedAt" | "lastContactAt" | "followUpAt", ExtArgs["result"]["lead"]>
+export type LeadOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "phone" | "email" | "city" | "kind" | "status" | "priority" | "source" | "category" | "currentProvider" | "cost" | "isStarred" | "noAnswerCount" | "sourceDetail" | "packageName" | "assigneeId" | "createdById" | "createdAt" | "updatedAt" | "lastContactAt" | "followUpAt", ExtArgs["result"]["lead"]>
 export type LeadInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   assignee?: boolean | Prisma.Lead$assigneeArgs<ExtArgs>
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2006,6 +2075,13 @@ export type $LeadPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
      */
     cost: runtime.Decimal | null
     isStarred: boolean
+    /**
+     * כמה פעמים ברצף סומן "אין מענה" מאז הסטטוס האמיתי האחרון.
+     * מתאפס ל-0 כשעוברים לכל סטטוס אחר, ועולה ב-1 בכל חזרה ל"אין
+     * מענה" — כך שהתווית יכולה להציג "אין מענה 2", "אין מענה 3" וכו׳
+     * בלי טקסט חופשי שהסוכן צריך להקליד בעצמו.
+     */
+    noAnswerCount: number
     /**
      * מאיפה הליד הגיע, כטקסט חופשי: שם הקמפיין, החבילה או הספק
      * ("פלאפון – 300GB Perfect", "Easy Peasy"). משלים את `source`,
@@ -2472,6 +2548,7 @@ export interface LeadFieldRefs {
   readonly currentProvider: Prisma.FieldRef<"Lead", 'Provider'>
   readonly cost: Prisma.FieldRef<"Lead", 'Decimal'>
   readonly isStarred: Prisma.FieldRef<"Lead", 'Boolean'>
+  readonly noAnswerCount: Prisma.FieldRef<"Lead", 'Int'>
   readonly sourceDetail: Prisma.FieldRef<"Lead", 'String'>
   readonly packageName: Prisma.FieldRef<"Lead", 'String'>
   readonly assigneeId: Prisma.FieldRef<"Lead", 'String'>

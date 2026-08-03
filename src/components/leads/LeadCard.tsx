@@ -190,7 +190,12 @@ export function LeadCard({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <StatusPicker current={lead.status} onPick={onStatus} busy={busy} />
+        <StatusPicker
+          current={lead.status}
+          onPick={onStatus}
+          busy={busy}
+          noAnswerCount={lead.noAnswerCount}
+        />
 
         <InlinePicker
           value={lead.priority}
@@ -237,9 +242,13 @@ export function LeadCard({
           התוצאה הנפוצה ביותר של חיוג — "אין מענה" — בלחיצה אחת,
           בלי לפתוח את בורר הסטטוסים. דרך `onQuickStatus` היא גם
           מדלגת על הדיאלוג (השאלה שם אינה חובה); בלעדיו נופלים
-          ל-`onStatus` הרגיל. מוסתר כשהליד כבר "אין מענה" או סגור.
+          ל-`onStatus` הרגיל.
+
+          ⚠️ **לא** מוסתר כשהליד כבר "אין מענה" — נשאר כדי לרשום
+          ניסיון נוסף (הצ׳יפ עצמו מציג את המספר הבא), ורק סטטוס סופי
+          מסתיר אותו.
         */}
-        {lead.status !== "noAnswer" && !status.terminal && (
+        {!status.terminal && (
           <button
             onClick={() => (onQuickStatus ?? onStatus)("noAnswer")}
             disabled={busy}
@@ -247,7 +256,9 @@ export function LeadCard({
             // בלי להוסיף גובה לשורה — אותו דפוס כמו הכוכב והוואטסאפ
             className="relative min-h-9 rounded-full border border-line px-2.5 text-xs text-ink-2 transition-transform after:absolute after:-inset-1 after:content-[''] active:scale-95 disabled:opacity-50"
           >
-            אין מענה
+            {lead.status === "noAnswer"
+              ? `ניסיון נוסף (${lead.noAnswerCount + 1})`
+              : "אין מענה"}
           </button>
         )}
 

@@ -84,6 +84,7 @@ enum LeadStatus {
   won
   notRelevant
   notInterested
+  existingCustomer
   noAnswer
   returning
   soldByCompetitor
@@ -160,6 +161,12 @@ model Lead {
   /// 0 הוא ערך אמיתי — "הליד הזה היה חינם" — ולכן העמודה nullable.
   cost      Decimal? @db.Decimal(10, 2)
   isStarred Boolean  @default(false)
+
+  /// כמה פעמים ברצף סומן "אין מענה" מאז הסטטוס האמיתי האחרון.
+  /// מתאפס ל-0 כשעוברים לכל סטטוס אחר, ועולה ב-1 בכל חזרה ל"אין
+  /// מענה" — כך שהתווית יכולה להציג "אין מענה 2", "אין מענה 3" וכו׳
+  /// בלי טקסט חופשי שהסוכן צריך להקליד בעצמו.
+  noAnswerCount Int @default(0)
 
   /// מאיפה הליד הגיע, כטקסט חופשי: שם הקמפיין, החבילה או הספק
   /// ("פלאפון – 300GB Perfect", "Easy Peasy"). משלים את `source`,

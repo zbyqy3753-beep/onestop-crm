@@ -56,6 +56,7 @@ export function leadFromPrisma(
     email: row.email ?? undefined,
     kind: row.kind,
     status: row.status,
+    noAnswerCount: row.noAnswerCount,
     priority: row.priority,
     source: row.source,
     category: row.category ?? undefined,

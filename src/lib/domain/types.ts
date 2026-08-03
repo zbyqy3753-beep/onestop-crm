@@ -57,6 +57,7 @@ export type LeadStatus =
   | "won" // נסגר בהצלחה
   | "notRelevant" // לא רלוונטי
   | "notInterested" // לא מעוניין
+  | "existingCustomer" // לקוח קיים
   | "noAnswer" // אין מענה
   | "returning" // ליד חוזר
   | "soldByCompetitor" // נמכר ע״י משווק מקביל
@@ -175,6 +176,16 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
       required: true,
     },
   },
+  existingCustomer: {
+    label: "לקוח קיים",
+    tone: "neutral",
+    terminal: true,
+    prompt: {
+      question: "פרטים נוספים",
+      placeholder: "כבר לקוח אצלנו, אצל איזה ספק...",
+      required: false,
+    },
+  },
   noAnswer: {
     label: "אין מענה",
     tone: "warn",
@@ -230,11 +241,11 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
 /**
  * סדר התצוגה בסרגלי סינון ובתפריטי שינוי סטטוס.
  *
- * מבוסס על סדר הסטטוסים האמיתי שאומת מול המערכת החיה (13 סטטוסים,
+ * הבסיס הוא סדר הסטטוסים האמיתי שאומת מול המערכת החיה (13 סטטוסים,
  * עם ספירות שסוכמות בדיוק לכלל הלידים). `followUp` ו-`lost` לא הופיעו
  * ברשימה החיה שנצפתה, אך לא הוסרו — אין הוכחה שהם לא קיימים במקום אחר
  * במערכת האמיתית, ומחיקתם הייתה רגרסיה בלי הצדקה. הם משובצים כאן ליד
- * השכנים הסמנטיים שלהם.
+ * השכנים הסמנטיים שלהם. `existingCustomer` נוסף מאוחר יותר (15 היום).
  */
 export const STATUS_ORDER: LeadStatus[] = [
   "new",
@@ -247,6 +258,7 @@ export const STATUS_ORDER: LeadStatus[] = [
   "won",
   "notRelevant",
   "notInterested",
+  "existingCustomer",
   "noAnswer",
   "returning",
   "soldByCompetitor",
@@ -412,6 +424,12 @@ export interface Lead {
   email?: string;
   kind: LeadKind;
   status: LeadStatus;
+  /**
+   * כמה פעמים ברצף סומן "אין מענה" מאז הסטטוס האמיתי האחרון.
+   * מתאפס ל-0 בכל מעבר לסטטוס אחר; עולה ב-1 בכל חזרה ל-`noAnswer`.
+   * משמש להצגת "אין מענה 2", "אין מענה 3" בלי טקסט חופשי.
+   */
+  noAnswerCount: number;
   priority: Priority;
   source: LeadSource;
   /** קטגוריית העניין של הליד — מפתח מתוך LEAD_CATEGORY_CONFIG */

@@ -598,7 +598,24 @@ export function LeadsClient({
     startTransition(async () => {
       // לפני ה-await — הסטטוס החדש נצבע מיד; אם השרת ייכשל השכבה
       // האופטימית תתאפס לבד בסוף ה-transition
-      applyOptimistic({ ids: leadIds, patch: { status: to } });
+      const patch: Partial<Lead> = { status: to };
+
+      // מונה "אין מענה" מחושב פר-ליד, ולכן רק כשמדובר בליד בודד —
+      // בפעולה קבוצתית כל ליד יכול להתחיל ממונה שונה, וטלאי אחיד
+      // היה שקרי. שם המונה יתעדכן אחרי אישור השרת בלבד.
+      if (leadIds.length === 1) {
+        const current = optimisticLeads.find((l) => l.id === leadIds[0]);
+        if (current) {
+          patch.noAnswerCount =
+            to === "noAnswer"
+              ? current.status === "noAnswer"
+                ? current.noAnswerCount + 1
+                : 1
+              : 0;
+        }
+      }
+
+      applyOptimistic({ ids: leadIds, patch });
 
       await withBusy(leadIds, async () => {
         const res = await changeStatusManyAction(leadIds, to, detail, followUpDate);
