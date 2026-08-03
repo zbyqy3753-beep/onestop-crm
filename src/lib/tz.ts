@@ -71,6 +71,43 @@ export function startOfMonth(instant: number | Date = Date.now()): number {
 }
 
 /**
+ * `YYYY-MM-DD` + שעה ודקה בשעון **ישראל** → חותמת זמן.
+ *
+ * ⚠️ זו הדרך היחידה לבנות כאן רגע מתוך תאריך שהמשתמש הקליד.
+ * `new Date(y, m, d, hh, mm)` בונה את הרגע באזור הזמן של **התהליך** —
+ * בדפדפן זה ישראל, ב-Vercel זה UTC. זה בדיוק הבאג שהיה כאן: תאריך חזרה
+ * שנבחר ל-09:00 נשמר בייצור כ-09:00Z, כלומר 12:00 בישראל.
+ *
+ * העוגן הוא צהרי UTC של אותו תאריך — היסט ישראל הוא +2/+3, ולכן צהרי
+ * UTC נופלים תמיד באותו יום קלנדרי בישראל. משם `startOfDay` הקיים.
+ *
+ * מחזיר `null` לתאריך לא חוקי (כולל 31.2, ש-`Date.UTC` היה מגלגל למרץ).
+ *
+ * מעברי שעון קיץ: ההיסט נלקח מהעוגן (אחרי המעבר, שקורה ב-02:00), וזה
+ * גם ההיסט שחל על שעות העבודה — כך ש-09:00 נשאר 09:00 בשני צידי המעבר.
+ * השעה 02:00–03:00 של ליל המעבר קדימה אינה קיימת, אך היא מחוץ לחלון
+ * השליחה ממילא.
+ */
+export function instantFromIsraelDateTime(
+  dateStr: string,
+  hh: number,
+  mm: number,
+): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if (!match) return null;
+  if (!Number.isInteger(hh) || hh < 0 || hh > 23) return null;
+  if (!Number.isInteger(mm) || mm < 0 || mm > 59) return null;
+
+  const [, y, m, d] = match;
+  const anchor = Date.UTC(Number(y), Number(m) - 1, Number(d), 12);
+
+  // גלגול (31.2 → 3.3) מחזיר תאריך אחר מזה שהוקלד — נפילה, לא תיקון שקט
+  if (dayKey(anchor) !== dateStr) return null;
+
+  return startOfDay(anchor) + hh * 3_600_000 + mm * 60_000;
+}
+
+/**
  * הפרש בימי לוח בשעון ישראל: 0 = אותו יום, 1 = מחר, ‎-1 = אתמול.
  *
  * ⚠️ לא `Math.ceil(ms / 86_400_000)`. חישוב במילישניות עונה על "כמה

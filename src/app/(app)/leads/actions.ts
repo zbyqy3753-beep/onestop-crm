@@ -18,6 +18,7 @@ import {
   isProvider,
 } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
+import { instantFromIsraelDateTime, startOfDay } from "@/lib/tz";
 import { canSeeAllLeads } from "@/lib/domain/permissions";
 import { revalidateLeadSurfaces } from "@/app/(app)/_revalidate";
 
@@ -364,28 +365,37 @@ export async function changeStatusAction(
   return { ok: true };
 }
 
+/** ברירת המחדל כשנבחר תאריך בלי שעה. */
+const DEFAULT_FOLLOW_UP_HOUR = 9;
+
 /**
- * `YYYY-MM-DD` מ-`<input type="date">` → חותמת זמן ב-09:00 מקומי.
+ * `YYYY-MM-DD` מ-`<input type="date">` → חותמת זמן ב-09:00 **בשעון ישראל**.
  *
  * לא חצות ולא סוף היום: `until()` מעגל כלפי מעלה את הפרש הימים, והסינון
- * "לחזור היום" משווה מול סוף היום המקומי. 09:00 הוא הערך היחיד שגורם
- * לשניהם להציג את אותו יום — חצות היה נופל ליום הקודם באזורי זמן
- * מסוימים, וסוף יום היה מקדים את הליד ביום.
+ * "לחזור היום" משווה מול סוף היום. 09:00 הוא הערך היחיד שגורם לשניהם
+ * להציג את אותו יום — חצות היה נופל ליום הקודם, וסוף יום היה מקדים ביום.
+ *
+ * ⚠️ הגרסה הקודמת בנתה `new Date(y, m, d, 9)`, כלומר 09:00 באזור הזמן של
+ * **התהליך**. במחשב מקומי זה נראה תקין, אבל ב-Vercel התהליך רץ ב-UTC
+ * ולכן כל תאריך חזרה בייצור נשמר כ-09:00Z = **12:00 בישראל**. מכאן
+ * ההסתמכות על `instantFromIsraelDateTime` — ראה את ההסבר שם.
  */
 function parseFollowUpDate(raw: string): string | undefined {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw.trim());
   if (!match) return undefined;
 
-  const [, y, m, d] = match;
-  const date = new Date(Number(y), Number(m) - 1, Number(d), 9, 0, 0, 0);
-  if (Number.isNaN(date.getTime())) return undefined;
+  const instant = instantFromIsraelDateTime(
+    match[0],
+    DEFAULT_FOLLOW_UP_HOUR,
+    0,
+  );
+  if (instant === null) return undefined;
 
-  // תאריך בעבר הוא כמעט תמיד טעות הקלדה, לא כוונה
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (date < yesterday) return undefined;
+  // תאריך בעבר הוא כמעט תמיד טעות הקלדה, לא כוונה. הסף הוא תחילת אתמול
+  // בשעון ישראל — לא "לפני 24 שעות", שהיה תלוי בשעה שבה נשמר.
+  if (instant < startOfDay() - 86_400_000) return undefined;
 
-  return date.toISOString();
+  return new Date(instant).toISOString();
 }
 
 /* ── שיוך ─────────────────────────────────────────────────────────────── */
