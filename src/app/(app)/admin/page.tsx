@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AdminClient } from "@/components/admin/AdminClient";
 import { db } from "@/server/repositories";
+import { prisma } from "@/server/db/client";
 import { requireSessionUser } from "@/server/auth/session";
 
 /**
@@ -19,9 +20,24 @@ export default async function AdminPage() {
   const actor = await requireSessionUser();
   if (!ALLOWED.includes(actor.role as (typeof ALLOWED)[number])) notFound();
 
-  const [users, { rows: leads }] = await Promise.all([
+  const [users, { rows: leads }, health, failures] = await Promise.all([
     db.users.list(),
     db.leads.list(),
+    // הדופק והכשלים נקראים ישירות מ-Prisma ולא דרך repository: אין
+    // להם מימוש בזיכרון ואין להם קורא שני. שכבת repository כאן הייתה
+    // הפשטה לצרכן יחיד.
+    prisma.botHeartbeat.findUnique({ where: { id: "default" } }),
+    prisma.whatsAppMessage.findMany({
+      where: { status: "failed" },
+      orderBy: { scheduledFor: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        toPhone: true,
+        lastError: true,
+        scheduledFor: true,
+      },
+    }),
   ]);
 
   return (
@@ -30,6 +46,21 @@ export default async function AdminPage() {
       leads={leads}
       canImpersonate={actor.role === "owner"}
       currentUserId={actor.id}
+      botHealth={
+        health
+          ? {
+              lastSeenAt: health.lastSeenAt.toISOString(),
+              waConnected: health.waConnected,
+              waNumber: health.waNumber,
+              instanceId: health.instanceId,
+              queuedCount: health.queuedCount,
+            }
+          : null
+      }
+      botFailures={failures.map((f) => ({
+        ...f,
+        scheduledFor: f.scheduledFor.toISOString(),
+      }))}
     />
   );
 }

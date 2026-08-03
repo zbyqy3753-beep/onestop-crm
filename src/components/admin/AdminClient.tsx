@@ -5,6 +5,7 @@ import type { Lead, User } from "@/lib/domain/types";
 import { Button, inputClass } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { AdminSummaryTiles } from "./AdminSummaryTiles";
+import { BotStatus, type BotFailure, type BotHealth } from "./BotStatus";
 import { UsersTable } from "./UsersTable";
 import { AddUserModal } from "./AddUserModal";
 import { EditUserModal } from "./EditUserModal";
@@ -21,12 +22,17 @@ export function AdminClient({
   leads,
   canImpersonate,
   currentUserId,
+  botHealth,
+  botFailures,
 }: {
   users: User[];
   leads: Lead[];
   /** בעלים בלבד — נקבע בשרת ב-page.tsx */
   canImpersonate: boolean;
   currentUserId: string;
+  /** `null` = הבוט מעולם לא דיווח דופק */
+  botHealth: BotHealth | null;
+  botFailures: BotFailure[];
 }) {
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
@@ -69,6 +75,8 @@ export function AdminClient({
           משתמש חדש
         </Button>
       </header>
+
+      <BotStatus health={botHealth} failures={botFailures} />
 
       <AdminSummaryTiles users={users} />
 
