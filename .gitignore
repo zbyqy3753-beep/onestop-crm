@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# בוט הוואטסאפ — פרויקט npm נפרד
+/bot/node_modules
+/bot/auth
+/bot/qr.png
