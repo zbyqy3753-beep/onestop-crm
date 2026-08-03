@@ -243,7 +243,9 @@ export function LeadCard({
           <button
             onClick={() => (onQuickStatus ?? onStatus)("noAnswer")}
             disabled={busy}
-            className="min-h-9 rounded-full border border-line px-2.5 text-xs text-ink-2 transition-transform active:scale-95 disabled:opacity-50"
+            // 36px גובה ויזואלי, 44px אזור לחיצה: הפסאודו-אלמנט מרחיב
+            // בלי להוסיף גובה לשורה — אותו דפוס כמו הכוכב והוואטסאפ
+            className="relative min-h-9 rounded-full border border-line px-2.5 text-xs text-ink-2 transition-transform after:absolute after:-inset-1 after:content-[''] active:scale-95 disabled:opacity-50"
           >
             אין מענה
           </button>
@@ -263,7 +265,8 @@ export function LeadCard({
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           aria-label={`וואטסאפ ל${lead.name}`}
-          className="relative ms-auto rounded-lg p-1 text-ink-3 after:absolute after:-inset-2 after:content-[''] active:scale-90"
+          // `-inset-2.5` ולא `-inset-2`: 24px + 10 מכל צד = 44 בדיוק
+          className="relative ms-auto rounded-lg p-1 text-ink-3 after:absolute after:-inset-2.5 after:content-[''] active:scale-90"
         >
           <Icon name="whatsapp" size={16} />
         </a>
