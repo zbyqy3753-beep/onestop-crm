@@ -151,6 +151,18 @@ function createSupervisor() {
   return { open, current: () => wa };
 }
 
+/** ממתין שהסוקט ייפתח, עד תקרה. מוותר בשקט — הסקר ידווח את המצב. */
+async function waitForConnection(
+  supervisor: { current: () => WaClient | null },
+  timeoutMs: number,
+): Promise<void> {
+  const until = Date.now() + timeoutMs;
+  while (Date.now() < until) {
+    if (supervisor.current()?.isConnected()) return;
+    await sleep(250);
+  }
+}
+
 async function main() {
   if (!isPaired()) {
     console.error("\n✗ הבוט לא מחובר לוואטסאפ.");
@@ -162,6 +174,12 @@ async function main() {
 
   const supervisor = createSupervisor();
   await supervisor.open();
+
+  // ⚠️ `connect()` חוזר ברגע שהסוקט נוצר, אבל החיבור עצמו נפתח כשנייה
+  // אחר כך. בלי ההמתנה הזו הסקר הראשון רץ לפני שהחיבור קיים ומדווח
+  // "אין חיבור לוואטסאפ" על בוט תקין לחלוטין — שורה מבהילה בלי סיבה,
+  // בדיוק ברגע שבו מסתכלים על המסך בפעם היחידה.
+  await waitForConnection(supervisor, 15_000);
 
   // הסקר רץ גם כשהחיבור נפל: הדופק הוא מה שהופך "הבוט מת" לנראה
   // במסך הניהול במקום להיות שקט
