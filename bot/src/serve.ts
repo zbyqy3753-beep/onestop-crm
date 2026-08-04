@@ -1,7 +1,12 @@
+import { appendFileSync, existsSync, statSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { DisconnectReason } from "@whiskeysockets/baileys";
 import { connect, type InboundMessage, type WaClient } from "./wa.js";
 import { pull, report, reportInbound, type OutboxMessage } from "./crm.js";
 import {
+  BOT_FEATURES,
+  BOT_ROOT,
+  BOT_VERSION,
   INSTANCE_ID,
   POLL_INTERVAL_MS,
   SEND_GAP_MAX_MS,
@@ -27,7 +32,36 @@ const stamp = () =>
     timeStyle: "medium",
   }).format(new Date());
 
-const log = (msg: string) => console.log(`[${stamp()}] ${msg}`);
+/**
+ * קובץ הלוג.
+ *
+ * ⚠️ המשימה ב-Task Scheduler רצה **בלי חלון ובלי לכידת פלט**. עד
+ * עכשיו כל מה שהבוט הדפיס פשוט נעלם, וכשמשהו לא עבד לא הייתה שום
+ * דרך לדעת מה קרה חוץ מלעצור את המשימה ולהריץ ידנית. זה הפך כל
+ * תקלה קטנה לחקירה.
+ */
+const LOG_PATH = resolve(BOT_ROOT, "bot.log");
+
+/** מעל זה הקובץ נחתך. תהליך שרץ חודשים ימלא דיסק בלי הגבלה. */
+const LOG_MAX_BYTES = 5 * 1024 * 1024;
+
+function writeLog(line: string): void {
+  try {
+    if (existsSync(LOG_PATH) && statSync(LOG_PATH).size > LOG_MAX_BYTES) {
+      // חיתוך פשוט ולא רוטציה: מה שמעניין בלוג של בוט הוא תמיד הסוף
+      writeFileSync(LOG_PATH, "");
+    }
+    appendFileSync(LOG_PATH, line + "\n", "utf8");
+  } catch {
+    // דיסק מלא או הרשאות — הבוט ימשיך לעבוד בלי לוג
+  }
+}
+
+const log = (msg: string) => {
+  const line = `[${stamp()}] ${msg}`;
+  console.log(line);
+  writeLog(line);
+};
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -216,7 +250,8 @@ async function main() {
     process.exit(1);
   }
 
-  log(`מתחיל · מופע ${INSTANCE_ID}`);
+  log(`מתחיל · מופע ${INSTANCE_ID} · גרסה ${BOT_VERSION} (${BOT_FEATURES})`);
+  log(`לוג: ${LOG_PATH}`);
 
   const supervisor = createSupervisor();
   await supervisor.open();

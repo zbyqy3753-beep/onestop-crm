@@ -34,9 +34,32 @@ function required(name: string): string {
 export const CRM_BASE_URL = () => required("CRM_BASE_URL").replace(/\/$/, "");
 export const WA_API_KEY = () => required("WA_API_KEY");
 
+/**
+ * גרסת הבוט.
+ *
+ * ⚠️ **להעלות ידנית בכל שינוי בקוד הבוט.** המחשב במשרד הוא clone
+ * נפרד של המאגר, ואין שום דבר שמכריח אותו להיות מעודכן. בלי המספר
+ * הזה "הבוט לא עושה X" ו"הבוט מריץ קוד מלפני שבוע" נראים בדיוק
+ * אותו דבר — וזה בדיוק הבלבול שעלה שעה שלמה לאבחן.
+ *
+ * מופיע בלוג בהפעלה ובמסך הבוטים ליד מזהה המופע.
+ */
+export const BOT_VERSION = "2";
+
+/** מה נוסף בגרסה הזו, לקריאה מהירה בלוג. */
+export const BOT_FEATURES = "קולט תשובות מלקוחות";
+
 /** מזהה המופע — מופיע במסך הניהול, כדי ש"שני דפקים" יהיה ניתן לאבחון. */
-export const INSTANCE_ID =
-  process.env.BOT_INSTANCE_ID?.trim() || `office-${process.pid}`;
+/**
+ * ⚠️ הגרסה חלק מהמזהה, ולא שדה נפרד.
+ *
+ * המזהה כבר נשלח בכל דופק ומוצג במסך הבוטים, ולכן זו הדרך להפוך את
+ * "איזה קוד רץ במשרד" לשאלה שנענית מהדפדפן — בלי שינוי סכימה ובלי
+ * לנסוע למשרד.
+ */
+export const INSTANCE_ID = `${
+  process.env.BOT_INSTANCE_ID?.trim() || `office-${process.pid}`
+} v${BOT_VERSION}`;
 
 /** כל כמה זמן לשאול את ה-CRM מה יש לשלוח. */
 export const POLL_INTERVAL_MS = 60_000;

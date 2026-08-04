@@ -44,3 +44,6 @@ next-env.d.ts
 /bot/node_modules
 /bot/auth
 /bot/qr.png
+
+# הלוג של הבוט, נוצר בזמן ריצה
+/bot/bot.log
