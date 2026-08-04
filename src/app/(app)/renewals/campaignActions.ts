@@ -103,13 +103,7 @@ export async function previewMessageAction(
   return {
     ok: true,
     data: {
-      body: renewalOpener({
-        name: c.name,
-        provider: c.provider,
-        packageName: c.packageName,
-        currentPrice: c.currentPrice ? Number(c.currentPrice) : null,
-        futurePrice: c.futurePrice ? Number(c.futurePrice) : null,
-      }),
+      body: renewalOpener({ name: c.name }),
     },
   };
 }

@@ -201,26 +201,42 @@ function extractTime(text: string): TimeGuess | null {
   return null;
 }
 
-/** תווית עברית קריאה למועד שנקבע, לשימוש בהודעת האישור. */
+/**
+ * אורך החלון שמובטח ללקוח.
+ *
+ * ⚠️ זו **הבטחה, לא סלוט ביומן.** אין במערכת שום מושג של "שעה תפוסה",
+ * ולא אמור להיות: שני לקוחות יכולים לבחור באותה שעה בלי שום חיכוך.
+ * מה שהקבוע הזה משנה הוא רק מה אנחנו מתחייבים עליו בכתב — "בין 8 ל-9"
+ * במקום "ב-8". הבטחה לנקודה מדויקת נשברת בכל שיחה שנמשכת דקה יותר
+ * מהצפוי, והלקוח הבא הוא זה שמרגיש את זה.
+ */
+const WINDOW_MINUTES = 60;
+
+function hhmm(instant: number): string {
+  return new Date(instant).toLocaleTimeString("he-IL", {
+    timeZone: "Asia/Jerusalem",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+}
+
+/** תווית עברית קריאה לחלון שנקבע, לשימוש בהודעת האישור. */
 function labelFor(instant: number, now: number): string {
-  const hhmm = new Date(instant)
-    .toLocaleTimeString("he-IL", {
-      timeZone: "Asia/Jerusalem",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    });
+  // `LATEST_HOUR` הוא 21, ולכן החלון האחרון האפשרי נגמר ב-21:00 —
+  // הוא לעולם לא חוצה חצות, ו"היום"/"מחר" נשארים נכונים לשני קצותיו
+  const range = `בין ${hhmm(instant)} ל-${hhmm(instant + WINDOW_MINUTES * 60_000)}`;
 
   const key = dayKey(instant);
-  if (key === dayKeyPlus(now, 0)) return `היום בשעה ${hhmm}`;
-  if (key === dayKeyPlus(now, 1)) return `מחר בשעה ${hhmm}`;
+  if (key === dayKeyPlus(now, 0)) return `היום ${range}`;
+  if (key === dayKeyPlus(now, 1)) return `מחר ${range}`;
 
   // he-IL כבר מחזיר "יום חמישי" — הוספת "ביום" לפניו נתנה "ביום יום חמישי"
   const dayName = new Date(instant).toLocaleDateString("he-IL", {
     timeZone: "Asia/Jerusalem",
     weekday: "long",
   });
-  return `ב${dayName} בשעה ${hhmm}`;
+  return `ב${dayName} ${range}`;
 }
 
 export function parseReply(body: string, now = Date.now()): ReplyIntent {

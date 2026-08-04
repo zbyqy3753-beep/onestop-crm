@@ -134,13 +134,7 @@ export async function approveAndQueue(ids: string[]): Promise<number> {
 
   let queued = 0;
   for (const c of contacts) {
-    const body = renewalOpener({
-      name: c.name,
-      provider: c.provider,
-      packageName: c.packageName,
-      currentPrice: c.currentPrice ? Number(c.currentPrice) : null,
-      futurePrice: c.futurePrice ? Number(c.futurePrice) : null,
-    });
+    const body = renewalOpener({ name: c.name });
 
     await enqueue(c.id, "opener", c.phone, body);
     await prisma.renewalContact.update({
@@ -315,6 +309,25 @@ async function scheduleFromReply(
           cost: 0,
         },
       });
+
+  /*
+   * ⚠️ הערה ולא רק `followUpAt`.
+   *
+   * מה שהובטח ללקוח הוא **טווח** ("מחר בין 08:00 ל-09:00"), אבל
+   * `followUpAt` הוא נקודה אחת — תחילת הטווח, כי כל המערכת (המיון,
+   * "לחזור היום", תור התזכורות) נשענת על נקודה. בלי ההערה הזו הנציג
+   * היה רואה 08:00 ומניח שזו התחייבות מדויקת, ולא יודע שיש לו שעה.
+   *
+   * לקוח שמזיז את השעה מקבל הערה נוספת, וזה בדיוק הרצוי — נשאר תיעוד
+   * של מה שהובטח ומתי.
+   */
+  await prisma.leadNote.create({
+    data: {
+      leadId: lead.id,
+      authorId: creator.id,
+      body: `הלקוח ביקש שנחזור אליו ${label}.`,
+    },
+  });
 
   await prisma.renewalContact.update({
     where: { id: contactId },
