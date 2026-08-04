@@ -65,6 +65,8 @@ export const ModelName = {
   WhatsAppMessage: 'WhatsAppMessage',
   BotHeartbeat: 'BotHeartbeat',
   RenewalDocument: 'RenewalDocument',
+  RenewalContact: 'RenewalContact',
+  WhatsAppInbound: 'WhatsAppInbound',
   BotSettings: 'BotSettings'
 } as const
 
@@ -290,6 +292,48 @@ export const RenewalDocumentScalarFieldEnum = {
 } as const
 
 export type RenewalDocumentScalarFieldEnum = (typeof RenewalDocumentScalarFieldEnum)[keyof typeof RenewalDocumentScalarFieldEnum]
+
+
+export const RenewalContactScalarFieldEnum = {
+  id: 'id',
+  documentId: 'documentId',
+  pageIndex: 'pageIndex',
+  name: 'name',
+  phone: 'phone',
+  city: 'city',
+  email: 'email',
+  provider: 'provider',
+  packageName: 'packageName',
+  serviceType: 'serviceType',
+  currentPrice: 'currentPrice',
+  futurePrice: 'futurePrice',
+  contractEndsAt: 'contractEndsAt',
+  status: 'status',
+  rawText: 'rawText',
+  agreedAt: 'agreedAt',
+  leadId: 'leadId',
+  sentAt: 'sentAt',
+  lastInboundAt: 'lastInboundAt',
+  lastInboundText: 'lastInboundText',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RenewalContactScalarFieldEnum = (typeof RenewalContactScalarFieldEnum)[keyof typeof RenewalContactScalarFieldEnum]
+
+
+export const WhatsAppInboundScalarFieldEnum = {
+  id: 'id',
+  waMessageId: 'waMessageId',
+  fromPhone: 'fromPhone',
+  body: 'body',
+  receivedAt: 'receivedAt',
+  contactId: 'contactId',
+  parsed: 'parsed',
+  createdAt: 'createdAt'
+} as const
+
+export type WhatsAppInboundScalarFieldEnum = (typeof WhatsAppInboundScalarFieldEnum)[keyof typeof WhatsAppInboundScalarFieldEnum]
 
 
 export const BotSettingsScalarFieldEnum = {

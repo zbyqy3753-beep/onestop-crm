@@ -105,6 +105,24 @@ export type BotHeartbeat = Prisma.BotHeartbeatModel
  */
 export type RenewalDocument = Prisma.RenewalDocumentModel
 /**
+ * Model RenewalContact
+ * לקוח בודד שחולץ ממסמך חידוש — עמוד אחד = איש קשר אחד.
+ * 
+ * ⚠️ זו הישות היחידה במערכת שממנה יוצאת הודעה **ללקוח** ולא לעובד.
+ * כל שאר הבוט הוא פנימי. לכן היא מחזיקה גם את הראיות שנדרשות
+ * לדיוור חוקי: מה נשלח, מתי, ומה הלקוח ענה — כולל בקשת הסרה.
+ */
+export type RenewalContact = Prisma.RenewalContactModel
+/**
+ * Model WhatsAppInbound
+ * הודעה נכנסת מלקוח.
+ * 
+ * נשמרת **גם כשלא הצלחנו לשייך אותה** לאיש קשר: הודעה ממספר לא
+ * מוכר עדיין עשויה להיות "הסר", וזו בקשה שחייבים לכבד ולתעד גם אם
+ * לא ידוע מי שלח אותה.
+ */
+export type WhatsAppInbound = Prisma.WhatsAppInboundModel
+/**
  * Model BotSettings
  * הגדרות הבוט שמנהל יכול לשנות מהאתר — שורה יחידה (`id = "default"`).
  * 

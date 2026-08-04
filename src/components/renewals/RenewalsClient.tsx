@@ -10,6 +10,8 @@ import {
   uploadRenewalDocsAction,
   type UploadOutcome,
 } from "@/app/(app)/renewals/actions";
+import { extractContactsAction } from "@/app/(app)/renewals/campaignActions";
+import { ContactList, type RenewalContactRow } from "./ContactList";
 
 /**
  * העלאת מסמכי חידוש והצגת מה שחולץ מהם.
@@ -32,9 +34,16 @@ export interface RenewalDoc {
   textLength: number;
   createdAt: string;
   uploadedByName: string;
+  contactCount: number;
 }
 
-export function RenewalsClient({ docs }: { docs: RenewalDoc[] }) {
+export function RenewalsClient({
+  docs,
+  contacts,
+}: {
+  docs: RenewalDoc[];
+  contacts: RenewalContactRow[];
+}) {
   const [pending, start] = useTransition();
   const [outcomes, setOutcomes] = useState<UploadOutcome[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +116,8 @@ export function RenewalsClient({ docs }: { docs: RenewalDoc[] }) {
           </ul>
         )}
       </div>
+
+      <ContactList rows={contacts} />
     </div>
   );
 }
@@ -222,6 +233,7 @@ function UploadReport({ outcomes }: { outcomes: UploadOutcome[] }) {
 function DocRow({ doc }: { doc: RenewalDoc }) {
   const now = useNow();
   const [pending, start] = useTransition();
+  const [note, setNote] = useState<string | null>(null);
 
   const kb = Math.max(1, Math.round(doc.byteSize / 1024));
 
@@ -262,19 +274,64 @@ function DocRow({ doc }: { doc: RenewalDoc }) {
           )}
         </div>
 
-        <Button
-          variant="ghost"
-          icon="trash"
-          className="h-8 shrink-0 px-2 text-xs"
-          disabled={pending}
-          aria-label={`מחיקת ${doc.fileName}`}
-          onClick={() =>
-            start(() => deleteRenewalDocAction(doc.id).then(() => {}))
-          }
-        >
-          מחיקה
-        </Button>
+        <div className="flex shrink-0 flex-col gap-1">
+          {/*
+            החילוץ מופרד מההעלאה בכוונה, והוא **לא** שולח כלום — הוא
+            רק ממלא את רשימת הלקוחות למטה, שם יש שער אישור נפרד.
+          */}
+          {doc.status === "extracted" && (
+            <Button
+              variant={doc.contactCount > 0 ? "ghost" : "secondary"}
+              className="h-8 px-2 text-xs"
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  const res = await extractContactsAction(doc.id);
+                  if (res.ok && res.data) {
+                    const { created, skippedPages, duplicates } = res.data;
+                    setNote(
+                      [
+                        `${created} לקוחות חולצו`,
+                        duplicates.length
+                          ? `${duplicates.length} כבר קיימים (${duplicates.join(", ")})`
+                          : null,
+                        skippedPages.length
+                          ? `עמודים שלא נקראו: ${skippedPages.join(", ")}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · "),
+                    );
+                  }
+                })
+              }
+            >
+              {doc.contactCount > 0
+                ? `${doc.contactCount} לקוחות`
+                : "חלץ לקוחות"}
+            </Button>
+          )}
+
+          <Button
+            variant="ghost"
+            icon="trash"
+            className="h-8 px-2 text-xs"
+            disabled={pending}
+            aria-label={`מחיקת ${doc.fileName}`}
+            onClick={() =>
+              start(() => deleteRenewalDocAction(doc.id).then(() => {}))
+            }
+          >
+            מחיקה
+          </Button>
+        </div>
       </div>
+
+      {note && (
+        <p className="border-t border-line px-3 py-1.5 text-xs text-ink-3">
+          {note}
+        </p>
+      )}
 
       {doc.textPreview && (
         <details className="border-t border-line">

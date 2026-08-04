@@ -57,3 +57,15 @@ export function report(
 ): Promise<{ applied: number }> {
   return call<{ applied: number }>("/api/whatsapp/report", { results });
 }
+
+/**
+ * מדווח הודעות נכנסות ל-CRM.
+ *
+ * ⚠️ ה-CRM הוא שמפענח את הטקסט, לא הבוט. פענוח עברית חופשית ישתנה
+ * הרבה, וכל שינוי בו צריך לעלות ב-`git push` ולא בנסיעה למחשב שבמשרד.
+ */
+export function reportInbound(
+  messages: { id: string; fromPhone: string; body: string; timestamp: number }[],
+): Promise<{ handled: number }> {
+  return call<{ handled: number }>("/api/whatsapp/inbound", { messages });
+}

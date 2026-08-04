@@ -28,9 +28,20 @@ export interface WaClient {
   send: (toE164: string, body: string) => Promise<void>;
 }
 
+/** הודעה שנכנסה מלקוח. */
+export interface InboundMessage {
+  id: string;
+  /** ספרות בלבד, כפי שוואטסאפ מזהה את השולח */
+  fromPhone: string;
+  body: string;
+  timestamp: number;
+}
+
 export interface ConnectOptions {
   /** נקרא כשיש QR לסרוק. בלעדיו הבוט מסרב להתחבר (מצב serve). */
   onQr?: (qr: string) => void;
+  /** נקרא לכל הודעה נכנסת מאדם. */
+  onMessage?: (msg: InboundMessage) => void;
   /** נקרא כשהסשן נפסל — צריך מחיקת auth וסריקה מחדש. */
   onLoggedOut?: () => void;
   onOpen?: (number?: string) => void;
@@ -84,6 +95,42 @@ export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
       } else {
         opts.onClosed?.(status);
       }
+    }
+  });
+
+  /*
+   * הודעות נכנסות.
+   *
+   * ⚠️ שלושה סינונים, וכל אחד מהם מונע לולאה או רעש:
+   *
+   *  - `fromMe` — ההודעות **שלנו** חוזרות באותו אירוע. בלי הסינון
+   *    הזה כל הודעה שהבוט שולח הייתה נקלטת כתשובה של הלקוח, נשלחת
+   *    לשרת, ומייצרת תשובה נוספת. לולאה אינסופית מול לקוח אמיתי.
+   *  - קבוצות (`@g.us`) — הבוט לא אמור להגיב לשום דבר בקבוצה.
+   *  - `notify` בלבד — `append` הוא סנכרון היסטוריה ישנה, ובחיבור
+   *    ראשון הוא מציף מאות הודעות ישנות שכולן ייראו כתשובות טריות.
+   */
+  socket.ev.on("messages.upsert", ({ messages, type }) => {
+    if (type !== "notify" || !opts.onMessage) return;
+
+    for (const m of messages) {
+      if (m.key.fromMe) continue;
+
+      const jid = m.key.remoteJid ?? "";
+      if (!jid.endsWith("@s.whatsapp.net")) continue;
+
+      const body =
+        m.message?.conversation ??
+        m.message?.extendedTextMessage?.text ??
+        "";
+      if (!body.trim()) continue;
+
+      opts.onMessage({
+        id: m.key.id ?? `${jid}-${m.messageTimestamp}`,
+        fromPhone: jid.split("@")[0].split(":")[0],
+        body,
+        timestamp: Number(m.messageTimestamp ?? 0) * 1000 || Date.now(),
+      });
     }
   });
 

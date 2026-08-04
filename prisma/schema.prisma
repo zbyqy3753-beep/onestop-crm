@@ -30,7 +30,9 @@ datasource db {
   provider = "postgresql"
 }
 
-/* ── משתמשים ────────────────────────────────────────────────────────── */
+/**
+ * ── משתמשים ──────────────────────────────────────────────────────────
+ */
 
 enum Role {
   owner
@@ -56,22 +58,24 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assignedLeads       Lead[]            @relation("LeadAssignee")
-  createdLeads        Lead[]            @relation("LeadCreator")
-  notes               LeadNote[]
-  statusEvents        LeadStatusEvent[]
-  leadActivity        LeadActivity[]    @relation("LeadActivityActor")
-  deals               Deal[]
-  dealStageEvents     DealStageEvent[]
-  referredRegistrations   Registration[] @relation("RegistrationReferrer")
-  handledRegistrations    Registration[] @relation("RegistrationHandler")
-  whatsappMessages        WhatsAppMessage[] @relation("WaRecipient")
-  renewalDocuments        RenewalDocument[] @relation("RenewalUploader")
+  assignedLeads         Lead[]            @relation("LeadAssignee")
+  createdLeads          Lead[]            @relation("LeadCreator")
+  notes                 LeadNote[]
+  statusEvents          LeadStatusEvent[]
+  leadActivity          LeadActivity[]    @relation("LeadActivityActor")
+  deals                 Deal[]
+  dealStageEvents       DealStageEvent[]
+  referredRegistrations Registration[]    @relation("RegistrationReferrer")
+  handledRegistrations  Registration[]    @relation("RegistrationHandler")
+  whatsappMessages      WhatsAppMessage[] @relation("WaRecipient")
+  renewalDocuments      RenewalDocument[] @relation("RenewalUploader")
 
   @@index([role, active])
 }
 
-/* ── לידים ──────────────────────────────────────────────────────────── */
+/**
+ * ── לידים ────────────────────────────────────────────────────────────
+ */
 
 /// סדר ההצהרה תואם בכוונה לסדר האמיתי (STATUS_ORDER ב-types.ts) —
 /// MySQL ממיין enum-ים לפי סדר ההצהרה (האינדקס הפנימי), וה-repository נשען על כך.
@@ -153,11 +157,11 @@ enum Provider {
 }
 
 model Lead {
-  id       String  @id @default(cuid())
-  name     String
-  phone    String
-  email    String?
-  city     String?
+  id    String  @id @default(cuid())
+  name  String
+  phone String
+  email String?
+  city  String?
 
   kind     LeadKind   @default(data)
   status   LeadStatus @default(new)
@@ -204,6 +208,7 @@ model Lead {
   activity         LeadActivity[]
   deal             Deal?
   whatsappMessages WhatsAppMessage[]
+  renewalContacts  RenewalContact[]
 
   // טלפון הוא מפתח הכפילות בפועל — ייבוא CSV נשען עליו
   @@index([phone])
@@ -278,7 +283,9 @@ model LeadStatusEvent {
   @@index([leadId, createdAt])
 }
 
-/* ── חבילות ─────────────────────────────────────────────────────────── */
+/**
+ * ── חבילות ───────────────────────────────────────────────────────────
+ */
 
 model Package {
   id          String   @id @default(cuid())
@@ -304,7 +311,9 @@ model Package {
   @@index([active])
 }
 
-/* ── עסקאות ─────────────────────────────────────────────────────────── */
+/**
+ * ── עסקאות ───────────────────────────────────────────────────────────
+ */
 
 /// שלבי מעקב הזמנה — סטפר רב-שלבי, לא רק סטטוס יחיד.
 enum DealStage {
@@ -383,7 +392,9 @@ model DealStageEvent {
   @@index([dealId, createdAt])
 }
 
-/* ── הגדרות ─────────────────────────────────────────────────────────── */
+/**
+ * ── הגדרות ───────────────────────────────────────────────────────────
+ */
 
 /// עלות רכישת ליד לפי קטגוריית ליד. שורה אחת לכל קטגוריה.
 model LeadCost {
@@ -393,7 +404,9 @@ model LeadCost {
   updatedAt DateTime @updatedAt
 }
 
-/* ── טפסי רישום (הפניית שותפים) ────────────────────────────────────── */
+/**
+ * ── טפסי רישום (הפניית שותפים) ──────────────────────────────────────
+ */
 
 enum RegistrationStatus {
   pending
@@ -404,11 +417,11 @@ enum RegistrationStatus {
 /// פנייה של בעל עסק חיצוני להצטרפות כשותף — דרך טופס ציבורי משותף,
 /// לא ליד מכירה. ישות נפרדת לגמרי מ-Lead.
 model Registration {
-  id           String  @id @default(cuid())
-  businessName String
-  contactName  String
-  phone        String
-  email        String?
+  id             String  @id @default(cuid())
+  businessName   String
+  contactName    String
+  phone          String
+  email          String?
   /// תיאור חופשי של ערוץ ההפניה, למשל "ONE STOP" או שם עובד
   referralSource String
 
@@ -427,7 +440,9 @@ model Registration {
   @@index([referredByUserId])
 }
 
-/* ── תזכורות וואטסאפ ────────────────────────────────────────────────── */
+/**
+ * ── תזכורות וואטסאפ ──────────────────────────────────────────────────
+ */
 
 enum WaMessageStatus {
   queued
@@ -493,7 +508,9 @@ model BotHeartbeat {
   queuedCount Int      @default(0)
 }
 
-/* ── חידושים ────────────────────────────────────────────────────────── */
+/**
+ * ── חידושים ──────────────────────────────────────────────────────────
+ */
 
 enum RenewalDocStatus {
   /// הקובץ נשמר, הטקסט טרם חולץ
@@ -536,9 +553,105 @@ model RenewalDocument {
   uploadedById String
   uploadedBy   User   @relation("RenewalUploader", fields: [uploadedById], references: [id])
 
-  createdAt DateTime @default(now())
+  createdAt       DateTime         @default(now())
+  renewalContacts RenewalContact[]
 
   @@index([status, createdAt])
+}
+
+enum RenewalContactStatus {
+  /// חולץ מהמסמך, ממתין לאישור אדם לפני שיוצאת הודעה
+  pending
+  /// אושר — ההודעה נכנסה לתור השליחה
+  queued
+  /// ההודעה נשלחה, ממתינים לתשובה
+  awaitingReply
+  /// הלקוח ענה משהו שלא הצלחנו לפענח — דורש עין אנושית
+  needsReview
+  /// הלקוח נקב בשעה ונוצר ליד
+  scheduled
+  /// הלקוח סירב
+  declined
+  /// הלקוח ביקש להסיר אותו מהדיוור
+  optedOut
+  /// לא ענה בזמן סביר
+  noReply
+  /// השליחה נכשלה
+  failed
+}
+
+/// לקוח בודד שחולץ ממסמך חידוש — עמוד אחד = איש קשר אחד.
+///
+/// ⚠️ זו הישות היחידה במערכת שממנה יוצאת הודעה **ללקוח** ולא לעובד.
+/// כל שאר הבוט הוא פנימי. לכן היא מחזיקה גם את הראיות שנדרשות
+/// לדיוור חוקי: מה נשלח, מתי, ומה הלקוח ענה — כולל בקשת הסרה.
+model RenewalContact {
+  id String @id @default(cuid())
+
+  documentId String
+  document   RenewalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  /// העמוד שממנו חולץ. יחד עם המסמך זו הזהות הטבעית.
+  pageIndex  Int
+
+  name  String
+  /// E.164 בלי הפלוס — אותו פורמט כמו ב-WhatsAppMessage
+  phone String
+  city  String?
+  email String?
+
+  provider       String?
+  packageName    String?
+  serviceType    String?
+  currentPrice   Decimal?  @db.Decimal(10, 2)
+  futurePrice    Decimal?  @db.Decimal(10, 2)
+  contractEndsAt DateTime?
+
+  status RenewalContactStatus @default(pending)
+
+  /// טקסט העמוד כפי שחולץ. נשמר כדי שאפשר יהיה לתקן את הפרסר בלי
+  /// להעלות מחדש, ולראות מה באמת היה כתוב כשהחילוץ טעה.
+  rawText String
+
+  /// השעה שהלקוח הסכים לה
+  agreedAt DateTime?
+  /// הליד שנוצר בעקבות ההסכמה
+  leadId   String?
+  lead     Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  sentAt          DateTime?
+  lastInboundAt   DateTime?
+  lastInboundText String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([documentId, pageIndex])
+  @@index([phone])
+  @@index([status, createdAt])
+}
+
+/// הודעה נכנסת מלקוח.
+///
+/// נשמרת **גם כשלא הצלחנו לשייך אותה** לאיש קשר: הודעה ממספר לא
+/// מוכר עדיין עשויה להיות "הסר", וזו בקשה שחייבים לכבד ולתעד גם אם
+/// לא ידוע מי שלח אותה.
+model WhatsAppInbound {
+  id String @id @default(cuid())
+
+  /// מזהה ההודעה אצל וואטסאפ — מונע כפילות כשהבוט מדווח פעמיים
+  waMessageId String   @unique
+  fromPhone   String
+  body        String
+  receivedAt  DateTime
+
+  /// לאיזה איש קשר שויכה, אם נמצא
+  contactId String?
+  /// מה המערכת הבינה מההודעה — לתיעוד ולניפוי הפרסר
+  parsed    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([fromPhone, receivedAt])
 }
 
 /// הגדרות הבוט שמנהל יכול לשנות מהאתר — שורה יחידה (`id = "default"`).

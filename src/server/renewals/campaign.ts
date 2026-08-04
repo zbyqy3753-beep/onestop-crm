@@ -1,0 +1,325 @@
+import "server-only";
+
+import { prisma } from "@/server/db/client";
+import { parseDocument } from "./parse";
+import { parseReply } from "./reply";
+import {
+  renewalConfirmation,
+  renewalDeclineAck,
+  renewalOpener,
+  renewalOptOutAck,
+  renewalUnclearAck,
+} from "@/lib/domain/renewalMessages";
+
+/**
+ * מנוע קמפיין החידושים.
+ *
+ * זרימה מלאה: מסמך → אנשי קשר → אישור אדם → הודעה ללקוח → תשובה →
+ * שעה מוסכמת → ליד.
+ *
+ * ⚠️ **אין כאן שליחה אוטומטית.** חילוץ אנשי הקשר לא מוציא שום הודעה;
+ * צריך אישור מפורש במסך. זה מכוון: המקור הוא PDF שנקרא ע"י פרסר,
+ * וטעות חילוץ שקטה שהופכת מיד להודעה ללקוח אמיתי היא בדיוק סוג
+ * התקלה שאי אפשר לבטל אחרי שקרתה.
+ */
+
+/**
+ * חילוץ אנשי קשר ממסמך שכבר נקרא.
+ *
+ * ⚠️ מדלג על מספר שכבר קיים כאיש קשר אחר — גם ממסמך אחר. לקוח שמופיע
+ * בשתי חשבוניות (סלולר ואינטרנט) הוא אדם אחד, ושתי הודעות זהות
+ * מאותו מספר הן מה שהופך דיוור לגיטימי לתלונה.
+ */
+export async function extractContacts(documentId: string): Promise<{
+  created: number;
+  skippedPages: number[];
+  duplicates: string[];
+}> {
+  const doc = await prisma.renewalDocument.findUnique({
+    where: { id: documentId },
+    select: { id: true, extractedText: true },
+  });
+  if (!doc?.extractedText) {
+    return { created: 0, skippedPages: [], duplicates: [] };
+  }
+
+  const { contacts, skippedPages } = parseDocument(doc.extractedText);
+
+  const phones = contacts.map((c) => c.phone);
+  const taken = new Set(
+    (
+      await prisma.renewalContact.findMany({
+        where: { phone: { in: phones } },
+        select: { phone: true },
+      })
+    ).map((r) => r.phone),
+  );
+
+  let created = 0;
+  const duplicates: string[] = [];
+
+  for (const [i, c] of contacts.entries()) {
+    if (taken.has(c.phone)) {
+      duplicates.push(c.name);
+      continue;
+    }
+    taken.add(c.phone);
+
+    try {
+      await prisma.renewalContact.create({
+        data: {
+          documentId: doc.id,
+          pageIndex: i,
+          name: c.name,
+          phone: c.phone,
+          city: c.city,
+          email: c.email,
+          provider: c.provider,
+          packageName: c.packageName,
+          serviceType: c.serviceType,
+          currentPrice: c.currentPrice,
+          futurePrice: c.futurePrice,
+          contractEndsAt: c.contractEndsAt,
+          rawText: c.rawText,
+        },
+      });
+      created++;
+    } catch {
+      // הפרת ייחודיות על (documentId, pageIndex) — כבר חולץ בעבר
+    }
+  }
+
+  return { created, skippedPages, duplicates };
+}
+
+function dedupeKeyFor(contactId: string, step: string): string {
+  return `renewal:${step}:${contactId}`;
+}
+
+/**
+ * מכניס לתור הודעה ללקוח.
+ *
+ * ⚠️ `leadId`/`recipientUserId` נשארים ריקים — התור משותף עם תזכורות
+ * העובדים, ושתי השורות האלה מצביעות על **עובדים**. איש קשר בקמפיין
+ * אינו עובד ואינו ליד (עדיין), והצבעה שגויה שם הייתה מציגה במסך
+ * הבוטים שההודעה נשלחה למישהו אחר.
+ */
+async function enqueue(
+  contactId: string,
+  step: string,
+  toPhone: string,
+  body: string,
+): Promise<boolean> {
+  try {
+    await prisma.whatsAppMessage.create({
+      data: {
+        dedupeKey: dedupeKeyFor(contactId, step),
+        toPhone,
+        body,
+        scheduledFor: new Date(),
+      },
+    });
+    return true;
+  } catch {
+    // כבר בתור או כבר נשלח — no-op מכוון
+    return false;
+  }
+}
+
+/** מאשר אנשי קשר ומכניס את ההודעה הראשונה לתור. */
+export async function approveAndQueue(ids: string[]): Promise<number> {
+  const contacts = await prisma.renewalContact.findMany({
+    where: { id: { in: ids }, status: "pending" },
+  });
+
+  let queued = 0;
+  for (const c of contacts) {
+    const body = renewalOpener({
+      name: c.name,
+      provider: c.provider,
+      packageName: c.packageName,
+      currentPrice: c.currentPrice ? Number(c.currentPrice) : null,
+      futurePrice: c.futurePrice ? Number(c.futurePrice) : null,
+    });
+
+    await enqueue(c.id, "opener", c.phone, body);
+    await prisma.renewalContact.update({
+      where: { id: c.id },
+      data: { status: "queued" },
+    });
+    queued++;
+  }
+  return queued;
+}
+
+/**
+ * מסמן שההודעה הראשונה יצאה בפועל.
+ *
+ * נקרא מ-`report` של הבוט, ולא בזמן ההכנסה לתור: "נשלח" צריך להיות
+ * מה שקרה, לא מה שתוכנן. מחשב כבוי במשרד היה משאיר אנשי קשר במצב
+ * "ממתין לתשובה" בלי ששום הודעה יצאה.
+ */
+export async function markOpenerSent(dedupeKeys: string[]): Promise<void> {
+  const ids = dedupeKeys
+    .filter((k) => k.startsWith("renewal:opener:"))
+    .map((k) => k.slice("renewal:opener:".length));
+  if (ids.length === 0) return;
+
+  await prisma.renewalContact.updateMany({
+    where: { id: { in: ids }, status: "queued" },
+    data: { status: "awaitingReply", sentAt: new Date() },
+  });
+}
+
+export interface InboundOutcome {
+  matched: boolean;
+  intent: string;
+  contactName?: string;
+}
+
+/**
+ * קליטת תשובה מלקוח — הלב של הזרימה.
+ *
+ * ⚠️ ההודעה נשמרת **תמיד**, גם כשאין איש קשר תואם. הודעה ממספר לא
+ * מוכר עדיין עשויה להיות "הסר", וזו בקשה שחייבים לתעד ולכבד גם בלי
+ * לדעת מי שלח אותה.
+ */
+export async function handleInbound(input: {
+  waMessageId: string;
+  fromPhone: string;
+  body: string;
+  receivedAt: Date;
+}): Promise<InboundOutcome> {
+  const contact = await prisma.renewalContact.findFirst({
+    where: {
+      phone: input.fromPhone,
+      status: { in: ["awaitingReply", "needsReview", "scheduled"] },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const intent = parseReply(input.body, input.receivedAt.getTime());
+
+  try {
+    await prisma.whatsAppInbound.create({
+      data: {
+        waMessageId: input.waMessageId,
+        fromPhone: input.fromPhone,
+        body: input.body.slice(0, 2000),
+        receivedAt: input.receivedAt,
+        contactId: contact?.id,
+        parsed: intent.kind,
+      },
+    });
+  } catch {
+    // אותה הודעה דווחה פעמיים — כבר טופלה, ואין לעבד שוב
+    return { matched: !!contact, intent: "duplicate" };
+  }
+
+  if (!contact) return { matched: false, intent: intent.kind };
+
+  await prisma.renewalContact.update({
+    where: { id: contact.id },
+    data: {
+      lastInboundAt: input.receivedAt,
+      lastInboundText: input.body.slice(0, 500),
+    },
+  });
+
+  switch (intent.kind) {
+    case "optOut":
+      await prisma.renewalContact.update({
+        where: { id: contact.id },
+        data: { status: "optedOut" },
+      });
+      await enqueue(contact.id, "optout", contact.phone, renewalOptOutAck());
+      break;
+
+    case "decline":
+      await prisma.renewalContact.update({
+        where: { id: contact.id },
+        data: { status: "declined" },
+      });
+      await enqueue(contact.id, "decline", contact.phone, renewalDeclineAck());
+      break;
+
+    case "time":
+      await scheduleFromReply(contact.id, intent.at, intent.label);
+      break;
+
+    case "unclear":
+      await prisma.renewalContact.update({
+        where: { id: contact.id },
+        data: { status: "needsReview" },
+      });
+      await enqueue(contact.id, "unclear", contact.phone, renewalUnclearAck());
+      break;
+  }
+
+  return { matched: true, intent: intent.kind, contactName: contact.name };
+}
+
+/**
+ * הלקוח נקב בשעה → נוצר ליד עם תאריך חזרה.
+ *
+ * ⚠️ כאן הזרימה מתחברת למה שכבר קיים: הליד מקבל `followUpAt`, ומנוע
+ * התזכורות ששלח עד היום רק תזכורות פנימיות ישלח לעובד המשויך את כל
+ * פרטי הלקוח עשר דקות לפני השיחה. אין כאן מנגנון תזמון חדש.
+ *
+ * הליד נוצר **בלי שיוך**: חלוקת לידים לעובדים היא החלטה ניהולית,
+ * והבוט לא אמור לקבל אותה. עד שישויך, "צפויות" במסך הבוטים יראה
+ * אותו כחסום עם הסיבה.
+ */
+async function scheduleFromReply(
+  contactId: string,
+  at: number,
+  label: string,
+): Promise<void> {
+  const contact = await prisma.renewalContact.findUnique({
+    where: { id: contactId },
+  });
+  if (!contact) return;
+
+  // מי נרשם כיוצר הליד — הבעלים, כי אין כאן משתמש מחובר
+  const creator = await prisma.user.findFirst({
+    where: { role: "owner", active: true },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!creator) return;
+
+  const followUpAt = new Date(at);
+
+  const lead = contact.leadId
+    ? await prisma.lead.update({
+        where: { id: contact.leadId },
+        data: { followUpAt },
+      })
+    : await prisma.lead.create({
+        data: {
+          name: contact.name,
+          // ⚠️ הליד שומר מספר ישראלי מקומי ולא E.164 — זה מה שכל
+          // המערכת מצפה לו (`isIsraeliPhone`, `waLink`, ייבוא CSV)
+          phone: contact.phone.replace(/^972/, "0"),
+          email: contact.email,
+          city: contact.city,
+          status: "recycled",
+          category: "recycled",
+          kind: "hot",
+          source: "campaign",
+          sourceDetail: [contact.provider, "חידוש"].filter(Boolean).join(" · "),
+          packageName: contact.packageName,
+          followUpAt,
+          createdById: creator.id,
+          // עלות 0 — לקוח עבר, כבר שילמנו על רכישתו פעם אחת
+          cost: 0,
+        },
+      });
+
+  await prisma.renewalContact.update({
+    where: { id: contactId },
+    data: { status: "scheduled", agreedAt: followUpAt, leadId: lead.id },
+  });
+
+  await enqueue(contactId, `confirm:${at}`, contact.phone, renewalConfirmation(label));
+}

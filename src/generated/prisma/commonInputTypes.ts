@@ -596,6 +596,23 @@ export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedIntNullableFilter<$PrismaModel>
 }
 
+export type EnumRenewalContactStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.RenewalContactStatus | Prisma.EnumRenewalContactStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.RenewalContactStatus[] | Prisma.ListEnumRenewalContactStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.RenewalContactStatus[] | Prisma.ListEnumRenewalContactStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumRenewalContactStatusFilter<$PrismaModel> | $Enums.RenewalContactStatus
+}
+
+export type EnumRenewalContactStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.RenewalContactStatus | Prisma.EnumRenewalContactStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.RenewalContactStatus[] | Prisma.ListEnumRenewalContactStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.RenewalContactStatus[] | Prisma.ListEnumRenewalContactStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumRenewalContactStatusWithAggregatesFilter<$PrismaModel> | $Enums.RenewalContactStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumRenewalContactStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumRenewalContactStatusFilter<$PrismaModel>
+}
+
 export type NestedStringFilter<$PrismaModel = never> = {
   equals?: string | Prisma.StringFieldRefInput<$PrismaModel>
   in?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
@@ -1162,6 +1179,23 @@ export type NestedFloatNullableFilter<$PrismaModel = never> = {
   gt?: number | Prisma.FloatFieldRefInput<$PrismaModel>
   gte?: number | Prisma.FloatFieldRefInput<$PrismaModel>
   not?: Prisma.NestedFloatNullableFilter<$PrismaModel> | number | null
+}
+
+export type NestedEnumRenewalContactStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.RenewalContactStatus | Prisma.EnumRenewalContactStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.RenewalContactStatus[] | Prisma.ListEnumRenewalContactStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.RenewalContactStatus[] | Prisma.ListEnumRenewalContactStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumRenewalContactStatusFilter<$PrismaModel> | $Enums.RenewalContactStatus
+}
+
+export type NestedEnumRenewalContactStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.RenewalContactStatus | Prisma.EnumRenewalContactStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.RenewalContactStatus[] | Prisma.ListEnumRenewalContactStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.RenewalContactStatus[] | Prisma.ListEnumRenewalContactStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumRenewalContactStatusWithAggregatesFilter<$PrismaModel> | $Enums.RenewalContactStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumRenewalContactStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumRenewalContactStatusFilter<$PrismaModel>
 }
 
 

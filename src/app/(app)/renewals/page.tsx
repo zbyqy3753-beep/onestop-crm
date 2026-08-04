@@ -16,6 +16,11 @@ export default async function RenewalsPage() {
   const actor = await requireSessionUser();
   if (!ALLOWED.includes(actor.role as (typeof ALLOWED)[number])) notFound();
 
+  const contacts = await prisma.renewalContact.findMany({
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    take: 300,
+  });
+
   const docs = await prisma.renewalDocument.findMany({
     orderBy: { createdAt: "desc" },
     take: 200,
@@ -47,6 +52,24 @@ export default async function RenewalsPage() {
         textLength: d.extractedText?.length ?? 0,
         createdAt: d.createdAt.toISOString(),
         uploadedByName: d.uploadedBy.name,
+        contactCount: contacts.filter((c) => c.documentId === d.id).length,
+      }))}
+      contacts={contacts.map((c) => ({
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        city: c.city,
+        provider: c.provider,
+        packageName: c.packageName,
+        // Decimal של Prisma לא עובר סריאליזציה לקליינט כמו שהוא
+        currentPrice: c.currentPrice ? Number(c.currentPrice) : null,
+        futurePrice: c.futurePrice ? Number(c.futurePrice) : null,
+        status: c.status,
+        agreedAt: c.agreedAt?.toISOString() ?? null,
+        leadId: c.leadId,
+        sentAt: c.sentAt?.toISOString() ?? null,
+        lastInboundText: c.lastInboundText,
+        lastInboundAt: c.lastInboundAt?.toISOString() ?? null,
       }))}
     />
   );

@@ -275,6 +275,7 @@ export type RenewalDocumentWhereInput = {
   uploadedById?: Prisma.StringFilter<"RenewalDocument"> | string
   createdAt?: Prisma.DateTimeFilter<"RenewalDocument"> | Date | string
   uploadedBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  renewalContacts?: Prisma.RenewalContactListRelationFilter
 }
 
 export type RenewalDocumentOrderByWithRelationInput = {
@@ -290,6 +291,7 @@ export type RenewalDocumentOrderByWithRelationInput = {
   uploadedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   uploadedBy?: Prisma.UserOrderByWithRelationInput
+  renewalContacts?: Prisma.RenewalContactOrderByRelationAggregateInput
 }
 
 export type RenewalDocumentWhereUniqueInput = Prisma.AtLeast<{
@@ -308,6 +310,7 @@ export type RenewalDocumentWhereUniqueInput = Prisma.AtLeast<{
   uploadedById?: Prisma.StringFilter<"RenewalDocument"> | string
   createdAt?: Prisma.DateTimeFilter<"RenewalDocument"> | Date | string
   uploadedBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  renewalContacts?: Prisma.RenewalContactListRelationFilter
 }, "id" | "contentHash">
 
 export type RenewalDocumentOrderByWithAggregationInput = {
@@ -358,6 +361,7 @@ export type RenewalDocumentCreateInput = {
   contentHash: string
   createdAt?: Date | string
   uploadedBy: Prisma.UserCreateNestedOneWithoutRenewalDocumentsInput
+  renewalContacts?: Prisma.RenewalContactCreateNestedManyWithoutDocumentInput
 }
 
 export type RenewalDocumentUncheckedCreateInput = {
@@ -372,6 +376,7 @@ export type RenewalDocumentUncheckedCreateInput = {
   contentHash: string
   uploadedById: string
   createdAt?: Date | string
+  renewalContacts?: Prisma.RenewalContactUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type RenewalDocumentUpdateInput = {
@@ -386,6 +391,7 @@ export type RenewalDocumentUpdateInput = {
   contentHash?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   uploadedBy?: Prisma.UserUpdateOneRequiredWithoutRenewalDocumentsNestedInput
+  renewalContacts?: Prisma.RenewalContactUpdateManyWithoutDocumentNestedInput
 }
 
 export type RenewalDocumentUncheckedUpdateInput = {
@@ -400,6 +406,7 @@ export type RenewalDocumentUncheckedUpdateInput = {
   contentHash?: Prisma.StringFieldUpdateOperationsInput | string
   uploadedById?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  renewalContacts?: Prisma.RenewalContactUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type RenewalDocumentCreateManyInput = {
@@ -505,6 +512,11 @@ export type RenewalDocumentSumOrderByAggregateInput = {
   pageCount?: Prisma.SortOrder
 }
 
+export type RenewalDocumentScalarRelationFilter = {
+  is?: Prisma.RenewalDocumentWhereInput
+  isNot?: Prisma.RenewalDocumentWhereInput
+}
+
 export type RenewalDocumentCreateNestedManyWithoutUploadedByInput = {
   create?: Prisma.XOR<Prisma.RenewalDocumentCreateWithoutUploadedByInput, Prisma.RenewalDocumentUncheckedCreateWithoutUploadedByInput> | Prisma.RenewalDocumentCreateWithoutUploadedByInput[] | Prisma.RenewalDocumentUncheckedCreateWithoutUploadedByInput[]
   connectOrCreate?: Prisma.RenewalDocumentCreateOrConnectWithoutUploadedByInput | Prisma.RenewalDocumentCreateOrConnectWithoutUploadedByInput[]
@@ -559,6 +571,20 @@ export type NullableIntFieldUpdateOperationsInput = {
   divide?: number
 }
 
+export type RenewalDocumentCreateNestedOneWithoutRenewalContactsInput = {
+  create?: Prisma.XOR<Prisma.RenewalDocumentCreateWithoutRenewalContactsInput, Prisma.RenewalDocumentUncheckedCreateWithoutRenewalContactsInput>
+  connectOrCreate?: Prisma.RenewalDocumentCreateOrConnectWithoutRenewalContactsInput
+  connect?: Prisma.RenewalDocumentWhereUniqueInput
+}
+
+export type RenewalDocumentUpdateOneRequiredWithoutRenewalContactsNestedInput = {
+  create?: Prisma.XOR<Prisma.RenewalDocumentCreateWithoutRenewalContactsInput, Prisma.RenewalDocumentUncheckedCreateWithoutRenewalContactsInput>
+  connectOrCreate?: Prisma.RenewalDocumentCreateOrConnectWithoutRenewalContactsInput
+  upsert?: Prisma.RenewalDocumentUpsertWithoutRenewalContactsInput
+  connect?: Prisma.RenewalDocumentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.RenewalDocumentUpdateToOneWithWhereWithoutRenewalContactsInput, Prisma.RenewalDocumentUpdateWithoutRenewalContactsInput>, Prisma.RenewalDocumentUncheckedUpdateWithoutRenewalContactsInput>
+}
+
 export type RenewalDocumentCreateWithoutUploadedByInput = {
   id?: string
   fileName: string
@@ -570,6 +596,7 @@ export type RenewalDocumentCreateWithoutUploadedByInput = {
   error?: string | null
   contentHash: string
   createdAt?: Date | string
+  renewalContacts?: Prisma.RenewalContactCreateNestedManyWithoutDocumentInput
 }
 
 export type RenewalDocumentUncheckedCreateWithoutUploadedByInput = {
@@ -583,6 +610,7 @@ export type RenewalDocumentUncheckedCreateWithoutUploadedByInput = {
   error?: string | null
   contentHash: string
   createdAt?: Date | string
+  renewalContacts?: Prisma.RenewalContactUncheckedCreateNestedManyWithoutDocumentInput
 }
 
 export type RenewalDocumentCreateOrConnectWithoutUploadedByInput = {
@@ -628,6 +656,78 @@ export type RenewalDocumentScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"RenewalDocument"> | Date | string
 }
 
+export type RenewalDocumentCreateWithoutRenewalContactsInput = {
+  id?: string
+  fileName: string
+  byteSize: number
+  storagePath: string
+  status?: $Enums.RenewalDocStatus
+  extractedText?: string | null
+  pageCount?: number | null
+  error?: string | null
+  contentHash: string
+  createdAt?: Date | string
+  uploadedBy: Prisma.UserCreateNestedOneWithoutRenewalDocumentsInput
+}
+
+export type RenewalDocumentUncheckedCreateWithoutRenewalContactsInput = {
+  id?: string
+  fileName: string
+  byteSize: number
+  storagePath: string
+  status?: $Enums.RenewalDocStatus
+  extractedText?: string | null
+  pageCount?: number | null
+  error?: string | null
+  contentHash: string
+  uploadedById: string
+  createdAt?: Date | string
+}
+
+export type RenewalDocumentCreateOrConnectWithoutRenewalContactsInput = {
+  where: Prisma.RenewalDocumentWhereUniqueInput
+  create: Prisma.XOR<Prisma.RenewalDocumentCreateWithoutRenewalContactsInput, Prisma.RenewalDocumentUncheckedCreateWithoutRenewalContactsInput>
+}
+
+export type RenewalDocumentUpsertWithoutRenewalContactsInput = {
+  update: Prisma.XOR<Prisma.RenewalDocumentUpdateWithoutRenewalContactsInput, Prisma.RenewalDocumentUncheckedUpdateWithoutRenewalContactsInput>
+  create: Prisma.XOR<Prisma.RenewalDocumentCreateWithoutRenewalContactsInput, Prisma.RenewalDocumentUncheckedCreateWithoutRenewalContactsInput>
+  where?: Prisma.RenewalDocumentWhereInput
+}
+
+export type RenewalDocumentUpdateToOneWithWhereWithoutRenewalContactsInput = {
+  where?: Prisma.RenewalDocumentWhereInput
+  data: Prisma.XOR<Prisma.RenewalDocumentUpdateWithoutRenewalContactsInput, Prisma.RenewalDocumentUncheckedUpdateWithoutRenewalContactsInput>
+}
+
+export type RenewalDocumentUpdateWithoutRenewalContactsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  fileName?: Prisma.StringFieldUpdateOperationsInput | string
+  byteSize?: Prisma.IntFieldUpdateOperationsInput | number
+  storagePath?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumRenewalDocStatusFieldUpdateOperationsInput | $Enums.RenewalDocStatus
+  extractedText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pageCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contentHash?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  uploadedBy?: Prisma.UserUpdateOneRequiredWithoutRenewalDocumentsNestedInput
+}
+
+export type RenewalDocumentUncheckedUpdateWithoutRenewalContactsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  fileName?: Prisma.StringFieldUpdateOperationsInput | string
+  byteSize?: Prisma.IntFieldUpdateOperationsInput | number
+  storagePath?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumRenewalDocStatusFieldUpdateOperationsInput | $Enums.RenewalDocStatus
+  extractedText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pageCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contentHash?: Prisma.StringFieldUpdateOperationsInput | string
+  uploadedById?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 export type RenewalDocumentCreateManyUploadedByInput = {
   id?: string
   fileName: string
@@ -652,6 +752,7 @@ export type RenewalDocumentUpdateWithoutUploadedByInput = {
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contentHash?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  renewalContacts?: Prisma.RenewalContactUpdateManyWithoutDocumentNestedInput
 }
 
 export type RenewalDocumentUncheckedUpdateWithoutUploadedByInput = {
@@ -665,6 +766,7 @@ export type RenewalDocumentUncheckedUpdateWithoutUploadedByInput = {
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contentHash?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  renewalContacts?: Prisma.RenewalContactUncheckedUpdateManyWithoutDocumentNestedInput
 }
 
 export type RenewalDocumentUncheckedUpdateManyWithoutUploadedByInput = {
@@ -681,6 +783,35 @@ export type RenewalDocumentUncheckedUpdateManyWithoutUploadedByInput = {
 }
 
 
+/**
+ * Count Type RenewalDocumentCountOutputType
+ */
+
+export type RenewalDocumentCountOutputType = {
+  renewalContacts: number
+}
+
+export type RenewalDocumentCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  renewalContacts?: boolean | RenewalDocumentCountOutputTypeCountRenewalContactsArgs
+}
+
+/**
+ * RenewalDocumentCountOutputType without action
+ */
+export type RenewalDocumentCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RenewalDocumentCountOutputType
+   */
+  select?: Prisma.RenewalDocumentCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * RenewalDocumentCountOutputType without action
+ */
+export type RenewalDocumentCountOutputTypeCountRenewalContactsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RenewalContactWhereInput
+}
+
 
 export type RenewalDocumentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -695,6 +826,8 @@ export type RenewalDocumentSelect<ExtArgs extends runtime.Types.Extensions.Inter
   uploadedById?: boolean
   createdAt?: boolean
   uploadedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  renewalContacts?: boolean | Prisma.RenewalDocument$renewalContactsArgs<ExtArgs>
+  _count?: boolean | Prisma.RenewalDocumentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["renewalDocument"]>
 
 export type RenewalDocumentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -744,6 +877,8 @@ export type RenewalDocumentSelectScalar = {
 export type RenewalDocumentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "fileName" | "byteSize" | "storagePath" | "status" | "extractedText" | "pageCount" | "error" | "contentHash" | "uploadedById" | "createdAt", ExtArgs["result"]["renewalDocument"]>
 export type RenewalDocumentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   uploadedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  renewalContacts?: boolean | Prisma.RenewalDocument$renewalContactsArgs<ExtArgs>
+  _count?: boolean | Prisma.RenewalDocumentCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type RenewalDocumentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   uploadedBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -756,6 +891,7 @@ export type $RenewalDocumentPayload<ExtArgs extends runtime.Types.Extensions.Int
   name: "RenewalDocument"
   objects: {
     uploadedBy: Prisma.$UserPayload<ExtArgs>
+    renewalContacts: Prisma.$RenewalContactPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1178,6 +1314,7 @@ readonly fields: RenewalDocumentFieldRefs;
 export interface Prisma__RenewalDocumentClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   uploadedBy<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  renewalContacts<T extends Prisma.RenewalDocument$renewalContactsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RenewalDocument$renewalContactsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RenewalContactPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1616,6 +1753,30 @@ export type RenewalDocumentDeleteManyArgs<ExtArgs extends runtime.Types.Extensio
    * Limit how many RenewalDocuments to delete.
    */
   limit?: number
+}
+
+/**
+ * RenewalDocument.renewalContacts
+ */
+export type RenewalDocument$renewalContactsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RenewalContact
+   */
+  select?: Prisma.RenewalContactSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the RenewalContact
+   */
+  omit?: Prisma.RenewalContactOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RenewalContactInclude<ExtArgs> | null
+  where?: Prisma.RenewalContactWhereInput
+  orderBy?: Prisma.RenewalContactOrderByWithRelationInput | Prisma.RenewalContactOrderByWithRelationInput[]
+  cursor?: Prisma.RenewalContactWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RenewalContactScalarFieldEnum | Prisma.RenewalContactScalarFieldEnum[]
 }
 
 /**

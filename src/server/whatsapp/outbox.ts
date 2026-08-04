@@ -7,6 +7,7 @@ import { followUpReminder } from "@/lib/domain/whatsapp";
 import { leadFromPrisma } from "@/server/repositories/prisma/mappers";
 import { israelHourMinute, startOfDay } from "@/lib/tz";
 import { readSettings, type BotSettingsView } from "./settings";
+import { markOpenerSent } from "@/server/renewals/campaign";
 
 /**
  * מנוע התור של תזכורות הוואטסאפ.
@@ -390,6 +391,8 @@ export async function report(
   results: { id: string; status: "sent" | "failed"; error?: string }[],
 ): Promise<number> {
   let applied = 0;
+  const sentKeys: string[] = [];
+
   for (const r of results) {
     const { count } = await prisma.whatsAppMessage.updateMany({
       where: { id: r.id, status: "sending" },
@@ -399,6 +402,23 @@ export async function report(
           : { status: "failed", lastError: r.error?.slice(0, 300) ?? "שגיאה" },
     });
     applied += count;
+
+    if (count > 0 && r.status === "sent") {
+      const row = await prisma.whatsAppMessage.findUnique({
+        where: { id: r.id },
+        select: { dedupeKey: true },
+      });
+      if (row) sentKeys.push(row.dedupeKey);
+    }
   }
+
+  /*
+   * ⚠️ מצב איש הקשר בקמפיין מתקדם ל"ממתין לתשובה" **כאן** ולא בזמן
+   * ההכנסה לתור. "נשלח" חייב להיות מה שקרה ולא מה שתוכנן: מחשב כבוי
+   * במשרד היה משאיר לקוחות במצב שממתין לתשובה שלא תגיע, כי מעולם
+   * לא נשאלה שאלה.
+   */
+  if (sentKeys.length > 0) await markOpenerSent(sentKeys);
+
   return applied;
 }

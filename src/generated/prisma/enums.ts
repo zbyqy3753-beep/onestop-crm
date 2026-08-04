@@ -172,3 +172,18 @@ export const RenewalDocStatus = {
 } as const
 
 export type RenewalDocStatus = (typeof RenewalDocStatus)[keyof typeof RenewalDocStatus]
+
+
+export const RenewalContactStatus = {
+  pending: 'pending',
+  queued: 'queued',
+  awaitingReply: 'awaitingReply',
+  needsReview: 'needsReview',
+  scheduled: 'scheduled',
+  declined: 'declined',
+  optedOut: 'optedOut',
+  noReply: 'noReply',
+  failed: 'failed'
+} as const
+
+export type RenewalContactStatus = (typeof RenewalContactStatus)[keyof typeof RenewalContactStatus]

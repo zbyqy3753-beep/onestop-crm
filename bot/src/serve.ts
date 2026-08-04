@@ -1,6 +1,6 @@
 import { DisconnectReason } from "@whiskeysockets/baileys";
-import { connect, type WaClient } from "./wa.js";
-import { pull, report, type OutboxMessage } from "./crm.js";
+import { connect, type InboundMessage, type WaClient } from "./wa.js";
+import { pull, report, reportInbound, type OutboxMessage } from "./crm.js";
 import {
   INSTANCE_ID,
   POLL_INTERVAL_MS,
@@ -69,6 +69,10 @@ async function deliver(
 async function tick(wa: WaClient): Promise<void> {
   const connected = wa.isConnected();
 
+  // לפני הסקר: תשובות שהצטברו מאז הפעם הקודמת. הסדר חשוב — תשובה
+  // שקובעת שעה מייצרת הודעת אישור, ורצוי שהיא תיתפס כבר בסקר הזה.
+  await flushInbound();
+
   let res;
   try {
     res = await pull(connected, wa.number());
@@ -99,6 +103,36 @@ async function tick(wa: WaClient): Promise<void> {
   await deliver(wa, res.messages);
 }
 
+/**
+ * הודעות נכנסות שממתינות לדיווח.
+ *
+ * ⚠️ תור בזיכרון ולא דיווח מיידי לכל הודעה. שתי סיבות: לקוח שכותב
+ * שלוש שורות ברצף מייצר שלוש קריאות רשת, ודיווח שנכשל ברגע שאין
+ * אינטרנט היה מאבד את ההודעה לגמרי. כאן היא ממתינה לסקר הבא.
+ *
+ * ⚠️ המחיר: הודעות שהתקבלו ולא דווחו **אובדות** אם התהליך נופל. זה
+ * מקובל — הלקוח יקבל תשובה מאוחר יותר או שעובד יראה אותו במסך —
+ * והחלופה (תור על הדיסק) מוסיפה מצב מתמשך שצריך לתחזק.
+ */
+const inboundQueue: InboundMessage[] = [];
+
+/** תקרה, כדי שנפילת רשת ארוכה לא תנפח את הזיכרון בלי גבול. */
+const MAX_INBOUND_QUEUE = 200;
+
+async function flushInbound(): Promise<void> {
+  if (inboundQueue.length === 0) return;
+
+  // נלקחות מהתור **לפני** הקריאה, ומוחזרות אם היא נכשלה
+  const batch = inboundQueue.splice(0, 50);
+  try {
+    const res = await reportInbound(batch);
+    log(`← ${res.handled} תשובות מלקוחות`);
+  } catch (e) {
+    inboundQueue.unshift(...batch);
+    log(`⚠ דיווח התשובות נכשל: ${e instanceof Error ? e.message : e}`);
+  }
+}
+
 /** השהיה מדורגת בין ניסיונות חיבור, עד חצי דקה. */
 const backoffMs = (attempt: number) =>
   Math.min(2_000 * 2 ** Math.min(attempt, 4), 30_000);
@@ -120,6 +154,11 @@ function createSupervisor() {
     reconnecting = true;
     try {
       wa = await connect({
+        onMessage: (msg) => {
+          // התור מוגבל — נפילת רשת ארוכה לא תנפח את הזיכרון בלי גבול
+          if (inboundQueue.length >= MAX_INBOUND_QUEUE) inboundQueue.shift();
+          inboundQueue.push(msg);
+        },
         onOpen: (number) => {
           attempt = 0;
           log(`✓ וואטסאפ מחובר: +${number ?? "?"}`);

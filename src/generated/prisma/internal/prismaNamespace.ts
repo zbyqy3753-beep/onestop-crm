@@ -398,6 +398,8 @@ export const ModelName = {
   WhatsAppMessage: 'WhatsAppMessage',
   BotHeartbeat: 'BotHeartbeat',
   RenewalDocument: 'RenewalDocument',
+  RenewalContact: 'RenewalContact',
+  WhatsAppInbound: 'WhatsAppInbound',
   BotSettings: 'BotSettings'
 } as const
 
@@ -414,7 +416,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "botSettings"
+    modelProps: "user" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "renewalContact" | "whatsAppInbound" | "botSettings"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1454,6 +1456,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    RenewalContact: {
+      payload: Prisma.$RenewalContactPayload<ExtArgs>
+      fields: Prisma.RenewalContactFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RenewalContactFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalContactPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RenewalContactFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalContactPayload>
+        }
+        findFirst: {
+          args: Prisma.RenewalContactFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalContactPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RenewalContactFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalContactPayload>
+        }
+        findMany: {
+          args: Prisma.RenewalContactFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalContactPayload>[]
+        }
+        create: {
+          args: Prisma.RenewalContactCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalContactPayload>
+        }
+        createMany: {
+          args: Prisma.RenewalContactCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RenewalContactCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalContactPayload>[]
+        }
+        delete: {
+          args: Prisma.RenewalContactDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalContactPayload>
+        }
+        update: {
+          args: Prisma.RenewalContactUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalContactPayload>
+        }
+        deleteMany: {
+          args: Prisma.RenewalContactDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RenewalContactUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RenewalContactUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalContactPayload>[]
+        }
+        upsert: {
+          args: Prisma.RenewalContactUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalContactPayload>
+        }
+        aggregate: {
+          args: Prisma.RenewalContactAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRenewalContact>
+        }
+        groupBy: {
+          args: Prisma.RenewalContactGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RenewalContactGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RenewalContactCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RenewalContactCountAggregateOutputType> | number
+        }
+      }
+    }
+    WhatsAppInbound: {
+      payload: Prisma.$WhatsAppInboundPayload<ExtArgs>
+      fields: Prisma.WhatsAppInboundFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WhatsAppInboundFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppInboundPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WhatsAppInboundFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppInboundPayload>
+        }
+        findFirst: {
+          args: Prisma.WhatsAppInboundFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppInboundPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WhatsAppInboundFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppInboundPayload>
+        }
+        findMany: {
+          args: Prisma.WhatsAppInboundFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppInboundPayload>[]
+        }
+        create: {
+          args: Prisma.WhatsAppInboundCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppInboundPayload>
+        }
+        createMany: {
+          args: Prisma.WhatsAppInboundCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.WhatsAppInboundCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppInboundPayload>[]
+        }
+        delete: {
+          args: Prisma.WhatsAppInboundDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppInboundPayload>
+        }
+        update: {
+          args: Prisma.WhatsAppInboundUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppInboundPayload>
+        }
+        deleteMany: {
+          args: Prisma.WhatsAppInboundDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WhatsAppInboundUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.WhatsAppInboundUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppInboundPayload>[]
+        }
+        upsert: {
+          args: Prisma.WhatsAppInboundUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WhatsAppInboundPayload>
+        }
+        aggregate: {
+          args: Prisma.WhatsAppInboundAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWhatsAppInbound>
+        }
+        groupBy: {
+          args: Prisma.WhatsAppInboundGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WhatsAppInboundGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WhatsAppInboundCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WhatsAppInboundCountAggregateOutputType> | number
+        }
+      }
+    }
     BotSettings: {
       payload: Prisma.$BotSettingsPayload<ExtArgs>
       fields: Prisma.BotSettingsFieldRefs
@@ -1773,6 +1923,48 @@ export const RenewalDocumentScalarFieldEnum = {
 } as const
 
 export type RenewalDocumentScalarFieldEnum = (typeof RenewalDocumentScalarFieldEnum)[keyof typeof RenewalDocumentScalarFieldEnum]
+
+
+export const RenewalContactScalarFieldEnum = {
+  id: 'id',
+  documentId: 'documentId',
+  pageIndex: 'pageIndex',
+  name: 'name',
+  phone: 'phone',
+  city: 'city',
+  email: 'email',
+  provider: 'provider',
+  packageName: 'packageName',
+  serviceType: 'serviceType',
+  currentPrice: 'currentPrice',
+  futurePrice: 'futurePrice',
+  contractEndsAt: 'contractEndsAt',
+  status: 'status',
+  rawText: 'rawText',
+  agreedAt: 'agreedAt',
+  leadId: 'leadId',
+  sentAt: 'sentAt',
+  lastInboundAt: 'lastInboundAt',
+  lastInboundText: 'lastInboundText',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RenewalContactScalarFieldEnum = (typeof RenewalContactScalarFieldEnum)[keyof typeof RenewalContactScalarFieldEnum]
+
+
+export const WhatsAppInboundScalarFieldEnum = {
+  id: 'id',
+  waMessageId: 'waMessageId',
+  fromPhone: 'fromPhone',
+  body: 'body',
+  receivedAt: 'receivedAt',
+  contactId: 'contactId',
+  parsed: 'parsed',
+  createdAt: 'createdAt'
+} as const
+
+export type WhatsAppInboundScalarFieldEnum = (typeof WhatsAppInboundScalarFieldEnum)[keyof typeof WhatsAppInboundScalarFieldEnum]
 
 
 export const BotSettingsScalarFieldEnum = {
@@ -2097,6 +2289,20 @@ export type ListEnumRenewalDocStatusFieldRefInput<$PrismaModel> = FieldRefInputT
 
 
 /**
+ * Reference to a field of type 'RenewalContactStatus'
+ */
+export type EnumRenewalContactStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RenewalContactStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'RenewalContactStatus[]'
+ */
+export type ListEnumRenewalContactStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RenewalContactStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -2233,6 +2439,8 @@ export type GlobalOmitConfig = {
   whatsAppMessage?: Prisma.WhatsAppMessageOmit
   botHeartbeat?: Prisma.BotHeartbeatOmit
   renewalDocument?: Prisma.RenewalDocumentOmit
+  renewalContact?: Prisma.RenewalContactOmit
+  whatsAppInbound?: Prisma.WhatsAppInboundOmit
   botSettings?: Prisma.BotSettingsOmit
 }
 
