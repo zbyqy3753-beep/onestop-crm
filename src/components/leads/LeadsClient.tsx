@@ -350,12 +350,10 @@ export function LeadsClient({
 
   // התצוגה כולה נגזרת מהשכבה האופטימית — כך שינוי סטטוס/עדיפות/כוכב
   // נראה מיד, עוד לפני שהשרת אישר
-  const filtered = useMemo(() => {
+  const matched = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
 
     return optimisticLeads.filter((lead) => {
-      if (filters.openOnly && STATUS_CONFIG[lead.status].terminal) return false;
-
       if (filters.dueToday) {
         if (endOfToday === null) return false;
         if (!lead.followUpAt) return false;
@@ -407,6 +405,26 @@ export function LeadsClient({
       return true;
     });
   }, [optimisticLeads, filters, endOfToday]);
+
+  /**
+   * `matched` + שער הסטטוסים הסגורים.
+   *
+   * ⚠️ נגזרת נפרדת ולא שורה בתוך `matched`, כי **הפאנל הפיננסי חייב
+   * לראות את הסגורים.** "נסגר בהצלחה" הוא סטטוס סופי, ולכן שער שחל על
+   * כל השרשרת היה מאפס את העמלות בכל טעינת מסך — מספר שגוי שנראה
+   * לגמרי תקין. העלויות והעמלות נחשבות על `matched`, הטבלה על `filtered`.
+   *
+   * ⚠️ שני פתחים מכבים את השער לגמרי:
+   *   • **בחירת סטטוס מפורשת** — לחיצה על אריח "הפסד" חייבת להראות
+   *     הפסדים, אחרת האריח מחזיר מסך ריק.
+   *   • **חיפוש חופשי** — מי שמחפש לקוח בשם מחפש אותו, לא את הסטטוס
+   *     שלו. ליד סגור שלא נמצא בחיפוש הוא ליד שנמחק, מבחינת המשתמש.
+   */
+  const filtered = useMemo(() => {
+    if (!filters.openOnly) return matched;
+    if (filters.status.length || filters.query.trim()) return matched;
+    return matched.filter((lead) => !STATUS_CONFIG[lead.status].terminal);
+  }, [matched, filters.openOnly, filters.status, filters.query]);
 
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
@@ -492,7 +510,10 @@ export function LeadsClient({
   const hasActiveFilters = useMemo(
     () =>
       filters.query.trim() !== "" ||
-      filters.openOnly ||
+      // ⚠️ שונה מברירת המחדל, לא "דלוק". `openOnly` דולק מלכתחילה,
+      // ולכן בדיקה נאיבית הייתה מכריזה שכל מסך הוא "מסונן" — כולל
+      // מסך פתיחה נקי, שאז היה מציג מצב ריק שגוי במקום "אין לידים".
+      filters.openOnly !== EMPTY_FILTERS.openOnly ||
       filters.dueToday ||
       filters.starred ||
       filters.status.length > 0 ||
@@ -522,21 +543,27 @@ export function LeadsClient({
     [packages],
   );
 
-  /** רק העסקאות שנסגרו מלידים שנמצאים בחתך הנוכחי. */
+  /**
+   * רק העסקאות שנסגרו מלידים שנמצאים בחתך הנוכחי.
+   *
+   * ⚠️ `matched` ולא `sorted` — ראה ההערה על `filtered`. עסקה נסגרת
+   * מליד שסטטוסו "נסגר בהצלחה", כלומר סטטוס סופי; אילו זה היה נגזר
+   * מהרשימה המוצגת, ההכנסות היו נעלמות מהמסך ברגע שהסגורים ירדו ממנו.
+   */
   const dealsForLeads = useMemo(() => {
-    const ids = new Set(sorted.map((l) => l.id));
+    const ids = new Set(matched.map((l) => l.id));
     return deals.filter((d) => ids.has(d.leadId));
-  }, [deals, sorted]);
+  }, [deals, matched]);
 
   const finance = useMemo(
     () => ({
-      cost: totalLeadCostForLeads(sorted, leadCosts),
+      cost: totalLeadCostForLeads(matched, leadCosts),
       commission: dealsForLeads.reduce(
         (sum, d) => sum + payableCommission(d.packageIds, catalog),
         0,
       ),
     }),
-    [sorted, leadCosts, dealsForLeads, catalog],
+    [matched, leadCosts, dealsForLeads, catalog],
   );
 
   const performance = useMemo(

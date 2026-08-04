@@ -1,5 +1,6 @@
 import type { Filters } from "./FilterBar";
 import { EMPTY_FILTERS } from "./FilterBar";
+import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
 
 /**
  * תצוגות מהירות.
@@ -67,6 +68,22 @@ export const QUICK_VIEWS: QuickView[] = [
     key: "starred",
     label: "מסומנים",
     patch: () => ({ ...EMPTY_FILTERS, starred: true }),
+  },
+  /**
+   * הדרך המפורשת לראות מה שירד מהמסך הראשי.
+   *
+   * ⚠️ קיימת כי `EMPTY_FILTERS` מסתיר סטטוסים סופיים כברירת מחדל.
+   * בלי צ׳יפ כזה "איפה הלידים שסגרתי?" הופך לשאלה בלי תשובה במסך,
+   * וזה בדיוק המצב שהופך הסתרה למחיקה מבחינת המשתמש.
+   */
+  {
+    key: "closed",
+    label: "סגורים",
+    patch: () => ({
+      ...EMPTY_FILTERS,
+      openOnly: false,
+      status: STATUS_ORDER.filter((s) => STATUS_CONFIG[s].terminal),
+    }),
   },
   {
     key: "hot",

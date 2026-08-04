@@ -32,6 +32,15 @@ export interface Filters {
   starred: boolean;
 }
 
+/**
+ * מצב הפתיחה של המסך.
+ *
+ * ⚠️ `openOnly: true` הוא ברירת המחדל, ולא `false`. מסך הלידים הוא תור
+ * עבודה — ליד שנסגר, אבד או סומן "לא רלוונטי" אינו משימה, והוא רק דוחף
+ * למטה את מה שכן. הוא **לא נמחק ולא מוסתר**: תצוגת "סגורים", בחירת
+ * אריח סטטוס סגור וחיפוש חופשי כולם חושפים אותו (ראה `filtered`
+ * ב-`LeadsClient`).
+ */
 export const EMPTY_FILTERS: Filters = {
   query: "",
   status: [],
@@ -39,7 +48,7 @@ export const EMPTY_FILTERS: Filters = {
   priority: [],
   category: [],
   assignee: [],
-  openOnly: false,
+  openOnly: true,
   dueToday: false,
   starred: false,
 };
@@ -82,7 +91,10 @@ export function FilterBar({
     filters.priority.length +
     filters.category.length +
     filters.assignee.length +
-    (filters.openOnly ? 1 : 0) +
+    // ⚠️ נספר רק כשהוא **שונה** מברירת המחדל. מאז ש-`openOnly` דולק
+    // מלכתחילה, ספירה נאיבית הייתה מציגה "ניקוי (1)" על מסך נקי לגמרי
+    // ומזמינה את המשתמש לנקות מסנן שהוא לא הפעיל.
+    (filters.openOnly === EMPTY_FILTERS.openOnly ? 0 : 1) +
     (filters.dueToday ? 1 : 0) +
     (filters.starred ? 1 : 0) +
     (filters.query ? 1 : 0);
