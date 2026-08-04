@@ -317,12 +317,21 @@ export function RowActions({
   const actionClass =
     "relative rounded-lg p-2 transition-colors after:absolute after:-inset-1.5 after:content-[''] active:scale-95";
 
+  /*
+   * ⚠️ הצבע במנוחה ולא רק ב-hover.
+   *
+   * שלוש הפעולות היו `text-ink-3` אפור וקיבלו צבע רק בריחוף — כלומר
+   * **בטלפון הן היו אפורות לצמיתות**, כי אין שם hover בכלל. זה גם
+   * הפך את החיוג והוואטסאפ (שתי הפעולות הכי נפוצות במסך) לשני
+   * אייקונים זהים שצריך לקרוא כדי להבדיל ביניהם.
+   */
+
   return (
     <div className="flex items-center justify-end gap-0.5">
       <a
         href={`tel:${lead.phone}`}
         onClick={stop}
-        className={`${actionClass} text-ink-3 hover:bg-brand-soft hover:text-brand`}
+        className={`${actionClass} text-brand hover:bg-brand-soft`}
         aria-label={`חיוג ל${lead.name}`}
         title="חיוג"
       >
@@ -334,7 +343,7 @@ export function RowActions({
         onClick={stop}
         target="_blank"
         rel="noopener noreferrer"
-        className={`${actionClass} text-ink-3 hover:bg-good-soft hover:text-good`}
+        className={`${actionClass} text-good hover:bg-good-soft`}
         aria-label={`וואטסאפ ל${lead.name}`}
         title="וואטסאפ"
       >
@@ -345,7 +354,7 @@ export function RowActions({
         <a
           href={`mailto:${lead.email}`}
           onClick={stop}
-          className={`${actionClass} text-ink-3 hover:bg-info-soft hover:text-info`}
+          className={`${actionClass} text-info hover:bg-info-soft`}
           aria-label={`מייל ל${lead.name}`}
           title="מייל"
         >

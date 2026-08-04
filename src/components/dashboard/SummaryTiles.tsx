@@ -1,6 +1,7 @@
 import type { IconKey } from "@/components/ui/Icon";
 import { Icon } from "@/components/ui/Icon";
-import { number } from "@/lib/format";
+import type { StatusTone } from "@/lib/domain/types";
+import { TONE_SOFT_VAR, TONE_VAR, number } from "@/lib/format";
 
 /**
  * שורת אריחי הסיכום של הדשבורד.
@@ -17,6 +18,12 @@ interface Tile {
   label: string;
   value: React.ReactNode;
   caption?: string;
+  /**
+   * ⚠️ שבעה אריחים לבנים זהים הם רשת שאי אפשר לסרוק — העין לא יודעת
+   * לאן ללכת, וכל אריח נראה חשוב באותה מידה. הטון צובע את האייקון
+   * ונותן לכל אריח סימן היכר שנקרא לפני שקוראים את הכותרת.
+   */
+  tone: StatusTone;
 }
 
 export function SummaryTiles({
@@ -35,11 +42,18 @@ export function SummaryTiles({
   totalLeads: number;
 }) {
   const tiles: Tile[] = [
-    { key: "agents", icon: "user", label: "סוכנים", value: number(agentsActive) },
+    {
+      key: "agents",
+      icon: "user",
+      label: "סוכנים",
+      value: number(agentsActive),
+      tone: "info",
+    },
     {
       key: "employees",
       icon: "user",
       label: "עובדים",
+      tone: "signal",
       // רצף "מספר / מספר" טהור (בלי מילה בעברית ביניים) מתהפך חזותית
       // ב-RTL בלי בידוד — ראה .ltr-num ב-globals.css.
       value: (
@@ -48,12 +62,19 @@ export function SummaryTiles({
         </span>
       ),
     },
-    { key: "stores", icon: "packages", label: "חנויות", value: number(storesCount) },
+    {
+      key: "stores",
+      icon: "packages",
+      label: "חנויות",
+      value: number(storesCount),
+      tone: "accent",
+    },
     {
       key: "leads",
       icon: "leads",
       label: "לידים",
       value: `${number(pendingLeads)} ממתינים / ${number(totalLeads)}`,
+      tone: "active",
     },
     {
       key: "dealsMonth",
@@ -61,6 +82,7 @@ export function SummaryTiles({
       label: "עסקאות החודש",
       value: "0",
       caption: "יתעדכן אוטומטית בקרוב",
+      tone: "good",
     },
     {
       key: "dealsToday",
@@ -68,6 +90,7 @@ export function SummaryTiles({
       label: "עסקאות היום",
       value: "0",
       caption: "יתעדכן אוטומטית בקרוב",
+      tone: "warn",
     },
     {
       key: "commissionsMonth",
@@ -75,6 +98,7 @@ export function SummaryTiles({
       label: "עמלות החודש",
       value: "0",
       caption: "יתעדכן אוטומטית בקרוב",
+      tone: "rose",
     },
   ];
 
@@ -85,8 +109,16 @@ export function SummaryTiles({
           key={t.key}
           className="rounded-card border border-line bg-surface p-4"
         >
-          <div className="mb-2.5 flex items-center gap-2 text-ink-3">
-            <Icon name={t.icon} size={16} />
+          <div className="mb-2.5 flex items-center gap-2 text-ink-2">
+            <span
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg"
+              style={{
+                background: TONE_SOFT_VAR[t.tone],
+                color: TONE_VAR[t.tone],
+              }}
+            >
+              <Icon name={t.icon} size={16} />
+            </span>
             <span className="text-[13px] font-medium">{t.label}</span>
           </div>
           <p className="nums text-xl font-bold leading-tight text-ink-1">

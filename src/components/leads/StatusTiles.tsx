@@ -2,7 +2,7 @@
 
 import type { LeadStatus } from "@/lib/domain/types";
 import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
-import { TONE_VAR } from "@/lib/format";
+import { TONE_SOFT_VAR, TONE_VAR } from "@/lib/format";
 import { number } from "@/lib/format";
 
 /**
@@ -71,19 +71,32 @@ export function StatusTiles({
               onClick={() => onToggle(status)}
               aria-pressed={on}
               title={`${meta.label} — ${count}`}
-              style={{ "--spine-c": TONE_VAR[meta.tone] } as React.CSSProperties}
-              className={`spine relative min-w-[92px] rounded-card border py-1.5 pe-2 ps-2.5 text-start transition-colors ${
+              /*
+               * ⚠️ הרקע והמספר נצבעים בטון הסטטוס, ולא רק פס 3px.
+               *
+               * הגרסה הקודמת נתנה 19 אריחים לבנים זהים שנבדלו ברצועה
+               * דקה בצד — ומכיוון שהפלטה החזיקה אז שישה טונים (ושניים
+               * מהם באותו hex), חצי מהמסך היה פשוט לבן. זה היה הדבר
+               * ה"יבש" הגדול ביותר במסך.
+               */
+              style={
+                {
+                  "--spine-c": TONE_VAR[meta.tone],
+                  "--spine-w": "4px",
+                  ...(on ? {} : { background: TONE_SOFT_VAR[meta.tone] }),
+                } as React.CSSProperties
+              }
+              className={`spine relative min-w-[92px] rounded-card border py-1.5 pe-2 ps-2.5 text-start transition-all ${
                 compact ? "shrink-0" : "flex-1"
               } ${
                 on
                   ? "border-brand bg-brand-soft"
-                  : "border-line bg-surface hover:border-line-strong hover:bg-surface-2"
+                  : "border-transparent hover:brightness-105"
               } ${empty && !on ? "opacity-45 hover:opacity-100" : ""}`}
             >
               <span
-                className={`nums block text-base font-bold leading-none ${
-                  on ? "text-brand" : "text-ink-1"
-                }`}
+                className="nums block text-base font-bold leading-none"
+                style={{ color: on ? "var(--c-brand)" : TONE_VAR[meta.tone] }}
               >
                 {number(count)}
               </span>
@@ -91,7 +104,7 @@ export function StatusTiles({
                   היה מותח את הקוביה שלו לרוחב שלוש אחרות */}
               <span
                 className={`mt-0.5 block truncate text-[11px] ${
-                  on ? "text-brand" : "text-ink-3"
+                  on ? "text-brand" : "text-ink-2"
                 }`}
               >
                 {meta.label}

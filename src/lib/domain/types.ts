@@ -54,7 +54,7 @@ export type LeadStatus =
   | "quoteSent" // הצעה נשלחה
   | "awaitingClient" // ממתין ללקוח
   | "followUp" // חיזור
-  | "futureTracking" // מעקב עתידי
+  | "futureTracking" // חזרה ללקוח
   | "won" // נסגר בהצלחה
   | "notRelevant" // לא רלוונטי
   | "notInterested" // לא מעוניין
@@ -72,7 +72,28 @@ export type LeadStatus =
  * `prompt` הוא מה שנשאל את הסוכן כשהוא בוחר בסטטוס — המערכת המקורית
  * דורשת פירוט בכל מעבר, וזה מה שהופך את היסטוריית הליד לשימושית.
  */
-export type StatusTone = "neutral" | "info" | "active" | "warn" | "good" | "bad";
+/*
+ * ⚠️ תשעה גוונים ל-19 סטטוסים, ולא שישה.
+ *
+ * הגרסה הקודמת החזיקה שישה, ומתוכם `info` ו-`active` היו **אותו hex
+ * בדיוק** — כלומר חמישה סטטוסים פעילים ("חדש", "ממחזור", "נוצר קשר",
+ * "בטיפול", "הצעה נשלחה") נצבעו בשני כחולים שאי אפשר להבחין ביניהם,
+ * ושישה סטטוסים נוספים חלקו כתום אחד. במסך של 19 אריחים זה קורא
+ * כאילו אין צבע בכלל.
+ *
+ * `signal` היה מוגדר ב-globals.css מההתחלה ואף אחד לא השתמש בו.
+ * `accent` ו-`rose` נוספו, ו-`info` הוזז לאינדיגו.
+ */
+export type StatusTone =
+  | "neutral"
+  | "info"
+  | "active"
+  | "warn"
+  | "good"
+  | "bad"
+  | "signal"
+  | "accent"
+  | "rose";
 
 export interface StatusMeta {
   label: string;
@@ -97,7 +118,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
    */
   recycled: {
     label: "ממחזור",
-    tone: "info",
+    tone: "rose",
     terminal: false,
   },
   inProgress: {
@@ -112,7 +133,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   },
   contacted: {
     label: "נוצר קשר",
-    tone: "info",
+    tone: "signal",
     terminal: false,
     prompt: {
       question: "סיכום השיחה",
@@ -122,7 +143,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   },
   quoteSent: {
     label: "הצעה נשלחה",
-    tone: "active",
+    tone: "accent",
     terminal: false,
     prompt: {
       question: "פרטי ההצעה",
@@ -150,13 +171,22 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
       required: true,
     },
   },
+  /*
+   * ⚠️ המפתח `futureTracking` נשאר למרות שהתווית היא "חזרה ללקוח".
+   *
+   * שינוי המפתח היה דורש `ALTER TYPE` על ה-enum ב-Postgres, וסדר
+   * ההצהרה שם הוא סדר המיון שה-repository נשען עליו (ראה ההערה מעל
+   * `enum LeadStatus` ב-schema.prisma). זו פעולה שכבר שברה לנו את
+   * מיון הסטטוסים פעם אחת. תווית היא מחרוזת תצוגה, ואין שום סיבה
+   * לשלם עליה במיגרציה.
+   */
   futureTracking: {
-    label: "מעקב עתידי",
-    tone: "neutral",
+    label: "חזרה ללקוח",
+    tone: "signal",
     terminal: false,
     prompt: {
-      question: "מתי לחזור?",
-      placeholder: "תאריכים ופרטים נוספים",
+      question: "מתי לחזור ללקוח?",
+      placeholder: "מתי ולמה לחזור",
       required: true,
     },
   },
@@ -225,7 +255,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   },
   returning: {
     label: "ליד חוזר",
-    tone: "warn",
+    tone: "accent",
     terminal: false,
     prompt: {
       question: "למה חזר?",
@@ -482,7 +512,7 @@ export interface Lead {
   createdAt: string;
   updatedAt: string;
   lastContactAt?: string;
-  /** מתי לחזור — נגזר מסטטוס חיזור / מעקב עתידי */
+  /** מתי לחזור — נגזר מסטטוס חיזור / חזרה ללקוח */
   followUpAt?: string;
   city?: string;
   notes: LeadNote[];
@@ -644,19 +674,29 @@ export type LeadCategoryKey =
   | "general"
   | "recycled";
 
-export const LEAD_CATEGORY_CONFIG: Record<LeadCategoryKey, { label: string }> = {
-  mobile: { label: "סלולר" },
-  internet: { label: "אינטרנט" },
-  tv: { label: "טלוויזיה" },
-  triple: { label: "טריפל" },
-  electricity: { label: "חשמל" },
-  general: { label: "כללי" },
+/**
+ * ⚠️ `tone` נוסף כדי שהקטגוריה תהיה **נראית**.
+ *
+ * עד עכשיו הרשומה הייתה `{ label }` בלבד, והקטגוריה רוּנדרה כטקסט אפור
+ * בתוך שורת מטא — כלומר שדה שקיים, מסונן ולא נקרא. "סלולר" מול "חשמל"
+ * הוא ההבדל בין שתי שיחות שונות לגמרי, והוא היה בלתי נראה בסריקה.
+ */
+export const LEAD_CATEGORY_CONFIG: Record<
+  LeadCategoryKey,
+  { label: string; tone: StatusTone }
+> = {
+  mobile: { label: "סלולר", tone: "info" },
+  internet: { label: "אינטרנט", tone: "signal" },
+  tv: { label: "טלוויזיה", tone: "accent" },
+  triple: { label: "טריפל", tone: "active" },
+  electricity: { label: "חשמל", tone: "warn" },
+  general: { label: "כללי", tone: "neutral" },
   /**
    * ⚠️ לא קטגוריית מוצר אלא **מקור**: הליד הגיע ממסמך חידוש של לקוח
    * עבר. הוא יושב באותה רשימה כי כך אפשר לסנן אליו במסך הלידים בלי
    * ציר סינון נוסף — אבל הוא לא מתאר במה הלקוח מתעניין, ולכן אחרון.
    */
-  recycled: { label: "ממחזור" },
+  recycled: { label: "ממחזור", tone: "rose" },
 };
 
 export const LEAD_CATEGORY_ORDER: LeadCategoryKey[] = [

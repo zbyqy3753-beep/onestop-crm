@@ -9,6 +9,29 @@ export const TONE_CLASS: Record<StatusTone, string> = {
   warn: "bg-warn-soft text-warn",
   good: "bg-good-soft text-good",
   bad: "bg-bad-soft text-bad",
+  signal: "bg-signal-soft text-signal",
+  accent: "bg-accent-soft text-accent",
+  rose: "bg-rose-soft text-rose",
+};
+
+/**
+ * רקע רך לפי טון, כמשתנה CSS.
+ *
+ * ⚠️ קיים לצד `TONE_CLASS` ולא במקומו: `TONE_CLASS` מחזיר רקע **וטקסט**
+ * כזוג מחלקות, וזה נכון לתגית. אריח סטטוס צריך את הרקע לבדו, עם צבע
+ * טקסט משלו — ופיצול המחרוזת של `TONE_CLASS` היה הופך אותה לפורמט
+ * שאסור לגעת בו.
+ */
+export const TONE_SOFT_VAR: Record<StatusTone, string> = {
+  neutral: "var(--c-neutral-soft)",
+  info: "var(--c-info-soft)",
+  active: "var(--c-brand-soft)",
+  warn: "var(--c-warn-soft)",
+  good: "var(--c-good-soft)",
+  bad: "var(--c-bad-soft)",
+  signal: "var(--c-signal-soft)",
+  accent: "var(--c-accent-soft)",
+  rose: "var(--c-rose-soft)",
 };
 
 /** צבע הרצועה הצדדית (`--spine-c`) לפי טון. */
@@ -19,6 +42,9 @@ export const TONE_VAR: Record<StatusTone, string> = {
   warn: "var(--c-warn)",
   good: "var(--c-good)",
   bad: "var(--c-bad)",
+  signal: "var(--c-signal)",
+  accent: "var(--c-accent)",
+  rose: "var(--c-rose)",
 };
 
 const shekel = new Intl.NumberFormat("he-IL", {

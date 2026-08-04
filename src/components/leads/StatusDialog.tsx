@@ -34,7 +34,7 @@ export function StatusDialog({
   const blocked = Boolean(prompt?.required) && !detail.trim();
 
   // סטטוסים ששומרים תזכורת חזרה — ראה changeStatus ברפוזיטורי.
-  // הורחב מעבר ל"פולו־אפ"/"מעקב עתידי": אחרי "אין מענה" (וכד׳) הנציג
+  // הורחב מעבר ל"חיזור"/"חזרה ללקוח": אחרי "אין מענה" (וכד׳) הנציג
   // צריך לקבוע חזרה בלי לפתוח דיאלוג נוסף. התאריך נשאר אופציונלי.
   const FOLLOW_UP_STATUSES: LeadStatus[] = [
     "followUp",

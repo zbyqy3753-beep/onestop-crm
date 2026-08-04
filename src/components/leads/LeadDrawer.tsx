@@ -219,7 +219,13 @@ export function LeadDrawer({
           {/* פרטים */}
           <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-4 text-sm">
             <Detail label="קטגוריה">
-              {lead.category ? LEAD_CATEGORY_CONFIG[lead.category].label : "—"}
+              {lead.category ? (
+                <Badge tone={LEAD_CATEGORY_CONFIG[lead.category].tone}>
+                  {LEAD_CATEGORY_CONFIG[lead.category].label}
+                </Badge>
+              ) : (
+                "—"
+              )}
             </Detail>
             <Detail label="ספק נוכחי">
               {lead.currentProvider

@@ -51,10 +51,19 @@
   --c-warn-soft: #faedd3;
   --c-bad: #bb3f36;
   --c-bad-soft: #fae2e0;
-  --c-info: #0b709d;
-  --c-info-soft: #e0eff6;
+  /* ⚠️ אינדיגו ולא כחול-מותג. עד היום `--c-info` היה #0b709d — בדיוק
+     אותו hex כמו `--c-brand`, ולכן חמישה סטטוסים פעילים נראו כשני
+     כחולים בלתי מבחינים. */
+  --c-info: #2f5fb3;
+  --c-info-soft: #e3ebf9;
   --c-neutral: #5c7086;
   --c-neutral-soft: #e8eff4;
+
+  /* גוונים לסטטוסים — הפלטה הסמנטית לבדה לא הספיקה ל-19 סטטוסים */
+  --c-accent: #6d4bbd; /* סגול */
+  --c-accent-soft: #ece5f9;
+  --c-rose: #a3418a; /* מג׳נטה */
+  --c-rose-soft: #f8e3f2;
 
   --c-focus: #14a6d8; /* Cyan Accent */
   --sh-card: 0 1px 2px rgb(13 31 55 / 0.06), 0 1px 3px rgb(13 31 55 / 0.05);
@@ -90,10 +99,16 @@
   --c-warn-soft: #34290f;
   --c-bad: #ec7b71;
   --c-bad-soft: #3a1f1d;
-  --c-info: #14a6d8;
-  --c-info-soft: #0b2f42;
+  /* ראה ההערה בערכה הבהירה — היה זהה ל-`--c-signal` */
+  --c-info: #7aa6e8;
+  --c-info-soft: #12294a;
   --c-neutral: #a4aeb4;
   --c-neutral-soft: #1d3a59;
+
+  --c-accent: #a98ce8; /* סגול */
+  --c-accent-soft: #241a3d;
+  --c-rose: #e086c7; /* מג׳נטה */
+  --c-rose-soft: #3a1c33;
 
   --c-focus: #1dade3; /* Glow Blue */
   --sh-card: 0 1px 2px rgb(0 0 0 / 0.45), 0 1px 3px rgb(0 0 0 / 0.35);
@@ -138,6 +153,10 @@
   --color-info-soft: var(--c-info-soft);
   --color-neutral: var(--c-neutral);
   --color-neutral-soft: var(--c-neutral-soft);
+  --color-accent: var(--c-accent);
+  --color-accent-soft: var(--c-accent-soft);
+  --color-rose: var(--c-rose);
+  --color-rose-soft: var(--c-rose-soft);
 
   --font-display: var(--font-frank), Georgia, serif;
   --font-sans: var(--font-assistant), system-ui, sans-serif;

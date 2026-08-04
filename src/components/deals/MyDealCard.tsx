@@ -37,7 +37,9 @@ export function MyDealCard({
             <span className="nums text-xs font-semibold text-ink-4">
               #{deal.displayId}
             </span>
-            <Badge tone="neutral">{LEAD_CATEGORY_CONFIG[deal.category].label}</Badge>
+            <Badge tone={LEAD_CATEGORY_CONFIG[deal.category].tone}>
+              {LEAD_CATEGORY_CONFIG[deal.category].label}
+            </Badge>
           </div>
           <h3 className="mt-1 font-semibold leading-tight">
             {lead?.name ?? "לקוח לא ידוע"}
