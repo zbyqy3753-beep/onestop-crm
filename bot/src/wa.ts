@@ -1,3 +1,5 @@
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
@@ -5,7 +7,7 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import pino from "pino";
-import { AUTH_DIR } from "./config.js";
+import { AUTH_DIR, BOT_ROOT } from "./config.js";
 
 /**
  * החיבור לוואטסאפ.
@@ -99,8 +101,56 @@ function textOf(msg: unknown, depth = 0): string {
   );
 }
 
+/** ספרות בלבד מתוך JID או מזהה כלשהו. */
+const digitsOf = (raw: string) =>
+  raw.split("@")[0].split(":")[0].replace(/\D/g, "");
+
+/**
+ * מיפוי LID → מספר טלפון.
+ *
+ * ⚠️⚠️ **זה הבאג שגרם ל"שולחים הסר ולא קורה כלום".**
+ *
+ * וואטסאפ עברו לכתובות `@lid` בצ׳אטים פרטיים. ה-LID הוא מזהה אטום
+ * (`224283443917054`) שאין לו שום קשר מתמטי למספר הטלפון, ובהודעות
+ * שנבדקו בפועל השדות `senderPn`/`participantPn` פשוט לא הגיעו. לכן
+ * כל תשובה נרשמה תחת המזהה האטום, לא שויכה לאף איש קשר — ובקשת הסרה
+ * "נקלטה" בלי שאיש ידע ממי היא.
+ *
+ * את הכיוון ההפוך אי אפשר לשאול; את הכיוון קדימה כן — `onWhatsApp`
+ * מחזיר את ה-LID של מספר. לכן המיפוי נבנה **בזמן השליחה**, כשהמספר
+ * עוד ידוע לנו. זה מכסה בדיוק את מי שיכול לענות: מי שכבר שלחנו לו.
+ *
+ * ⚠️ נשמר לדיסק. בלי זה כל הפעלה מחדש של הבוט הייתה מאבדת את המיפוי,
+ * ותשובות של לקוחות שכבר קיבלו הודעה היו חוזרות להיות בלתי ניתנות
+ * לשיוך — כלומר הבאג היה חוזר בכל אתחול.
+ */
+const LID_MAP_PATH = resolve(BOT_ROOT, "lid-map.json");
+
+function loadLidMap(): Record<string, string> {
+  try {
+    if (!existsSync(LID_MAP_PATH)) return {};
+    const parsed: unknown = JSON.parse(readFileSync(LID_MAP_PATH, "utf8"));
+    return parsed && typeof parsed === "object"
+      ? (parsed as Record<string, string>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+  const lidToPhone = loadLidMap();
+
+  function rememberLid(lid: string, phone: string): void {
+    if (!lid || !phone || lidToPhone[lid] === phone) return;
+    lidToPhone[lid] = phone;
+    try {
+      writeFileSync(LID_MAP_PATH, JSON.stringify(lidToPhone, null, 1), "utf8");
+    } catch {
+      // דיסק מלא או הרשאות — המיפוי ימשיך לחיות בזיכרון עד לאתחול
+    }
+  }
 
   let connected = false;
   let number: string | undefined;
@@ -187,16 +237,33 @@ export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
       }
 
       /*
-       * המספר לשיוך.
+       * המספר לשיוך — שלוש דרגות, לפי אמינות.
        *
-       * ב-`@lid` החלק שלפני ה-@ **אינו** מספר טלפון, ולכן הוא לא
-       * ישויך לאיש קשר. `senderPn` הוא השדה שוואטסאפ מוסיפים עם
-       * המספר האמיתי כשמדובר ב-LID; אם הוא חסר, נופלים ל-JID ומדווחים
-       * — עדיף הודעה לא משויכת שנשמרת מאשר הודעה שנעלמת.
+       * ב-`@lid` החלק שלפני ה-@ **אינו** מספר טלפון. `senderPn` /
+       * `participantPn` הם השדות שוואטסאפ אמורים לצרף עם המספר
+       * האמיתי, אבל בהודעות אמיתיות שנבדקו הם פשוט לא הגיעו — ולכן
+       * המיפוי שנבנה בזמן השליחה הוא מה שבאמת עובד כאן.
+       *
+       * ⚠️ כשגם הוא ריק, מדווחים את ה-LID עצמו ורושמים אזהרה בלוג.
+       * הודעה לא משויכת שנשמרת עדיפה על הודעה שנעלמת — אבל היא לא
+       * ניתנת לכיבוד אוטומטי, ולכן חייבת להיות רועשת.
        */
-      const key = m.key as { senderPn?: string; remoteJidAlt?: string };
-      const source = key.senderPn ?? key.remoteJidAlt ?? jid;
-      const fromPhone = source.split("@")[0].split(":")[0].replace(/\D/g, "");
+      const key = m.key as {
+        senderPn?: string;
+        participantPn?: string;
+        remoteJidAlt?: string;
+      };
+      const direct = key.senderPn ?? key.participantPn ?? key.remoteJidAlt;
+
+      let fromPhone = digitsOf(direct ?? jid);
+      if (!direct && jid.endsWith("@lid")) {
+        const mapped = lidToPhone[digitsOf(jid)];
+        if (mapped) {
+          fromPhone = mapped;
+        } else {
+          opts.onDebug?.(`  ⚠ LID ללא מיפוי: ${digitsOf(jid)} — לא ישויך`);
+        }
+      }
 
       opts.onDebug?.(`  ← ${fromPhone}: "${body.slice(0, 40)}"`);
 
@@ -214,7 +281,24 @@ export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
     isConnected: () => connected,
     number: () => number,
     async send(toE164, body) {
-      await socket.sendMessage(`${toE164}@s.whatsapp.net`, { text: body });
+      const jid = `${toE164}@s.whatsapp.net`;
+      await socket.sendMessage(jid, { text: body });
+
+      /*
+       * ⚠️ אחרי השליחה, לא לפניה, ובלי לחסום אותה.
+       *
+       * זו הנקודה היחידה שבה המספר וה-LID ידועים שניהם — וכל תשובה
+       * שתגיע אחר כך תגיע מה-LID. כישלון כאן לא אמור להפיל שליחה
+       * שכבר הצליחה, ולכן הוא נבלע.
+       */
+      try {
+        // ⚠️ `onWhatsApp` מוגדר כמחזיר `undefined` ולא מערך ריק
+        const found = (await socket.onWhatsApp(jid))?.[0];
+        const lid = typeof found?.lid === "string" ? digitsOf(found.lid) : "";
+        if (lid) rememberLid(lid, toE164);
+      } catch {
+        // ההודעה יצאה; רק השיוך של תשובה עתידית עלול להיפגע
+      }
     },
   };
 }

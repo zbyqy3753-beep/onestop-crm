@@ -66,6 +66,7 @@ export const ModelName = {
   BotHeartbeat: 'BotHeartbeat',
   RenewalDocument: 'RenewalDocument',
   RenewalContact: 'RenewalContact',
+  RenewalOptOut: 'RenewalOptOut',
   WhatsAppInbound: 'WhatsAppInbound',
   BotSettings: 'BotSettings'
 } as const
@@ -320,6 +321,15 @@ export const RenewalContactScalarFieldEnum = {
 } as const
 
 export type RenewalContactScalarFieldEnum = (typeof RenewalContactScalarFieldEnum)[keyof typeof RenewalContactScalarFieldEnum]
+
+
+export const RenewalOptOutScalarFieldEnum = {
+  phone: 'phone',
+  body: 'body',
+  createdAt: 'createdAt'
+} as const
+
+export type RenewalOptOutScalarFieldEnum = (typeof RenewalOptOutScalarFieldEnum)[keyof typeof RenewalOptOutScalarFieldEnum]
 
 
 export const WhatsAppInboundScalarFieldEnum = {

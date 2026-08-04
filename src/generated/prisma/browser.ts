@@ -114,6 +114,20 @@ export type RenewalDocument = Prisma.RenewalDocumentModel
  */
 export type RenewalContact = Prisma.RenewalContactModel
 /**
+ * Model RenewalOptOut
+ * רשימת ההסרה. מספר שביקש לא לקבל דיוור — לנצח.
+ * 
+ * ⚠️ **טבלה נפרדת ולא סטטוס על `RenewalContact`, בכוונה.** סטטוס
+ * `optedOut` חי על שורה שאפשר למחוק, ושמתקיימת רק אם המספר בכלל
+ * חולץ ממסמך. שתי חורים נובעים מכך: מחיקת מסמך מוחקת בcascade את
+ * אנשי הקשר שלו ואיתם את ההסרה, ומספר שביקש הסרה בלי שהיה איש קשר
+ * כלל לא נרשם בשום מקום. בשני המקרים העלאת PDF הבאה הייתה מכניסה
+ * אותו חזרה ושולחת לו שוב — בדיוק ההפרה שהוא ביקש למנוע.
+ * 
+ * המפתח הוא הטלפון עצמו, ולכן הרשומה שורדת כל מחיקה של תוכן.
+ */
+export type RenewalOptOut = Prisma.RenewalOptOutModel
+/**
  * Model WhatsAppInbound
  * הודעה נכנסת מלקוח.
  * 

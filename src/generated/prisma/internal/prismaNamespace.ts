@@ -399,6 +399,7 @@ export const ModelName = {
   BotHeartbeat: 'BotHeartbeat',
   RenewalDocument: 'RenewalDocument',
   RenewalContact: 'RenewalContact',
+  RenewalOptOut: 'RenewalOptOut',
   WhatsAppInbound: 'WhatsAppInbound',
   BotSettings: 'BotSettings'
 } as const
@@ -416,7 +417,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "renewalContact" | "whatsAppInbound" | "botSettings"
+    modelProps: "user" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "renewalContact" | "renewalOptOut" | "whatsAppInbound" | "botSettings"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1530,6 +1531,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    RenewalOptOut: {
+      payload: Prisma.$RenewalOptOutPayload<ExtArgs>
+      fields: Prisma.RenewalOptOutFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RenewalOptOutFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalOptOutPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RenewalOptOutFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalOptOutPayload>
+        }
+        findFirst: {
+          args: Prisma.RenewalOptOutFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalOptOutPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RenewalOptOutFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalOptOutPayload>
+        }
+        findMany: {
+          args: Prisma.RenewalOptOutFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalOptOutPayload>[]
+        }
+        create: {
+          args: Prisma.RenewalOptOutCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalOptOutPayload>
+        }
+        createMany: {
+          args: Prisma.RenewalOptOutCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RenewalOptOutCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalOptOutPayload>[]
+        }
+        delete: {
+          args: Prisma.RenewalOptOutDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalOptOutPayload>
+        }
+        update: {
+          args: Prisma.RenewalOptOutUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalOptOutPayload>
+        }
+        deleteMany: {
+          args: Prisma.RenewalOptOutDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RenewalOptOutUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RenewalOptOutUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalOptOutPayload>[]
+        }
+        upsert: {
+          args: Prisma.RenewalOptOutUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RenewalOptOutPayload>
+        }
+        aggregate: {
+          args: Prisma.RenewalOptOutAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRenewalOptOut>
+        }
+        groupBy: {
+          args: Prisma.RenewalOptOutGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RenewalOptOutGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RenewalOptOutCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RenewalOptOutCountAggregateOutputType> | number
+        }
+      }
+    }
     WhatsAppInbound: {
       payload: Prisma.$WhatsAppInboundPayload<ExtArgs>
       fields: Prisma.WhatsAppInboundFieldRefs
@@ -1951,6 +2026,15 @@ export const RenewalContactScalarFieldEnum = {
 } as const
 
 export type RenewalContactScalarFieldEnum = (typeof RenewalContactScalarFieldEnum)[keyof typeof RenewalContactScalarFieldEnum]
+
+
+export const RenewalOptOutScalarFieldEnum = {
+  phone: 'phone',
+  body: 'body',
+  createdAt: 'createdAt'
+} as const
+
+export type RenewalOptOutScalarFieldEnum = (typeof RenewalOptOutScalarFieldEnum)[keyof typeof RenewalOptOutScalarFieldEnum]
 
 
 export const WhatsAppInboundScalarFieldEnum = {
@@ -2440,6 +2524,7 @@ export type GlobalOmitConfig = {
   botHeartbeat?: Prisma.BotHeartbeatOmit
   renewalDocument?: Prisma.RenewalDocumentOmit
   renewalContact?: Prisma.RenewalContactOmit
+  renewalOptOut?: Prisma.RenewalOptOutOmit
   whatsAppInbound?: Prisma.WhatsAppInboundOmit
   botSettings?: Prisma.BotSettingsOmit
 }

@@ -54,8 +54,11 @@ export const COLUMNS: ColumnDef[] = [
   { key: "cost", label: "עלות", defaultOn: true },
   { key: "assignee", label: "משויך ל", defaultOn: true },
   { key: "activity", label: "פעילות", defaultOn: true },
+  // מאיפה הליד הגיע הוא חלק מהחלטת החיוג, לא מטא-דאטה: פנייה מטופס
+  // ולקוח ממחזור הם שתי שיחות שונות לגמרי. הייתה כבויה כברירת מחדל
+  // וכמעט אף אחד לא ידע שהיא קיימת בבורר — ראה `PROMOTED_TO_DEFAULT`.
+  { key: "source", label: "מקור", defaultOn: true },
   // כבויות כברירת מחדל — זמינות דרך הבורר, כדי לא להחזיר את הצפיפות
-  { key: "source", label: "מקור", defaultOn: false },
   { key: "provider", label: "ספק נוכחי", defaultOn: false },
   { key: "city", label: "עיר", defaultOn: false },
   { key: "email", label: "אימייל", defaultOn: false },
@@ -87,7 +90,23 @@ const STORAGE_KEY = "onestop.leads.columns";
 interface StoredColumns {
   visible: ColumnKey[];
   known: ColumnKey[];
+  /** אילו קידומים כבר הוחלו אצל המשתמש. ראה `PROMOTED_TO_DEFAULT`. */
+  promoted?: ColumnKey[];
 }
+
+/**
+ * עמודות שהיו קיימות וכבויות, ו**קודמו** לברירת מחדל.
+ *
+ * ⚠️ `known` פותר רק עמודה **חדשה**. עמודה ותיקה שהופכת ל-`defaultOn`
+ * לא תגיע לאף אחד שכבר נגע בבורר — היא נמצאת ב-`known` השמור, ולכן
+ * היעדרותה מ-`visible` נקראת כ"המשתמש כיבה אותה". זה בדיוק מה שקרה
+ * ל"מקור": היא הייתה זמינה בבורר, איש לא ידע שהיא שם, וההחלטה
+ * להדליק אותה כברירת מחדל הייתה נשארת בלי השפעה.
+ *
+ * החלופה — לאפס את מפתח האחסון — הייתה מוחקת גם את כל שאר הבחירות.
+ * כאן מקודמת עמודה אחת, פעם אחת, וכל השאר נשמר.
+ */
+const PROMOTED_TO_DEFAULT: ColumnKey[] = ["source"];
 
 /**
  * קריאת הבחירה השמורה.
@@ -117,10 +136,21 @@ export function readStoredColumns(): ColumnKey[] | null {
     const known: unknown = isLegacy ? null : (parsed as StoredColumns)?.known;
     const seen = new Set<string>(Array.isArray(known) ? (known as string[]) : []);
 
+    const promoted: unknown = isLegacy ? null : (parsed as StoredColumns)?.promoted;
+    const applied = new Set<string>(
+      Array.isArray(promoted) ? (promoted as string[]) : [],
+    );
+
     for (const c of COLUMNS) {
       if (visible.includes(c.key)) continue;
       const isNewToUser = !seen.has(c.key);
-      if (c.alwaysOn || (isNewToUser && c.defaultOn)) visible.push(c.key);
+      // קידום שטרם הוחל נחשב כמו עמודה חדשה — פעם אחת, כי הכתיבה
+      // הבאה תרשום אותו ב-`promoted` והמשתמש יוכל לכבות אותה סופית
+      const isFreshPromotion =
+        PROMOTED_TO_DEFAULT.includes(c.key) && !applied.has(c.key);
+      if (c.alwaysOn || ((isNewToUser || isFreshPromotion) && c.defaultOn)) {
+        visible.push(c.key);
+      }
     }
     return visible;
   } catch {
@@ -134,6 +164,7 @@ function writeStoredColumns(keys: ColumnKey[]): void {
     const payload: StoredColumns = {
       visible: keys,
       known: COLUMNS.map((c) => c.key),
+      promoted: PROMOTED_TO_DEFAULT,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {

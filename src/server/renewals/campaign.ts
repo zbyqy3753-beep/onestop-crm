@@ -55,10 +55,28 @@ export async function extractContacts(documentId: string): Promise<{
     ).map((r) => r.phone),
   );
 
+  /*
+   * ⚠️ מי שביקש הסרה לא נכנס בחזרה.
+   *
+   * זה הסגר האמיתי של בקשת ההסרה: בלעדיו הלקוח מוסר מהדיוור, ובעוד
+   * חודש מישהו מעלה PDF חדש שהוא מופיע בו — והוא חוזר לרשימה כאילו
+   * לא ביקש כלום. הסינון כאן, ולא רק בשליחה, כדי שהוא גם לא יוצג
+   * במסך כמועמד לאישור.
+   */
+  const suppressed = new Set(
+    (
+      await prisma.renewalOptOut.findMany({
+        where: { phone: { in: phones } },
+        select: { phone: true },
+      })
+    ).map((r) => r.phone),
+  );
+
   let created = 0;
   const duplicates: string[] = [];
 
   for (const [i, c] of contacts.entries()) {
+    if (suppressed.has(c.phone)) continue;
     if (taken.has(c.phone)) {
       duplicates.push(c.name);
       continue;
@@ -132,8 +150,32 @@ export async function approveAndQueue(ids: string[]): Promise<number> {
     where: { id: { in: ids }, status: "pending" },
   });
 
+  /*
+   * ⚠️ שער שני, אחרי זה שב-`extractContacts`.
+   *
+   * החילוץ מסנן לפי רשימת ההסרה, אבל איש קשר יכול היה להיחלץ **לפני**
+   * שהוא ביקש הסרה ולהמתין באישור מאז. זו הנקודה האחרונה לפני שהודעה
+   * נכנסת לתור, ולכן היא זו שחייבת להיות אטומה.
+   */
+  const suppressed = new Set(
+    (
+      await prisma.renewalOptOut.findMany({
+        where: { phone: { in: contacts.map((c) => c.phone) } },
+        select: { phone: true },
+      })
+    ).map((r) => r.phone),
+  );
+
   let queued = 0;
   for (const c of contacts) {
+    if (suppressed.has(c.phone)) {
+      await prisma.renewalContact.update({
+        where: { id: c.id },
+        data: { status: "optedOut" },
+      });
+      continue;
+    }
+
     const body = renewalOpener({ name: c.name });
 
     await enqueue(c.id, "opener", c.phone, body);
@@ -178,17 +220,65 @@ export interface InboundOutcome {
  * מוכר עדיין עשויה להיות "הסר", וזו בקשה שחייבים לתעד ולכבד גם בלי
  * לדעת מי שלח אותה.
  */
+/**
+ * מכבד בקשת הסרה — בלי תלות בשאלה אם מוכר לנו מי שלח אותה.
+ *
+ * ⚠️ שלושה חלקים, וכל אחד מהם היה חסר וגרם ל"שולחים הסר ולא קורה כלום":
+ *
+ * 1. **רישום ברשימת ההסרה.** קודם ההסרה הייתה רק סטטוס על איש הקשר,
+ *    ולכן מספר שאינו איש קשר פעיל (או שהמסמך שלו נמחק) פשוט לא נרשם
+ *    בשום מקום — והעלאת ה-PDF הבאה הייתה מכניסה אותו חזרה.
+ * 2. **ביטול מה שכבר בתור.** אם ההודעה הראשונה עדיין ממתינה לשליחה,
+ *    היא הייתה יוצאת **אחרי** שהלקוח ביקש להפסיק. זו ההפרה הגרועה
+ *    ביותר בזרימה, והיא הייתה קורית בשקט מוחלט.
+ * 3. **אישור ללקוח.** בלעדיו הוא לא יודע שהבקשה נקלטה, וההתנהגות
+ *    הסבירה שלו היא לחסום ולדווח.
+ */
+async function honorOptOut(
+  phone: string,
+  body: string,
+  contactId?: string,
+): Promise<void> {
+  await prisma.renewalOptOut.upsert({
+    where: { phone },
+    create: { phone, body: body.slice(0, 500) },
+    update: {},
+  });
+
+  // ⚠️ `queued` בלבד. שורה ב-`sending` כבר נתבעה ע"י הבוט ואולי כבר
+  // יצאה בפועל; סימונה כמבוטלת היה יוצר תיעוד שקרי של מה שנשלח.
+  await prisma.whatsAppMessage.updateMany({
+    where: { toPhone: phone, status: "queued" },
+    data: { status: "cancelled", lastError: "בקשת הסרה מהלקוח" },
+  });
+
+  if (contactId) {
+    await prisma.renewalContact.update({
+      where: { id: contactId },
+      data: { status: "optedOut" },
+    });
+  }
+
+  // מפתח הדדופ נגזר מאיש הקשר; בלעדיו אין למה לתלות את האישור, ולכן
+  // נופלים למספר עצמו — הוא ייחודי לא פחות
+  await enqueue(contactId ?? `phone:${phone}`, "optout", phone, renewalOptOutAck());
+}
+
 export async function handleInbound(input: {
   waMessageId: string;
   fromPhone: string;
   body: string;
   receivedAt: Date;
 }): Promise<InboundOutcome> {
+  /*
+   * ⚠️ **בלי סינון סטטוס.** הגרסה הקודמת חיפשה רק
+   * `awaitingReply | needsReview | scheduled`, ולכן "הסר" מלקוח
+   * שההודעה אליו עדיין בתור (`queued`), או שכבר סירב (`declined`),
+   * לא מצא כלום ונפל לענף "מספר לא מוכר" — כלומר לא עשה דבר.
+   * המספר הוא הזהות; הסטטוס הוא רק המקום בזרימה.
+   */
   const contact = await prisma.renewalContact.findFirst({
-    where: {
-      phone: input.fromPhone,
-      status: { in: ["awaitingReply", "needsReview", "scheduled"] },
-    },
+    where: { phone: input.fromPhone },
     orderBy: { createdAt: "desc" },
   });
 
@@ -210,6 +300,22 @@ export async function handleInbound(input: {
     return { matched: !!contact, intent: "duplicate" };
   }
 
+  /*
+   * ⚠️ ההסרה מטופלת **לפני** הבדיקה אם יש איש קשר, ולא בתוך ה-switch.
+   *
+   * זה היה הבאג: השורה הבאה החזירה מוקדם כשלא נמצא איש קשר, ולכן
+   * "הסר" ממספר לא מוכר נשמר ביומן ההודעות הנכנסות — ומעולם לא כובד.
+   * ההערה מעל הפונקציה הבטיחה "לתעד ולכבד"; הקוד רק תיעד.
+   */
+  if (intent.kind === "optOut") {
+    await honorOptOut(input.fromPhone, input.body, contact?.id);
+    return {
+      matched: !!contact,
+      intent: intent.kind,
+      contactName: contact?.name,
+    };
+  }
+
   if (!contact) return { matched: false, intent: intent.kind };
 
   await prisma.renewalContact.update({
@@ -221,14 +327,6 @@ export async function handleInbound(input: {
   });
 
   switch (intent.kind) {
-    case "optOut":
-      await prisma.renewalContact.update({
-        where: { id: contact.id },
-        data: { status: "optedOut" },
-      });
-      await enqueue(contact.id, "optout", contact.phone, renewalOptOutAck());
-      break;
-
     case "decline":
       await prisma.renewalContact.update({
         where: { id: contact.id },
