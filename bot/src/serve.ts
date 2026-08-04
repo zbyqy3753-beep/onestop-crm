@@ -7,10 +7,12 @@ import {
   BOT_FEATURES,
   BOT_ROOT,
   BOT_VERSION,
+  CRM_BASE_URL,
   INSTANCE_ID,
   POLL_INTERVAL_MS,
   SEND_GAP_MAX_MS,
   SEND_GAP_MIN_MS,
+  WA_API_KEY,
   isPaired,
 } from "./config.js";
 
@@ -245,6 +247,19 @@ async function waitForConnection(
 }
 
 async function main() {
+  /*
+   * ⚠️ התצורה נבדקת **ראשונה**, לפני הצימוד ולפני החיבור.
+   *
+   * `CRM_BASE_URL` ו-`WA_API_KEY` נקראים בעצלתיים בזמן הסקר, ולכן בוט
+   * בלי `.env` היה מדפיס "מתחיל", מתחבר לוואטסאפ בהצלחה, ורק אז נופל
+   * על משתנה חסר — אחרי שהודיע שהכול תקין. זה קרה בפועל בהתקנה על
+   * מחשב חדש, וזו בדיוק ההודעה שגורמת לחפש את התקלה במקום הלא נכון.
+   *
+   * הקריאות האלה זורקות בעצמן עם הודעה בעברית; אין מה לעטוף.
+   */
+  CRM_BASE_URL();
+  WA_API_KEY();
+
   if (!isPaired()) {
     console.error("\n✗ הבוט לא מחובר לוואטסאפ.");
     console.error("  הרץ פעם אחת:  npm run pair\n");
