@@ -136,32 +136,63 @@ interface TimeGuess {
  * הוא כמעט תמיד 17:00 ולא 05:00, ולכן 1–7 מתפרשים כאחר הצהריים.
  * 8–12 נשארים כפי שהם — "ב-10" הוא בוקר. כל השאר נדחה.
  */
+/**
+ * האם שעה נמוכה צריכה להיקרא כאחר הצהריים.
+ *
+ * ⚠️ 1–7 בהקשר של תיאום שיחת מכירה הם כמעט תמיד אחר הצהריים. אף לקוח
+ * לא מתכוון ל-03:00 לפנות בוקר כשהוא כותב "ב-3".
+ *
+ * מילת בוקר מפורשת גוברת: "3 בבוקר" נשאר 3, וייפסל אחר כך כי הוא
+ * מחוץ לשעות הפעילות — וזה הנכון, כי זו באמת בקשה מוזרה.
+ */
+function toAfternoon(hour: number, morning: boolean): number {
+  if (morning) return hour;
+  return hour >= 1 && hour <= 7 ? hour + 12 : hour;
+}
+
 function extractTime(text: string): TimeGuess | null {
+  const part = DAY_PARTS.find((p) => p.words.some((w) => text.includes(w)));
+  const morning = part?.hour !== undefined && part.hour < 12;
+
   // שעה מפורשת: 17:00 / 17.30 / 9:15
   const explicit = /(\d{1,2})[:.](\d{2})/.exec(text);
   if (explicit) {
-    const hour = Number(explicit[1]);
+    const raw = explicit[1];
     const minute = Number(explicit[2]);
-    if (hour <= 23 && minute <= 59) return { hour, minute };
-    return null;
+    let hour = Number(raw);
+    if (hour > 23 || minute > 59) return null;
+
+    /*
+     * ⚠️ "3:00" מקבל את אותו טיפול כמו "3" — הוא 15:00.
+     *
+     * **אלא אם** נכתב עם אפס מוביל: מי שכותב "07:30" חושב בשעון
+     * 24 שעות ומתכוון לבוקר, ומי שכותב "7:30" מתכוון לערב. האפס
+     * המוביל הוא הסימן היחיד שמבדיל ביניהם.
+     */
+    const paddedTo24h = raw.length === 2 && raw.startsWith("0");
+    if (!paddedTo24h) hour = toAfternoon(hour, morning);
+
+    return { hour, minute };
   }
 
-  const part = DAY_PARTS.find((p) => p.words.some((w) => text.includes(w)));
-
-  // מספר בודד, אולי אחרי "ב-" או "בשעה"
-  const bare = /(?:^|\s|-)(\d{1,2})(?=\s|$|\D)/.exec(text);
+  /*
+   * מספר בודד.
+   *
+   * ⚠️ lookbehind ולא `(?:^|\s|-)`. הגרסה הקודמת דרשה רווח או מקף
+   * לפני הספרה, ולכן **"אפשר ב3" לא נקרא בכלל** — צורת כתיבה נפוצה
+   * לגמרי בעברית, שבה האות נדבקת לספרה. עכשיו נדרש רק שהתו הצמוד
+   * לא יהיה ספרה או סימן שעה, כדי לא לחטוף חצי מ-"17:00".
+   */
+  const bare = /(?<![\d:.])(\d{1,2})(?![\d:.])/.exec(text);
   if (bare) {
-    let hour = Number(bare[1]);
+    const hour = Number(bare[1]);
     if (hour > 23) return null;
 
-    if (part) {
-      // "5 בערב" — חלק היום מכריע את הפרשנות
-      if (part.hour >= 12 && hour < 12) hour += 12;
-    } else if (hour >= 1 && hour <= 7) {
-      // ראה ההערה למעלה
-      hour += 12;
+    if (part && part.hour >= 12 && hour < 12) {
+      // "5 בערב" — חלק היום מכריע
+      return { hour: hour + 12, minute: 0 };
     }
-    return { hour, minute: 0 };
+    return { hour: toAfternoon(hour, morning), minute: 0 };
   }
 
   // "בערב" בלי מספר בכלל
