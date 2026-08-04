@@ -42,6 +42,14 @@ export interface ConnectOptions {
   onQr?: (qr: string) => void;
   /** נקרא לכל הודעה נכנסת מאדם. */
   onMessage?: (msg: InboundMessage) => void;
+  /**
+   * שורות אבחון על מה שהתקבל — כולל מה שנפסל ולמה.
+   *
+   * ⚠️ קיים כי סינון שקט הוא בדיוק מה שהסתיר את הבאג הקודם: הבוט
+   * קיבל הודעות, פסל אותן בשקט, ומבחוץ זה נראה כאילו הוא לא מקבל
+   * כלום. עכשיו כל דחייה נרשמת בלוג.
+   */
+  onDebug?: (msg: string) => void;
   /** נקרא כשהסשן נפסל — צריך מחיקת auth וסריקה מחדש. */
   onLoggedOut?: () => void;
   onOpen?: (number?: string) => void;
@@ -50,6 +58,45 @@ export interface ConnectOptions {
    * רשת, או סגירה מהצד השני. הקורא מחליט אם להתחבר מחדש.
    */
   onClosed?: (reason?: number) => void;
+}
+
+/**
+ * הטקסט מתוך הודעה, על כל הצורות שוואטסאפ עוטף בהן תוכן.
+ *
+ * ⚠️ `conversation` הוא רק המקרה הפשוט ביותר. הודעה שנשלחה כתשובה
+ * לציטוט היא `extendedTextMessage`, ו**בצ׳אט עם הודעות נעלמות התוכן
+ * האמיתי עטוף** ב-`ephemeralMessage` — שם `conversation` פשוט לא
+ * קיים, וההודעה נראית ריקה. הודעות נעלמות מופעלות בהרבה צ׳אטים,
+ * ולכן זה לא מקרה קצה.
+ *
+ * העטיפות מקוננות (viewOnce בתוך ephemeral), ולכן פירוק רקורסיבי
+ * עם תקרה שמונעת לולאה על מבנה פגום.
+ */
+function textOf(msg: unknown, depth = 0): string {
+  if (!msg || typeof msg !== "object" || depth > 4) return "";
+  const m = msg as Record<string, { message?: unknown; text?: string; caption?: string }>;
+
+  for (const wrapper of [
+    "ephemeralMessage",
+    "viewOnceMessage",
+    "viewOnceMessageV2",
+    "viewOnceMessageV2Extension",
+    "documentWithCaptionMessage",
+    "editedMessage",
+  ]) {
+    if (m[wrapper]?.message) return textOf(m[wrapper].message, depth + 1);
+  }
+
+  const plain = (msg as { conversation?: string }).conversation;
+  if (plain) return plain;
+
+  return (
+    m.extendedTextMessage?.text ??
+    m.imageMessage?.caption ??
+    m.videoMessage?.caption ??
+    m.buttonsResponseMessage?.text ??
+    ""
+  );
 }
 
 export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
@@ -98,36 +145,64 @@ export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
     }
   });
 
-  /*
-   * הודעות נכנסות.
-   *
-   * ⚠️ שלושה סינונים, וכל אחד מהם מונע לולאה או רעש:
-   *
-   *  - `fromMe` — ההודעות **שלנו** חוזרות באותו אירוע. בלי הסינון
-   *    הזה כל הודעה שהבוט שולח הייתה נקלטת כתשובה של הלקוח, נשלחת
-   *    לשרת, ומייצרת תשובה נוספת. לולאה אינסופית מול לקוח אמיתי.
-   *  - קבוצות (`@g.us`) — הבוט לא אמור להגיב לשום דבר בקבוצה.
-   *  - `notify` בלבד — `append` הוא סנכרון היסטוריה ישנה, ובחיבור
-   *    ראשון הוא מציף מאות הודעות ישנות שכולן ייראו כתשובות טריות.
-   */
   socket.ev.on("messages.upsert", ({ messages, type }) => {
-    if (type !== "notify" || !opts.onMessage) return;
+    if (!opts.onMessage) return;
+
+    // ⚠️ מדווח **כל** אירוע, גם כזה שיידחה. הגרסה הקודמת סיננה בשקט,
+    // ולכן "הבוט לא קולט" ו"הבוט קולט ופוסל" נראו זהים לגמרי מבחוץ.
+    opts.onDebug?.(`upsert type=${type} · ${messages.length} הודעות`);
+
+    // `append` הוא סנכרון היסטוריה — בחיבור ראשון הוא מציף מאות
+    // הודעות ישנות שכולן ייראו כתשובות טריות
+    if (type !== "notify") return;
 
     for (const m of messages) {
+      // ההודעות **שלנו** חוזרות באותו אירוע. בלי זה כל הודעה שהבוט
+      // שולח נקלטת כתשובה, מייצרת תשובה נוספת, ונוצרת לולאה אינסופית.
       if (m.key.fromMe) continue;
 
       const jid = m.key.remoteJid ?? "";
-      if (!jid.endsWith("@s.whatsapp.net")) continue;
 
-      const body =
-        m.message?.conversation ??
-        m.message?.extendedTextMessage?.text ??
-        "";
-      if (!body.trim()) continue;
+      /*
+       * ⚠️ רשימת **פסילה** ולא רשימת היתר.
+       *
+       * הגרסה הקודמת דרשה `@s.whatsapp.net` — וזה בדיוק מה ששבר את
+       * הכל: וואטסאפ עברו לכתובות `@lid` בצ׳אטים פרטיים, והבדיקה
+       * הפילה כל הודעה אמיתית בלי להשאיר עקבות. פוסלים רק את מה
+       * שבאמת לא רלוונטי, ומקבלים את השאר.
+       */
+      if (
+        jid.endsWith("@g.us") ||
+        jid.endsWith("@broadcast") ||
+        jid.endsWith("@newsletter")
+      ) {
+        opts.onDebug?.(`  דילוג (${jid.split("@")[1]})`);
+        continue;
+      }
+
+      const body = textOf(m.message);
+      if (!body.trim()) {
+        opts.onDebug?.(`  ${jid}: אין טקסט (${Object.keys(m.message ?? {}).join(",")})`);
+        continue;
+      }
+
+      /*
+       * המספר לשיוך.
+       *
+       * ב-`@lid` החלק שלפני ה-@ **אינו** מספר טלפון, ולכן הוא לא
+       * ישויך לאיש קשר. `senderPn` הוא השדה שוואטסאפ מוסיפים עם
+       * המספר האמיתי כשמדובר ב-LID; אם הוא חסר, נופלים ל-JID ומדווחים
+       * — עדיף הודעה לא משויכת שנשמרת מאשר הודעה שנעלמת.
+       */
+      const key = m.key as { senderPn?: string; remoteJidAlt?: string };
+      const source = key.senderPn ?? key.remoteJidAlt ?? jid;
+      const fromPhone = source.split("@")[0].split(":")[0].replace(/\D/g, "");
+
+      opts.onDebug?.(`  ← ${fromPhone}: "${body.slice(0, 40)}"`);
 
       opts.onMessage({
         id: m.key.id ?? `${jid}-${m.messageTimestamp}`,
-        fromPhone: jid.split("@")[0].split(":")[0],
+        fromPhone,
         body,
         timestamp: Number(m.messageTimestamp ?? 0) * 1000 || Date.now(),
       });

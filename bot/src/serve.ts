@@ -193,6 +193,7 @@ function createSupervisor() {
           if (inboundQueue.length >= MAX_INBOUND_QUEUE) inboundQueue.shift();
           inboundQueue.push(msg);
         },
+        onDebug: (msg) => log(msg),
         onOpen: (number) => {
           attempt = 0;
           log(`✓ וואטסאפ מחובר: +${number ?? "?"}`);
