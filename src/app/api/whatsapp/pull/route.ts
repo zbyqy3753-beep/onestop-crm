@@ -19,7 +19,12 @@ import { prisma } from "@/server/db/client";
 const MAX_BODY_BYTES = 4_096;
 const DEFAULT_LIMIT = 5;
 
-/** תקרת קצב גסה — הבוט אמור לסקור כל 60 שניות, לא כל שנייה. */
+/**
+ * תקרת קצב גסה.
+ *
+ * הבוט סוקר כל 20 שניות (3 בדקה), ובנוסף מיד אחרי כל תשובה נכנסת.
+ * 30 בדקה משאיר מרווח נוח גם לשיחה עמוסה, ועדיין עוצר לולאה מטורפת.
+ */
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX_PER_WINDOW = 30;
 const hits: number[] = [];
