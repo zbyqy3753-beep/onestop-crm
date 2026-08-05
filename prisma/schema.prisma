@@ -480,6 +480,15 @@ model WhatsAppMessage {
   claimedAt    DateTime?
   sentAt       DateTime?
 
+  /// מזהה ההודעה אצל מטא (Cloud API).
+  ///
+  /// ⚠️ זה מה שמקשר עדכון מסירה שמגיע ב-webhook לשורה שלנו. בלעדיו
+  /// "נמסר ללקוח" ו"נשלח לספק" הם אותו דבר — וזו בדיוק ההנחה שגרמה
+  /// לנו לסמן `sent` על הודעות שאיש לא קיבל בגרסת הבוט.
+  ///
+  /// ריק בשורות שנשלחו דרך הבוט הישן, שלא היה לו מזהה כזה.
+  providerMessageId String? @unique
+
   /// SetNull ולא Cascade: הגוף והמספר הם snapshot, ומחיקת ליד לא צריכה
   /// למחוק את הראיה שההודעה נשלחה
   leadId String?

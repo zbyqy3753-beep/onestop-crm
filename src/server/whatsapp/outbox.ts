@@ -40,6 +40,15 @@ export interface ClaimedMessage {
   id: string;
   toPhone: string;
   body: string;
+  /**
+   * ⚠️ נחשף כי הוא **מקור האמת לסוג ההודעה**.
+   *
+   * ב-Cloud API הודעה שיוזמת שיחה חייבת תבנית מאושרת, ותשובה בתוך
+   * חלון 24 השעות היא טקסט חופשי. ההבחנה כבר מקודדת במפתח
+   * (`renewal:opener:` מול `renewal:confirm:`), ושדה נפרד בסכימה היה
+   * מוסיף מצב שאפשר לשכוח לעדכן. הבוט הישן פשוט מתעלם מהשדה.
+   */
+  dedupeKey: string;
 }
 
 /** מפתח ה-exactly-once: תזמון מחדש = חובה חדשה, אותה שעה = no-op. */
@@ -307,7 +316,7 @@ async function claim(
 
     const row = await prisma.whatsAppMessage.findUnique({
       where: { id },
-      select: { id: true, toPhone: true, body: true },
+      select: { id: true, toPhone: true, body: true, dedupeKey: true },
     });
     if (row) claimed.push(row);
   }
@@ -387,6 +396,67 @@ export async function pull(input: {
         : null,
     paused: settings.paused,
   };
+}
+
+/**
+ * מטא אישרו שההודעה נמסרה ללקוח.
+ *
+ * ⚠️ לא משנה סטטוס אלא רק מנקה שגיאה. `sent` אצלנו כבר נכתב ברגע
+ * שמטא קיבלו אותה; המסירה בפועל היא חיזוק, ולא מצב חדש שצריך לנהל.
+ * מה שכן חשוב זה שדיווח מסירה **מבטל** שגיאה קודמת — שורה שנרשמה
+ * עליה תקלה ואז נמסרה בכל זאת לא צריכה להישאר מסומנת כבעייתית.
+ */
+export async function markDelivered(providerMessageId: string): Promise<void> {
+  await prisma.whatsAppMessage.updateMany({
+    where: { providerMessageId },
+    data: { lastError: null },
+  });
+}
+
+/**
+ * מטא דחו את ההודעה או שהיא לא נמסרה.
+ *
+ * ⚠️ אותה מדיניות בדיוק כמו כישלון שדוּוח מהבוט: חוזר לתור עד
+ * `MAX_ATTEMPTS`, ורק אז `failed`. ההבדל היחיד הוא שכאן הכישלון
+ * מגיע **אחרי** שכבר סימנו `sent`, כי מטא קיבלו את ההודעה ורק אחר
+ * כך גילו שאי אפשר למסור אותה.
+ */
+export async function markUndeliverable(
+  providerMessageId: string,
+  error: string,
+): Promise<void> {
+  const row = await prisma.whatsAppMessage.findUnique({
+    where: { providerMessageId },
+    select: { id: true, attempts: true },
+  });
+  if (!row) return;
+
+  const giveUp = row.attempts >= MAX_ATTEMPTS;
+
+  await prisma.whatsAppMessage.update({
+    where: { id: row.id },
+    data: giveUp
+      ? { status: "failed", lastError: error.slice(0, 300) }
+      : {
+          status: "queued",
+          claimedAt: null,
+          sentAt: null,
+          providerMessageId: null,
+          lastError: error.slice(0, 300),
+          scheduledFor: new Date(Date.now() + RETRY_DELAY_MS),
+        },
+  });
+}
+
+/** מקשר שורה למזהה שמטא החזירו, כדי ש-webhook יוכל לעדכן אותה. */
+export async function attachProviderId(
+  id: string,
+  providerMessageId: string,
+): Promise<void> {
+  await prisma.whatsAppMessage.updateMany({
+    where: { id },
+    data: { providerMessageId },
+  });
 }
 
 /** קולט את תוצאות השליחה מהבוט. */
