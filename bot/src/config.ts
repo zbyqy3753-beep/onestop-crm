@@ -44,10 +44,10 @@ export const WA_API_KEY = () => required("WA_API_KEY");
  *
  * מופיע בלוג בהפעלה ובמסך הבוטים ליד מזהה המופע.
  */
-export const BOT_VERSION = "8";
+export const BOT_VERSION = "9";
 
 /** מה נוסף בגרסה הזו, לקריאה מהירה בלוג. */
-export const BOT_FEATURES = "\"נשלח\" רק אחרי אישור קבלה מוואטסאפ";
+export const BOT_FEATURES = "שני ערוצי אישור + לוג מפורט של מה שמגיע";
 
 /** מזהה המופע — מופיע במסך הניהול, כדי ש"שני דפקים" יהיה ניתן לאבחון. */
 /**

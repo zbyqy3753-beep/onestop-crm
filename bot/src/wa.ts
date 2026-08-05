@@ -186,16 +186,37 @@ export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
   const SERVER_ACK = 2;
   const pendingAcks = new Map<string, (ok: boolean) => void>();
 
+  function settleAck(id: string | null | undefined, why: string): void {
+    if (!id) return;
+    const waiting = pendingAcks.get(id);
+    // ⚠️ מדווח גם על אישור שאיש לא ממתין לו. אחרת "לא הגיע אישור"
+    // ו"הגיע אישור מאוחר מדי" נראים זהים בלוג, ואי אפשר להבדיל בין
+    // שליחה שנכשלה לבין תקרת המתנה קצרה מדי.
+    opts.onDebug?.(`  ✓ אישור (${why}) ל-${id}${waiting ? "" : " — כבר לא ממתינים"}`);
+    if (!waiting) return;
+    pendingAcks.delete(id);
+    waiting(true);
+  }
+
   socket.ev.on("messages.update", (updates) => {
     for (const u of updates) {
-      const id = u.key?.id;
-      if (!id) continue;
       const status = u.update?.status;
-      if (typeof status === "number" && status >= SERVER_ACK) {
-        pendingAcks.get(id)?.(true);
-        pendingAcks.delete(id);
-      }
+      if (typeof status !== "number") continue;
+      opts.onDebug?.(`  · סטטוס ${status} ל-${u.key?.id}`);
+      if (status >= SERVER_ACK) settleAck(u.key?.id, `status=${status}`);
     }
+  });
+
+  /*
+   * ⚠️ אירוע שני, לא במקום הראשון.
+   *
+   * Baileys מפרסמים אישורים בשני ערוצים נפרדים, ואיזה מהם יגיע תלוי
+   * בסוג הקבלה ובגרסה. האזנה לאחד בלבד היא בדיוק הסוג של הנחה שהופכת
+   * שליחה תקינה ל"נכשל" — ומכיוון שכישלון כאן שולח הודעה שנייה
+   * ללקוח, המחיר של פספוס אישור הוא הודעה כפולה.
+   */
+  socket.ev.on("message-receipt.update", (updates) => {
+    for (const u of updates) settleAck(u.key?.id, "receipt");
   });
 
   /** ממתין לאישור קבלה. `false` = לא הגיע בזמן. */
@@ -335,6 +356,7 @@ export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
        * חושבת שדיברה איתו ובפועל לא.
        */
       const id = sent?.key?.id;
+      opts.onDebug?.(`  → נמסר לספרייה (${id ?? "בלי מזהה"}), ממתין לאישור`);
       if (id && !(await waitForAck(id))) {
         throw new Error("וואטסאפ לא אישרו קבלה של ההודעה");
       }
