@@ -24,11 +24,27 @@ import {
  */
 
 /**
+ * כמה זמן איש קשר חוסם הוספה מחדש של אותו מספר.
+ *
+ * ⚠️ החסימה הייתה **לנצח**, וזו הייתה טעות. לקוח שתקופת ההטבה שלו
+ * נגמרת שוב בשנה הבאה הוא מועמד לגיטימי לקמפיין חדש — אבל הוא נדחה
+ * כ"כבר קיים" בלי שום דרך להחזיר אותו חוץ ממחיקה ידנית במסד. כלומר
+ * הזרימה כולה הייתה חד-פעמית לכל לקוח, לתמיד.
+ *
+ * תשעים יום מכסים בנוחות מחזור קמפיין אחד ואת כל הזנב שלו, ורחוקים
+ * מספיק מהמחזור הבא.
+ */
+const REENTRY_BLOCK_DAYS = 90;
+
+/**
  * חילוץ אנשי קשר ממסמך שכבר נקרא.
  *
- * ⚠️ מדלג על מספר שכבר קיים כאיש קשר אחר — גם ממסמך אחר. לקוח שמופיע
- * בשתי חשבוניות (סלולר ואינטרנט) הוא אדם אחד, ושתי הודעות זהות
- * מאותו מספר הן מה שהופך דיוור לגיטימי לתלונה.
+ * ⚠️ מדלג על מספר שכבר קיים כאיש קשר פעיל, או שנוצר לאחרונה — גם
+ * ממסמך אחר. לקוח שמופיע בשתי חשבוניות (סלולר ואינטרנט) הוא אדם אחד,
+ * ושתי הודעות זהות מאותו מספר הן מה שהופך דיוור לגיטימי לתלונה.
+ *
+ * ⚠️ "פעיל" נבדק **בנוסף** לחלון הזמן ולא במקומו: איש קשר שממתין
+ * לתשובה כבר חצי שנה עדיין באמצע שיחה, ואסור לפתוח לו שיחה שנייה.
  */
 export async function extractContacts(documentId: string): Promise<{
   created: number;
@@ -46,10 +62,19 @@ export async function extractContacts(documentId: string): Promise<{
   const { contacts, skippedPages } = parseDocument(doc.extractedText);
 
   const phones = contacts.map((c) => c.phone);
+  const cutoff = new Date(Date.now() - REENTRY_BLOCK_DAYS * 86_400_000);
   const taken = new Set(
     (
       await prisma.renewalContact.findMany({
-        where: { phone: { in: phones } },
+        where: {
+          phone: { in: phones },
+          OR: [
+            // באמצע שיחה — בלי קשר לכמה זמן עבר
+            { status: { in: ["pending", "queued", "awaitingReply", "needsReview"] } },
+            // או פשוט טרי מדי מכדי לפנות שוב
+            { createdAt: { gte: cutoff } },
+          ],
+        },
         select: { phone: true },
       })
     ).map((r) => r.phone),
