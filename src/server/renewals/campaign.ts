@@ -316,6 +316,25 @@ export async function handleInbound(input: {
     };
   }
 
+  /*
+   * ⚠️ הסרה גוברת על כל מה שיגיע אחריה.
+   *
+   * נצפה בלוג של הייצור: לקוח שלח "הסר" ב-11:56:58, ושלוש-עשרה שניות
+   * אחר כך שלח "5". ההודעה השנייה פוענחה כשעה, נקבעה לו שיחה, והסטטוס
+   * חזר מ-`optedOut` ל-`scheduled` — כלומר המערכת **ביטלה בעצמה** את
+   * בקשת ההסרה שהיא בדיוק כיבדה, ובנתה מסלול לשלוח לו עוד הודעות.
+   *
+   * ההודעה עדיין נשמרת ביומן הנכנסות (זה קרה למעלה), אבל שום פעולה
+   * לא ננקטת ושום תשובה לא יוצאת. אדם שמשנה את דעתו יפנה לנציג.
+   */
+  const suppressed = await prisma.renewalOptOut.findUnique({
+    where: { phone: input.fromPhone },
+    select: { phone: true },
+  });
+  if (suppressed) {
+    return { matched: !!contact, intent: "suppressed", contactName: contact?.name };
+  }
+
   if (!contact) return { matched: false, intent: intent.kind };
 
   await prisma.renewalContact.update({
