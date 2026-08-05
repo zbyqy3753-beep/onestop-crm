@@ -44,10 +44,10 @@ export const WA_API_KEY = () => required("WA_API_KEY");
  *
  * מופיע בלוג בהפעלה ובמסך הבוטים ליד מזהה המופע.
  */
-export const BOT_VERSION = "5";
+export const BOT_VERSION = "6";
 
 /** מה נוסף בגרסה הזו, לקריאה מהירה בלוג. */
-export const BOT_FEATURES = "מגיב תוך שניות — סקר כל 20ש׳ וסקר מיידי בתשובה";
+export const BOT_FEATURES = "לא נלחם על החיבור — 440 מזוהה ומדווח במפורש";
 
 /** מזהה המופע — מופיע במסך הניהול, כדי ש"שני דפקים" יהיה ניתן לאבחון. */
 /**
