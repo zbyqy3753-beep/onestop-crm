@@ -30,6 +30,9 @@ const STALE_AFTER_MS = 48 * 3_600_000;
 /** מספר הניסיונות לפני ויתור, כדי ששורה תקועה לא תסתובב לנצח. */
 const MAX_ATTEMPTS = 3;
 
+/** המתנה לפני ניסיון חוזר אחרי כישלון שדוּוח. ראה `report`. */
+const RETRY_DELAY_MS = 60_000;
+
 /** מעל חצי שעה בלי דופק = נפילה אמיתית ולא רק פספוס סקר אחד. */
 const RECOVERY_THRESHOLD_MS = 30 * 60_000;
 
@@ -394,22 +397,56 @@ export async function report(
   const sentKeys: string[] = [];
 
   for (const r of results) {
+    if (r.status === "sent") {
+      const { count } = await prisma.whatsAppMessage.updateMany({
+        where: { id: r.id, status: "sending" },
+        data: { status: "sent", sentAt: new Date(), lastError: null },
+      });
+      applied += count;
+
+      if (count > 0) {
+        const row = await prisma.whatsAppMessage.findUnique({
+          where: { id: r.id },
+          select: { dedupeKey: true },
+        });
+        if (row) sentKeys.push(row.dedupeKey);
+      }
+      continue;
+    }
+
+    /*
+     * ⚠️ כישלון מדוּוח חוזר לתור — לא נקבר.
+     *
+     * עד עכשיו כל כישלון סימן `failed` מיד, וזה מצב סופי: אין שום דבר
+     * שמחזיר ממנו. כלומר ניתוק רשת של שנייה אחת, או סשן שנפל באמצע,
+     * הרג את ההודעה לתמיד — וזה קרה בפועל, עם `Connection Closed`
+     * שדרש שחזור ידני במסד.
+     *
+     * `MAX_ATTEMPTS` כבר קיים ומשמש את `reclaimAbandoned`; כאן הוא
+     * מקבל את המשמעות שהתכוונו לו מלכתחילה. אחרי שלושה ניסיונות
+     * ההודעה באמת נכשלת ומופיעה במסך הבוטים.
+     */
+    const row = await prisma.whatsAppMessage.findUnique({
+      where: { id: r.id },
+      select: { attempts: true },
+    });
+    const giveUp = (row?.attempts ?? MAX_ATTEMPTS) >= MAX_ATTEMPTS;
+    const error = r.error?.slice(0, 300) ?? "שגיאה";
+
     const { count } = await prisma.whatsAppMessage.updateMany({
       where: { id: r.id, status: "sending" },
-      data:
-        r.status === "sent"
-          ? { status: "sent", sentAt: new Date(), lastError: null }
-          : { status: "failed", lastError: r.error?.slice(0, 300) ?? "שגיאה" },
+      data: giveUp
+        ? { status: "failed", lastError: error }
+        : {
+            status: "queued",
+            claimedAt: null,
+            lastError: error,
+            // ⚠️ דקה קדימה ולא מיד: ניסיון חוזר מיידי על חיבור שבור
+            // היה שורף את שלושת הניסיונות בשלוש שניות
+            scheduledFor: new Date(Date.now() + RETRY_DELAY_MS),
+          },
     });
     applied += count;
-
-    if (count > 0 && r.status === "sent") {
-      const row = await prisma.whatsAppMessage.findUnique({
-        where: { id: r.id },
-        select: { dedupeKey: true },
-      });
-      if (row) sentKeys.push(row.dedupeKey);
-    }
   }
 
   /*

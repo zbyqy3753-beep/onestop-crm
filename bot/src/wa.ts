@@ -7,7 +7,7 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import pino from "pino";
-import { AUTH_DIR, BOT_ROOT } from "./config.js";
+import { ACK_TIMEOUT_MS, AUTH_DIR, BOT_ROOT } from "./config.js";
 
 /**
  * החיבור לוואטסאפ.
@@ -170,6 +170,49 @@ export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
 
   socket.ev.on("creds.update", saveCreds);
 
+  /*
+   * ⚠️⚠️ אישורי קבלה — הסיבה ש"נשלח" הפך למשמעותי.
+   *
+   * `sendMessage` שחוזר בהצלחה אומר **רק** שההודעה נמסרה לספרייה
+   * ונשלחה לסוקט. הוא לא אומר שוואטסאפ קיבלו אותה, ובוודאי לא
+   * שהלקוח קיבל. אחרי צימוד טרי, סשן חלש או ניתוק באמצע, ההודעה
+   * נעלמת בשקט — והמערכת מדווחת "נשלח" על משהו שלא קרה. זה נצפה
+   * בייצור: השורה סומנה `sent` והלקוח לא קיבל כלום.
+   *
+   * `messages.update` מביא את מצב ההודעה. `SERVER_ACK` (2) הוא
+   * הרגע שבו וואטסאפ אישרו קבלה — זה הסימן האמיתי, וממנו והלאה
+   * המסירה באחריותם.
+   */
+  const SERVER_ACK = 2;
+  const pendingAcks = new Map<string, (ok: boolean) => void>();
+
+  socket.ev.on("messages.update", (updates) => {
+    for (const u of updates) {
+      const id = u.key?.id;
+      if (!id) continue;
+      const status = u.update?.status;
+      if (typeof status === "number" && status >= SERVER_ACK) {
+        pendingAcks.get(id)?.(true);
+        pendingAcks.delete(id);
+      }
+    }
+  });
+
+  /** ממתין לאישור קבלה. `false` = לא הגיע בזמן. */
+  function waitForAck(id: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        pendingAcks.delete(id);
+        resolve(false);
+      }, ACK_TIMEOUT_MS);
+
+      pendingAcks.set(id, (ok) => {
+        clearTimeout(timer);
+        resolve(ok);
+      });
+    });
+  }
+
   socket.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;
 
@@ -282,7 +325,19 @@ export async function connect(opts: ConnectOptions = {}): Promise<WaClient> {
     number: () => number,
     async send(toE164, body) {
       const jid = `${toE164}@s.whatsapp.net`;
-      await socket.sendMessage(jid, { text: body });
+      const sent = await socket.sendMessage(jid, { text: body });
+
+      /*
+       * ⚠️ בלי אישור אין "נשלח" — ראה ההערה על `pendingAcks`.
+       *
+       * הזריקה כאן מסומנת ככישלון ב-CRM, וכישלון חוזר לתור לניסיון
+       * נוסף. הודעה כפולה במקרה גבול עדיפה בהרבה על לקוח שהמערכת
+       * חושבת שדיברה איתו ובפועל לא.
+       */
+      const id = sent?.key?.id;
+      if (id && !(await waitForAck(id))) {
+        throw new Error("וואטסאפ לא אישרו קבלה של ההודעה");
+      }
 
       /*
        * ⚠️ אחרי השליחה, לא לפניה, ובלי לחסום אותה.
