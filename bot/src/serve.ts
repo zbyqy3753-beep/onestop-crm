@@ -8,6 +8,7 @@ import {
   BOT_ROOT,
   BOT_VERSION,
   CRM_BASE_URL,
+  INBOUND_DEBOUNCE_MS,
   INSTANCE_ID,
   POLL_INTERVAL_MS,
   SEND_GAP_MAX_MS,
@@ -155,6 +156,28 @@ const inboundQueue: InboundMessage[] = [];
 /** תקרה, כדי שנפילת רשת ארוכה לא תנפח את הזיכרון בלי גבול. */
 const MAX_INBOUND_QUEUE = 200;
 
+/**
+ * סקר מיידי, מחוץ ללוח הזמנים הקבוע.
+ *
+ * ⚠️ בלי זה תשובה של לקוח הייתה ממתינה עד הסקר הבא — ורק אז מדוּוחת,
+ * מעובדת, ומייצרת את הודעת האישור שנשלחת באותו מחזור. לקוח שכתב
+ * "מחר ב-8" חיכה לאישור עד דקה, וזה קורא כמו מערכת שלא קלטה אותו.
+ *
+ * ⚠️ הטיימר **לא** מתאפס בכל הודעה. לקוח שמקליד ברצף היה דוחה בכך את
+ * הסקר שוב ושוב; כאן ההודעה הראשונה קובעת את המועד וכל מה שמצטרף
+ * עד אז נוסע איתה.
+ */
+let wakeTimer: ReturnType<typeof setTimeout> | null = null;
+let requestTick: (() => void) | null = null;
+
+function wake(): void {
+  if (wakeTimer || !requestTick) return;
+  wakeTimer = setTimeout(() => {
+    wakeTimer = null;
+    requestTick?.();
+  }, INBOUND_DEBOUNCE_MS);
+}
+
 async function flushInbound(): Promise<void> {
   if (inboundQueue.length === 0) return;
 
@@ -194,6 +217,8 @@ function createSupervisor() {
           // התור מוגבל — נפילת רשת ארוכה לא תנפח את הזיכרון בלי גבול
           if (inboundQueue.length >= MAX_INBOUND_QUEUE) inboundQueue.shift();
           inboundQueue.push(msg);
+          // לא מחכים לסקר הבא — ראה ההערה על `wake`
+          wake();
         },
         onDebug: (msg) => log(msg),
         onOpen: (number) => {
@@ -294,8 +319,30 @@ async function main() {
     );
   };
 
-  await poll();
-  setInterval(() => void poll(), POLL_INTERVAL_MS);
+  /*
+   * ⚠️ שומר על סקר אחד בכל רגע.
+   *
+   * מאז שיש גם סקר מיידי (`wake`) וגם סקר מתוזמן, שניהם יכולים ליפול
+   * על אותה שנייה — ואז שני מחזורים תובעים שורות במקביל. התביעה בשרת
+   * אטומית ולכן הודעה לא תישלח פעמיים, אבל המחזור השני היה מדלג על
+   * הריווח האנושי בין הודעות ושולח שתיים ברצף מיידי. זה בדיוק הדפוס
+   * שהריווח נועד להסתיר.
+   */
+  let ticking = false;
+  const guarded = async () => {
+    if (ticking) return;
+    ticking = true;
+    try {
+      await poll();
+    } finally {
+      ticking = false;
+    }
+  };
+
+  requestTick = () => void guarded();
+
+  await guarded();
+  setInterval(() => void guarded(), POLL_INTERVAL_MS);
 }
 
 main().catch((e) => {
