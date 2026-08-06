@@ -171,7 +171,9 @@ export function FilterBar({
           ref={searchRef}
           value={filters.query}
           onChange={(e) => onChange({ ...filters, query: e.target.value })}
-          placeholder="חיפוש לפי שם, טלפון, חבילה או הערה…"
+          // העובד ברשימה כי אחרת אף אחד לא ינחש שאפשר — וזו בדיוק
+          // הדרך הקצרה ביותר ל"תראה לי את הלידים של ניב"
+          placeholder="חיפוש לפי שם, טלפון, חבילה, עובד או הערה…"
           className={`${inputClass} ps-8 pe-9`}
           aria-label="חיפוש לידים"
         />

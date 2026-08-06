@@ -55,6 +55,7 @@ import { LeadsPerformancePanel } from "./LeadsPerformancePanel";
 import { leadsCsvFilename, leadsToCsvRows } from "./leadsCsv";
 import { QueueHeader } from "./QueueHeader";
 import { FilterBar, type Filters, EMPTY_FILTERS } from "./FilterBar";
+import { INITIAL_FILTERS, isOpeningStatus } from "./views";
 import { LeadsTable } from "./LeadsTable";
 import { LeadCardList } from "./LeadCardList";
 import { LeadsMoreSheet } from "./LeadsMoreSheet";
@@ -117,7 +118,8 @@ export function LeadsClient({
    */
   canSeeAll: boolean;
 }) {
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  // המסך נפתח על הלידים החדשים בלבד — ראה `INITIAL_FILTERS`
+  const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
   // ברירת המחדל היא תור העבודה — מה שדחוף היום צף למעלה בלי
   // שהמשתמש יבחר מיון. הכיוון לא משפיע על "queue" (הסדר קבוע).
   const [sort, setSort] = useState<{ field: SortField; dir: "asc" | "desc" }>({
@@ -348,10 +350,27 @@ export function LeadsClient({
     return d.getTime();
   }, [now]);
 
+  // ⚠️ מעל `matched` ולא ליד שאר המפות: החיפוש קורא ממנו את שם העובד
+  // המשויך, ו-`const` שמוצהר אחרי השימוש נופל ב-TDZ בזמן הרינדור
+  const userById = useMemo(
+    () => new Map(users.map((u) => [u.id, u])),
+    [users],
+  );
+
   // התצוגה כולה נגזרת מהשכבה האופטימית — כך שינוי סטטוס/עדיפות/כוכב
   // נראה מיד, עוד לפני שהשרת אישר
   const matched = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
+
+    /*
+      ⚠️ חיפוש מבטל את **ברירת הפתיחה** של הסטטוס, לא בחירה מפורשת.
+
+      המסך נפתח מסונן ל"חדשים". בלי השורה הזו, חיפוש שם של לקוח או של
+      עובד היה מחזיר אפס תוצאות בכל ליד שכבר טופל — כלומר כמעט תמיד,
+      ובלי שום רמז למה. לחיצה על אריח סטטוס לעומת זאת היא כן בחירה,
+      והיא נשמרת גם תוך כדי חיפוש.
+    */
+    const status = q && isOpeningStatus(filters.status) ? [] : filters.status;
 
     return optimisticLeads.filter((lead) => {
       if (filters.dueToday) {
@@ -360,7 +379,7 @@ export function LeadsClient({
         if (Date.parse(lead.followUpAt) > endOfToday) return false;
       }
 
-      if (filters.status.length && !filters.status.includes(lead.status)) return false;
+      if (status.length && !status.includes(lead.status)) return false;
       if (filters.kind.length && !filters.kind.includes(lead.kind)) return false;
       if (filters.priority.length && !filters.priority.includes(lead.priority))
         return false;
@@ -387,6 +406,21 @@ export function LeadsClient({
         const provider = lead.currentProvider
           ? PROVIDER_CONFIG[lead.currentProvider].label
           : "";
+
+        /*
+          ⚠️ שם העובד המשויך הוא חלק מהחיפוש.
+
+          "תראה לי את הלידים של ניב" היא שאלה יומיומית, והדרך היחידה
+          לענות עליה הייתה מסנן השיוך — שלוש לחיצות בתפריט. הקלדת שם
+          בתיבת החיפוש היא מה שכולם מנסים קודם.
+
+          זה מרחיב את החיפוש ולא מצר אותו: ליד עם אותה מילה בשם או
+          בהערות ימשיך להימצא בדיוק כמו קודם.
+        */
+        const assignee = lead.assigneeId
+          ? (userById.get(lead.assigneeId)?.name ?? "")
+          : "";
+
         const haystack = [
           lead.name,
           lead.phone,
@@ -395,6 +429,7 @@ export function LeadsClient({
           lead.packageName ?? "",
           provider,
           lead.sourceDetail ?? "",
+          assignee,
           lead.notes.map((n) => n.body).join(" "),
         ]
           .join(" ")
@@ -404,7 +439,7 @@ export function LeadsClient({
 
       return true;
     });
-  }, [optimisticLeads, filters, endOfToday]);
+  }, [optimisticLeads, filters, endOfToday, userById]);
 
   /**
    * `matched` + שער הסטטוסים הסגורים.
@@ -531,10 +566,6 @@ export function LeadsClient({
     [optimisticLeads, openLeadId],
   );
 
-  const userById = useMemo(
-    () => new Map(users.map((u) => [u.id, u])),
-    [users],
-  );
 
   /* ── כספים על החתך המוצג ─────────────────────────────────────────── */
 
