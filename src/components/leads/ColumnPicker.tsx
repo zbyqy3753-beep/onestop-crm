@@ -6,6 +6,7 @@ import { useDetailsAutoClose } from "@/lib/overlay";
 import {
   DEFAULT_VISIBLE,
   TOGGLEABLE,
+  allowedColumns,
   type ColumnKey,
 } from "./columns";
 
@@ -19,11 +20,15 @@ import {
 export function ColumnPicker({
   visible,
   onChange,
+  canSeeAll,
 }: {
   visible: ColumnKey[];
   onChange: (keys: ColumnKey[]) => void;
+  /** עמודות ניהוליות לא מופיעות בבורר של עובד — ראה `allowedColumns` */
+  canSeeAll: boolean;
 }) {
-  const extras = TOGGLEABLE.filter((c) => !c.defaultOn && visible.includes(c.key));
+  const offered = allowedColumns(TOGGLEABLE, canSeeAll);
+  const extras = offered.filter((c) => !c.defaultOn && visible.includes(c.key));
 
   function toggle(key: ColumnKey) {
     onChange(
@@ -50,7 +55,7 @@ export function ColumnPicker({
       </summary>
 
       <div className="scroll-thin absolute end-0 z-30 mt-1 max-h-72 w-56 overflow-y-auto rounded-card border border-line bg-surface p-1.5 shadow-pop">
-        {TOGGLEABLE.map((col) => (
+        {offered.map((col) => (
           <label
             key={col.key}
             className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink-2 hover:bg-surface-2"

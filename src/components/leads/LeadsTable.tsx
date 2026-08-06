@@ -5,7 +5,7 @@ import { leadCost } from "@/server/services/economics";
 import { Button, EmptyState, useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import type { SortField } from "./LeadsClient";
-import { COLUMNS, type ColumnKey } from "./columns";
+import { COLUMNS, allowedColumns, type ColumnKey } from "./columns";
 import { LeadRow } from "./LeadRow";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
 
@@ -61,8 +61,13 @@ export function LeadsTable({
 }) {
   const now = useNow();
 
-  // סדר העמודות נקבע ב-columns.ts ולא בסדר שבו המשתמש סימן אותן
-  const shown = COLUMNS.filter((c) => visibleColumns.includes(c.key));
+  // סדר העמודות נקבע ב-columns.ts ולא בסדר שבו המשתמש סימן אותן.
+  // `allowedColumns` כאן ולא אצל הקורא: זו הנקודה היחידה שמרנדרת
+  // עמודות, ולכן היא היחידה שאי אפשר לעקוף בטעות מקריאה חדשה.
+  const shown = allowedColumns(
+    COLUMNS.filter((c) => visibleColumns.includes(c.key)),
+    canSeeAll,
+  );
 
   const allChecked = leads.length > 0 && leads.every((l) => selected.has(l.id));
 

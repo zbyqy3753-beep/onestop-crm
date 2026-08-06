@@ -39,6 +39,15 @@ export interface ColumnDef {
   alwaysOn?: boolean;
   /** מוצגת כברירת מחדל */
   defaultOn: boolean;
+  /**
+   * מוצגת רק למי שרואה את כל הלידים (`canSeeAllLeads`).
+   *
+   * ⚠️ הסתרה בתצוגה, לא הרשאה. הליד עצמו נשלח ללקוח במלואו, וכל מה
+   * שיש כאן הוא ממילא שדה של ליד שהעובד כבר מטפל בו — השליפה בשרת
+   * כבר מגבילה אותו ללידים שלו. אם מישהו מהעובדים **אסור** לו לדעת
+   * את הנתון, זו החלטה שצריכה לרדת לשליפה ב-`leads/page.tsx`.
+   */
+  fullAccessOnly?: boolean;
 }
 
 export const COLUMNS: ColumnDef[] = [
@@ -52,12 +61,17 @@ export const COLUMNS: ColumnDef[] = [
   // ובלידים שמגיעים מה-API זה השדה שנושא את פרטי ההתעניינות
   { key: "packageName", label: "חבילה", defaultOn: true },
   { key: "cost", label: "עלות", defaultOn: true },
-  { key: "assignee", label: "משויך ל", defaultOn: true },
+  // מי מחזיק את הליד הוא נתון ניהולי: לעובד כל הלידים שהוא רואה הם
+  // ממילא שלו, ולכן העמודה רק תופסת רוחב אצלו
+  { key: "assignee", label: "משויך ל", defaultOn: true, fullAccessOnly: true },
   { key: "activity", label: "פעילות", defaultOn: true },
   // מאיפה הליד הגיע הוא חלק מהחלטת החיוג, לא מטא-דאטה: פנייה מטופס
   // ולקוח ממחזור הם שתי שיחות שונות לגמרי. הייתה כבויה כברירת מחדל
   // וכמעט אף אחד לא ידע שהיא קיימת בבורר — ראה `PROMOTED_TO_DEFAULT`.
-  { key: "source", label: "מקור", defaultOn: true },
+  //
+  // ⚠️ ניהולית: מאיפה מגיעים הלידים ומה עלה כל ערוץ הן שאלות של מי
+  // שקונה את הלידים, לא של מי שמחייג אליהם.
+  { key: "source", label: "מקור", defaultOn: true, fullAccessOnly: true },
   // כבויות כברירת מחדל — זמינות דרך הבורר, כדי לא להחזיר את הצפיפות
   { key: "provider", label: "ספק נוכחי", defaultOn: false },
   { key: "city", label: "עיר", defaultOn: false },
@@ -72,6 +86,20 @@ export const DEFAULT_VISIBLE: ColumnKey[] = COLUMNS.filter((c) => c.defaultOn).m
 
 /** עמודות שהמשתמש יכול לכבות — הבסיס לבורר. */
 export const TOGGLEABLE = COLUMNS.filter((c) => !c.alwaysOn);
+
+/**
+ * סינון לפי תפקיד — נקודה אחת, גם לטבלה וגם לבורר.
+ *
+ * ⚠️ הסינון בזמן רינדור ולא בשמירה. מה שנשמר ב-localStorage נשאר
+ * ניטרלי לתפקיד, ולכן עובד שיקודם למנהל יראה את העמודות מיד ובלי
+ * שהבחירות האחרות שלו יידרסו.
+ */
+export function allowedColumns<T extends { fullAccessOnly?: boolean }>(
+  cols: T[],
+  canSeeAll: boolean,
+): T[] {
+  return canSeeAll ? cols : cols.filter((c) => !c.fullAccessOnly);
+}
 
 const STORAGE_KEY = "onestop.leads.columns";
 

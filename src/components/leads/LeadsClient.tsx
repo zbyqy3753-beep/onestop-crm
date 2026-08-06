@@ -729,7 +729,7 @@ export function LeadsClient({
   function exportCsv() {
     downloadCsv(
       leadsCsvFilename(),
-      toCsv(leadsToCsvRows(sorted, userById, leadCosts)),
+      toCsv(leadsToCsvRows(sorted, userById, leadCosts, canSeeAll)),
     );
     notify(`${sorted.length} לידים יוצאו`);
   }
@@ -794,7 +794,11 @@ export function LeadsClient({
         columnPicker={
           // בורר העמודות הוא כלי של הטבלה בלבד — לכרטיס אין עמודות
           narrow ? undefined : (
-            <ColumnPicker visible={visibleColumns} onChange={setVisibleColumns} />
+            <ColumnPicker
+              visible={visibleColumns}
+              onChange={setVisibleColumns}
+              canSeeAll={canSeeAll}
+            />
           )
         }
         overflow={
@@ -975,6 +979,7 @@ export function LeadsClient({
         onDelete={() => openLead && remove([openLead.id])}
         onNotify={notify}
         busy={pending}
+        canSeeAll={canSeeAll}
       />
 
       <AddLeadModal

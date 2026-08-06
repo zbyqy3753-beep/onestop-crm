@@ -39,6 +39,7 @@ export function LeadDrawer({
   onDelete,
   onNotify,
   busy,
+  canSeeAll,
 }: {
   lead: Lead | null;
   users: User[];
@@ -52,6 +53,8 @@ export function LeadDrawer({
   onDelete: () => void;
   onNotify: (message: string, tone?: "good" | "bad") => void;
   busy: boolean;
+  /** מקור הליד הוא נתון ניהולי — ראה `columns.ts` */
+  canSeeAll: boolean;
 }) {
   const now = useNow();
   // מתאפסים כשנפתח ליד אחר, דרך ה-key שההורה נותן
@@ -236,14 +239,16 @@ export function LeadDrawer({
             <Detail label="חבילה">{lead.packageName?.trim() || "—"}</Detail>
             {/* הערוץ כתגית והפירוט לצדו — ראה `SOURCE_CONFIG`: קודם
                 הפירוט הסתיר את הערוץ, ולכן מאיפה הליד הגיע לא הופיע */}
-            <Detail label="מקור">
-              <span className="flex flex-wrap items-center gap-1.5">
-                <Badge tone={SOURCE_CONFIG[lead.source].tone}>
-                  {SOURCE_CONFIG[lead.source].label}
-                </Badge>
-                {lead.sourceDetail?.trim() && <span>{lead.sourceDetail.trim()}</span>}
-              </span>
-            </Detail>
+            {canSeeAll && (
+              <Detail label="מקור">
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <Badge tone={SOURCE_CONFIG[lead.source].tone}>
+                    {SOURCE_CONFIG[lead.source].label}
+                  </Badge>
+                  {lead.sourceDetail?.trim() && <span>{lead.sourceDetail.trim()}</span>}
+                </span>
+              </Detail>
+            )}
             {/* האימייל כטקסט ולא רק כאייקון — tooltip לא קיים במגע */}
             <Detail label="אימייל">
               {lead.email ? (
