@@ -148,10 +148,9 @@ export function LeadCardList({
               onQuickStatus={(to) => onQuickStatus(lead.id, to)}
               onStar={(next) => onStar(lead.id, next)}
               onPatch={(patch) => onPatch(lead.id, patch)}
+              showAssignee={canSeeAll}
               assigneeName={
-                canSeeAll && lead.assigneeId
-                  ? userById.get(lead.assigneeId)?.name
-                  : undefined
+                lead.assigneeId ? userById.get(lead.assigneeId)?.name : undefined
               }
             />
           ))}

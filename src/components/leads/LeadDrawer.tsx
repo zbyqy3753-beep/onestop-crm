@@ -234,8 +234,15 @@ export function LeadDrawer({
             </Detail>
             <Detail label="עיר">{lead.city ?? "—"}</Detail>
             <Detail label="חבילה">{lead.packageName?.trim() || "—"}</Detail>
+            {/* הערוץ כתגית והפירוט לצדו — ראה `SOURCE_CONFIG`: קודם
+                הפירוט הסתיר את הערוץ, ולכן מאיפה הליד הגיע לא הופיע */}
             <Detail label="מקור">
-              {lead.sourceDetail?.trim() || SOURCE_CONFIG[lead.source].label}
+              <span className="flex flex-wrap items-center gap-1.5">
+                <Badge tone={SOURCE_CONFIG[lead.source].tone}>
+                  {SOURCE_CONFIG[lead.source].label}
+                </Badge>
+                {lead.sourceDetail?.trim() && <span>{lead.sourceDetail.trim()}</span>}
+              </span>
             </Detail>
             {/* האימייל כטקסט ולא רק כאייקון — tooltip לא קיים במגע */}
             <Detail label="אימייל">

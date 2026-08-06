@@ -387,12 +387,20 @@ export const PRIORITY_ORDER: Priority[] = ["urgent", "high", "normal"];
 
 export type LeadSource = "manual" | "import" | "form" | "campaign" | "referral";
 
-export const SOURCE_CONFIG: Record<LeadSource, { label: string }> = {
-  manual: { label: "ידני" },
-  import: { label: "ייבוא" },
-  form: { label: "טופס רישום" },
-  campaign: { label: "קמפיין" },
-  referral: { label: "הפניה" },
+/**
+ * ⚠️ `tone` נוסף כדי שהמקור יהיה **נראה** ולא טקסט אפור בקצה השורה.
+ *
+ * מאיפה הליד הגיע משנה את השיחה: הפניה מלקוח מרוצה ופנייה מטופס אינן
+ * אותו חיוג. עד כה ה-enum הזה הוצג רק כשלא היה `sourceDetail`, כלומר
+ * דווקא בלידים שהגיעו מקמפיין — היחידים שבהם יש פירוט — ערוץ המקור
+ * נעלם לגמרי מהמסך.
+ */
+export const SOURCE_CONFIG: Record<LeadSource, { label: string; tone: StatusTone }> = {
+  manual: { label: "ידני", tone: "neutral" },
+  import: { label: "ייבוא", tone: "info" },
+  form: { label: "טופס רישום", tone: "signal" },
+  campaign: { label: "קמפיין", tone: "accent" },
+  referral: { label: "הפניה", tone: "good" },
 };
 
 /* ── ישויות ───────────────────────────────────────────────────────────── */

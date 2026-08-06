@@ -322,12 +322,23 @@ export function LeadRow({
       }
 
       case "source": {
-        // הטקסט החופשי הוא מה שמעניין ("פלאפון – 300GB Perfect");
-        // ה-enum הוא רק אופן הקליטה ולכן משני
+        /*
+         * ⚠️ הערוץ **והפירוט**, לא אחד במקום השני.
+         *
+         * קודם הפירוט הסתיר את הערוץ, ולכן דווקא בלידים שיש להם פירוט
+         * — אלה שהגיעו מקמפיין או מטופס — לא היה אפשר לדעת מאיפה הם
+         * הגיעו. התגית נושאת את הערוץ, הטקסט את הסיפור.
+         */
+        const src = SOURCE_CONFIG[lead.source];
         const detail = lead.sourceDetail?.trim();
         return (
-          <span className="block max-w-[180px] truncate" title={detail ?? undefined}>
-            {detail || <span className="text-ink-4">{SOURCE_CONFIG[lead.source].label}</span>}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <Badge tone={src.tone}>{src.label}</Badge>
+            {detail && (
+              <span className="max-w-[130px] truncate text-ink-3" title={detail}>
+                {detail}
+              </span>
+            )}
           </span>
         );
       }

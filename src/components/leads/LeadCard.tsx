@@ -6,6 +6,7 @@ import {
   PRIORITY_CONFIG,
   PRIORITY_ORDER,
   PROVIDER_CONFIG,
+  SOURCE_CONFIG,
   STATUS_CONFIG,
 } from "@/lib/domain/types";
 import { TONE_VAR, phone, relative, until, waLink } from "@/lib/format";
@@ -34,11 +35,12 @@ const NO_ANSWER_SEQUENCE: LeadStatus[] = ["noAnswer", "noAnswer1", "noAnswer2"];
  * העריכה זהה בשתי התצוגות ואין שני מימושים שיכולים להיפרד.
  *
  * מה שעל הכרטיס עונה על שאלה אחת: **למי אני מתקשר עכשיו, ובשביל מה.**
- * שם, טלפון, קטגוריה וחבילה, סטטוס, עדיפות, מתי לחזור, ודרכי הקשר.
+ * שם, טלפון, קטגוריה וחבילה, סטטוס, עדיפות, מתי לחזור, המקור, ודרכי
+ * הקשר.
  *
- * מה שלא עליו — עלות, שיוך, פעילות, מקור, ספק, עיר, אימייל —
- * נמצא במגירה, שכבר היום נפתחת כגיליון מסך-מלא ב-390px. זו לא פשרה:
- * שתי רמות מידע, לא אחת מקוצצת.
+ * מה שלא עליו — עלות, פעילות, ספק, עיר, אימייל — נמצא במגירה, שכבר
+ * היום נפתחת כגיליון מסך-מלא ב-390px. זו לא פשרה: שתי רמות מידע, לא
+ * אחת מקוצצת.
  */
 export function LeadCard({
   lead,
@@ -52,6 +54,7 @@ export function LeadCard({
   onQuickStatus,
   onStar,
   onPatch,
+  showAssignee = false,
   assigneeName,
 }: {
   lead: Lead;
@@ -70,11 +73,20 @@ export function LeadCard({
   onQuickStatus?: (to: LeadStatus) => void;
   onStar: (next: boolean) => void;
   onPatch: (patch: LeadPatch) => void;
-  /** שם העובד המשויך. מוצג רק למי שרואה את כל הלידים. */
+  /**
+   * האם להציג בכלל את השיוך — נכון רק למי שרואה את כל הלידים.
+   *
+   * ⚠️ נפרד מ-`assigneeName` בכוונה. קודם השניים היו אותו שדה, ולכן
+   * ליד **ללא שיוך** נראה בדיוק כמו ליד של עובד אחר: שניהם `undefined`.
+   * זה בדיוק המצב שמנהל הכי צריך לראות — ליד שאיש לא מטפל בו.
+   */
+  showAssignee?: boolean;
+  /** שם העובד המשויך, אם יש. */
   assigneeName?: string;
 }) {
   const priority = PRIORITY_CONFIG[lead.priority];
   const status = STATUS_CONFIG[lead.status];
+  const source = SOURCE_CONFIG[lead.source];
 
   /** הפירוט האחרון שהסוכן הזין — אותה נגזרת כמו ב-`LeadRow`. */
   const lastDetail = [...lead.history].reverse().find((h) => h.detail)?.detail;
@@ -244,6 +256,18 @@ export function LeadCard({
         </FollowUpCell>
 
         {/*
+          מאיפה הליד הגיע.
+
+          היה זמין רק במגירה, ודווקא בטלפון — המכשיר שממנו מחייגים —
+          זו פיסת המידע שקובעת איך פותחים: הפניה מלקוח מרוצה, פנייה
+          מטופס וקמפיין חידושים הן שלוש שיחות שונות לגמרי.
+
+          התגית נושאת את הערוץ; הפירוט החופשי (`sourceDetail`) נשאר
+          במגירה, כי הוא משפט שלם ולא צ׳יפ.
+        */}
+        <Badge tone={source.tone}>{source.label}</Badge>
+
+        {/*
           התוצאה הנפוצה ביותר של חיוג — "אין מענה" — בלחיצה אחת,
           בלי לפתוח את בורר הסטטוסים. דרך `onQuickStatus` היא גם
           מדלגת על הדיאלוג; בלעדיו נופלים ל-`onStatus` הרגיל.
@@ -301,9 +325,36 @@ export function LeadCard({
           במסך של 375px. לעובד (שרואה רק את שלו) אין שם מה להציג,
           ולכן הוא ממשיך לראות את הזמן.
         */}
-        <span className="shrink-0 truncate whitespace-nowrap text-[11px] text-ink-4">
-          {assigneeName ?? (now === null ? "" : relative(lead.updatedAt, now))}
-        </span>
+        {showAssignee ? (
+          // ⚠️ עיגול ראשי-תיבות ולא עוד טקסט אפור. קודם שם העובד נכתב
+          // באותו גודל וצבע של "לפני 3 שע׳" באותו מקום בדיוק, ולכן
+          // נקרא כחותמת זמן. ליד ללא שיוך מקבל טון אזהרה — הוא לא
+          // "מידע חסר" אלא ליד שאיש לא מטפל בו.
+          <span
+            className={`flex min-w-0 shrink-0 items-center gap-1 text-[11px] ${
+              assigneeName ? "text-ink-3" : "text-warn"
+            }`}
+            title={assigneeName ? `משויך ל${assigneeName}` : "ללא שיוך"}
+          >
+            <span
+              className={`grid size-5 shrink-0 place-items-center rounded-full text-[9px] font-bold ${
+                assigneeName
+                  ? "bg-surface-3 text-ink-2"
+                  : "bg-warn-soft text-warn"
+              }`}
+              aria-hidden
+            >
+              {assigneeName ? assigneeName.slice(0, 2) : "?"}
+            </span>
+            <span className="max-w-[72px] truncate">
+              {assigneeName ?? "ללא שיוך"}
+            </span>
+          </span>
+        ) : (
+          <span className="shrink-0 truncate whitespace-nowrap text-[11px] text-ink-4">
+            {now === null ? "" : relative(lead.updatedAt, now)}
+          </span>
+        )}
       </div>
     </li>
   );
