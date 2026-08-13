@@ -230,6 +230,54 @@ export interface UserRepository {
   update(id: UserId, input: UpdateUserInput): Promise<User>;
 }
 
+/* ── סשנים ────────────────────────────────────────────────────────────── */
+
+/**
+ * סשן התחברות פעיל, כפי שהוא מוחזר מהמאגר.
+ *
+ * ⚠️ `userId` הוא תמיד הזהות **האמיתית** של מי שהתחבר עם סיסמה, גם
+ * בתוך התחזות. `impersonatingId` הוא בתור מי הוא מוצג. שמירת השניים
+ * על אותה שורה היא מה שהופך התחזות לבלתי ניתנת לזיוף — קודם היא
+ * ישבה בעוגייה נפרדת ולא חתומה.
+ */
+export interface SessionRecord {
+  tokenHash: string;
+  userId: UserId;
+  impersonatingId: UserId | null;
+  expiresAt: Date;
+  lastSeenAt: Date;
+}
+
+export interface SessionRepository {
+  /** יוצר סשן חדש. הטוקן עצמו לא נשמר — רק ה-hash שלו. */
+  create(input: {
+    tokenHash: string;
+    userId: UserId;
+    expiresAt: Date;
+  }): Promise<SessionRecord>;
+
+  /** הסשן לפי ה-hash, או `null` אם אין כזה. תפוגה נבדקת אצל הקורא. */
+  find(tokenHash: string): Promise<SessionRecord | null>;
+
+  /** מאריך תפוגה ומעדכן `lastSeenAt` — הסשן המתגלגל. */
+  touch(tokenHash: string, expiresAt: Date): Promise<void>;
+
+  /** נכנסים/יוצאים ממצב התחזות. `null` = חזרה לחשבון האמיתי. */
+  setImpersonating(
+    tokenHash: string,
+    impersonatingId: UserId | null,
+  ): Promise<void>;
+
+  /** התנתקות של הסשן הנוכחי בלבד. */
+  delete(tokenHash: string): Promise<void>;
+
+  /**
+   * ניתוק מיידי של משתמש מכל המכשירים. נקרא בהשבתת חשבון —
+   * בלי זה עובד שהושבת ממשיך לעבוד עד שהעוגייה שלו פגה.
+   */
+  deleteAllForUser(userId: UserId): Promise<number>;
+}
+
 export interface PackageFilter {
   query?: string;
   provider?: ProviderKey[];
@@ -286,6 +334,7 @@ export interface RegistrationRepository {
 export interface Repositories {
   leads: LeadRepository;
   users: UserRepository;
+  sessions: SessionRepository;
   packages: PackageRepository;
   deals: DealRepository;
   settings: SettingsRepository;

@@ -8,8 +8,10 @@ import type {
   LeadStatusEvent as PEvent,
   Package as PPackage,
   Registration as PRegistration,
+  Session as PSession,
   User as PUser,
 } from "@/generated/prisma/client";
+import type { SessionRecord } from "../types";
 import type {
   Deal,
   DealStageEvent,
@@ -123,6 +125,20 @@ export function userFromPrisma(row: PUser): User {
     active: row.active,
     store: row.store ?? undefined,
     subscriptionEndsAt: row.subscriptionEndsAt?.toISOString(),
+  };
+}
+
+/**
+ * סשן. אין כאן המרת תאריכים ל-ISO כמו במשתמש: הסשן לא מגיע לדפדפן
+ * לעולם — הוא נצרך רק בשרת, שם `Date` נוח יותר להשוואה מול `now`.
+ */
+export function sessionFromPrisma(row: PSession): SessionRecord {
+  return {
+    tokenHash: row.tokenHash,
+    userId: row.userId,
+    impersonatingId: row.impersonatingId,
+    expiresAt: row.expiresAt,
+    lastSeenAt: row.lastSeenAt,
   };
 }
 

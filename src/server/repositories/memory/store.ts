@@ -7,6 +7,7 @@ import type {
   User,
 } from "@/lib/domain/types";
 import { SEED_LEAD_COSTS, SEED_PACKAGES } from "@/lib/domain/catalog";
+import type { SessionRecord } from "../types";
 import {
   SEED_DEALS,
   SEED_LEADS,
@@ -28,6 +29,8 @@ import {
 interface MemoryState {
   leads: Lead[];
   users: User[];
+  /** סשנים פעילים, לפי ה-hash של הטוקן. נמחקים באתחול כמו כל השאר. */
+  sessions: SessionRecord[];
   packages: Package[];
   deals: Deal[];
   registrations: Registration[];
@@ -45,6 +48,7 @@ function createState(): MemoryState {
     // עותקים עמוקים — כדי שמוטציות לא ידרסו את נתוני הזרע עצמם
     leads: structuredClone(SEED_LEADS),
     users: structuredClone(SEED_USERS),
+    sessions: [],
     packages: structuredClone(SEED_PACKAGES),
     deals: structuredClone(SEED_DEALS),
     registrations: structuredClone(SEED_REGISTRATIONS),

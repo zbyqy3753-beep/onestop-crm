@@ -10,6 +10,7 @@ import type {
   RegistrationFilter,
   RegistrationRepository,
   Repositories,
+  SessionRepository,
   SettingsRepository,
   UserRepository,
 } from "../types";
@@ -17,6 +18,7 @@ import {
   dealFromPrisma,
   packageFromPrisma,
   registrationFromPrisma,
+  sessionFromPrisma,
   toNumber,
   userFromPrisma,
 } from "./mappers";
@@ -212,10 +214,62 @@ const registrations: RegistrationRepository = {
   },
 };
 
+/**
+ * סשנים.
+ *
+ * ⚠️ `find` לא מסנן תפוגה בכוונה — הקורא (`server/auth/session.ts`)
+ * הוא זה שמחליט מה לעשות עם סשן שפג, והוא גם מוחק אותו. סינון כאן
+ * היה מסתיר את ההבחנה בין "אין סשן כזה" ל"היה וכבר לא", ובלעדיה אין
+ * דרך לנקות שורות מתות.
+ */
+const sessions: SessionRepository = {
+  async create({ tokenHash, userId, expiresAt }) {
+    const row = await prisma.session.create({
+      data: { tokenHash, userId, expiresAt },
+    });
+    return sessionFromPrisma(row);
+  },
+
+  async find(tokenHash) {
+    const row = await prisma.session.findUnique({ where: { tokenHash } });
+    return row ? sessionFromPrisma(row) : null;
+  },
+
+  async touch(tokenHash, expiresAt) {
+    await prisma.session.update({
+      where: { tokenHash },
+      data: { expiresAt, lastSeenAt: new Date() },
+    });
+  },
+
+  async setImpersonating(tokenHash, impersonatingId) {
+    await prisma.session.update({
+      where: { tokenHash },
+      data: { impersonatingId },
+    });
+  },
+
+  async delete(tokenHash) {
+    // deleteMany ולא delete: התנתקות עם עוגייה שכבר נמחקה (טאב שני,
+    // כפתור שנלחץ פעמיים) היא מצב תקין, לא שגיאה
+    await prisma.session.deleteMany({ where: { tokenHash } });
+  },
+
+  async deleteAllForUser(userId) {
+    // גם סשנים שבהם המשתמש הוא היעד המתוחזה: אחרת הבעלים היה ממשיך
+    // לפעול בתור עובד שהושבת זה עתה
+    const { count } = await prisma.session.deleteMany({
+      where: { OR: [{ userId }, { impersonatingId: userId }] },
+    });
+    return count;
+  },
+};
+
 export function createPrismaRepositories(): Repositories {
   return {
     leads: prismaLeadRepository,
     users,
+    sessions,
     packages,
     deals,
     settings,

@@ -10,7 +10,14 @@
 
 export const GATE_COOKIE = "os_gate";
 
-/** תוכן העוגייה הוא מזהה המשתמש עצמו. */
+/**
+ * תוכן העוגייה הוא **טוקן אקראי** — ראה `server/auth/token.ts`.
+ *
+ * ⚠️ קדם לזה מזהה המשתמש עצמו, בטקסט גלוי. אל תחזיר את זה: עריכת
+ * העוגייה ב-DevTools למזהה של הבעלים נתנה גישת בעלים מלאה, ומזהי
+ * משתמשים מגיעים לדפדפן בשדה `assigneeId` של כל ליד — לא היה אפילו
+ * מה לנחש.
+ */
 export const SESSION_COOKIE = "os_session";
 
 /**
@@ -20,7 +27,9 @@ export const SESSION_COOKIE = "os_session";
  * בלי החידוש הזה הבעלים היה נזרק מהאפליקציה המותקנת כל שבוע, באמצע
  * התור, בלי שום רמז למה.
  */
-const MAX_AGE = 60 * 60 * 24 * 7;
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
+
+const MAX_AGE = SESSION_MAX_AGE;
 
 export const GATE_COOKIE_OPTIONS = {
   httpOnly: true,

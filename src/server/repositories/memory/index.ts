@@ -4,6 +4,8 @@ import type {
   PackageFilter,
   PackageRepository,
   Repositories,
+  SessionRecord,
+  SessionRepository,
   SettingsRepository,
   UserRepository,
 } from "../types";
@@ -114,6 +116,54 @@ const deals: DealRepository = {
   },
 };
 
+/**
+ * סשנים בזיכרון. אין כאן `structuredClone` כמו בשאר המאגרים: הסשן
+ * נצרך מיד ואינו נשמר בשום מצב לקוח, והשכפול היה רק עולה.
+ */
+const sessions: SessionRepository = {
+  async create({ tokenHash, userId, expiresAt }) {
+    const row: SessionRecord = {
+      tokenHash,
+      userId,
+      impersonatingId: null,
+      expiresAt,
+      lastSeenAt: new Date(),
+    };
+    state.sessions.push(row);
+    return { ...row };
+  },
+
+  async find(tokenHash) {
+    const found = state.sessions.find((s) => s.tokenHash === tokenHash);
+    return found ? { ...found } : null;
+  },
+
+  async touch(tokenHash, expiresAt) {
+    const found = state.sessions.find((s) => s.tokenHash === tokenHash);
+    if (!found) return;
+    found.expiresAt = expiresAt;
+    found.lastSeenAt = new Date();
+  },
+
+  async setImpersonating(tokenHash, impersonatingId) {
+    const found = state.sessions.find((s) => s.tokenHash === tokenHash);
+    if (found) found.impersonatingId = impersonatingId;
+  },
+
+  async delete(tokenHash) {
+    const at = state.sessions.findIndex((s) => s.tokenHash === tokenHash);
+    if (at !== -1) state.sessions.splice(at, 1);
+  },
+
+  async deleteAllForUser(userId) {
+    const before = state.sessions.length;
+    state.sessions = state.sessions.filter(
+      (s) => s.userId !== userId && s.impersonatingId !== userId,
+    );
+    return before - state.sessions.length;
+  },
+};
+
 const settings: SettingsRepository = {
   async getLeadCosts() {
     return structuredClone(state.leadCosts);
@@ -127,6 +177,7 @@ const settings: SettingsRepository = {
 export const memoryRepositories: Repositories = {
   leads: memoryLeadRepository,
   users,
+  sessions,
   packages,
   deals,
   settings,

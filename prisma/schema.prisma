@@ -69,8 +69,41 @@ model User {
   handledRegistrations  Registration[]    @relation("RegistrationHandler")
   whatsappMessages      WhatsAppMessage[] @relation("WaRecipient")
   renewalDocuments      RenewalDocument[] @relation("RenewalUploader")
+  sessions              Session[]         @relation("SessionUser")
+  impersonatedSessions  Session[]         @relation("SessionImpersonated")
 
   @@index([role, active])
+}
+
+/// סשן התחברות פעיל.
+///
+/// ⚠️ העמודה היא **ה-hash של הטוקן**, לא הטוקן. הטוקן עצמו חי רק
+/// בעוגייה אצל המשתמש: מי שמשיג גישת קריאה ל-DB מקבל hash-ים, ומהם
+/// אי אפשר להרכיב עוגייה תקפה. זו הסיבה היחידה שהעמודה לא נקראת
+/// `token`.
+///
+/// קדם לזה: עוגיית `os_session` הכילה את מזהה המשתמש עצמו, בלי חתימה.
+/// כל מי שפתח DevTools והחליף את הערך במזהה של הבעלים — הפך לבעלים,
+/// ומזהי משתמשים ממילא מגיעים לדפדפן בשדה `assigneeId` של כל ליד.
+model Session {
+  /// ה-hash (SHA-256, hex) של הטוקן שיושב בעוגייה
+  tokenHash String @id
+
+  userId String
+  user   User   @relation("SessionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// בזמן התחזות: בתור מי הבעלים מחובר. `null` = סשן רגיל.
+  /// `userId` נשאר תמיד הזהות **האמיתית**, גם בתוך התחזות.
+  impersonatingId String?
+  impersonating   User?   @relation("SessionImpersonated", fields: [impersonatingId], references: [id], onDelete: Cascade)
+
+  /// תפוגה מתגלגלת — ראה `touchIfStale` ב-server/auth/session.ts
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 /**

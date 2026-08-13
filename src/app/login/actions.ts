@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 import { GATE_COOKIE, GATE_COOKIE_OPTIONS } from "@/lib/gate";
 import { NEXT_PARAM, safeReturnTo } from "@/lib/returnTo";
 import {
-  SESSION_COOKIE,
-  SESSION_COOKIE_OPTIONS,
+  endSessionRecord,
+  startSession,
   verifyCredentials,
 } from "@/server/auth/session";
 
@@ -31,8 +31,10 @@ export async function signIn(_prev: string | null, formData: FormData) {
   const user = await verifyCredentials(email, password);
   if (!user) return "אימייל או סיסמה שגויים.";
 
+  // שורת סשן ב-DB + טוקן אקראי בעוגייה. ראה server/auth/session.ts
+  await startSession(user.id);
+
   const store = await cookies();
-  store.set(SESSION_COOKIE, user.id, SESSION_COOKIE_OPTIONS);
 
   // גם עוגיית השער, ולא רק הסשן: אפליקציה שהותקנה למסך הבית באייפון
   // מקבלת צנצנת עוגיות נפרדת מספארי, ולכן היא מגיעה לכאן בלי שום
@@ -45,7 +47,8 @@ export async function signIn(_prev: string | null, formData: FormData) {
 }
 
 export async function endSession() {
-  const store = await cookies();
-  store.delete(SESSION_COOKIE);
+  // מוחק גם את שורת הסשן ולא רק את העוגייה: אחרת הטוקן היה נשאר תקף
+  // ב-DB, וכל מי שהעתיק אותו קודם יכול היה להמשיך להשתמש בו
+  await endSessionRecord();
   redirect("/login");
 }

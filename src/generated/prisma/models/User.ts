@@ -233,6 +233,8 @@ export type UserWhereInput = {
   handledRegistrations?: Prisma.RegistrationListRelationFilter
   whatsappMessages?: Prisma.WhatsAppMessageListRelationFilter
   renewalDocuments?: Prisma.RenewalDocumentListRelationFilter
+  sessions?: Prisma.SessionListRelationFilter
+  impersonatedSessions?: Prisma.SessionListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -257,6 +259,8 @@ export type UserOrderByWithRelationInput = {
   handledRegistrations?: Prisma.RegistrationOrderByRelationAggregateInput
   whatsappMessages?: Prisma.WhatsAppMessageOrderByRelationAggregateInput
   renewalDocuments?: Prisma.RenewalDocumentOrderByRelationAggregateInput
+  sessions?: Prisma.SessionOrderByRelationAggregateInput
+  impersonatedSessions?: Prisma.SessionOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -284,6 +288,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   handledRegistrations?: Prisma.RegistrationListRelationFilter
   whatsappMessages?: Prisma.WhatsAppMessageListRelationFilter
   renewalDocuments?: Prisma.RenewalDocumentListRelationFilter
+  sessions?: Prisma.SessionListRelationFilter
+  impersonatedSessions?: Prisma.SessionListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -340,6 +346,8 @@ export type UserCreateInput = {
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -364,6 +372,8 @@ export type UserUncheckedCreateInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUpdateInput = {
@@ -388,6 +398,8 @@ export type UserUpdateInput = {
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -412,6 +424,8 @@ export type UserUncheckedUpdateInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -492,14 +506,14 @@ export type UserMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
 }
 
-export type UserNullableScalarRelationFilter = {
-  is?: Prisma.UserWhereInput | null
-  isNot?: Prisma.UserWhereInput | null
-}
-
 export type UserScalarRelationFilter = {
   is?: Prisma.UserWhereInput
   isNot?: Prisma.UserWhereInput
+}
+
+export type UserNullableScalarRelationFilter = {
+  is?: Prisma.UserWhereInput | null
+  isNot?: Prisma.UserWhereInput | null
 }
 
 export type StringFieldUpdateOperationsInput = {
@@ -524,6 +538,36 @@ export type NullableDateTimeFieldUpdateOperationsInput = {
 
 export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
+}
+
+export type UserCreateNestedOneWithoutSessionsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSessionsInput, Prisma.UserUncheckedCreateWithoutSessionsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSessionsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutImpersonatedSessionsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutImpersonatedSessionsInput, Prisma.UserUncheckedCreateWithoutImpersonatedSessionsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutImpersonatedSessionsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutSessionsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSessionsInput, Prisma.UserUncheckedCreateWithoutSessionsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSessionsInput
+  upsert?: Prisma.UserUpsertWithoutSessionsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSessionsInput, Prisma.UserUpdateWithoutSessionsInput>, Prisma.UserUncheckedUpdateWithoutSessionsInput>
+}
+
+export type UserUpdateOneWithoutImpersonatedSessionsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutImpersonatedSessionsInput, Prisma.UserUncheckedCreateWithoutImpersonatedSessionsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutImpersonatedSessionsInput
+  upsert?: Prisma.UserUpsertWithoutImpersonatedSessionsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutImpersonatedSessionsInput, Prisma.UserUpdateWithoutImpersonatedSessionsInput>, Prisma.UserUncheckedUpdateWithoutImpersonatedSessionsInput>
 }
 
 export type UserCreateNestedOneWithoutAssignedLeadsInput = {
@@ -688,6 +732,238 @@ export type UserUpdateOneRequiredWithoutRenewalDocumentsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutRenewalDocumentsInput, Prisma.UserUpdateWithoutRenewalDocumentsInput>, Prisma.UserUncheckedUpdateWithoutRenewalDocumentsInput>
 }
 
+export type UserCreateWithoutSessionsInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
+  renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
+}
+
+export type UserUncheckedCreateWithoutSessionsInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
+  renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
+}
+
+export type UserCreateOrConnectWithoutSessionsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutSessionsInput, Prisma.UserUncheckedCreateWithoutSessionsInput>
+}
+
+export type UserCreateWithoutImpersonatedSessionsInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
+  renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutImpersonatedSessionsInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
+  renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutImpersonatedSessionsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutImpersonatedSessionsInput, Prisma.UserUncheckedCreateWithoutImpersonatedSessionsInput>
+}
+
+export type UserUpsertWithoutSessionsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutSessionsInput, Prisma.UserUncheckedUpdateWithoutSessionsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutSessionsInput, Prisma.UserUncheckedCreateWithoutSessionsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutSessionsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutSessionsInput, Prisma.UserUncheckedUpdateWithoutSessionsInput>
+}
+
+export type UserUpdateWithoutSessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
+  renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
+}
+
+export type UserUncheckedUpdateWithoutSessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
+  renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
+}
+
+export type UserUpsertWithoutImpersonatedSessionsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutImpersonatedSessionsInput, Prisma.UserUncheckedUpdateWithoutImpersonatedSessionsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutImpersonatedSessionsInput, Prisma.UserUncheckedCreateWithoutImpersonatedSessionsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutImpersonatedSessionsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutImpersonatedSessionsInput, Prisma.UserUncheckedUpdateWithoutImpersonatedSessionsInput>
+}
+
+export type UserUpdateWithoutImpersonatedSessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
+  renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutImpersonatedSessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
+  renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+}
+
 export type UserCreateWithoutAssignedLeadsInput = {
   id?: string
   name: string
@@ -709,6 +985,8 @@ export type UserCreateWithoutAssignedLeadsInput = {
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUncheckedCreateWithoutAssignedLeadsInput = {
@@ -732,6 +1010,8 @@ export type UserUncheckedCreateWithoutAssignedLeadsInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserCreateOrConnectWithoutAssignedLeadsInput = {
@@ -760,6 +1040,8 @@ export type UserCreateWithoutCreatedLeadsInput = {
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUncheckedCreateWithoutCreatedLeadsInput = {
@@ -783,6 +1065,8 @@ export type UserUncheckedCreateWithoutCreatedLeadsInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserCreateOrConnectWithoutCreatedLeadsInput = {
@@ -822,6 +1106,8 @@ export type UserUpdateWithoutAssignedLeadsInput = {
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAssignedLeadsInput = {
@@ -845,6 +1131,8 @@ export type UserUncheckedUpdateWithoutAssignedLeadsInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUpsertWithoutCreatedLeadsInput = {
@@ -879,6 +1167,8 @@ export type UserUpdateWithoutCreatedLeadsInput = {
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedLeadsInput = {
@@ -902,6 +1192,8 @@ export type UserUncheckedUpdateWithoutCreatedLeadsInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserCreateWithoutNotesInput = {
@@ -925,6 +1217,8 @@ export type UserCreateWithoutNotesInput = {
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUncheckedCreateWithoutNotesInput = {
@@ -948,6 +1242,8 @@ export type UserUncheckedCreateWithoutNotesInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserCreateOrConnectWithoutNotesInput = {
@@ -987,6 +1283,8 @@ export type UserUpdateWithoutNotesInput = {
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotesInput = {
@@ -1010,6 +1308,8 @@ export type UserUncheckedUpdateWithoutNotesInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserCreateWithoutLeadActivityInput = {
@@ -1033,6 +1333,8 @@ export type UserCreateWithoutLeadActivityInput = {
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUncheckedCreateWithoutLeadActivityInput = {
@@ -1056,6 +1358,8 @@ export type UserUncheckedCreateWithoutLeadActivityInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserCreateOrConnectWithoutLeadActivityInput = {
@@ -1095,6 +1399,8 @@ export type UserUpdateWithoutLeadActivityInput = {
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUncheckedUpdateWithoutLeadActivityInput = {
@@ -1118,6 +1424,8 @@ export type UserUncheckedUpdateWithoutLeadActivityInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserCreateWithoutStatusEventsInput = {
@@ -1141,6 +1449,8 @@ export type UserCreateWithoutStatusEventsInput = {
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUncheckedCreateWithoutStatusEventsInput = {
@@ -1164,6 +1474,8 @@ export type UserUncheckedCreateWithoutStatusEventsInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserCreateOrConnectWithoutStatusEventsInput = {
@@ -1203,6 +1515,8 @@ export type UserUpdateWithoutStatusEventsInput = {
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUncheckedUpdateWithoutStatusEventsInput = {
@@ -1226,6 +1540,8 @@ export type UserUncheckedUpdateWithoutStatusEventsInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserCreateWithoutDealsInput = {
@@ -1249,6 +1565,8 @@ export type UserCreateWithoutDealsInput = {
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUncheckedCreateWithoutDealsInput = {
@@ -1272,6 +1590,8 @@ export type UserUncheckedCreateWithoutDealsInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserCreateOrConnectWithoutDealsInput = {
@@ -1311,6 +1631,8 @@ export type UserUpdateWithoutDealsInput = {
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDealsInput = {
@@ -1334,6 +1656,8 @@ export type UserUncheckedUpdateWithoutDealsInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserCreateWithoutDealStageEventsInput = {
@@ -1357,6 +1681,8 @@ export type UserCreateWithoutDealStageEventsInput = {
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUncheckedCreateWithoutDealStageEventsInput = {
@@ -1380,6 +1706,8 @@ export type UserUncheckedCreateWithoutDealStageEventsInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserCreateOrConnectWithoutDealStageEventsInput = {
@@ -1419,6 +1747,8 @@ export type UserUpdateWithoutDealStageEventsInput = {
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDealStageEventsInput = {
@@ -1442,6 +1772,8 @@ export type UserUncheckedUpdateWithoutDealStageEventsInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserCreateWithoutReferredRegistrationsInput = {
@@ -1465,6 +1797,8 @@ export type UserCreateWithoutReferredRegistrationsInput = {
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUncheckedCreateWithoutReferredRegistrationsInput = {
@@ -1488,6 +1822,8 @@ export type UserUncheckedCreateWithoutReferredRegistrationsInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserCreateOrConnectWithoutReferredRegistrationsInput = {
@@ -1516,6 +1852,8 @@ export type UserCreateWithoutHandledRegistrationsInput = {
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUncheckedCreateWithoutHandledRegistrationsInput = {
@@ -1539,6 +1877,8 @@ export type UserUncheckedCreateWithoutHandledRegistrationsInput = {
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserCreateOrConnectWithoutHandledRegistrationsInput = {
@@ -1578,6 +1918,8 @@ export type UserUpdateWithoutReferredRegistrationsInput = {
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReferredRegistrationsInput = {
@@ -1601,6 +1943,8 @@ export type UserUncheckedUpdateWithoutReferredRegistrationsInput = {
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUpsertWithoutHandledRegistrationsInput = {
@@ -1635,6 +1979,8 @@ export type UserUpdateWithoutHandledRegistrationsInput = {
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUncheckedUpdateWithoutHandledRegistrationsInput = {
@@ -1658,6 +2004,8 @@ export type UserUncheckedUpdateWithoutHandledRegistrationsInput = {
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserCreateWithoutWhatsappMessagesInput = {
@@ -1681,6 +2029,8 @@ export type UserCreateWithoutWhatsappMessagesInput = {
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
   renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUncheckedCreateWithoutWhatsappMessagesInput = {
@@ -1704,6 +2054,8 @@ export type UserUncheckedCreateWithoutWhatsappMessagesInput = {
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserCreateOrConnectWithoutWhatsappMessagesInput = {
@@ -1743,6 +2095,8 @@ export type UserUpdateWithoutWhatsappMessagesInput = {
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUncheckedUpdateWithoutWhatsappMessagesInput = {
@@ -1766,6 +2120,8 @@ export type UserUncheckedUpdateWithoutWhatsappMessagesInput = {
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
   renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserCreateWithoutRenewalDocumentsInput = {
@@ -1789,6 +2145,8 @@ export type UserCreateWithoutRenewalDocumentsInput = {
   referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserUncheckedCreateWithoutRenewalDocumentsInput = {
@@ -1812,6 +2170,8 @@ export type UserUncheckedCreateWithoutRenewalDocumentsInput = {
   referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
   handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
 }
 
 export type UserCreateOrConnectWithoutRenewalDocumentsInput = {
@@ -1851,6 +2211,8 @@ export type UserUpdateWithoutRenewalDocumentsInput = {
   referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
 }
 
 export type UserUncheckedUpdateWithoutRenewalDocumentsInput = {
@@ -1874,6 +2236,8 @@ export type UserUncheckedUpdateWithoutRenewalDocumentsInput = {
   referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
   handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
   whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
 }
 
 
@@ -1893,6 +2257,8 @@ export type UserCountOutputType = {
   handledRegistrations: number
   whatsappMessages: number
   renewalDocuments: number
+  sessions: number
+  impersonatedSessions: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1907,6 +2273,8 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   handledRegistrations?: boolean | UserCountOutputTypeCountHandledRegistrationsArgs
   whatsappMessages?: boolean | UserCountOutputTypeCountWhatsappMessagesArgs
   renewalDocuments?: boolean | UserCountOutputTypeCountRenewalDocumentsArgs
+  sessions?: boolean | UserCountOutputTypeCountSessionsArgs
+  impersonatedSessions?: boolean | UserCountOutputTypeCountImpersonatedSessionsArgs
 }
 
 /**
@@ -1996,6 +2364,20 @@ export type UserCountOutputTypeCountRenewalDocumentsArgs<ExtArgs extends runtime
   where?: Prisma.RenewalDocumentWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountSessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SessionWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountImpersonatedSessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SessionWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -2019,6 +2401,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   handledRegistrations?: boolean | Prisma.User$handledRegistrationsArgs<ExtArgs>
   whatsappMessages?: boolean | Prisma.User$whatsappMessagesArgs<ExtArgs>
   renewalDocuments?: boolean | Prisma.User$renewalDocumentsArgs<ExtArgs>
+  sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
+  impersonatedSessions?: boolean | Prisma.User$impersonatedSessionsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -2074,6 +2458,8 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   handledRegistrations?: boolean | Prisma.User$handledRegistrationsArgs<ExtArgs>
   whatsappMessages?: boolean | Prisma.User$whatsappMessagesArgs<ExtArgs>
   renewalDocuments?: boolean | Prisma.User$renewalDocumentsArgs<ExtArgs>
+  sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
+  impersonatedSessions?: boolean | Prisma.User$impersonatedSessionsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -2093,6 +2479,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     handledRegistrations: Prisma.$RegistrationPayload<ExtArgs>[]
     whatsappMessages: Prisma.$WhatsAppMessagePayload<ExtArgs>[]
     renewalDocuments: Prisma.$RenewalDocumentPayload<ExtArgs>[]
+    sessions: Prisma.$SessionPayload<ExtArgs>[]
+    impersonatedSessions: Prisma.$SessionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2513,6 +2901,8 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   handledRegistrations<T extends Prisma.User$handledRegistrationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$handledRegistrationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RegistrationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   whatsappMessages<T extends Prisma.User$whatsappMessagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$whatsappMessagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WhatsAppMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   renewalDocuments<T extends Prisma.User$renewalDocumentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$renewalDocumentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RenewalDocumentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  sessions<T extends Prisma.User$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  impersonatedSessions<T extends Prisma.User$impersonatedSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$impersonatedSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3206,6 +3596,54 @@ export type User$renewalDocumentsArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.RenewalDocumentScalarFieldEnum | Prisma.RenewalDocumentScalarFieldEnum[]
+}
+
+/**
+ * User.sessions
+ */
+export type User$sessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Session
+   */
+  select?: Prisma.SessionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Session
+   */
+  omit?: Prisma.SessionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SessionInclude<ExtArgs> | null
+  where?: Prisma.SessionWhereInput
+  orderBy?: Prisma.SessionOrderByWithRelationInput | Prisma.SessionOrderByWithRelationInput[]
+  cursor?: Prisma.SessionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SessionScalarFieldEnum | Prisma.SessionScalarFieldEnum[]
+}
+
+/**
+ * User.impersonatedSessions
+ */
+export type User$impersonatedSessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Session
+   */
+  select?: Prisma.SessionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Session
+   */
+  omit?: Prisma.SessionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SessionInclude<ExtArgs> | null
+  where?: Prisma.SessionWhereInput
+  orderBy?: Prisma.SessionOrderByWithRelationInput | Prisma.SessionOrderByWithRelationInput[]
+  cursor?: Prisma.SessionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SessionScalarFieldEnum | Prisma.SessionScalarFieldEnum[]
 }
 
 /**
