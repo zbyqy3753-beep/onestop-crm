@@ -36,7 +36,10 @@ export function BottomNav({
   return (
     <nav
       aria-label="ניווט ראשי"
-      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+      // ⚠️ גם ה-inset האופקי, לא רק התחתון. במצב נוף על מכשיר עם מגרעת
+      // הטאב הראשון והאחרון נחתו מתחתיה — כלומר "לידים", היעד הנפוץ
+      // ביותר, הפך ללא לחיץ בדיוק בסיבוב שבו מסתכלים על טבלאות
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] ps-[env(safe-area-inset-right)] pe-[env(safe-area-inset-left)] lg:hidden"
     >
       {tabs.map((item) => {
         const active = pathname.startsWith(item.href);

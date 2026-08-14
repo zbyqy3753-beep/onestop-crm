@@ -7,11 +7,34 @@ import { useEffect, type RefObject } from "react";
  */
 
 /**
+ * מונה נעילות פתוחות — **חייב להיות ברמת המודול, לא בתוך ה-hook.**
+ *
+ * ⚠️ הגרסה הקודמת שמרה את `body.style.overflow` הקודם בכל נעילה בנפרד
+ * והחזירה אותו בשחרור. עם שתי שכבות פתוחות זה נשבר: `MoreSheet`
+ * ו-`Modal` שניהם נועלים, ו-`AppShell` סוגר את `moreOpen` **בזמן
+ * רינדור** כשמשתנה הנתיב. סדר ה-cleanup בין תתי-עצים אחים אינו מובטח,
+ * ולכן שחרור שרץ אחרי נעילה החזיר `""` על גוף שעדיין אמור להיות נעול —
+ * או, בכיוון ההפוך, השאיר את הנעילה תקועה **בלי ששום דבר פתוח**.
+ * במקרה השני העמוד פשוט מפסיק להיגלל, ואין שום דרך להתאושש חוץ מרענון.
+ *
+ * מונה פותר את שניהם: משחררים רק כשהנעילה האחרונה נסגרה.
+ */
+let lockCount = 0;
+let restoreScrollY = 0;
+
+/**
  * נועל את גלילת העמוד כל עוד השכבה פתוחה.
  *
  * ⚠️ בלי זה נוצרים שני גוללים מוערמים: המודאל גולל בפנים והעמוד ממשיך
  * לגלול מאחוריו. במגע זה בולט במיוחד — החלקה שעברה את סוף המודאל
  * ממשיכה להזיז את הרקע, והמשתמש חוזר למקום אחר לגמרי אחרי הסגירה.
+ *
+ * ⚠️ **`overflow: hidden` לבדו לא עובד ב-iOS.** ספארי בנייד גולל את
+ * ה-viewport החזותי ולא את ה-`<body>`, ופשוט מתעלם מהכלל. `overscroll-contain`
+ * שעל השכבות עוצר שרשור גלילה כשהגולל הפנימי מגיע לקצה, אבל לא עוצר
+ * מגע שמתחיל על חלק לא-נגלל של השכבה — הכותרת, הריפוד או הרקע המעומעם.
+ * לכן נועלים ב-`position: fixed` עם היסט שלילי בגובה מיקום הגלילה,
+ * ומשחזרים אותו ביציאה. בלי השחזור הדף היה קופץ לראש בכל סגירת מודאל.
  *
  * ⚠️ הקפיצה של 15px בשולחן — הסתרת פס הגלילה מרחיבה את ה-viewport —
  * **לא** מטופלת כאן אלא ב-`scrollbar-gutter: stable` שב-globals.css.
@@ -24,11 +47,32 @@ export function useBodyScrollLock(locked: boolean): void {
     if (!locked) return;
 
     const { body } = document;
-    const previous = body.style.overflow;
-    body.style.overflow = "hidden";
+
+    // רק הנעילה הראשונה נוגעת בסגנון. השאר רק מגדילות את המונה.
+    if (lockCount === 0) {
+      restoreScrollY = window.scrollY;
+      body.style.position = "fixed";
+      body.style.top = `-${restoreScrollY}px`;
+      body.style.insetInline = "0";
+      body.style.overflow = "hidden";
+    }
+    lockCount++;
 
     return () => {
-      body.style.overflow = previous;
+      lockCount--;
+      if (lockCount > 0) return;
+
+      body.style.position = "";
+      body.style.top = "";
+      body.style.insetInline = "";
+      body.style.overflow = "";
+
+      /*
+       * ⚠️ `instant` ולא ברירת המחדל. אם למשתמש מוגדר
+       * `scroll-behavior: smooth` השחזור היה מונפש — כלומר הדף היה
+       * גולל לאחור מול העיניים בכל סגירת שכבה.
+       */
+      window.scrollTo({ top: restoreScrollY, behavior: "instant" });
     };
   }, [locked]);
 }

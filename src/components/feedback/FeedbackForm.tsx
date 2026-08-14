@@ -45,7 +45,9 @@ export function FeedbackForm() {
                 type="button"
                 onClick={() => setKind(k)}
                 aria-pressed={kind === k}
-                className={`flex-1 rounded-md border px-2 py-1.5 text-[13px] font-medium transition-colors ${
+                // `min-h-11` — היו 34px. אלה שלושת הכפתורים הראשונים
+                // בטופס, וטופס משוב שקשה למלא בטלפון פשוט לא ימולא
+                className={`min-h-11 flex-1 rounded-md border px-2 py-1.5 text-[13px] font-medium transition-colors active:bg-surface-2 lg:min-h-0 ${
                   kind === k
                     ? "border-brand bg-brand-soft text-brand"
                     : "border-line text-ink-3 hover:bg-surface-2 hover:text-ink-1"
@@ -80,7 +82,9 @@ export function FeedbackForm() {
                 onClick={() => setRating(n)}
                 aria-pressed={rating === n}
                 aria-label={`דירוג ${n} מתוך 5`}
-                className={`nums size-9 rounded-md border text-sm font-semibold transition-colors ${
+                // `size-11` בטלפון — חמישה כפתורים של 36px זה מתחת לסף
+                // המגע, ודירוג הוא בדיוק הדבר שנוגעים בו פעם אחת ובזריזות
+                className={`nums size-11 rounded-md border text-sm font-semibold transition-colors active:scale-95 lg:size-9 ${
                   rating >= n
                     ? "border-brand bg-brand text-on-brand"
                     : "border-line text-ink-4 hover:bg-surface-2"

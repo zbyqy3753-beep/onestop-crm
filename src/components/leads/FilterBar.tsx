@@ -107,8 +107,17 @@ export function FilterBar({
           {selectedCount} נבחרו
         </span>
 
+        {/*
+          ⚠️ `min-w-0 max-w-full` לצד `w-auto` — לא קישוט.
+
+          ל-`<select>` יש רוחב מובנה לפי ה-`option` הארוך ביותר, ובפריט
+          flex ברירת המחדל `min-width: auto` מונעת ממנו להתכווץ מתחתיו.
+          עם שמות עובדים מלאים או תוויות סטטוס ארוכות ב-16px זה עובר את
+          רוחב המסך בטלפון, דוחף את גבול הדף החוצה, וכל האפליקציה מקבלת
+          גלילה אופקית — "המערכת לא יושבת על המסך".
+        */}
         <select
-          className={`${inputClass} w-auto`}
+          className={`${inputClass} w-auto min-w-0 max-w-full`}
           defaultValue=""
           disabled={busy}
           onChange={(e) => {
@@ -127,7 +136,7 @@ export function FilterBar({
         </select>
 
         <select
-          className={`${inputClass} w-auto`}
+          className={`${inputClass} w-auto min-w-0 max-w-full`}
           defaultValue=""
           disabled={busy}
           onChange={(e) => {

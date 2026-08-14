@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { Lead, LeadStatus, User } from "@/lib/domain/types";
 import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
@@ -90,6 +91,41 @@ export function LeadCardList({
   // בטיסה, בשונה מהכרטיסים שכל אחד ננעל רק על הליד שלו
   const bulkBusy = busyIds.size > 0;
 
+  /*
+   * מפרסם את גובה סרגל הפעולות כ-`--action-bar-h` על `<html>`.
+   *
+   * ⚠️ זה מה שמרחיק את הטוסטים מהסרגל. סדר השכבות לבדו לא פתר את זה:
+   * הטוסט אמנם ב-`z-[70]` מעל הסרגל ב-`z-40`, אבל שניהם מעוגנים לאותה
+   * פינה תחתונה, ולכן כל הודעת "N לידים עודכנו" נחתה בדיוק על מונה
+   * הנבחרים ועל בורר השיוך — למשך 3.2 שניות, בדיוק כשמנסים לבחור את
+   * הפעולה הבאה.
+   *
+   * הגובה נמדד ולא נכתב כקבוע, כי הסרגל הוא `flex-wrap` ומשתנה בגובהו
+   * לפי רוחב המסך ואורך שמות העובדים.
+   */
+  const barRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = barRef.current;
+    const root = document.documentElement;
+    if (!el) {
+      root.style.removeProperty("--action-bar-h");
+      return;
+    }
+
+    const observer = new ResizeObserver(([entry]) => {
+      root.style.setProperty(
+        "--action-bar-h",
+        `${Math.round(entry.contentRect.height)}px`,
+      );
+    });
+    observer.observe(el);
+
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--action-bar-h");
+    };
+  }, [selecting]);
+
   return (
     <>
       {/*
@@ -132,8 +168,19 @@ export function LeadCardList({
           />
         </div>
       ) : (
-        /* מרווח בתחתית כדי שסרגל הפעולות הקבוע + ניווט התחתית לא יכסו את הכרטיס האחרון */
-        <ul className={`flex flex-col gap-2 ${selecting ? "pb-56" : ""}`}>
+        /*
+          מרווח בתחתית כדי שסרגל הפעולות הקבוע + ניווט התחתית לא יכסו את
+          הכרטיס האחרון.
+
+          ⚠️ `pb-20` גם **מחוץ** למצב בחירה. קודם היה כאן ריפוד רק בזמן
+          בחירה, ולכן במצב הרגיל — המצב שבו נמצאים כל הזמן — כפתור ה-+
+          הצף (`LeadsClient`, `size-14` ב-`bottom-[3.5rem+safe+0.75rem]`)
+          ישב על שורת הפעולות של הכרטיס האחרון ובלע לחיצות על "טען עוד".
+          ריפוד ה-`<main>` ב-`AppShell` מפנה מקום לניווט התחתון בלבד ולא
+          יודע דבר על ה-FAB. 3.5rem (ניווט) + 0.75rem (מרווח) + 3.5rem
+          (הכפתור) ≈ 7.75rem, ו-`pb-20` נותן 5rem מעבר לריפוד הקיים.
+        */
+        <ul className={`flex flex-col gap-2 ${selecting ? "pb-56" : "pb-20"}`}>
           {leads.map((lead) => (
             <LeadCard
               key={lead.id}
@@ -168,7 +215,12 @@ export function LeadCardList({
         זה שסופג את ה-safe-area — לכן כאן רק ריפוד רגיל.
       */}
       {selecting && (
-        <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t border-line bg-surface-2 px-3 pb-2 pt-2 shadow-card">
+        <div
+          ref={barRef}
+          // הריפוד האופקי ב-`max()` — במצב נוף על מכשיר עם מגרעת, ה-inset
+          // הצדדי אינו אפס, ו-`px-3` קבוע היה דוחף את בורר השיוך מתחתיה
+          className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t border-line bg-surface-2 pb-2 pt-2 ps-[max(0.75rem,env(safe-area-inset-right))] pe-[max(0.75rem,env(safe-area-inset-left))] shadow-card"
+        >
           <div className="mb-2 flex items-center justify-between gap-2">
             <span className="text-sm font-semibold text-brand">
               {selected.size} נבחרו
@@ -197,8 +249,15 @@ export function LeadCardList({
           <div
             className={`flex flex-wrap gap-2 ${selected.size === 0 ? "pointer-events-none opacity-40" : ""}`}
           >
+            {/*
+              ⚠️ `min-w-0` חובה: ל-`<select>` יש רוחב מובנה לפי ה-`option`
+              הארוך ביותר, ו-`min-width: auto` בפריט flex מונע ממנו
+              להתכווץ מתחתיו. שם עובד מלא ב-16px גלש מהסרגל הקבוע והזיז
+              את כל הדף הצידה. `h-11` ולא `h-10` — 44px היא מטרת המגע
+              המינימלית, ו-40px היה מתחתיה.
+            */}
             <select
-              className={`${inputClass} h-10 w-auto flex-1`}
+              className={`${inputClass} h-11 w-auto min-w-0 flex-1`}
               defaultValue=""
               disabled={bulkBusy}
               onChange={(e) => {
@@ -217,7 +276,7 @@ export function LeadCardList({
             </select>
 
             <select
-              className={`${inputClass} h-10 w-auto flex-1`}
+              className={`${inputClass} h-11 w-auto min-w-0 flex-1`}
               defaultValue=""
               disabled={bulkBusy}
               onChange={(e) => {
@@ -239,7 +298,7 @@ export function LeadCardList({
               icon="trash"
               onClick={onBulkDelete}
               disabled={bulkBusy}
-              className="h-10"
+              className="h-11"
             >
               מחיקה
             </Button>

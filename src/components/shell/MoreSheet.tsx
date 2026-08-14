@@ -47,7 +47,9 @@ export function MoreSheet({
         role="dialog"
         aria-modal="true"
         aria-label="תפריט"
-        className="animate-rise absolute inset-x-0 bottom-0 max-h-[80dvh] overflow-y-auto overscroll-contain rounded-t-2xl border-t border-line bg-surface pb-[max(1rem,env(safe-area-inset-bottom))]"
+        // ה-inset האופקי לצד התחתון — במצב נוף המגרעת חותכת את קצות
+        // הגיליון, וזה הגיליון שמחזיק את היעדים שלא נכנסו לסרגל התחתון
+        className="animate-rise absolute inset-x-0 bottom-0 max-h-[80dvh] overflow-y-auto overscroll-contain rounded-t-2xl border-t border-line bg-surface pb-[max(1rem,env(safe-area-inset-bottom))] ps-[env(safe-area-inset-right)] pe-[env(safe-area-inset-left)]"
       >
         {/* ידית — הסימן המוסכם ל"אפשר לסגור את זה" */}
         <div className="sticky top-0 flex justify-center bg-surface pb-1 pt-2">

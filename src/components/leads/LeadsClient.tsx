@@ -37,6 +37,7 @@ import { useNow } from "@/lib/clock";
 import { useIsNarrow } from "@/lib/media";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import {
+  leadCost,
   payableCommission,
   performanceByAgent,
   totalLeadCostForLeads,
@@ -1006,6 +1007,8 @@ export function LeadsClient({
         onPatchFollowUp={(date) =>
           openLead && patchLead(openLead.id, { followUpDate: date })
         }
+        onCost={(cost) => openLead && setCost(openLead.id, cost)}
+        effectiveCost={openLead ? leadCost(openLead, leadCosts) : undefined}
         onEdit={() => setEditOpen(true)}
         onDelete={() => openLead && remove([openLead.id])}
         onNotify={notify}

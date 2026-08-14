@@ -64,10 +64,15 @@ export function Button({
        * הקוראים שמעבירים `h-9` הופכים ל-44px בטלפון ונשארים 36px בשולחן,
        * בלי לגעת באף אחד מהם בנפרד.
        *
+       * ⚠️ `min-w-11` הוא בן הזוג החסר. `min-h-11` לבדו טיפל בגובה בלבד,
+       * ולכן כפתור עם אייקון ובלי טקסט — `<Button icon="x" />` — יצא
+       * 44px גובה על 40px רוחב (`px-3` + אייקון 16px). מטרת מגע נמדדת
+       * בשני הצירים, ובלי זה כל כפתור אייקון באפליקציה נפל מתחת לסף.
+       *
        * `touch-manipulation` מבטל את השהיית ה-300ms של זיהוי לחיצה כפולה,
        * ו-`select-none` מונע את סימון הטקסט שקורה בלחיצה ארוכה בטעות.
        */
-      className={`inline-flex min-h-11 touch-manipulation select-none items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 lg:min-h-0 lg:active:scale-100 ${VARIANT[variant]} ${className}`}
+      className={`inline-flex min-h-11 min-w-11 touch-manipulation select-none items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 lg:min-h-0 lg:min-w-0 lg:active:scale-100 ${VARIANT[variant]} ${className}`}
       {...rest}
     >
       {icon && <Icon name={icon} size={16} />}
@@ -110,9 +115,18 @@ export function Field({
  * כל חיפוש, כל טופס וכל בורר במערכת השאירו את המשתמש בתצוגה מזויימת.
  *
  * מ-1024px ומעלה חוזרים ל-14px, כך שבשולחן שום דבר לא משתנה.
+ *
+ * ⚠️ `min-h-11 lg:min-h-0` מאותה משפחה. `py-1.5` עם גופן 16px נותן שדה
+ * של 38px — נמדד — כלומר כל שדה קלט במערכת היה מתחת ל-44px שמטרת מגע
+ * דורשת. שדה החיפוש של הלידים הוא הפקד הנפוץ ביותר באפליקציה, והוא
+ * היה בין הקטנים. גם כאן: בשולחן חוזרים לצפוף.
+ *
+ * ⚠️ רצפת ה-16px עצמה מגובה גם בכלל בסיס ב-`globals.css`, כי `text-xs`
+ * שנוסף **אחרי** המחרוזת הזו באותו `className` היה גובר עליה. שם היא
+ * לא ניתנת לדריסה, כאן היא רק ברירת המחדל.
  */
 export const inputClass =
-  "w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-base lg:text-sm text-ink-1 placeholder:text-ink-4 focus:border-brand focus:outline-none focus-visible:outline-none";
+  "w-full min-h-11 lg:min-h-0 rounded-md border border-line bg-surface px-2.5 py-1.5 text-base lg:text-sm text-ink-1 placeholder:text-ink-4 focus:border-brand focus:outline-none focus-visible:outline-none";
 
 /* ── מצב ריק ──────────────────────────────────────────────────────────── */
 
@@ -229,7 +243,13 @@ export function ToastStack({
     // קבוע), ולכן start הוא תמיד הצד הימני הפיזי.
     // ⚠️ ה-bottom במובייל מפנה מקום ל-BottomNav (min-h-14 = 3.5rem +
     // safe-area, מוסתר ב-lg ומעלה) — בדסקטופ נשאר ההיסט המקורי.
-    <div className="pointer-events-none fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.5rem)] start-[max(1rem,env(safe-area-inset-right))] z-[70] flex flex-col gap-2 lg:bottom-[max(1rem,env(safe-area-inset-bottom))]">
+    // ⚠️ `--action-bar-h` מפנה מקום גם לסרגל הפעולות הקבוצתיות של
+    // תצוגת הכרטיסים. ה-z-index לבדו לא הספיק: הטוסט אמנם *מעל* הסרגל,
+    // אבל שניהם עוגנים לאותה פינה, ולכן כל הודעת "N לידים עודכנו" נחתה
+    // בדיוק על מונה הנבחרים ועל בורר השיוך — ל-3.2 שניות, בדיוק בזמן
+    // שהמשתמש מנסה לבחור את הפעולה הבאה. הסרגל מודד את עצמו ומפרסם את
+    // גובהו; כשאין סרגל המשתנה אינו מוגדר וה-fallback הוא 0.
+    <div className="pointer-events-none fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom)+var(--action-bar-h,0px)+0.5rem)] start-[max(1rem,env(safe-area-inset-right))] z-[70] flex flex-col gap-2 lg:bottom-[max(1rem,env(safe-area-inset-bottom))]">
       {toasts.map((t) => (
         <ToastRow key={t.id} toast={t} onDismiss={onDismiss} />
       ))}

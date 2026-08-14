@@ -268,7 +268,9 @@ function Counters({ counts }: { counts: BotOverview["counts"] }) {
   ];
 
   return (
-    <div className="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+    // שתי עמודות בבסיס ולא שלוש — ב-360px שלוש נתנו ~100px לאריח,
+    // ותוויות כמו "נשלחו השבוע" נשברו לשתי שורות בגופן 11px
+    <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
       {tiles.map((t) => (
         <div
           key={t.label}
@@ -517,8 +519,14 @@ function Tabs({
   counts: Record<TabKey, number>;
 }) {
   return (
+    /*
+      ⚠️ `scroll-x-cue`: חמישה טאבים עם מונים עוברים את רוחב הטלפון,
+      ומה שנופל החוצה הוא דווקא "נמענים" — הטאב שעונה על "למה X לא קיבל
+      תזכורת". בלי הרמז אין שום סימן שהוא שם.
+      `min-h-11` — הטאבים היו ~36px, מתחת למינימום למגע.
+    */
     <div
-      className="mt-5 flex gap-1 overflow-x-auto border-b border-line"
+      className="scroll-x-cue mt-5 flex gap-1 overflow-x-auto border-b border-line"
       role="tablist"
     >
       {(Object.keys(TAB_LABEL) as TabKey[]).map((k) => (
@@ -527,7 +535,7 @@ function Tabs({
           role="tab"
           aria-selected={tab === k}
           onClick={() => onTab(k)}
-          className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+          className={`-mb-px min-h-11 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors lg:min-h-0 ${
             tab === k
               ? "border-brand text-ink-1"
               : "border-transparent text-ink-3 hover:text-ink-1"

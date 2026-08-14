@@ -53,7 +53,7 @@ export function CopyReferralLink({ userId }: { userId: string }) {
         value={link || "טוען…"}
         onFocus={(e) => e.target.select()}
         aria-label="קישור הפניה אישי"
-        className={`${inputClass} ltr-num min-w-[220px] flex-1`}
+        className={`${inputClass} ltr-num min-w-0 flex-1 sm:min-w-[220px]`}
       />
       <Button variant="secondary" onClick={copy} disabled={!link}>
         {copied ? "הועתק!" : "העתקה"}

@@ -101,10 +101,17 @@ export function StatusBreakdownStrip({
 
           return (
             <li key={s.key} className="shrink-0">
+              {/*
+                `min-h-11` ו-`active:` — הכפתורים האלה היו ~18px גובה בלי
+                שום ריפוד, כלומר פחות מחצי ממטרת המגע המינימלית, והמקרא
+                הזה מופיע דווקא בשני המסכים הראשיים בטלפון (`/` ו-`/leads`).
+                `hover:` לבדו גם לא מספיק: Tailwind v4 מהדר אותו לתוך
+                `@media (hover: hover)`, ולכן במגע לא הייתה שום משוב חזותי.
+              */}
               <button
                 onClick={() => onToggle!(s.key)}
                 aria-pressed={active}
-                className={`flex items-center gap-1.5 rounded text-[13px] transition-colors ${
+                className={`flex min-h-11 items-center gap-1.5 rounded px-1 text-[13px] transition-colors active:text-ink-1 lg:min-h-0 lg:px-0 ${
                   active ? "text-ink-1" : "text-ink-3 hover:text-ink-1"
                 }`}
               >

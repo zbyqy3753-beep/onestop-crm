@@ -221,8 +221,16 @@ export function ImportLeadsModal({
             </p>
           )}
 
-          <div className="scroll-thin overflow-x-auto rounded-card border border-line">
-            <table className="w-full border-collapse text-sm">
+          {/*
+            ⚠️ `min-w-[520px]` ו-`whitespace-nowrap` — בלעדיהם `w-full`
+            ניצח והדחיס שש עמודות לכ-40px כל אחת בתוך המודל של 288px
+            בטלפון. כלומר בדיוק המסך שכל תכליתו היא **לוודא שהפענוח יצא
+            נכון** לפני הכתיבה, היה בלתי קריא. עדיף לגלול לצדדים ולראות
+            ערכים שלמים מאשר לראות את כולם חתוכים.
+            `scroll-x-cue` נותן את הסימן שיש לאן לגלול.
+          */}
+          <div className="scroll-thin scroll-x-cue overflow-x-auto rounded-card border border-line [--scroll-cue-bg:var(--c-surface)]">
+            <table className="w-full min-w-[520px] border-collapse whitespace-nowrap text-sm">
               <thead className="bg-surface-2 text-xs text-ink-3">
                 <tr className="border-b border-line">
                   <th className="px-3 py-2 text-start font-medium">שם</th>

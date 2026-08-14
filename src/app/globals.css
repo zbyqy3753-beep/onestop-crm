@@ -122,6 +122,33 @@
   --g-brand: linear-gradient(90deg, #0d1f37 0%, #0b709d 50%, #14a6d8 100%);
 }
 
+/* ── גובה ה-chrome הדביק ──────────────────────────────────────────────
+ *
+ * ⚠️ המקור היחיד. קודם `--chrome-h` נכתב כמספר קשיח בסגנון inline
+ * ב-`(app)/layout.tsx` — `92px` עם באנר התחזות, `60px` בלעדיו — ושני
+ * הערכים היו שגויים בטלפון:
+ *
+ *   · 60px הוא גובה הסרגל ב-`lg`. בטלפון הוא `h-[52px]`, כלומר 8px
+ *     נשמרו לחינם בכל מסך.
+ *   · 92 = 60 + 32, כש-32 הוא גובה הבאנר בשורה אחת. אבל הבאנר הוא
+ *     `flex-wrap` **בכוונה**, כי ב-360px הוא לא נכנס בשורה אחת; שבור
+ *     הוא ~56px, והחשבון האמיתי הוא 108px. 16px של תוכן נחתכו מתחתיו.
+ *
+ * עכשיו `--banner-h` מגיע ממדידה אמיתית (`ResizeObserver` ב-
+ * `ImpersonationBanner`) ו-`--topbar-h` מתחלף ב-breakpoint. שני
+ * הערכים השגויים לא יכולים לחזור, כי אין יותר מספר לכתוב.
+ */
+:root {
+  --topbar-h: 52px;
+  --chrome-h: calc(var(--banner-h, 0px) + var(--topbar-h));
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --topbar-h: 60px;
+  }
+}
+
 @theme inline {
   --color-bg: var(--c-bg);
   --color-surface: var(--c-surface);
@@ -196,6 +223,27 @@
  */
 html {
   scrollbar-gutter: stable;
+
+  /*
+   * ⚠️ `clip` ולא `hidden` — ההבדל קריטי ולא סגנוני.
+   *
+   * `overflow: hidden` יוצר הקשר גלילה חדש, וכל `position: sticky`
+   * שבפנים נמדד מולו במקום מול ה-viewport. כלומר `hidden` כאן היה
+   * משתק בשקט את הסרגל העליון (`AppShell`), את באנר ההתחזות ואת
+   * כותרות הטבלאות הדביקות. `clip` חותך בלי ליצור הקשר גלילה, ולכן
+   * כולם ממשיכים להידבק.
+   *
+   * `overflow-x: clip` לצד `overflow-y: visible` הוא צירוף חוקי —
+   * זו בדיוק הסיבה ש-`clip` נוסף לתקן. עם `hidden` הדפדפן היה כופה
+   * `auto` על הציר השני ומוסיף פס גלילה אנכי שני.
+   *
+   * למה זה כאן בכלל: בלי שום הגבלה, אלמנט בודד שגולש **בכל מקום
+   * באפליקציה** גורר גלילה אופקית של הדף כולו, והמשתמש רואה מערכת
+   * "שלא יושבת על המסך". זו רשת ביטחון, לא פתרון — הגורם עצמו מטופל
+   * במקורו (ראה `max-w-full` על ה-`select`-ים ב-`FilterBar`,
+   * `PackagesClient` ו-`LeadCardList`).
+   */
+  overflow-x: clip;
 }
 
 body {
@@ -203,6 +251,31 @@ body {
   color: var(--c-ink-1);
   font-family: var(--font-assistant), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * רצפת גופן לשדות קלט בטלפון.
+ *
+ * ⚠️ iOS Safari מזנק זום על **כל** שדה שגופנו קטן מ-16px, והזום הזה
+ * לא חוזר לבד — הפריסה נשארת מוזזת עד שהמשתמש מצביט אותה בחזרה.
+ *
+ * הכלל הזה כבר היה קיים, אבל רק כמחרוזת Tailwind בתוך `inputClass`
+ * (`ui/primitives.tsx`), ולכן היה ניתן לדריסה בשקט: כל `text-xs`
+ * שנוסף **אחרי** `inputClass` באותו `className` ניצח אותו. כך נשברו
+ * בורר גודל העמוד (`Pagination`) ושדה עלות הליד (`cells.tsx`).
+ *
+ * חשוב במיוחד ל-`select`: בוררי הסטטוס/העדיפות/התאריך בכרטיס הליד
+ * הם `<select>` שקופים (`opacity: 0`) שיורשים גופן מהכרטיס — 12–13px.
+ * שקיפות אינה פוטרת מהזום, ואלה פקדי העריכה הראשיים בנייד.
+ *
+ * הסף הוא 1023px — אותו breakpoint כמו `useIsNarrow` ב-`lib/media.ts`.
+ */
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 :focus-visible {
@@ -301,6 +374,59 @@ body {
   border-radius: 99px;
   border: 3px solid transparent;
   background-clip: content-box;
+}
+
+/* ── רמז גלילה אופקית ─────────────────────────────────────────────────
+ *
+ * ⚠️ `.scroll-thin` לא עושה **כלום** במסך מגע: שם פס הגלילה מרחף,
+ * מופיע רק תוך כדי גלילה ונעלם. כלומר כל רצועה אופקית באפליקציה —
+ * התצוגות המהירות, אריחי הסטטוס, טאבי הבוטים, צ'יפי התאריכים —
+ * נראית בטלפון כרשימה שנגמרת, ומה שמעבר לקצה פשוט לא קיים בשביל
+ * המשתמש. `StatusTiles` אפילו מנסח את הכלל בעצמו: "סטטוס שדורש
+ * גלילה הוא סטטוס שלא ידעו שהוא קיים".
+ *
+ * הפתרון הוא הטריק של Roman Komarov: ארבעה רקעים, שניים מהם
+ * `background-attachment: local` (נגללים עם התוכן) ושניים `scroll`
+ * (נעוצים למסגרת). ה"מכסים" הנגללים מסתירים את הצללים הנעוצים כל עוד
+ * הרצועה בקצה — ולכן הצל מופיע **רק** בצד שבו באמת יש עוד תוכן, ולא
+ * מופיע כלל כשאין מה לגלול. אין כאן JS ואין מאזין scroll.
+ *
+ * `--scroll-cue-bg` חייב להתאים לרקע שמאחורי הרצועה, אחרת המכסה
+ * ייראה. ברירת המחדל היא רקע הדף; רצועה שיושבת על כרטיס תעביר
+ * `[--scroll-cue-bg:var(--c-surface)]`.
+ */
+.scroll-x-cue {
+  --scroll-cue-bg: var(--c-bg);
+  background:
+    linear-gradient(to right, var(--scroll-cue-bg) 40%, transparent) 0 0,
+    linear-gradient(to left, var(--scroll-cue-bg) 40%, transparent) 100% 0,
+    radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / 0.16), transparent) 0 0,
+    radial-gradient(
+        farthest-side at 100% 50%,
+        rgb(0 0 0 / 0.16),
+        transparent
+      )
+      100% 0;
+  background-repeat: no-repeat;
+  background-size:
+    36px 100%,
+    36px 100%,
+    12px 100%,
+    12px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+/* בתמה הכהה צל שחור על רקע כהה בלתי נראה — הרמז הופך לזוהר בהיר */
+[data-theme="dark"] .scroll-x-cue {
+  background-image:
+    linear-gradient(to right, var(--scroll-cue-bg) 40%, transparent),
+    linear-gradient(to left, var(--scroll-cue-bg) 40%, transparent),
+    radial-gradient(farthest-side at 0 50%, rgb(255 255 255 / 0.16), transparent),
+    radial-gradient(
+      farthest-side at 100% 50%,
+      rgb(255 255 255 / 0.16),
+      transparent
+    );
 }
 
 /* ── תנועה ────────────────────────────────────────────────────────────── */

@@ -51,9 +51,15 @@ export function StatusTiles({
   return (
     <div className="mb-3">
       <div
+        /*
+          ⚠️ `scroll-x-cue` במצב compact — הרכיב הזה מנסח בעצמו את הכלל
+          ש"סטטוס שדורש גלילה הוא סטטוס שלא ידעו שהוא קיים", ומצב compact
+          הפר אותו: שישה אריחים ומעלה הם >600px בתוך ~336px, בלי פס גלילה
+          נראה במסך מגע. הרמז מחזיר את הידיעה שיש עוד.
+        */
         className={
           compact
-            ? "scroll-thin -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
+            ? "scroll-thin scroll-x-cue -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
             : "flex flex-wrap gap-1.5"
         }
         role="group"
@@ -124,9 +130,12 @@ export function StatusTiles({
       </div>
 
       {active.length > 0 && (
+        // `min-h-11` — היה 16px גובה. זה כפתור המילוט מסינון שהמשתמש
+        // כבר לא זוכר שהפעיל, ובטלפון פשוט אי אפשר היה לפגוע בו.
+        // `active:` כי `hover:` לבדו מתקמפל ל-`@media (hover: hover)`
         <button
           onClick={onClear}
-          className="mt-1.5 text-xs text-ink-3 underline-offset-2 transition-colors hover:text-ink-1 hover:underline"
+          className="mt-1.5 inline-flex min-h-11 items-center text-xs text-ink-3 underline-offset-2 transition-colors active:text-ink-1 active:underline hover:text-ink-1 hover:underline lg:min-h-0"
         >
           ניקוי הסינון ({active.length})
         </button>

@@ -280,8 +280,14 @@ function TopBar({ user }: { user: User }) {
     // ה-inset הצדדי אינו אפס. `max` שומר על 1rem כשאין inset.
     // 52px בטלפון ו-60 בשולחן: ההמבורגר ירד (הניווט עבר לסרגל התחתון),
     // ולכן הסרגל הזה מחזיק רק כותרת ותמה ואין סיבה לגובה מלא.
-    <header className="sticky top-0 z-20 flex h-[52px] shrink-0 items-center gap-3 border-b border-line bg-surface ps-[max(1rem,env(safe-area-inset-right))] pe-[max(1rem,env(safe-area-inset-left))] sm:ps-6 sm:pe-6 lg:h-[60px]">
-      <span className="font-display text-[15px] font-medium text-ink-2 lg:hidden">
+    // ⚠️ `top-[var(--banner-h,0px)]` ולא `top-0`. באנר ההתחזות הוא גם הוא
+    // `sticky top-0`, בתת-עץ אחר, ב-`z-[60]` — כלומר הוא ניצח, וכל הסרגל
+    // הזה נעלם מאחוריו ברגע שמנהל מתחזה גלל. הבאנר מודד את עצמו ומפרסם
+    // את גובהו; בלעדיו המשתנה אינו מוגדר וה-fallback הוא 0.
+    <header className="sticky top-[var(--banner-h,0px)] z-20 flex h-[var(--topbar-h)] shrink-0 items-center gap-3 border-b border-line bg-surface ps-[max(1rem,env(safe-area-inset-right))] pe-[max(1rem,env(safe-area-inset-left))] sm:ps-6 sm:pe-6">
+      {/* `min-w-0 truncate` — כותרת ארוכה ("דשבורד עסקאות") דחפה את
+          אזהרת המנוי ואת מתג התמה מחוץ לסרגל בטלפון צר */}
+      <span className="min-w-0 truncate font-display text-[15px] font-medium text-ink-2 lg:hidden">
         {title}
       </span>
 
@@ -304,10 +310,27 @@ function SubscriptionNotice({ endsAt }: { endsAt?: string }) {
   const daysLeft = Math.ceil((Date.parse(endsAt) - now) / 86_400_000);
   if (daysLeft > 30) return null;
 
+  /*
+   * ⚠️ קודם היה כאן `hidden … sm:flex` — כלומר האזהרה לא הופיעה מתחת
+   * ל-640px **בכלל**, ולא הייתה לה שום חלופה בנייד. עובד שעובד רק
+   * מהטלפון לא היה מגלה שהמנוי נגמר עד שהמערכת פשוט תפסיק לעבוד.
+   *
+   * הטקסט המלא באמת לא נכנס לסרגל של 52px לצד הכותרת, ולכן בטלפון
+   * מוצג רק המספר. `sr-only` מחזיק את הנוסח המלא לקוראי מסך, כי
+   * "12 ימ׳" לבדו חסר משמעות בלי ההקשר.
+   */
   return (
-    <p className="hidden items-center gap-1.5 rounded-full bg-warn-soft px-3 py-1 text-xs font-medium text-warn sm:flex">
+    <p className="flex shrink-0 items-center gap-1.5 rounded-full bg-warn-soft px-2 py-1 text-xs font-medium text-warn sm:px-3">
       <Icon name="clock" size={14} />
-      המנוי מסתיים בעוד {daysLeft} ימים
+      <span className="hidden sm:inline">
+        המנוי מסתיים בעוד {daysLeft} ימים
+      </span>
+      <span className="nums sm:hidden" aria-hidden="true">
+        {daysLeft} ימ׳
+      </span>
+      <span className="sr-only sm:hidden">
+        המנוי מסתיים בעוד {daysLeft} ימים
+      </span>
     </p>
   );
 }

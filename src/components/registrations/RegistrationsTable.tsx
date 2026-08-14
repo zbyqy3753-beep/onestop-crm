@@ -3,6 +3,7 @@
 import type { Registration, RegistrationStatus } from "@/lib/domain/types";
 import { REGISTRATION_STATUS_CONFIG, REGISTRATION_STATUS_ORDER } from "@/lib/domain/types";
 import { TONE_VAR, date, phone } from "@/lib/format";
+import { useIsNarrow } from "@/lib/media";
 import { Badge, EmptyState } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 
@@ -17,6 +18,8 @@ export function RegistrationsTable({
   hasFilters: boolean;
   busy: boolean;
 }) {
+  const narrow = useIsNarrow();
+
   if (registrations.length === 0) {
     return (
       <div className="rounded-card border border-line bg-surface">
@@ -30,6 +33,31 @@ export function RegistrationsTable({
           }
         />
       </div>
+    );
+  }
+
+  /*
+   * ⚠️ בטלפון כרטיסים, לא טבלה. הטבלה שמתחת היא `min-w-[860px]` בתוך
+   * מסך של 360 — כלומר פחות מ-40% ממנה נראה, ו-`StatusPicker`, שהוא
+   * **הפקד היחיד במסך הזה שמשנה משהו**, יושב בעמודה השישית מתוך שבע,
+   * כ-600px מחוץ למסך. פנייה שנכנסה מהטופס הציבורי לא הייתה ניתנת
+   * לטיפול מהטלפון בכלל.
+   *
+   * אותו דפוס בדיוק כמו `admin/UsersTable` — רינדור אחד או השני, לעולם
+   * לא שניהם, כדי לא לשלם על DOM כפול ולא לבלבל קוראי מסך.
+   */
+  if (narrow) {
+    return (
+      <ul className="flex flex-col gap-2">
+        {registrations.map((reg) => (
+          <RegistrationCard
+            key={reg.id}
+            reg={reg}
+            onStatus={onStatus}
+            busy={busy}
+          />
+        ))}
+      </ul>
     );
   }
 
@@ -111,6 +139,80 @@ function Row({
 
       <td className="px-3 py-3 text-xs text-ink-3">{date(reg.createdAt)}</td>
     </tr>
+  );
+}
+
+/**
+ * כרטיס פנייה — התצוגה בטלפון.
+ *
+ * הסדר מכוון ותואם לשאר המערכת: קודם מי זה, אחר כך איך יוצרים קשר,
+ * ובסוף המנהלה. הסטטוס עולה לשורת הכותרת — הוא הדבר שנוגעים בו, ולכן
+ * הוא לא נקבר בתחתית הכרטיס.
+ */
+function RegistrationCard({
+  reg,
+  onStatus,
+  busy,
+}: {
+  reg: Registration;
+  onStatus: (id: string, to: RegistrationStatus) => void;
+  busy: boolean;
+}) {
+  const status = REGISTRATION_STATUS_CONFIG[reg.status];
+
+  return (
+    <li
+      className="spine relative overflow-hidden rounded-card border border-line bg-surface p-3 ps-4 shadow-card"
+      style={
+        {
+          "--spine-c": TONE_VAR[status.tone],
+          "--spine-w": "3px",
+        } as React.CSSProperties
+      }
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-[15px] font-semibold text-ink-1">
+            {reg.businessName}
+          </p>
+          <p className="truncate text-sm text-ink-2">{reg.contactName}</p>
+        </div>
+        {/* הפקד היחיד שמשנה משהו — בפינה, בגובה האגודל, ולא בעמודה 6 */}
+        <StatusPicker
+          current={reg.status}
+          onPick={(to) => onStatus(reg.id, to)}
+          busy={busy}
+        />
+      </div>
+
+      {/*
+        טלפון ומייל כקישורים ולא כטקסט: בטלפון זו הפעולה עצמה — הקשה
+        אחת מחייגת. `min-h-11` כי אלה שתי מטרות מגע צמודות.
+      */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+        <a
+          href={`tel:${reg.phone}`}
+          className="ltr-num inline-flex min-h-11 items-center gap-1.5 text-ink-2 active:text-brand"
+        >
+          <Icon name="phone" size={14} />
+          {phone(reg.phone)}
+        </a>
+        {reg.email && (
+          <a
+            href={`mailto:${reg.email}`}
+            className="inline-flex min-h-11 min-w-0 items-center gap-1.5 text-ink-3 active:text-brand"
+          >
+            <Icon name="mail" size={14} />
+            <span className="truncate">{reg.email}</span>
+          </a>
+        )}
+      </div>
+
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-3">
+        <span className="truncate">שוייך ל{reg.referralSource}</span>
+        <span className="ms-auto shrink-0">{date(reg.createdAt)}</span>
+      </div>
+    </li>
   );
 }
 

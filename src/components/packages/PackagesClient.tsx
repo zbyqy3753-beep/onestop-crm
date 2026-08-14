@@ -135,7 +135,13 @@ export function PackagesClient({
 
       {/* מסננים */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+        {/*
+          ⚠️ `min-w-[140px]` בצר ולא 200 — אותו לקח שכבר נלמד ב-
+          `leads/FilterBar.tsx`. השדה הוא `flex-1` בתוך `flex-wrap`,
+          ולצידו שני בוררים; עם מינימום 200 הסכום עובר את הרוחב הפנוי
+          ב-360px והשורה נשברת לשלוש.
+        */}
+        <div className="relative min-w-[140px] flex-1 sm:min-w-[200px] sm:max-w-xs">
           <span className="pointer-events-none absolute inset-y-0 start-2.5 flex items-center text-ink-4">
             <Icon name="search" size={16} />
           </span>
@@ -151,7 +157,7 @@ export function PackagesClient({
         <select
           value={provider}
           onChange={(e) => setProvider(e.target.value as ProviderKey | "all")}
-          className={`${inputClass} w-auto`}
+          className={`${inputClass} w-auto min-w-0 max-w-full`}
           aria-label="סינון לפי ספק"
         >
           <option value="all">כל החברות</option>
@@ -165,7 +171,7 @@ export function PackagesClient({
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value as CategoryKey | "all")}
-          className={`${inputClass} w-auto`}
+          className={`${inputClass} w-auto min-w-0 max-w-full`}
           aria-label="סינון לפי קטגוריה"
         >
           <option value="all">כל הקטגוריות</option>

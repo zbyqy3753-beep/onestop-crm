@@ -226,7 +226,13 @@ export function CostCell({
         }}
         onClick={(e) => e.stopPropagation()}
         aria-label={`עלות של ${lead.name}`}
-        className={`${inputClass} nums h-8 w-24 py-0 text-xs`}
+        /*
+          ⚠️ הגדלים מותנים ב-breakpoint ואין כאן `text-xs` ללא תנאי.
+          קודם היה `h-8 … text-xs` תמיד: 12px גרם ל-iOS לזנק זום ולהזיז
+          את הפריסה לצמיתות, ו-32px הוא חצי ממטרת המגע המינימלית.
+          בשולחן, שם התא צר וסמן העכבר מדויק, הערכים הקטנים נשארים.
+        */
+        className={`${inputClass} nums h-11 w-28 py-0 lg:h-8 lg:w-24 lg:text-xs`}
       />
     );
   }
@@ -239,7 +245,7 @@ export function CostCell({
       }}
       title="לחץ לעריכת עלות"
       aria-label={`עריכת עלות של ${lead.name}`}
-      className={`nums rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-surface-3 ${
+      className={`nums min-h-11 min-w-11 rounded-md px-1.5 py-1 text-sm transition-colors hover:bg-surface-3 active:bg-surface-3 lg:min-h-0 lg:min-w-0 lg:text-xs ${
         lead.cost === undefined ? "text-ink-4" : "text-ink-1"
       }`}
     >

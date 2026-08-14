@@ -156,9 +156,11 @@ export function LeadCard({
           <StarToggle lead={lead} onToggle={onStar} busy={busy} />
         )}
 
+        {/* `min-h-11` — נמדד 43px, פיקסל אחד מתחת לסף. זה הפקד שפותח
+            את הליד, כלומר המטרה הנפוצה ביותר בכל המסך */}
         <button
           onClick={selecting ? onToggle : onOpen}
-          className="min-w-0 flex-1 text-start"
+          className="min-h-11 min-w-0 flex-1 text-start"
         >
           <span className="flex items-center gap-1.5">
             <span className="truncate text-[15px] font-semibold text-ink-1">

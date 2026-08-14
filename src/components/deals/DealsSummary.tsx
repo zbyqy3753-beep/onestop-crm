@@ -52,7 +52,7 @@ export function DealsSummary({
 
       {/* טווח תאריכים — הבחירה הראשונה */}
       <div
-        className="scroll-thin -mx-1 mb-4 flex gap-1.5 overflow-x-auto px-1 pb-1"
+        className="scroll-thin scroll-x-cue -mx-1 mb-4 flex gap-1.5 overflow-x-auto px-1 pb-1"
         role="group"
         aria-label="טווח תאריכים"
       >
@@ -75,8 +75,15 @@ export function DealsSummary({
         })}
       </div>
 
-      {/* שורת סיכום */}
-      <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-3">
+      {/*
+        שורת סיכום.
+
+        ⚠️ עמודה אחת בבסיס ולא שלוש. `grid-cols-3` כבר ב-breakpoint
+        הבסיסי נתן ~100px לאריח בטלפון של 360px, ומתוכם ~74px לסכום
+        בגופן `text-xl` — מספרי הכנסה נשברו או נחתכו. (ה-`sm:grid-cols-3`
+        שהיה כאן גם חזר על הבסיס ולא עשה כלום.)
+      */}
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
         <Stat label="הכנסה" value={money(revenue)} />
         <Stat label="עמלה" value={money(commission)} />
         <Stat

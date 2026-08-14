@@ -73,7 +73,10 @@ export function SummaryTiles({
       key: "leads",
       icon: "leads",
       label: "לידים",
-      value: `${number(pendingLeads)} ממתינים / ${number(totalLeads)}`,
+      // ⚠️ `/` ולא " ממתינים / " — האריח הוא ~150px ב-360px, והמחרוזת
+      // הארוכה נשברה לשתי שורות בזמן ששישה שכניה בשורה אחת, כך שכל
+      // השורה יצאה מרוצפת. המשמעות נשמרת דרך התווית "לידים" שמעליה.
+      value: `${number(pendingLeads)} / ${number(totalLeads)}`,
       tone: "active",
     },
     {

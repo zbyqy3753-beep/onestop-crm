@@ -137,9 +137,18 @@ export function QueueHeader({
       </div>
       )}
 
-      {/* תצוגות מהירות — "מה אני צריך לעשות עכשיו" */}
+      {/*
+        תצוגות מהירות — "מה אני צריך לעשות עכשיו".
+
+        ⚠️ `scroll-x-cue` הוא לא קישוט. למנהל מוצגות כאן עשר תצוגות
+        (`views.ts`), כלומר ~720px של צ׳יפים בתוך ~336px פנויים בטלפון —
+        "סגורים", "לידים חמים" ו"לידים מדאטה" יושבים מחוץ למסך. ו-
+        `scroll-thin` לא עוזר: במסך מגע פס הגלילה מרחף ומופיע רק תוך כדי
+        גלילה, כך שאין **שום** סימן שיש עוד. `scroll-x-cue` מצייר צל
+        בקצה שבו נשאר תוכן, ונעלם מעצמו כשמגיעים אליו.
+      */}
       <div
-        className="scroll-thin -mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-0.5"
+        className="scroll-thin scroll-x-cue -mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-0.5"
         role="group"
         aria-label="תצוגות מהירות"
       >

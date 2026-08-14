@@ -33,7 +33,8 @@ export function DealsFilterBar({
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2">
-      <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+      {/* `min-w-[140px]` בצר — ראה ההערה ב-`leads/FilterBar.tsx` */}
+      <div className="relative min-w-[140px] flex-1 sm:min-w-[200px] sm:max-w-xs">
         <span className="pointer-events-none absolute inset-y-0 start-2.5 flex items-center text-ink-4">
           <Icon name="search" size={16} />
         </span>

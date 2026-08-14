@@ -84,7 +84,10 @@ export function StatusDialog({
             <span className="font-normal text-ink-4"> (אופציונלי)</span>
           </span>
           {/* קיצורי דרך נפוצים — נגיעה אחת במקום גלילה בלוח שנה */}
-          <div className="mb-2 flex gap-1.5">
+          {/* `flex-wrap` — שלושת/ארבעת הצ׳יפים מגיעים ל-~270px בתוך מודל
+              של 288px, כלומר בטלפון של 320px או עם גופן מערכת מוגדל הם
+              גלשו מהמודל בלי שום דרך להגיע לאחרון */}
+          <div className="mb-2 flex flex-wrap gap-1.5">
             {FOLLOW_UP_PRESETS.map((preset) => {
               const date = inDays(preset.days);
               // רק היום מושווה, לא השעה — אחרת נגיעה בצ׳יפ שעה הייתה
@@ -113,7 +116,10 @@ export function StatusDialog({
             })}
           </div>
           {/* שעות נפוצות — משנות רק את השעה ומשאירות את התאריך שנבחר */}
-          <div className="mb-2 flex gap-1.5">
+          {/* `flex-wrap` — שלושת/ארבעת הצ׳יפים מגיעים ל-~270px בתוך מודל
+              של 288px, כלומר בטלפון של 320px או עם גופן מערכת מוגדל הם
+              גלשו מהמודל בלי שום דרך להגיע לאחרון */}
+          <div className="mb-2 flex flex-wrap gap-1.5">
             {HOUR_PRESETS.map((hour) => {
               const active = followUpDate.endsWith(`T${hour}`);
               return (

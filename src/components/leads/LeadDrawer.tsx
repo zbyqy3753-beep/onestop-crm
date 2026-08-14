@@ -19,7 +19,7 @@ import { useBodyScrollLock } from "@/lib/overlay";
 import { Badge, Button, inputClass, useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { ActivityFeed } from "./ActivityFeed";
-import { FollowUpCell } from "./cells";
+import { CostCell, FollowUpCell } from "./cells";
 
 /**
  * מגירת הליד — כל מה שצריך לפני חיוג, במסך אחד.
@@ -35,6 +35,8 @@ export function LeadDrawer({
   onStatus,
   onAssign,
   onPatchFollowUp,
+  onCost,
+  effectiveCost,
   onEdit,
   onDelete,
   onNotify,
@@ -49,6 +51,18 @@ export function LeadDrawer({
   onAssign: (assigneeId: string | null) => void;
   /** קביעה/ניקוי של תאריך החזרה ישירות מהמגירה. `null` = ניקוי. */
   onPatchFollowUp?: (date: string | null) => void;
+  /**
+   * עדכון עלות הליד. `null` מחזיר לברירת המחדל של הקטגוריה.
+   *
+   * ⚠️ בלי זה עריכת העלות לא הייתה קיימת בטלפון **בכלל**: היא חיה רק
+   * ב-`CostCell` שבשורת הטבלה, והטבלה לא נטענת מתחת ל-1024px
+   * (`useIsNarrow`). המגירה הציגה את העלות לקריאה בלבד, ול-`EditLeadModal`
+   * אין שדה עלות — כלומר מנהל בטלפון לא יכול היה לתקן עלות של ליד בודד
+   * בשום מסלול. ההרשאה נאכפת בשרת ב-`setLeadCostAction`.
+   */
+  onCost?: (cost: number | null) => void;
+  /** העלות בפועל — פרטנית אם הוגדרה, אחרת של הקטגוריה. `leadCost()` */
+  effectiveCost?: number;
   onEdit: () => void;
   onDelete: () => void;
   onNotify: (message: string, tone?: "good" | "bad") => void;
@@ -220,7 +234,13 @@ export function LeadDrawer({
           </div>
 
           {/* פרטים */}
-          <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-4 text-sm">
+          {/*
+            ⚠️ עמודה אחת בבסיס. `grid-cols-2` ללא תנאי נתן ~140px לערך
+            בטלפון של 360px, ומחרוזות כמו "ברירת מחדל לפי קטגוריה" או
+            תאריך מלא נשברו לשלוש שורות — כלומר שתי העמודות תפסו יותר
+            גובה ממה שעמודה אחת קריאה הייתה תופסת.
+          */}
+          <dl className="mt-5 grid grid-cols-1 gap-x-4 gap-y-3 border-t border-line pt-4 text-sm sm:grid-cols-2">
             <Detail label="קטגוריה">
               {lead.category ? (
                 <Badge tone={LEAD_CATEGORY_CONFIG[lead.category].tone}>
@@ -245,7 +265,10 @@ export function LeadDrawer({
                   <Badge tone={SOURCE_CONFIG[lead.source].tone}>
                     {SOURCE_CONFIG[lead.source].label}
                   </Badge>
-                  {lead.sourceDetail?.trim() && <span>{lead.sourceDetail.trim()}</span>}
+                  {/* `break-words` — פירוט מקור ארוך בלי רווחים גלש מהמגירה */}
+                  {lead.sourceDetail?.trim() && (
+                    <span className="break-words">{lead.sourceDetail.trim()}</span>
+                  )}
                 </span>
               </Detail>
             )}
@@ -257,12 +280,27 @@ export function LeadDrawer({
                 "—"
               )}
             </Detail>
+            {/*
+              אותו `CostCell` של שורת הטבלה, ולא מימוש שני — כך "לחיצה
+              על העלות פותחת עריכה" מתנהג זהה בשני המקומות, וההבחנה בין
+              `undefined` (ברירת מחדל) ל-`0` (הליד היה חינם) נשמרת
+              במקום אחד. בלי `onCost` הוא חוזר להיות טקסט קריא-בלבד.
+            */}
             <Detail label="עלות ליד">
-              {lead.cost === undefined
-                ? "ברירת מחדל לפי קטגוריה"
-                : lead.cost === 0
-                  ? "חינם"
-                  : money(lead.cost)}
+              {onCost ? (
+                <CostCell
+                  lead={lead}
+                  effective={effectiveCost ?? lead.cost ?? 0}
+                  onSave={onCost}
+                  busy={busy}
+                />
+              ) : lead.cost === undefined ? (
+                "ברירת מחדל לפי קטגוריה"
+              ) : lead.cost === 0 ? (
+                "חינם"
+              ) : (
+                money(lead.cost)
+              )}
             </Detail>
             <Detail label="נוצר">{dateTime(lead.createdAt)}</Detail>
             <Detail label="עודכן">
