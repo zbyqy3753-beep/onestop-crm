@@ -48,3 +48,7 @@ next-env.d.ts
 # הלוג של הבוט, נוצר בזמן ריצה
 /bot/bot.log
 /bot/lid-map.json
+
+# נכסים שנוצרים לדף החנות (נגזרים מ-public/icons)
+/build-assets
+

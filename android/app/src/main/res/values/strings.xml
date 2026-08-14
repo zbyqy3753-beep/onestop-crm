@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ONE STOP</string>
+    <string name="title_activity_main">ONE STOP</string>
+    <string name="package_name">il.co.onestop.crm</string>
+    <string name="custom_url_scheme">il.co.onestop.crm</string>
+</resources>

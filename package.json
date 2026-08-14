@@ -13,6 +13,8 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.8.0",
     "@supabase/supabase-js": "^2.110.9",
@@ -23,6 +25,7 @@
     "unpdf": "^1.8.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.11.10",

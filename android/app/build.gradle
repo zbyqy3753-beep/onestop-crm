@@ -1,0 +1,98 @@
+apply plugin: 'com.android.application'
+
+/*
+ * פרטי מפתח החתימה נקראים מ-`keystore.properties` — קובץ מקומי שאינו
+ * נכנס לגיט (ראה `.gitignore`).
+ *
+ * ⚠️ **מפתח החתימה הוא הדבר היחיד בפרויקט הזה שאי אפשר לשחזר.**
+ * גוגל מזהה אפליקציה לפי החתימה שלה; מי שמאבד את המפתח לא יכול יותר
+ * לפרסם עדכון לאפליקציה שכבר בחנות — לעולם. הפתרון היחיד הוא לפרסם
+ * אפליקציה חדשה עם `applicationId` אחר, ולבקש מכל המשתמשים להתקין
+ * מחדש. גבה את הקובץ הזה ואת הסיסמאות במקום שאינו המחשב הזה.
+ *
+ * כשהקובץ חסר, בניית `assembleDebug` ממשיכה לעבוד כרגיל — רק בניית
+ * `release` היא זו שתידרש לו.
+ */
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+def hasKeystore = keystorePropertiesFile.exists()
+if (hasKeystore) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace = "il.co.onestop.crm"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "il.co.onestop.crm"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        if (hasKeystore) {
+            release {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            /*
+             * ⚠️ `minifyEnabled false` בכוונה, לפחות בגרסה הראשונה.
+             *
+             * האפליקציה היא מעטפת דקה סביב WebView — אין בה קוד Java
+             * משלנו שיש מה לכווץ, וכל מה ש-R8 היה יכול להשיג הוא כמה
+             * מאות קילובייט מתוך 4MB. מנגד, R8 שובר בשקט רפלקציה בתוספי
+             * Capacitor, והתקלה מתגלה רק בגרסת ה-release אצל המשתמש.
+             * לא שווה את הסיכון בהפצה פנימית.
+             */
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
