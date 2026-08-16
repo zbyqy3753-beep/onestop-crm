@@ -26,3 +26,19 @@ const FULL_LEAD_ACCESS: readonly Role[] = ["owner", "manager"];
 export function canSeeAllLeads(role: Role): boolean {
   return FULL_LEAD_ACCESS.includes(role);
 }
+
+/**
+ * ספק לידים חיצוני — לא חלק מהצוות.
+ *
+ * הוא רואה מסך יחיד: רשימת הלידים שהוא עצמו הביא, בשם ובתאריך בלבד.
+ * לא סטטוס, לא טלפון, לא מי מטפל, לא עלות. ההצמדה בין ספק ללידים שלו
+ * היא `User.leadSourceName` מול `Lead.sourceDetail`.
+ *
+ * ⚠️ **ההגבלה לא מסתמכת על הסתרת פריטים בתפריט.** `visibleFor` מסתיר
+ * את שאר היעדים, אבל מי שמקליד `/admin` בשורת הכתובת עוקף אותה
+ * לגמרי. מה שבאמת עוצר הוא `requireStaffUser` בראש כל מסך אחר —
+ * ראה `server/auth/session.ts`.
+ */
+export function isSupplier(role: Role): boolean {
+  return role === "supplier";
+}

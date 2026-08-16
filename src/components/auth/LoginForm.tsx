@@ -15,14 +15,19 @@ export function LoginForm({ next }: { next: string }) {
             השליחה — שדה נסתר הוא קלט של המשתמש לכל דבר */}
         <input type="hidden" name={NEXT_PARAM} value={next} />
 
-        <Field label="אימייל">
+        {/*
+          ⚠️ `type="text"` ולא `type="email"`. אימות המייל של הדפדפן
+          פוסל מחרוזת בלי `@` עוד לפני השליחה — כלומר `type="email"`
+          היה חוסם כניסה בשם משתמש בלבד, וללא הודעה מהמערכת שלנו.
+        */}
+        <Field label="שם משתמש או אימייל">
           <input
             name="email"
-            type="email"
+            type="text"
             autoComplete="username"
             dir="ltr"
             className={`${inputClass} text-start`}
-            placeholder="name@onestop.co.il"
+            placeholder="idan"
           />
         </Field>
 

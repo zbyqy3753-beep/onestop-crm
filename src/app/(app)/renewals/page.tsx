@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/server/db/client";
-import { requireSessionUser } from "@/server/auth/session";
+import { requireStaffUser } from "@/server/auth/session";
 import { RenewalsClient } from "@/components/renewals/RenewalsClient";
 
 /**
@@ -13,7 +13,7 @@ import { RenewalsClient } from "@/components/renewals/RenewalsClient";
 const ALLOWED = ["owner", "manager"] as const;
 
 export default async function RenewalsPage() {
-  const actor = await requireSessionUser();
+  const actor = await requireStaffUser();
   if (!ALLOWED.includes(actor.role as (typeof ALLOWED)[number])) notFound();
 
   const contacts = await prisma.renewalContact.findMany({

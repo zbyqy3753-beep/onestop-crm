@@ -161,7 +161,26 @@ export const NAV: NavGroup[] = [
   },
 ];
 
+/**
+ * ספק לידים חיצוני רואה יעד יחיד — הרשימה שלו.
+ *
+ * ⚠️ רשימת היתר (allow-list) ולא הוספת `roles` לכל פריט בנפרד. פריט
+ * **בלי** `roles` גלוי לכולם, וזו ברירת המחדל הנכונה לצוות; המשמעות
+ * היא שכל יעד חדש שמישהו יוסיף ל-`NAV` בלי לחשוב על ספקים היה נוחת
+ * להם בתפריט. כאן ההיגיון הפוך: מה שלא ברשימה — לא מוצג.
+ *
+ * זו עדיין הסתרה ולא הרשאה. מה שחוסם באמת הוא `requireStaffUser`.
+ */
+const SUPPLIER_HREFS: readonly string[] = ["/leads"];
+
 export function visibleFor(role: Role): NavGroup[] {
+  if (role === "supplier") {
+    return NAV.map((g) => ({
+      ...g,
+      items: g.items.filter((i) => SUPPLIER_HREFS.includes(i.href)),
+    })).filter((g) => g.items.length > 0);
+  }
+
   return NAV.map((g) => ({
     ...g,
     items: g.items.filter((i) => !i.roles || i.roles.includes(role)),

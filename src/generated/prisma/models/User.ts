@@ -33,6 +33,7 @@ export type UserMinAggregateOutputType = {
   active: boolean | null
   store: string | null
   subscriptionEndsAt: Date | null
+  leadSourceName: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -46,6 +47,7 @@ export type UserMaxAggregateOutputType = {
   active: boolean | null
   store: string | null
   subscriptionEndsAt: Date | null
+  leadSourceName: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -59,6 +61,7 @@ export type UserCountAggregateOutputType = {
   active: number
   store: number
   subscriptionEndsAt: number
+  leadSourceName: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -74,6 +77,7 @@ export type UserMinAggregateInputType = {
   active?: true
   store?: true
   subscriptionEndsAt?: true
+  leadSourceName?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -87,6 +91,7 @@ export type UserMaxAggregateInputType = {
   active?: true
   store?: true
   subscriptionEndsAt?: true
+  leadSourceName?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -100,6 +105,7 @@ export type UserCountAggregateInputType = {
   active?: true
   store?: true
   subscriptionEndsAt?: true
+  leadSourceName?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -186,6 +192,7 @@ export type UserGroupByOutputType = {
   active: boolean
   store: string | null
   subscriptionEndsAt: Date | null
+  leadSourceName: string | null
   createdAt: Date
   updatedAt: Date
   _count: UserCountAggregateOutputType | null
@@ -220,6 +227,7 @@ export type UserWhereInput = {
   active?: Prisma.BoolFilter<"User"> | boolean
   store?: Prisma.StringNullableFilter<"User"> | string | null
   subscriptionEndsAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  leadSourceName?: Prisma.StringNullableFilter<"User"> | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   assignedLeads?: Prisma.LeadListRelationFilter
@@ -246,6 +254,7 @@ export type UserOrderByWithRelationInput = {
   active?: Prisma.SortOrder
   store?: Prisma.SortOrderInput | Prisma.SortOrder
   subscriptionEndsAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  leadSourceName?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   assignedLeads?: Prisma.LeadOrderByRelationAggregateInput
@@ -275,6 +284,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   active?: Prisma.BoolFilter<"User"> | boolean
   store?: Prisma.StringNullableFilter<"User"> | string | null
   subscriptionEndsAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  leadSourceName?: Prisma.StringNullableFilter<"User"> | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   assignedLeads?: Prisma.LeadListRelationFilter
@@ -301,6 +311,7 @@ export type UserOrderByWithAggregationInput = {
   active?: Prisma.SortOrder
   store?: Prisma.SortOrderInput | Prisma.SortOrder
   subscriptionEndsAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  leadSourceName?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
@@ -320,6 +331,7 @@ export type UserScalarWhereWithAggregatesInput = {
   active?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
   store?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   subscriptionEndsAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  leadSourceName?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
 }
@@ -333,6 +345,7 @@ export type UserCreateInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -359,6 +372,7 @@ export type UserUncheckedCreateInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -385,6 +399,7 @@ export type UserUpdateInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -411,6 +426,7 @@ export type UserUncheckedUpdateInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -437,6 +453,7 @@ export type UserCreateManyInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -450,6 +467,7 @@ export type UserUpdateManyMutationInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -463,6 +481,7 @@ export type UserUncheckedUpdateManyInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -476,6 +495,7 @@ export type UserCountOrderByAggregateInput = {
   active?: Prisma.SortOrder
   store?: Prisma.SortOrder
   subscriptionEndsAt?: Prisma.SortOrder
+  leadSourceName?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -489,6 +509,7 @@ export type UserMaxOrderByAggregateInput = {
   active?: Prisma.SortOrder
   store?: Prisma.SortOrder
   subscriptionEndsAt?: Prisma.SortOrder
+  leadSourceName?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -502,6 +523,7 @@ export type UserMinOrderByAggregateInput = {
   active?: Prisma.SortOrder
   store?: Prisma.SortOrder
   subscriptionEndsAt?: Prisma.SortOrder
+  leadSourceName?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -741,6 +763,7 @@ export type UserCreateWithoutSessionsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -766,6 +789,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -796,6 +820,7 @@ export type UserCreateWithoutImpersonatedSessionsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -821,6 +846,7 @@ export type UserUncheckedCreateWithoutImpersonatedSessionsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -862,6 +888,7 @@ export type UserUpdateWithoutSessionsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -887,6 +914,7 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -923,6 +951,7 @@ export type UserUpdateWithoutImpersonatedSessionsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -948,6 +977,7 @@ export type UserUncheckedUpdateWithoutImpersonatedSessionsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -973,6 +1003,7 @@ export type UserCreateWithoutAssignedLeadsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
@@ -998,6 +1029,7 @@ export type UserUncheckedCreateWithoutAssignedLeadsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
@@ -1028,6 +1060,7 @@ export type UserCreateWithoutCreatedLeadsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -1053,6 +1086,7 @@ export type UserUncheckedCreateWithoutCreatedLeadsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1094,6 +1128,7 @@ export type UserUpdateWithoutAssignedLeadsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
@@ -1119,6 +1154,7 @@ export type UserUncheckedUpdateWithoutAssignedLeadsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
@@ -1155,6 +1191,7 @@ export type UserUpdateWithoutCreatedLeadsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -1180,6 +1217,7 @@ export type UserUncheckedUpdateWithoutCreatedLeadsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -1205,6 +1243,7 @@ export type UserCreateWithoutNotesInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -1230,6 +1269,7 @@ export type UserUncheckedCreateWithoutNotesInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1271,6 +1311,7 @@ export type UserUpdateWithoutNotesInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -1296,6 +1337,7 @@ export type UserUncheckedUpdateWithoutNotesInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -1321,6 +1363,7 @@ export type UserCreateWithoutLeadActivityInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -1346,6 +1389,7 @@ export type UserUncheckedCreateWithoutLeadActivityInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1387,6 +1431,7 @@ export type UserUpdateWithoutLeadActivityInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -1412,6 +1457,7 @@ export type UserUncheckedUpdateWithoutLeadActivityInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -1437,6 +1483,7 @@ export type UserCreateWithoutStatusEventsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -1462,6 +1509,7 @@ export type UserUncheckedCreateWithoutStatusEventsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1503,6 +1551,7 @@ export type UserUpdateWithoutStatusEventsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -1528,6 +1577,7 @@ export type UserUncheckedUpdateWithoutStatusEventsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -1553,6 +1603,7 @@ export type UserCreateWithoutDealsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -1578,6 +1629,7 @@ export type UserUncheckedCreateWithoutDealsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1619,6 +1671,7 @@ export type UserUpdateWithoutDealsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -1644,6 +1697,7 @@ export type UserUncheckedUpdateWithoutDealsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -1669,6 +1723,7 @@ export type UserCreateWithoutDealStageEventsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -1694,6 +1749,7 @@ export type UserUncheckedCreateWithoutDealStageEventsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1735,6 +1791,7 @@ export type UserUpdateWithoutDealStageEventsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -1760,6 +1817,7 @@ export type UserUncheckedUpdateWithoutDealStageEventsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -1785,6 +1843,7 @@ export type UserCreateWithoutReferredRegistrationsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -1810,6 +1869,7 @@ export type UserUncheckedCreateWithoutReferredRegistrationsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1840,6 +1900,7 @@ export type UserCreateWithoutHandledRegistrationsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -1865,6 +1926,7 @@ export type UserUncheckedCreateWithoutHandledRegistrationsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -1906,6 +1968,7 @@ export type UserUpdateWithoutReferredRegistrationsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -1931,6 +1994,7 @@ export type UserUncheckedUpdateWithoutReferredRegistrationsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -1967,6 +2031,7 @@ export type UserUpdateWithoutHandledRegistrationsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -1992,6 +2057,7 @@ export type UserUncheckedUpdateWithoutHandledRegistrationsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -2017,6 +2083,7 @@ export type UserCreateWithoutWhatsappMessagesInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -2042,6 +2109,7 @@ export type UserUncheckedCreateWithoutWhatsappMessagesInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -2083,6 +2151,7 @@ export type UserUpdateWithoutWhatsappMessagesInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -2108,6 +2177,7 @@ export type UserUncheckedUpdateWithoutWhatsappMessagesInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -2133,6 +2203,7 @@ export type UserCreateWithoutRenewalDocumentsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
@@ -2158,6 +2229,7 @@ export type UserUncheckedCreateWithoutRenewalDocumentsInput = {
   active?: boolean
   store?: string | null
   subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
@@ -2199,6 +2271,7 @@ export type UserUpdateWithoutRenewalDocumentsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
@@ -2224,6 +2297,7 @@ export type UserUncheckedUpdateWithoutRenewalDocumentsInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
@@ -2388,6 +2462,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   active?: boolean
   store?: boolean
   subscriptionEndsAt?: boolean
+  leadSourceName?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   assignedLeads?: boolean | Prisma.User$assignedLeadsArgs<ExtArgs>
@@ -2415,6 +2490,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   active?: boolean
   store?: boolean
   subscriptionEndsAt?: boolean
+  leadSourceName?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -2428,6 +2504,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   active?: boolean
   store?: boolean
   subscriptionEndsAt?: boolean
+  leadSourceName?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -2441,11 +2518,12 @@ export type UserSelectScalar = {
   active?: boolean
   store?: boolean
   subscriptionEndsAt?: boolean
+  leadSourceName?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "phone" | "role" | "active" | "store" | "subscriptionEndsAt" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "phone" | "role" | "active" | "store" | "subscriptionEndsAt" | "leadSourceName" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   assignedLeads?: boolean | Prisma.User$assignedLeadsArgs<ExtArgs>
   createdLeads?: boolean | Prisma.User$createdLeadsArgs<ExtArgs>
@@ -2494,6 +2572,16 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
      */
     store: string | null
     subscriptionEndsAt: Date | null
+    /**
+     * עבור `supplier` בלבד: הערך שנרשם ב-`Lead.sourceDetail` ללידים
+     * שהוא הביא — כלומר שם השותף מתוך `LEADS_API_KEYS`.
+     * 
+     * ⚠️ עמודה נפרדת ולא השוואה מול `name`. השם ב-CRM הוא טקסט תצוגה
+     * שמנהל עלול לערוך ("עידן" → "עידן כהן"), ואילו השם שב-env נקבע
+     * מול מערכת חיצונית. קשירת השניים הייתה מרוקנת לספק את המסך
+     * בשקט, בלי שגיאה ובלי שאיש יבין למה.
+     */
+    leadSourceName: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["user"]>
@@ -2940,6 +3028,7 @@ export interface UserFieldRefs {
   readonly active: Prisma.FieldRef<"User", 'Boolean'>
   readonly store: Prisma.FieldRef<"User", 'String'>
   readonly subscriptionEndsAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly leadSourceName: Prisma.FieldRef<"User", 'String'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
 }

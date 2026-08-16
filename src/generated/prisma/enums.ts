@@ -16,7 +16,8 @@ export const Role = {
   shopOwner: 'shopOwner',
   operator: 'operator',
   agent: 'agent',
-  employee: 'employee'
+  employee: 'employee',
+  supplier: 'supplier'
 } as const
 
 export type Role = (typeof Role)[keyof typeof Role]

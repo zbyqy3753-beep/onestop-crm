@@ -54,6 +54,9 @@ function buildWhere(filter: LeadFilter): Prisma.LeadWhereInput {
     if (or.length) and.push({ OR: or });
   }
 
+  // ללא `mode: "insensitive"` — התאמה מדויקת, ראה LeadFilter.sourceDetail
+  if (filter.sourceDetail) and.push({ sourceDetail: filter.sourceDetail });
+
   if (filter.query?.trim()) {
     const q = filter.query.trim();
     // `mode: "insensitive"` נחוץ: ב-Postgres `contains` הוא LIKE רגיש

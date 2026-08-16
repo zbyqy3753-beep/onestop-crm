@@ -63,10 +63,14 @@ export function EditUserModal({
           </select>
         </Field>
 
-        <Field label="אימייל" hint="משמש להתחברות — שינוי מעדכן גם את חשבון הכניסה">
+        {/* `type="text"` — ראה ההערה ב-LoginForm */}
+        <Field
+          label="שם משתמש"
+          hint="משמש להתחברות — שינוי מעדכן גם את חשבון הכניסה"
+        >
           <input
             name="email"
-            type="email"
+            type="text"
             dir="ltr"
             autoComplete="off"
             defaultValue={user.email}
@@ -99,6 +103,19 @@ export function EditUserModal({
           <input
             name="store"
             defaultValue={user.store ?? ""}
+            className={inputClass}
+          />
+        </Field>
+
+        {/* ראה ההערה המקבילה ב-AddUserModal */}
+        <Field
+          label="שם המקור (ספק לידים)"
+          hint="חובה לספק — הערך שמופיע בעמודת ״מקור״ בלידים שלו"
+        >
+          <input
+            name="leadSourceName"
+            defaultValue={user.leadSourceName ?? ""}
+            placeholder="לדוגמה: עידן"
             className={inputClass}
           />
         </Field>

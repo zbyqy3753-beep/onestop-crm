@@ -1,5 +1,5 @@
 import { db } from "@/server/repositories";
-import { requireSessionUser } from "@/server/auth/session";
+import { requireStaffUser } from "@/server/auth/session";
 import { OPEN_STATUSES, ROLE_CONFIG } from "@/lib/domain/types";
 import { performanceByAgent } from "@/server/services/economics";
 import { TZ, startOfDay, startOfMonth } from "@/lib/tz";
@@ -34,9 +34,15 @@ const LONG_DATE_FMT = new Intl.DateTimeFormat("he-IL", {
  * באמצע חיווט שלהם.
  */
 export default async function DashboardPage() {
-  const [currentUser, users, allLeads, recentLeads, counts, deals, packages, costs] =
+  /*
+   * מחוץ ל-`Promise.all` ולפניו, ולא כאחד מאיבריו: `redirect` זורק,
+   * אבל שמונה השאילתות שלצידו כבר יצאו לדרך. ספק חיצוני היה מריץ את
+   * כל שליפת הדשבורד הארגוני לפני שההפניה תופסת.
+   */
+  const currentUser = await requireStaffUser();
+
+  const [users, allLeads, recentLeads, counts, deals, packages, costs] =
     await Promise.all([
-      requireSessionUser(),
       db.users.list(),
       db.leads.list(),
       db.leads.list(undefined, { field: "createdAt", direction: "desc" }, { offset: 0, limit: 8 }),

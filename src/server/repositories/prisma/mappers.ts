@@ -124,6 +124,7 @@ export function userFromPrisma(row: PUser): User {
     phone: row.phone ?? undefined,
     active: row.active,
     store: row.store ?? undefined,
+    leadSourceName: row.leadSourceName ?? undefined,
     subscriptionEndsAt: row.subscriptionEndsAt?.toISOString(),
   };
 }

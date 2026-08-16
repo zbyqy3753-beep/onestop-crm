@@ -47,6 +47,7 @@ const users: UserRepository = {
       phone: input.phone,
       role: input.role,
       store: input.store,
+      leadSourceName: input.leadSourceName,
       active: true,
     };
     state.users.push(user);

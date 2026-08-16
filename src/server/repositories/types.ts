@@ -41,6 +41,14 @@ export interface LeadFilter {
   provider?: ProviderKey[];
   /** `null` = לידים ללא שיוך */
   assigneeId?: (UserId | null)[];
+  /**
+   * התאמה **מדויקת** לעמודת "מקור" — מה שמזהה לידים של ספק חיצוני.
+   *
+   * ⚠️ מדויקת ולא `contains`, בכוונה. ספק בשם "עידן" היה מקבל בחיפוש
+   * חלקי גם את הלידים של "עידן ב." ושל "קמפיין עידן" — כלומר לידים
+   * של אחרים. זה מסנן הרשאה, לא תיבת חיפוש.
+   */
+  sourceDetail?: string;
   /** רק לידים בסטטוס לא סופי */
   openOnly?: boolean;
 }
@@ -199,6 +207,8 @@ export interface CreateUserInput {
   phone?: string;
   role: User["role"];
   store?: string;
+  /** רלוונטי ל-`supplier` בלבד — ראה `User.leadSourceName` */
+  leadSourceName?: string;
 }
 
 /**
@@ -218,6 +228,8 @@ export interface UpdateUserInput {
   phone?: string | null;
   role?: User["role"];
   store?: string | null;
+  /** רלוונטי ל-`supplier` בלבד — ראה `User.leadSourceName` */
+  leadSourceName?: string | null;
   active?: boolean;
 }
 

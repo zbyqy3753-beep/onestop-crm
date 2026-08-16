@@ -51,13 +51,18 @@ export function AddUserModal({
           </select>
         </Field>
 
-        <Field label="אימייל" hint="ישמש להתחברות למערכת">
+        {/* `type="text"` — ראה ההערה ב-LoginForm */}
+        <Field
+          label="שם משתמש"
+          hint="ישמש להתחברות. אפשר גם כתובת מייל מלאה"
+        >
           <input
             name="email"
-            type="email"
+            type="text"
             required
-            placeholder="name@onestop.co.il"
-            className={inputClass}
+            dir="ltr"
+            placeholder="idan"
+            className={`${inputClass} text-start`}
           />
         </Field>
 
@@ -72,6 +77,22 @@ export function AddUserModal({
 
         <Field label="חנות/עסק" hint="אופציונלי">
           <input name="store" placeholder="" className={inputClass} />
+        </Field>
+
+        {/*
+          מוצג תמיד ולא רק כשנבחר "ספק לידים": הצגה מותנית הייתה
+          דורשת מצב בטופס שכולו לא-מבוקר, והשדה ממילא נשמר רק לספקים
+          (`createUserAction` מתעלם ממנו לשאר התפקידים).
+        */}
+        <Field
+          label='שם המקור (ספק לידים)'
+          hint="חובה לספק — הערך שמופיע בעמודת ״מקור״ בלידים שלו"
+        >
+          <input
+            name="leadSourceName"
+            placeholder="לדוגמה: עידן"
+            className={inputClass}
+          />
         </Field>
 
         <Field label="סיסמה ראשונית" hint="לפחות 6 תווים">

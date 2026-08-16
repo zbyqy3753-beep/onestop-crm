@@ -1,16 +1,18 @@
 import { RegistrationsClient } from "@/components/registrations/RegistrationsClient";
 import { db } from "@/server/repositories";
-import { requireSessionUser } from "@/server/auth/session";
+import { requireStaffUser } from "@/server/auth/session";
 
 /**
  * רכיב שרת. שולף דרך שכבת ה-repository בלבד ומעביר למטה.
  * כשמחליפים ל-Postgres, הקובץ הזה לא משתנה.
  */
 export default async function RegistrationsPage() {
-  const [registrations, users, currentUser] = await Promise.all([
+  // לפני השליפה ולא בתוכה — ראה requireStaffUser
+  const currentUser = await requireStaffUser();
+
+  const [registrations, users] = await Promise.all([
     db.registrations.list(),
     db.users.list(),
-    requireSessionUser(),
   ]);
 
   return (

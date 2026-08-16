@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { AdminClient } from "@/components/admin/AdminClient";
 import { db } from "@/server/repositories";
 import { prisma } from "@/server/db/client";
-import { requireSessionUser } from "@/server/auth/session";
+import { requireStaffUser } from "@/server/auth/session";
 import { readSettings } from "@/server/whatsapp/settings";
 
 /**
@@ -18,7 +18,7 @@ import { readSettings } from "@/server/whatsapp/settings";
 const ALLOWED = ["owner", "manager"] as const;
 
 export default async function AdminPage() {
-  const actor = await requireSessionUser();
+  const actor = await requireStaffUser();
   if (!ALLOWED.includes(actor.role as (typeof ALLOWED)[number])) notFound();
 
   // ⚠️ רק מה שהרצועה צריכה. הפירוט המלא — תור, היסטוריה, נמענים —

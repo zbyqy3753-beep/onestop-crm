@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireSessionUser } from "@/server/auth/session";
+import { requireStaffUser } from "@/server/auth/session";
 import { botOverview } from "@/server/whatsapp/overview";
 import { BotsClient } from "@/components/bots/BotsClient";
 
@@ -13,7 +13,7 @@ import { BotsClient } from "@/components/bots/BotsClient";
 const ALLOWED = ["owner", "manager"] as const;
 
 export default async function BotsPage() {
-  const actor = await requireSessionUser();
+  const actor = await requireStaffUser();
   if (!ALLOWED.includes(actor.role as (typeof ALLOWED)[number])) notFound();
 
   const overview = await botOverview();

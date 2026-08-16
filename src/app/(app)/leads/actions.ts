@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/server/repositories";
-import { requireSessionUser } from "@/server/auth/session";
+import { requireSessionUser, requireStaffUser } from "@/server/auth/session";
 import type {
   LeadCategoryKey,
   LeadKind,
@@ -19,7 +19,7 @@ import {
 } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
 import { instantFromIsraelDateTime, startOfDay } from "@/lib/tz";
-import { canSeeAllLeads } from "@/lib/domain/permissions";
+import { canSeeAllLeads, isSupplier } from "@/lib/domain/permissions";
 import { revalidateLeadSurfaces } from "@/app/(app)/_revalidate";
 
 /**
@@ -40,8 +40,14 @@ export type ActionResult<T = undefined> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
 
+/**
+ * `requireStaffUser` ולא `requireSessionUser`: ספק לידים חיצוני הוא
+ * צופה בלבד. זה מה שחוסם את `createLeadAction` ו-`importLeadsAction`,
+ * שתי הפעולות היחידות כאן שלא עוברות דרך `assertCanEdit` (הן יוצרות
+ * ליד ולכן אין להן ליד קיים לבדוק בעלות עליו).
+ */
 async function actor(): Promise<string> {
-  return (await requireSessionUser()).id;
+  return (await requireStaffUser()).id;
 }
 
 /** מוחזר כשעובד מנסה לגעת בליד של מישהו אחר. */
@@ -64,6 +70,17 @@ const FORBIDDEN = "אין לך הרשאה לערוך את הליד הזה";
 async function assertCanEdit(leadIds: string[]): Promise<string | null> {
   const user = await requireSessionUser();
   if (canSeeAllLeads(user.role)) return null;
+
+  /*
+   * ספק חיצוני — חסום על כל ליד, כולל אלה שהוא עצמו הביא.
+   *
+   * מפורש ולא נשען על בדיקת הבעלות שמתחת: ספק לעולם אינו `assigneeId`
+   * ולכן הלולאה הייתה דוחה אותו ממילא — **אבל רק כשהליד קיים.**
+   * ברשימת מזהים שאינם קיימים היא מחזירה `null` (מותר), וזה מספיק
+   * כדי ש-`deleteLeadsAction` ירוץ. שורה אחת כאן עדיפה על ההסתמכות
+   * הזאת.
+   */
+  if (isSupplier(user.role)) return FORBIDDEN;
 
   // שאילתה אחת לכל המזהים, ורק עמודת הבעלות. קודם זו הייתה שליפה
   // מלאה פר-ליד ובסדרה — פעולה קבוצתית של עובד על 50 לידים שילמה

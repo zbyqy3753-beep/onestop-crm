@@ -52,6 +52,7 @@ const users: UserRepository = {
         phone: input.phone,
         role: input.role,
         store: input.store,
+        leadSourceName: input.leadSourceName,
       },
     });
     return userFromPrisma(row);

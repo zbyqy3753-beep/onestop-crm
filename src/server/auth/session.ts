@@ -2,9 +2,11 @@ import "server-only";
 
 import { cache } from "react";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { db } from "@/server/repositories";
 import type { SessionRecord } from "@/server/repositories";
 import type { User } from "@/lib/domain/types";
+import { isSupplier } from "@/lib/domain/permissions";
 import {
   SESSION_COOKIE,
   SESSION_COOKIE_OPTIONS,
@@ -153,6 +155,26 @@ export const getSessionUser = cache(async (): Promise<User | null> => {
 export async function requireSessionUser(): Promise<User> {
   const user = await getSessionUser();
   if (!user) throw new Error("אין משתמש מחובר");
+  return user;
+}
+
+/**
+ * כמו `requireSessionUser`, אבל חוסם ספקי לידים חיצוניים.
+ *
+ * ⚠️ **זו ההגנה האמיתית על כל מסך שאינו `/leads`.** הסתרת פריטים
+ * ב-`visibleFor` היא נוחות תצוגה בלבד: הנתיבים עצמם נשארים חיים,
+ * ומי שמקליד `/admin` או `/deals` בשורת הכתובת מקבל אותם. ספק הוא
+ * צד חיצוני לארגון — מסך הניהול, העסקאות והחבילות אינם שלו.
+ *
+ * הפניה ולא שגיאה: הוא לא עשה שום דבר פסול, הוא פשוט הגיע לכתובת
+ * שאין לו בה מה לעשות. מסך שגיאה כאן היה נראה כמו תקלה.
+ *
+ * ⚠️ קרא לזה **לפני** כל שליפת נתונים במסך, לא אחריה. `redirect`
+ * זורק, אבל שאילתה שכבר יצאה כבר רצה.
+ */
+export async function requireStaffUser(): Promise<User> {
+  const user = await requireSessionUser();
+  if (isSupplier(user.role)) redirect("/leads");
   return user;
 }
 

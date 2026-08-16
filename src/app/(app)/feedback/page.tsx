@@ -1,5 +1,6 @@
 import { FeedbackClient } from "@/components/feedback/FeedbackClient";
 import { feedbackStore } from "@/server/feedback";
+import { requireStaffUser } from "@/server/auth/session";
 
 /**
  * משוב בודקים על המערכת עצמה — המסך היחיד שנוגע ב-Firebase.
@@ -12,6 +13,8 @@ import { feedbackStore } from "@/server/feedback";
 export const dynamic = "force-dynamic";
 
 export default async function FeedbackPage() {
+  await requireStaffUser();
+
   const items = await feedbackStore.list();
   return <FeedbackClient items={items} />;
 }

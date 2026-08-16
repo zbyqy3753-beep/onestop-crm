@@ -35,6 +35,9 @@ function matches(lead: Lead, f: LeadFilter): boolean {
     if (!f.assigneeId.includes(key)) return false;
   }
 
+  // התאמה מדויקת, זהה למימוש Prisma — ראה LeadFilter.sourceDetail
+  if (f.sourceDetail && lead.sourceDetail !== f.sourceDetail) return false;
+
   if (f.query) {
     const q = f.query.trim().toLowerCase();
     if (q) {

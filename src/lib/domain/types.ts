@@ -22,7 +22,8 @@ export type Role =
   | "employee" // עובד — התפקיד שרוב המשתמשים בפועל נושאים
   | "operator" // מתפעל
   | "shopOwner" // בעל חנות
-  | "bizManager"; // מנהל עסק
+  | "bizManager" // מנהל עסק
+  | "supplier"; // ספק לידים — מזין לידים מבחוץ, לא מטפל בהם
 
 export const ROLE_CONFIG: Record<Role, { label: string; rank: number }> = {
   owner: { label: "מנהל ראשי", rank: 100 },
@@ -32,6 +33,11 @@ export const ROLE_CONFIG: Record<Role, { label: string; rank: number }> = {
   operator: { label: "מתפעל", rank: 30 },
   agent: { label: "סוכן", rank: 10 },
   employee: { label: "עובד", rank: 10 },
+  /*
+   * דרגה 0 ולא 10: ספק אינו "עובד זוטר" אלא צד חיצוני. כל מקום
+   * שמשווה דרגות (מי רשאי לערוך את מי) צריך למקם אותו מתחת לכולם.
+   */
+  supplier: { label: "ספק לידים", rank: 0 },
 };
 
 export const ROLE_ORDER: Role[] = [
@@ -42,6 +48,7 @@ export const ROLE_ORDER: Role[] = [
   "operator",
   "agent",
   "employee",
+  "supplier",
 ];
 
 /* ── סטטוס ליד ────────────────────────────────────────────────────────── */
@@ -414,6 +421,12 @@ export interface User {
   active: boolean;
   /** שם העסק/החנות המשויכת, אם יש. שדה חופשי — אין עדיין ישות Store נפרדת. */
   store?: string;
+  /**
+   * לתפקיד `supplier` בלבד: הערך שמופיע ב"מקור" (`Lead.sourceDetail`)
+   * ללידים שהספק הביא — שם השותף מתוך `LEADS_API_KEYS`. זה מה שקושר
+   * בין המשתמש לבין הלידים שלו. ראה schema.prisma.
+   */
+  leadSourceName?: string;
   /** תפוגת מנוי — המערכת המקורית מתריעה עליה */
   subscriptionEndsAt?: string;
 }

@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { GATE_COOKIE, GATE_COOKIE_OPTIONS } from "@/lib/gate";
 import { NEXT_PARAM, safeReturnTo } from "@/lib/returnTo";
+import { toLoginEmail } from "@/lib/loginId";
 import {
   endSessionRecord,
   startSession,
@@ -23,13 +24,19 @@ import {
 
 /** שליחת הטופס — מאמת מול Supabase Auth דרך verifyCredentials. */
 export async function signIn(_prev: string | null, formData: FormData) {
-  const email = String(formData.get("email") ?? "");
+  const raw = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
 
-  if (!email || !password) return "יש למלא אימייל וסיסמה.";
+  if (!raw.trim() || !password) return "יש למלא שם משתמש וסיסמה.";
+
+  // `idan` → `idan@onestop.co.il`; כתובת מלאה עוברת כמות שהיא.
+  // אותה המרה בדיוק רצה ביצירת המשתמש — ראה lib/loginId.ts
+  const email = toLoginEmail(raw);
 
   const user = await verifyCredentials(email, password);
-  if (!user) return "אימייל או סיסמה שגויים.";
+  // הודעה אחת לשני המקרים (שם לא קיים / סיסמה שגויה): הפרדה ביניהם
+  // מסגירה אילו חשבונות קיימים במערכת
+  if (!user) return "שם משתמש או סיסמה שגויים.";
 
   // שורת סשן ב-DB + טוקן אקראי בעוגייה. ראה server/auth/session.ts
   await startSession(user.id);

@@ -6,6 +6,7 @@ import { createAuthUser, updateAuthUser } from "@/server/auth/supabaseAdmin";
 import type { Role } from "@/lib/domain/types";
 import { isRole } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
+import { isValidLoginId, toLoginEmail } from "@/lib/loginId";
 import { revalidateUserSurfaces } from "@/app/(app)/_revalidate";
 
 export type ActionResult<T = undefined> =
@@ -31,14 +32,26 @@ export async function createUserAction(
   }
 
   const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
+  const rawLoginId = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
   const store = String(formData.get("store") ?? "").trim();
+  const leadSourceName = String(formData.get("leadSourceName") ?? "").trim();
   const rawRole = String(formData.get("role") ?? "");
   const password = String(formData.get("password") ?? "");
 
   if (name.length < 2) return { ok: false, error: "שם מלא הוא שדה חובה" };
-  if (!email.includes("@")) return { ok: false, error: "אימייל לא תקין" };
+  if (!isValidLoginId(rawLoginId)) {
+    return {
+      ok: false,
+      error: "שם משתמש לא תקין — אותיות באנגלית, ספרות, נקודה או מקף",
+    };
+  }
+  /*
+   * מה שנשמר הוא תמיד כתובת מלאה, גם כשהוקלד שם בלבד: המייל הוא
+   * המפתח לחשבון ה-Supabase Auth, ושם בודד אינו מזהה חוקי שם.
+   * אותה המרה בדיוק רצה בהתחברות — ראה lib/loginId.ts
+   */
+  const email = toLoginEmail(rawLoginId);
   // אופציונלי, אבל אם הוזן — חייב להיות תקין: זה היעד של תזכורות
   // הוואטסאפ, ומספר שגוי נכשל בשקט אצל הבוט ולא כאן
   if (phone && !isIsraeliPhone(phone)) {
@@ -48,6 +61,15 @@ export async function createUserAction(
   const role: Role = rawRole;
   if (role === "owner" && actor.role !== "owner") {
     return { ok: false, error: "רק מנהל ראשי יכול ליצור מנהל ראשי נוסף" };
+  }
+  /*
+   * ספק בלי שם מקור הוא חשבון שנכנס למסך ריק לנצח, בלי שום רמז למה:
+   * `leads/page.tsx` מחזיר רשימה ריקה כשהשדה חסר (וזו ההתנהגות
+   * הנכונה — סינון ריק היה מציג לו את כל מאגר הארגון). לכן חוסמים
+   * כאן, במקום היחיד שיכול להסביר את הבעיה למי שיוצר את החשבון.
+   */
+  if (role === "supplier" && !leadSourceName) {
+    return { ok: false, error: "לספק לידים חובה להגדיר שם מקור" };
   }
   if (password.length < 6)
     return { ok: false, error: "סיסמה חייבת להכיל לפחות 6 תווים" };
@@ -67,6 +89,9 @@ export async function createUserAction(
     // ספרות בלבד, כמו בלידים — הבוט ממיר ל-E.164 ולא מנקה מקפים
     phone: phone ? phone.replace(/\D/g, "") : undefined,
     store: store || undefined,
+    // רק לספק: לשאר התפקידים השדה חסר משמעות, ושמירתו הייתה יוצרת
+    // משתמשים שנראים כספקים בכל שאילתה שתיכתב בעתיד על העמודה הזו
+    leadSourceName: role === "supplier" ? leadSourceName : undefined,
     role,
   });
 
@@ -110,9 +135,10 @@ export async function updateUserAction(
   const name = String(formData.get("name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
   const store = String(formData.get("store") ?? "").trim();
+  const leadSourceName = String(formData.get("leadSourceName") ?? "").trim();
   const rawRole = String(formData.get("role") ?? "");
   const active = formData.get("active") === "on";
-  const email = String(formData.get("email") ?? "").trim();
+  const rawLoginId = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
   if (name.length < 2) return { ok: false, error: "שם מלא הוא שדה חובה" };
@@ -122,7 +148,15 @@ export async function updateUserAction(
   if (!isRole(rawRole)) return { ok: false, error: "תפקיד לא מוכר" };
   const role: Role = rawRole;
 
-  if (!email.includes("@")) return { ok: false, error: "אימייל לא תקין" };
+  if (!isValidLoginId(rawLoginId)) {
+    return {
+      ok: false,
+      error: "שם משתמש לא תקין — אותיות באנגלית, ספרות, נקודה או מקף",
+    };
+  }
+  // כמו ביצירה — ראה lib/loginId.ts
+  const email = toLoginEmail(rawLoginId);
+
   // שדה ריק = "אל תשנה את הסיסמה", ולכן הבדיקה חלה רק כשהוזן משהו
   if (password && password.length < 6) {
     return { ok: false, error: "סיסמה חייבת להכיל לפחות 6 תווים" };
@@ -138,6 +172,10 @@ export async function updateUserAction(
 
   if (role === "owner" && actor.role !== "owner") {
     return { ok: false, error: "רק מנהל ראשי יכול להעניק תפקיד מנהל ראשי" };
+  }
+  // כמו ביצירה — ספק בלי שם מקור נכנס למסך ריק בלי הסבר
+  if (role === "supplier" && !leadSourceName) {
+    return { ok: false, error: "לספק לידים חובה להגדיר שם מקור" };
   }
 
   if (target.id === actor.id) {
@@ -169,6 +207,9 @@ export async function updateUserAction(
       email,
       phone: phone ? phone.replace(/\D/g, "") : null,
       store: store || null,
+      // `null` ולא `undefined` כשהתפקיד אינו ספק: הורדת תפקיד מספק
+      // לעובד חייבת לנקות את השדה, אחרת הוא נשאר תלוי על החשבון
+      leadSourceName: role === "supplier" ? leadSourceName : null,
       role,
       active,
     });
