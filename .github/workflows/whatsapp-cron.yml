@@ -1,0 +1,37 @@
+# השעון של תור הוואטסאפ.
+#
+# ⚠️ בלי זה תזכורות לא יוצאות בזמן. `drainOutbox` נקרא רק משני
+# מקומות: ה-webhook (כשלקוח כותב) והנתיב שכאן. בלי טריגר חיצוני,
+# הודעה שנקבעה ל-16:00 יושבת בתור עד שמישהו במקרה שולח הודעה.
+#
+# ⚠️ GitHub מריצים cron **כל 5 דקות לכל היותר**, ובפועל לפעמים
+# בעיכוב של דקה-שתיים בשעות עומס. זה מכוון ומקובל לתזכורות; אם יידרש
+# דיוק לדקה — זה עובר ל-Vercel Cron, שדורש תוכנית Pro.
+#
+# ⚠️ הסוד `WHATSAPP_CRON_KEY` תואם ל-`CRON_SECRET` שבייצור, ונשלח
+# ככותרת `Authorization: Bearer`. **לא** חלק מ-`WHATSAPP_API_KEYS`:
+# הרישום ההוא שייך לבוט במשרד, ודריסה שלו הייתה מנתקת אותו.
+
+name: WhatsApp outbox drain
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  # הרצה ידנית מלשונית Actions — לבדיקה בלי לחכות למחזור הבא
+  workflow_dispatch:
+
+jobs:
+  drain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Drain outbox
+        run: |
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            -H "authorization: Bearer ${{ secrets.WHATSAPP_CRON_KEY }}" \
+            "https://onestop-crm-demo.vercel.app/api/whatsapp/cron")
+          echo "HTTP $code"
+          cat /tmp/out.json
+          echo
+          # 401 = המפתח שגוי; 5xx = תקלה בשרת. שניהם צריכים להכשיל
+          # את הריצה, אחרת נגלה שהתזכורות לא יוצאות רק מהלקוחות.
+          test "$code" = "200"
