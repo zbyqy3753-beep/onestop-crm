@@ -61,6 +61,18 @@ export interface LeadFilter {
   sourceDetail?: string;
   /** רק לידים בסטטוס לא סופי */
   openOnly?: boolean;
+  /**
+   * חתך תקופה לפי `createdAt` — מתי הליד **נכנס**.
+   *
+   * ⚠️ נכנס דרך `LeadFilter` ולא כפרמטר נפרד **בכוונה**: זו הדרך
+   * היחידה שגם `list` וגם `countByStatus` מקבלים אותו חתך, ולכן
+   * הריבועים והטבלה לא יכולים לסתור זה את זה. ראה lib/domain/period.ts
+   *
+   * ⚠️ `createdTo` הוא **בלעדי** (`<`) ולא כולל. הבורר מייצר את הגבול
+   * העליון כתחילת היום שאחרי, כדי שיום שלם ייכלל בלי לפספס שנייה.
+   */
+  createdFrom?: string;
+  createdTo?: string;
 }
 
 export type LeadSortField =

@@ -41,6 +41,13 @@ function matches(lead: Lead, f: LeadFilter): boolean {
   // התאמה מדויקת, זהה למימוש Prisma — ראה LeadFilter.sourceDetail
   if (f.sourceDetail && lead.sourceDetail !== f.sourceDetail) return false;
 
+  // גבול עליון בלעדי, זהה למימוש Prisma — ראה LeadFilter.createdTo
+  if (f.createdFrom || f.createdTo) {
+    const at = Date.parse(lead.createdAt);
+    if (f.createdFrom && at < Date.parse(f.createdFrom)) return false;
+    if (f.createdTo && at >= Date.parse(f.createdTo)) return false;
+  }
+
   if (f.query) {
     const q = f.query.trim().toLowerCase();
     if (q) {

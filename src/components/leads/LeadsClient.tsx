@@ -103,6 +103,7 @@ export function LeadsClient({
   currentUserId,
   canSeeAll,
   canEditCosts,
+  periodPicker,
 }: {
   leads: Lead[];
   users: UserRef[];
@@ -127,6 +128,15 @@ export function LeadsClient({
    * נקודת קצה HTTP, והסתרת הכפתור לא מונעת קריאה ישירה אליה.
    */
   canEditCosts: boolean;
+  /**
+   * בורר התקופה, מרונדר בשרת ומוזרק כ-slot.
+   *
+   * ⚠️ slot ולא רכיב שנבנה כאן: הטווח נקבע ב-`page.tsx` **לפני**
+   * השליפה — הוא חותך גם את `leads` וגם את `counts`. אילו הבורר היה
+   * יושב בלקוח, הוא היה מסנן מחדש נתונים שכבר הגיעו חתוכים, והמספר
+   * שבריבוע היה מפסיק להתאים לטבלה.
+   */
+  periodPicker?: React.ReactNode;
 }) {
   // המסך נפתח על הלידים החדשים בלבד — ראה `INITIAL_FILTERS`
   const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
@@ -794,6 +804,8 @@ export function LeadsClient({
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-3 sm:px-6">
+      {periodPicker}
+
       <QueueHeader
         counts={counts}
         total={leads.length}

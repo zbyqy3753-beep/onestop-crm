@@ -9,6 +9,8 @@ import {
 } from "@/lib/domain/permissions";
 import type { UserRef } from "@/lib/domain/types";
 import type { LeadFilter } from "@/server/repositories";
+import { periodFromParams } from "@/lib/domain/period";
+import { PeriodPicker } from "@/components/leads/PeriodPicker";
 
 /**
  * רכיב שרת. שולף דרך שכבת ה-repository בלבד ומעביר למטה.
@@ -21,7 +23,13 @@ import type { LeadFilter } from "@/server/repositories";
  * אותו מסנן מוזרק גם ל-`countByStatus`, אחרת הקוביות היו מונות את
  * כל הארגון בזמן שהטבלה מציגה חתך אישי — שני מספרים סותרים במסך אחד.
  */
-export default async function LeadsPage() {
+export default async function LeadsPage({
+  searchParams,
+}: {
+  // ⚠️ Promise — ב-Next 16 `searchParams` א-סינכרוני. ראה
+  // node_modules/next/dist/docs (מדריך הגרסה) לפני שינוי החתימה.
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const currentUser = await requireSessionUser();
 
   /*
@@ -85,15 +93,50 @@ export default async function LeadsPage() {
     ? {}
     : { assigneeId: [currentUser.id] };
 
-  const [{ rows: leads }, allUsers, counts, leadCosts, allDeals, packages] =
-    await Promise.all([
-      db.leads.list(scope),
-      db.users.listActive(),
-      db.leads.countByStatus(scope),
-      db.settings.getLeadCosts(),
-      db.deals.list(),
-      db.packages.list(),
-    ]);
+  /*
+   * ── חתך התקופה ────────────────────────────────────────────────────
+   *
+   * ⚠️ מוחל על `scoped` שעובר גם ל-`list` וגם ל-`countByStatus`, ולכן
+   * הריבועים והטבלה חתוכים זהה. ראה lib/domain/period.ts
+   */
+  const period = periodFromParams(await searchParams);
+  const scoped: LeadFilter = {
+    ...scope,
+    ...(period.from ? { createdFrom: period.from } : {}),
+    ...(period.to ? { createdTo: period.to } : {}),
+  };
+
+  const [
+    { rows: leads },
+    allUsers,
+    counts,
+    openInRange,
+    openAllTime,
+    leadCosts,
+    allDeals,
+    packages,
+  ] = await Promise.all([
+    db.leads.list(scoped),
+    db.users.listActive(),
+    db.leads.countByStatus(scoped),
+
+    /*
+     * ⚠️⚠️ שתי ספירות של לידים **פתוחים** — בתוך הטווח ומחוץ לזמן.
+     * ההפרש ביניהן הוא כמה עבודה פתוחה החתך מסתיר, וזו האזהרה
+     * היחידה שמונעת מברירת המחדל החודשית לבלוע לידים ב-1 בחודש.
+     * ראה PeriodPicker › openOutsideRange.
+     */
+    db.leads.countByStatus({ ...scoped, openOnly: true }),
+    db.leads.countByStatus({ ...scope, openOnly: true }),
+
+    db.settings.getLeadCosts(),
+    db.deals.list(),
+    db.packages.list(),
+  ]);
+
+  const sum = (c: Record<string, number>) =>
+    Object.values(c).reduce((a, b) => a + b, 0);
+  const openOutsideRange = Math.max(0, sum(openAllTime) - sum(openInRange));
 
   /*
    * ⚠️ המסך שולח יותר מהלידים עצמם, וגם הנלווה חייב להיחתך.
@@ -141,6 +184,9 @@ export default async function LeadsPage() {
       currentUserId={currentUser.id}
       canSeeAll={canSeeAllLeads(currentUser.role)}
       canEditCosts={canManageSettings(currentUser.role)}
+      periodPicker={
+        <PeriodPicker period={period} openOutsideRange={openOutsideRange} />
+      }
     />
   );
 }

@@ -62,6 +62,16 @@ function buildWhere(filter: LeadFilter): Prisma.LeadWhereInput {
   // ללא `mode: "insensitive"` — התאמה מדויקת, ראה LeadFilter.sourceDetail
   if (filter.sourceDetail) and.push({ sourceDetail: filter.sourceDetail });
 
+  // `lt` ולא `lte` על הגבול העליון — הוא בלעדי, ראה LeadFilter.createdTo
+  if (filter.createdFrom || filter.createdTo) {
+    and.push({
+      createdAt: {
+        ...(filter.createdFrom ? { gte: new Date(filter.createdFrom) } : {}),
+        ...(filter.createdTo ? { lt: new Date(filter.createdTo) } : {}),
+      },
+    });
+  }
+
   if (filter.query?.trim()) {
     const q = filter.query.trim();
     // `mode: "insensitive"` נחוץ: ב-Postgres `contains` הוא LIKE רגיש
