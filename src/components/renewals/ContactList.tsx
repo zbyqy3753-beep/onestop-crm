@@ -6,6 +6,13 @@ import { Icon } from "@/components/ui/Icon";
 import { phone as formatPhone, relative, until } from "@/lib/format";
 import { useNow } from "@/components/ui/primitives";
 import {
+  WA_RATE_EFFECTIVE,
+  WA_RATE_USD,
+  bulkCostUsd,
+  formatIls,
+  formatUsd,
+} from "@/lib/domain/whatsappCost";
+import {
   approveContactsAction,
   deleteContactAction,
   previewMessageAction,
@@ -71,6 +78,21 @@ export function ContactList({ rows }: { rows: RenewalContactRow[] }) {
 
   const pendingRows = rows.filter((r) => r.status === "pending");
 
+  /*
+   * ⚠️⚠️ **מה שהשליחה הזו תעלה, לפני שהיא יוצאת.**
+   *
+   * הודעת פתיחה לחידוש היא MARKETING — הקטגוריה היקרה ביותר אצל מטא,
+   * ופי 6.7 מתזכורת פנימית. אישור של 500 לקוחות בלחיצה אחת הוא ההוצאה
+   * הגדולה היחידה שהמערכת מסוגלת לייצר, והוא נראה בדיוק כמו אישור של
+   * חמישה. המספר כאן הוא מה שהופך את ההבדל לגלוי ברגע הנכון.
+   *
+   * מחושב בקליינט ולא בשרת: המחירון קבוע, והמספר חייב להתעדכן תוך
+   * כדי סימון תיבות. הלוך-חזור לשרת על כל קליק היה הופך אותו לאיטי
+   * מספיק כדי שיתעלמו ממנו.
+   */
+  const selectedCost = bulkCostUsd("marketing", selected.size);
+  const allPendingCost = bulkCostUsd("marketing", pendingRows.length);
+
   const toggle = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -122,11 +144,30 @@ export function ContactList({ rows }: { rows: RenewalContactRow[] }) {
               disabled={pending || selected.size === 0}
               onClick={send}
             >
+              {/*
+                ⚠️ המחיר על הכפתור עצמו ולא רק בשורה שמעליו. זה הדבר
+                האחרון שנקרא לפני הלחיצה, וזו הנקודה שבה "שלח ל-500"
+                הופך ל"שלח ל-500 · $17.65".
+              */}
               שלח ל-{selected.size} לקוחות
+              {selected.size > 0 && (
+                <span className="nums ms-1.5 font-normal opacity-80">
+                  · {formatUsd(selectedCost)}
+                </span>
+              )}
             </Button>
           </div>
         )}
       </header>
+
+      {pendingRows.length > 0 && (
+        <CostBar
+          selectedCount={selected.size}
+          selectedCost={selectedCost}
+          pendingCount={pendingRows.length}
+          allPendingCost={allPendingCost}
+        />
+      )}
 
       {/*
         ⚠️ האזהרה נשארת גם כשאין מה לשלוח. היא לא הוראת הפעלה אלא
@@ -188,6 +229,66 @@ export function ContactList({ rows }: { rows: RenewalContactRow[] }) {
         ))}
       </ul>
     </section>
+  );
+}
+
+/**
+ * רצועת העלות מעל הרשימה.
+ *
+ * ⚠️ מציגה **שני** מספרים ולא אחד: מה שנבחר עכשיו, ולצידו מה שיעלה
+ * לשלוח לכולם. בלי השני, "בחר הכל" הוא קפיצה לחושך — רואים את המחיר
+ * רק אחרי שכבר סימנו 500 שורות.
+ */
+function CostBar({
+  selectedCount,
+  selectedCost,
+  pendingCount,
+  allPendingCost,
+}: {
+  selectedCount: number;
+  selectedCost: number;
+  pendingCount: number;
+  allPendingCost: number;
+}) {
+  const none = selectedCount === 0;
+
+  return (
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 rounded-card border border-line bg-surface-2 px-3 py-2">
+      <div>
+        <p className="text-xs text-ink-4">
+          {none ? "לא נבחר אף לקוח" : `עלות ${selectedCount} ההודעות שנבחרו`}
+        </p>
+        <p
+          className={`nums text-lg font-bold leading-tight ${
+            none ? "text-ink-3" : "text-ink-1"
+          }`}
+        >
+          {formatUsd(selectedCost)}
+          <span className="ms-1.5 text-xs font-normal text-ink-4">
+            {formatIls(selectedCost)}
+          </span>
+        </p>
+      </div>
+
+      <div className="text-end">
+        <p className="text-xs text-ink-4">
+          שליחה לכל {pendingCount} הממתינים
+        </p>
+        <p className="nums text-sm font-medium text-ink-2">
+          {formatUsd(allPendingCost)}
+          <span className="ms-1.5 text-xs font-normal text-ink-4">
+            {formatIls(allPendingCost)}
+          </span>
+        </p>
+      </div>
+
+      <p className="w-full text-[11px] leading-relaxed text-ink-4">
+        הודעת פתיחה היא <b>שיווק</b> — {formatUsd(WA_RATE_USD.marketing)}{" "}
+        להודעה, הקטגוריה היקרה אצל מטא. כל תשובה של הלקוח אחר כך פותחת
+        חלון 24 שעות שבו ההמשך חינם. מחירון ישראל, בתוקף מ-
+        {WA_RATE_EFFECTIVE}.
+      </p>
+    </div>
   );
 }
 

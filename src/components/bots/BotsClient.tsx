@@ -5,6 +5,11 @@ import { Badge, Button, Field, inputClass, useNow } from "@/components/ui/primit
 import { Icon } from "@/components/ui/Icon";
 import { phone as formatPhone, relative, until } from "@/lib/format";
 import { ROLE_CONFIG } from "@/lib/domain/types";
+import {
+  WA_RATE_EFFECTIVE,
+  formatIls,
+  formatUsd,
+} from "@/lib/domain/whatsappCost";
 import type {
   BotOverview,
   MessageRow,
@@ -45,8 +50,17 @@ function when(iso: string, now: number): string {
 }
 
 export function BotsClient({ overview }: { overview: BotOverview }) {
-  const { settings, health, counts, queue, upcoming, recent, failures, recipients } =
-    overview;
+  const {
+    settings,
+    health,
+    counts,
+    spend,
+    queue,
+    upcoming,
+    recent,
+    failures,
+    recipients,
+  } = overview;
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("queue");
@@ -73,6 +87,8 @@ export function BotsClient({ overview }: { overview: BotOverview }) {
       <HealthPanel health={health} paused={settings.paused} />
 
       <Counters counts={counts} />
+
+      <SpendPanel spend={spend} />
 
       <PauseBar
         settings={settings}
@@ -290,6 +306,102 @@ function Counters({ counts }: { counts: BotOverview["counts"] }) {
           <p className="mt-1 text-[11px] leading-tight text-ink-4">{t.label}</p>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ── הוצאה ────────────────────────────────────────────────────────────── */
+
+/**
+ * כמה כסף הבוט הוציא.
+ *
+ * ⚠️ יושב מתחת למונים ולא בלשונית נפרדת **בכוונה**: הוצאה שצריך
+ * לחפש אותה היא הוצאה שלא רואים. השאלה "כמה זה עולה לי" נשאלת בדיוק
+ * כשפותחים את המסך הזה, ולא אחרי שלוש קליקים.
+ *
+ * ⚠️ הפירוק לשיווק/תועלת/שירות אינו קישוט. הפער בין השורות הוא כל
+ * הסיפור — שיווק יקר פי 6.7 מתועלת, ושירות חינם. בלי הפירוק, מספר
+ * אחד שקופץ נראה כמו תקלה במקום כמו קמפיין שיצא.
+ */
+function SpendPanel({ spend }: { spend: BotOverview["spend"] }) {
+  const { month, today, queued } = spend;
+
+  return (
+    <div className="mb-3 rounded-card border border-line bg-surface p-3">
+      <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <p className="flex items-center gap-1.5 text-sm font-bold text-ink-1">
+          <Icon name="whatsapp" size={16} />
+          עלות הודעות
+        </p>
+        <p className="text-[11px] text-ink-4">
+          מחירון מטא לישראל, בתוקף מ-{WA_RATE_EFFECTIVE} · חיוב בדולר
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <SpendTile
+          label="החודש"
+          window={month}
+          tone={month.usd > 0 ? "ink" : "muted"}
+        />
+        <SpendTile label="היום" window={today} tone="muted" />
+        {/*
+          התור הוא הוצאה שכבר הוחלטה וטרם ירדה. הוא מוצג רק כשיש בו
+          כסף — אריח "0" קבוע היה הופך את המסך לרועש בלי להוסיף מידע.
+        */}
+        {queued.usd > 0 ? (
+          <SpendTile label="ממתין בתור" window={queued} tone="warn" />
+        ) : (
+          <SpendTile label="ממתין בתור" window={queued} tone="muted" />
+        )}
+      </div>
+
+      {/*
+        ⚠️ ההערה הזו היא התשובה לשאלה הראשונה שתישאל על המספר הזה:
+        "אבל שלחנו מאות הודעות, למה זה אפס?". בלעדיה המסך נראה שבור.
+      */}
+      <p className="mt-2 text-[11px] leading-relaxed text-ink-4">
+        נספרות רק הודעות שיצאו דרך ה-API של מטא. מה שיצא דרך הבוט
+        שבמשרד הוא וואטסאפ רגיל ולא עולה כלום.
+      </p>
+    </div>
+  );
+}
+
+function SpendTile({
+  label,
+  window: w,
+  tone,
+}: {
+  label: string;
+  window: BotOverview["spend"]["month"];
+  tone: "ink" | "muted" | "warn";
+}) {
+  const parts: string[] = [];
+  if (w.marketing) parts.push(`${w.marketing} שיווק`);
+  if (w.utility) parts.push(`${w.utility} תועלת`);
+  if (w.service) parts.push(`${w.service} חינם`);
+
+  return (
+    <div className="rounded-card border border-line bg-surface-2 px-3 py-2">
+      <p className="text-[11px] text-ink-4">{label}</p>
+      <p
+        className={`nums mt-0.5 text-lg font-bold leading-none ${
+          tone === "warn"
+            ? "text-warn"
+            : tone === "muted"
+              ? "text-ink-2"
+              : "text-ink-1"
+        }`}
+      >
+        {formatUsd(w.usd)}
+        <span className="ms-1.5 text-xs font-normal text-ink-4">
+          {formatIls(w.usd)}
+        </span>
+      </p>
+      <p className="mt-1 text-[11px] leading-tight text-ink-4">
+        {parts.join(" · ") || "אין הודעות"}
+      </p>
     </div>
   );
 }

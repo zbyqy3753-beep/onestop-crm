@@ -1,9 +1,11 @@
 import "server-only";
 
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/server/db/client";
 import { isIsraeliPhone } from "@/lib/format";
-import { startOfDay } from "@/lib/tz";
+import { startOfDay, startOfMonth } from "@/lib/tz";
 import { STATUS_CONFIG } from "@/lib/domain/types";
+import { bulkCostUsd } from "@/lib/domain/whatsappCost";
 import { readSettings, type BotSettingsView } from "./settings";
 import { plannedSendAt } from "./outbox";
 
@@ -56,6 +58,22 @@ export interface UpcomingRow {
   blockedReason: string | null;
 }
 
+/**
+ * מה שמטא חייבו אותנו בפועל בחלון זמן.
+ *
+ * ⚠️ לא אומדן ולא תחזית — ספירה של הודעות שיצאו, מוכפלת במחירון.
+ * הפער היחיד מול החיוב האמיתי הוא הודעה שיצאה ולא נמסרה: מטא מחייבים
+ * על מסירה, ואנחנו סופרים שליחה. הפער הזה קטן ותמיד לרעתנו (כלומר
+ * המספר כאן לכל היותר מעט גבוה מדי), וזה הכיוון הבטוח לטעות בו.
+ */
+export interface SpendWindow {
+  marketing: number;
+  utility: number;
+  service: number;
+  /** סה"כ בדולר. */
+  usd: number;
+}
+
 export interface BotOverview {
   settings: BotSettingsView;
   health: {
@@ -72,6 +90,12 @@ export interface BotOverview {
     failedToday: number;
     cancelledToday: number;
     sentWeek: number;
+  };
+  spend: {
+    month: SpendWindow;
+    today: SpendWindow;
+    /** כמה יעלה מה שממתין בתור כרגע — הוצאה שכבר הוחלטה וטרם יצאה. */
+    queued: SpendWindow;
   };
   queue: MessageRow[];
   upcoming: UpcomingRow[];
@@ -142,11 +166,51 @@ function blockedReasonFor(lead: {
   return null;
 }
 
+/**
+ * פירוק ההוצאה של קבוצת שורות לפי קטגוריה.
+ *
+ * ⚠️⚠️ הקורא **חייב** להעביר `providerMessageId: { not: null }` כשהוא
+ * שואל על כסף שכבר יצא. השדה הזה קיים רק בשורות שיצאו דרך Cloud API;
+ * מה שיצא דרך הבוט במשרד הוא וואטסאפ רגיל ולא עלה כלום. בלי הסינון
+ * הזה כל היסטוריית הבוט הייתה נספרת כהוצאה שמעולם לא הייתה.
+ *
+ * ⚠️ שלוש שאילתות ולא `groupBy`: אין עמודת קטגוריה בסכימה, והחלוקה
+ * נגזרת מתחילית `dedupeKey` (ראה `costCategoryOf`). `groupBy` על
+ * `dedupeKey` היה מחזיר שורה נפרדת לכל הודעה ומצריך צבירה בקוד.
+ */
+async function spendFor(
+  where: Prisma.WhatsAppMessageWhereInput,
+): Promise<SpendWindow> {
+  const [marketing, utility, total] = await Promise.all([
+    prisma.whatsAppMessage.count({
+      where: { ...where, dedupeKey: { startsWith: "renewal:opener:" } },
+    }),
+    prisma.whatsAppMessage.count({
+      where: { ...where, dedupeKey: { startsWith: "followup:" } },
+    }),
+    prisma.whatsAppMessage.count({ where }),
+  ]);
+
+  return {
+    marketing,
+    utility,
+    // בשארית: תשובות בתוך חלון 24 השעות. נספרות ומוצגות דווקא **כי**
+    // הן חינם — אחרת "0 ₪" נראה כמו תקלה במקום כמו חיסכון.
+    service: Math.max(0, total - marketing - utility),
+    usd:
+      bulkCostUsd("marketing", marketing) + bulkCostUsd("utility", utility),
+  };
+}
+
 export async function botOverview(): Promise<BotOverview> {
   const dayStart = new Date(startOfDay(Date.now()));
   const weekStart = new Date(startOfDay(Date.now()) - 6 * 86_400_000);
+  const monthStart = new Date(startOfMonth(Date.now()));
 
   const [
+    spendMonth,
+    spendToday,
+    spendQueued,
     settings,
     health,
     queued,
@@ -161,6 +225,22 @@ export async function botOverview(): Promise<BotOverview> {
     withFollowUp,
     users,
   ] = await Promise.all([
+    // ⚠️ `providerMessageId` מפריד בין מה שיצא ב-Cloud API (בתשלום)
+    // לבין מה שיצא דרך הבוט במשרד (חינם). ראה `spendFor`.
+    spendFor({
+      status: "sent",
+      sentAt: { gte: monthStart },
+      providerMessageId: { not: null },
+    }),
+    spendFor({
+      status: "sent",
+      sentAt: { gte: dayStart },
+      providerMessageId: { not: null },
+    }),
+    // התור עדיין לא יצא ולכן אין לו `providerMessageId` — כאן דווקא
+    // רוצים את מה שעומד לקרות, לא את מה שכבר קרה
+    spendFor({ status: { in: ["queued", "sending"] } }),
+
     readSettings(),
     prisma.botHeartbeat.findUnique({ where: { id: "default" } }),
 
@@ -272,6 +352,7 @@ export async function botOverview(): Promise<BotOverview> {
       cancelledToday,
       sentWeek,
     },
+    spend: { month: spendMonth, today: spendToday, queued: spendQueued },
     queue: queue.map(toRow),
     upcoming,
     recent: recent.map(toRow),
