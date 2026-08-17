@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { Lead, LeadStatus, User } from "@/lib/domain/types";
+import type { Lead, LeadStatus, UserRef } from "@/lib/domain/types";
 import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
 import { Button, EmptyState, inputClass, useNow } from "@/components/ui/primitives";
@@ -37,7 +37,7 @@ export function LeadCardList({
   onSelectingChange,
 }: {
   leads: Lead[];
-  users: User[];
+  users: UserRef[];
   selected: Set<string>;
   onSelectedChange: (s: Set<string>) => void;
   /** הלידים שיש להם כתיבה בטיסה — רק הכרטיסים שלהם ננעלים, לא כל הרשימה */

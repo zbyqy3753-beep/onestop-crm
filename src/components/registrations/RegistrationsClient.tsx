@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState, useTransition } from "react";
-import type { Registration, RegistrationStatus, User } from "@/lib/domain/types";
+import type { Registration, RegistrationStatus, UserRef } from "@/lib/domain/types";
 import { REGISTRATION_STATUS_CONFIG, REGISTRATION_STATUS_ORDER } from "@/lib/domain/types";
 import { updateRegistrationStatusAction } from "@/app/(app)/registrations/actions";
 import { Button, ToastStack, type Toast } from "@/components/ui/primitives";
@@ -24,7 +24,7 @@ export function RegistrationsClient({
 }: {
   registrations: Registration[];
   /** לא בשימוש כרגע — נשמר בחתימה כי מסך זה עשוי להזדקק לה בעתיד (למשל תצוגת "טופל ע״י"). */
-  users: User[];
+  users: UserRef[];
   currentUserId: string;
 }) {
   const [statusFilter, setStatusFilter] = useState<RegistrationStatus[]>([]);

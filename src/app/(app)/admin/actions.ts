@@ -14,6 +14,19 @@ export type ActionResult<T = undefined> =
   | { ok: false; error: string };
 
 /**
+ * אורך סיסמה מזערי — ביצירה ובעריכה כאחד.
+ *
+ * ⚠️ קבוע אחד ולא שני מספרים קשיחים: הסף עמד על 6 בשני המקומות
+ * בנפרד, וזה בדיוק סוג הכפילות שנסחפת. שישה תווים היו סף נמוך מדי
+ * לכל חשבון, ובכלל זה חשבון מנהל ראשי.
+ *
+ * הועלה ל-10 ולא גבוה מזה: הסיסמאות מוקלדות בטלפון, ומדיניות שקשה
+ * מדי לעמוד בה מייצרת פתקים על המסך.
+ */
+const MIN_PASSWORD_LENGTH = 10;
+const PASSWORD_TOO_SHORT = `סיסמה חייבת להכיל לפחות ${MIN_PASSWORD_LENGTH} תווים`;
+
+/**
  * יצירת משתמש חדש: גם רשומת User אצלנו, גם חשבון Supabase Auth
  * (כדי שיוכל להתחבר מייד עם המייל/סיסמה שהוזנו כאן).
  *
@@ -71,8 +84,8 @@ export async function createUserAction(
   if (role === "supplier" && !leadSourceName) {
     return { ok: false, error: "לספק לידים חובה להגדיר שם מקור" };
   }
-  if (password.length < 6)
-    return { ok: false, error: "סיסמה חייבת להכיל לפחות 6 תווים" };
+  if (password.length < MIN_PASSWORD_LENGTH)
+    return { ok: false, error: PASSWORD_TOO_SHORT };
 
   const existing = await db.users.getByEmail(email);
   if (existing) return { ok: false, error: "כבר קיים משתמש עם האימייל הזה" };
@@ -158,8 +171,8 @@ export async function updateUserAction(
   const email = toLoginEmail(rawLoginId);
 
   // שדה ריק = "אל תשנה את הסיסמה", ולכן הבדיקה חלה רק כשהוזן משהו
-  if (password && password.length < 6) {
-    return { ok: false, error: "סיסמה חייבת להכיל לפחות 6 תווים" };
+  if (password && password.length < MIN_PASSWORD_LENGTH) {
+    return { ok: false, error: PASSWORD_TOO_SHORT };
   }
 
   const emailChanged = email.toLowerCase() !== target.email.toLowerCase();

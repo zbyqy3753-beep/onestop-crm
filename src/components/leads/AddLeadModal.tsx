@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { User } from "@/lib/domain/types";
+import type { UserRef } from "@/lib/domain/types";
 import { createLeadAction } from "@/app/(app)/leads/actions";
 import { Button, Modal } from "@/components/ui/primitives";
 import { LeadFields } from "./LeadFields";
@@ -13,7 +13,7 @@ export function AddLeadModal({
   onNotify,
 }: {
   open: boolean;
-  users: User[];
+  users: UserRef[];
   onClose: () => void;
   onNotify: (message: string, tone?: "good" | "bad") => void;
 }) {

@@ -16,7 +16,7 @@ import type {
   LeadCostTable,
   LeadStatus,
   Package,
-  User,
+  UserRef,
 } from "@/lib/domain/types";
 import {
   PRIORITY_CONFIG,
@@ -102,9 +102,10 @@ export function LeadsClient({
   packages,
   currentUserId,
   canSeeAll,
+  canEditCosts,
 }: {
   leads: Lead[];
-  users: User[];
+  users: UserRef[];
   counts: Record<LeadStatus, number>;
   leadCosts: LeadCostTable;
   deals: Deal[];
@@ -118,6 +119,14 @@ export function LeadsClient({
    * להסתרת פקדים שאין להם משמעות בחתך אישי.
    */
   canSeeAll: boolean;
+  /**
+   * האם המשתמש רשאי לערוך את עלויות רכישת הלידים.
+   *
+   * ⚠️ נוחות תצוגה בלבד, בדיוק כמו `canSeeAll`. מה שבאמת חוסם הוא
+   * `canManageSettings` בתוך `saveLeadCostsAction` — Server Action היא
+   * נקודת קצה HTTP, והסתרת הכפתור לא מונעת קריאה ישירה אליה.
+   */
+  canEditCosts: boolean;
 }) {
   // המסך נפתח על הלידים החדשים בלבד — ראה `INITIAL_FILTERS`
   const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
@@ -807,7 +816,7 @@ export function LeadsClient({
           <LeadsFinancePanel
             cost={finance.cost}
             commission={finance.commission}
-            onEditCosts={() => setCostsOpen(true)}
+            onEditCosts={canEditCosts ? () => setCostsOpen(true) : undefined}
           />
           <LeadsPerformancePanel rows={performance} userById={userById} />
         </div>
@@ -1047,7 +1056,7 @@ export function LeadsClient({
       {/* ה-key מרענן את הטיוטה כשהעלויות משתנות מבחוץ */}
       <LeadCostsModal
         key={`costs:${JSON.stringify(leadCosts)}`}
-        open={costsOpen}
+        open={costsOpen && canEditCosts}
         costs={leadCosts}
         onClose={() => setCostsOpen(false)}
         onNotify={notify}

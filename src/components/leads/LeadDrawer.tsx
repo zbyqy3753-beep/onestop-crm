@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import type { Lead, LeadStatus, User } from "@/lib/domain/types";
+import type { Lead, LeadStatus, UserRef } from "@/lib/domain/types";
 import {
   KIND_CONFIG,
   LEAD_CATEGORY_CONFIG,
@@ -44,8 +44,8 @@ export function LeadDrawer({
   canSeeAll,
 }: {
   lead: Lead | null;
-  users: User[];
-  userById: Map<string, User>;
+  users: UserRef[];
+  userById: Map<string, UserRef>;
   onClose: () => void;
   onStatus: (to: LeadStatus) => void;
   onAssign: (assigneeId: string | null) => void;

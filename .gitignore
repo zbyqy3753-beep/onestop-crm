@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ⚠️ התבנית עצמה כן נכנסת: היא מכילה placeholders בלבד, וזה הקובץ
+# היחיד שמסביר איזה משתנים המערכת צריכה. `.env*` בלע גם אותו.
+!.env.example
 
 # vercel
 .vercel
@@ -51,4 +54,19 @@ next-env.d.ts
 
 # נכסים שנוצרים לדף החנות (נגזרים מ-public/icons)
 /build-assets
+
+# ⚠️ קבצי עבודה שיושבים בשורש ואסור שייכנסו למאגר.
+#
+# `mobisale-employees.*` הם רשימת עובדים אמיתית — שם, טלפון, תפקיד.
+# הם היו untracked אך **לא** מוגנים, כלומר `git add .` אחד היה מפרסם
+# אותם ל-remote לצמיתות; מחיקה מאוחרת אינה מוחקת מההיסטוריה.
+# תבנית ולא שמות מפורשים: כבר צצו כמה גרסאות (`-employees`, `-workers-crm`),
+# ורשימה מפורשת מפספסת את הייצוא הבא שמישהו ישמור כאן.
+/mobisale-*.csv
+/mobisale-*.xlsx
+
+# טיוטות וסקריפטים חד-פעמיים
+/tmp-*.ts
+/work-edit.html
+/work-edit.png
 

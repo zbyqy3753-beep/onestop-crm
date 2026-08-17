@@ -2,7 +2,12 @@ import { LeadsClient } from "@/components/leads/LeadsClient";
 import { SupplierLeadsList } from "@/components/leads/SupplierLeadsList";
 import { db } from "@/server/repositories";
 import { requireSessionUser } from "@/server/auth/session";
-import { canSeeAllLeads, isSupplier } from "@/lib/domain/permissions";
+import {
+  canManageSettings,
+  canSeeAllLeads,
+  isSupplier,
+} from "@/lib/domain/permissions";
+import type { UserRef } from "@/lib/domain/types";
 import type { LeadFilter } from "@/server/repositories";
 
 /**
@@ -80,7 +85,7 @@ export default async function LeadsPage() {
     ? {}
     : { assigneeId: [currentUser.id] };
 
-  const [{ rows: leads }, users, counts, leadCosts, deals, packages] =
+  const [{ rows: leads }, allUsers, counts, leadCosts, allDeals, packages] =
     await Promise.all([
       db.leads.list(scope),
       db.users.listActive(),
@@ -89,6 +94,41 @@ export default async function LeadsPage() {
       db.deals.list(),
       db.packages.list(),
     ]);
+
+  /*
+   * ⚠️ המסך שולח יותר מהלידים עצמם, וגם הנלווה חייב להיחתך.
+   *
+   * `users` — הרכיבים למטה קוראים מהמשתמש רק `id`, `name` ו-`role`
+   * (מפת המשויכים, בורר השיוך, תווית התפקיד בפאנל הביצועים). המייל,
+   * הטלפון והחנות של כל עובד בארגון נסעו לדפדפן בלי שאיש יקרא אותם.
+   */
+  const users = allUsers.map(({ id, name, role }): UserRef => ({
+    id,
+    name,
+    role,
+  }));
+
+  /*
+   * `deals` — רק עסקאות של הלידים שנשלחים למסך.
+   *
+   * ⚠️ הלקוח כבר מצמצם לזה בעצמו (`dealsForLeads` ב-`LeadsClient`),
+   * אבל צמצום בלקוח משאיר את **כל** עסקאות הארגון ב-payload — הכנסה,
+   * עמלה ומזהה סוכן לכל עסקה — אצל כל עובד שפותח את מסך הלידים.
+   * `canSeeAll` הסתיר את פאנל הפיננסים, לא את הנתונים שמאחוריו. זו
+   * בדיוק הטעות שההערה בראש הקובץ מזהירה ממנה לגבי הלידים עצמם.
+   *
+   * מוחל תמיד ולא רק כשאין הרשאה: למנהל `leads` הוא ממילא כל הטבלה,
+   * כך שזה כמעט no-op, ומסלול קוד אחד שווה יותר משניים.
+   */
+  const leadIds = new Set(leads.map((l) => l.id));
+  const deals = allDeals.filter((d) => leadIds.has(d.leadId));
+
+  /*
+   * `leadCosts` נשאר במלואו, וזו החלטה ולא השמטה: אלה שישה מספרי
+   * תצורה ברמת קטגוריה, לא נתונים של אף אדם, והתצוגה שלהם ממילא
+   * מגודרת ב-`canSeeAll`. הסרתם הייתה שאלה של מוצר — מה מסך הלידים
+   * מציג לעובד — ולא של אבטחה.
+   */
 
   return (
     <LeadsClient
@@ -100,6 +140,7 @@ export default async function LeadsPage() {
       packages={packages}
       currentUserId={currentUser.id}
       canSeeAll={canSeeAllLeads(currentUser.role)}
+      canEditCosts={canManageSettings(currentUser.role)}
     />
   );
 }

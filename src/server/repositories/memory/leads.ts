@@ -30,6 +30,9 @@ function matches(lead: Lead, f: LeadFilter): boolean {
   )
     return false;
 
+  // ללא `?.length`, זהה למימוש Prisma — ראה LeadFilter.id
+  if (f.id && !f.id.includes(lead.id)) return false;
+
   if (f.assigneeId?.length) {
     const key = lead.assigneeId ?? null;
     if (!f.assigneeId.includes(key)) return false;

@@ -2,11 +2,12 @@ import "server-only";
 
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { db } from "@/server/repositories";
 import type { SessionRecord } from "@/server/repositories";
 import type { User } from "@/lib/domain/types";
-import { isSupplier } from "@/lib/domain/permissions";
+import type { RestrictedRoute } from "@/lib/domain/permissions";
+import { canAccessRoute, isSupplier } from "@/lib/domain/permissions";
 import {
   SESSION_COOKIE,
   SESSION_COOKIE_OPTIONS,
@@ -176,6 +177,49 @@ export async function requireStaffUser(): Promise<User> {
   const user = await requireSessionUser();
   if (isSupplier(user.role)) redirect("/leads");
   return user;
+}
+
+/**
+ * שער המסך המוגבל — התפקיד חייב להופיע ב-`ROUTE_ROLES` של הנתיב.
+ *
+ * ⚠️ **קרא לזה לפני כל שליפה**, לא בתוך ה-`Promise.all` ולא אחריו.
+ * `notFound` זורק, אבל שאילתה שכבר יצאה כבר רצה — אותו כלל בדיוק
+ * כמו ב-`requireStaffUser`.
+ *
+ * `notFound()` ולא `redirect()`: מי שאין לו הרשאה לא צריך ללמוד
+ * שהמסך קיים. עבור ספק ההתנהגות שונה במכוון — `requireStaffUser`
+ * שבפנים מפנה אותו ל-`/leads`, כי לו יש יעד לגיטימי אחד ו-404 בפניו
+ * היה נראה כמו תקלה במערכת ולא כמו גבול.
+ *
+ * ⚠️ אין דרך לאכוף את זה במקום אחד מרכזי במקום בכל מסך: `proxy.ts`
+ * רץ ב-Edge ולא יכול לגעת במסד כדי לדעת מהו התפקיד, ו-layout ב-App
+ * Router לא מקבל את הנתיב הנוכחי. לכן — קריאה מפורשת בראש כל מסך
+ * שמופיע ב-`ROUTE_ROLES`.
+ */
+export async function requireRouteAccess(
+  route: RestrictedRoute,
+): Promise<User> {
+  const user = await requireStaffUser();
+  if (!canAccessRoute(user.role, route)) notFound();
+  return user;
+}
+
+/**
+ * אותה בדיקה, בשביל Server Action — מחזירה `null` במקום לזרוק.
+ *
+ * ⚠️ Server Action היא נקודת קצה HTTP לכל דבר; שומר על המסך אינו
+ * שומר עליה. פעולה שגלויה רק בתוך מסך מוגבל חייבת לבדוק בעצמה, ולא
+ * להסתמך על כך שמי שהגיע אליה ראה את המסך.
+ *
+ * `null` ולא חריגה, כדי שהקורא יוכל להחזיר `ActionResult` עם הודעה
+ * בעברית במקום מסך שגיאה.
+ */
+export async function actorForRoute(
+  route: RestrictedRoute,
+): Promise<User | null> {
+  const user = await getSessionUser();
+  if (!user) return null;
+  return canAccessRoute(user.role, route) ? user : null;
 }
 
 /**

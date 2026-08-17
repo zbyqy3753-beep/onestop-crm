@@ -1,8 +1,7 @@
-import { notFound } from "next/navigation";
 import { AdminClient } from "@/components/admin/AdminClient";
 import { db } from "@/server/repositories";
 import { prisma } from "@/server/db/client";
-import { requireStaffUser } from "@/server/auth/session";
+import { requireRouteAccess } from "@/server/auth/session";
 import { readSettings } from "@/server/whatsapp/settings";
 
 /**
@@ -13,13 +12,11 @@ import { readSettings } from "@/server/whatsapp/settings";
  * שכל מי שהגיע לכתובת ראה את הרשימה. הסתרת הפריט מהתפריט ב-`nav.ts`
  * היא הסתרה, לא הרשאה: הנתיב עצמו היה נגיש בהקלדה ישירה.
  *
- * `notFound()` ולא הפניה — מי שאין לו הרשאה לא צריך ללמוד שהמסך קיים.
+ * ההרשאה מוגדרת ב-`ROUTE_ROLES` ולא בקבוע מקומי, כדי שהתפריט והמסך
+ * לא יוכלו להסכים על דברים שונים — ראה `lib/domain/permissions.ts`.
  */
-const ALLOWED = ["owner", "manager"] as const;
-
 export default async function AdminPage() {
-  const actor = await requireStaffUser();
-  if (!ALLOWED.includes(actor.role as (typeof ALLOWED)[number])) notFound();
+  const actor = await requireRouteAccess("/admin");
 
   // ⚠️ רק מה שהרצועה צריכה. הפירוט המלא — תור, היסטוריה, נמענים —
   // חי ב-`/bots`, ושליפתו כאן הייתה עולה בכל טעינה של מסך המשתמשים

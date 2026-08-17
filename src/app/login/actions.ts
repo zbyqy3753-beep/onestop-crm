@@ -10,6 +10,11 @@ import {
   startSession,
   verifyCredentials,
 } from "@/server/auth/session";
+import {
+  clearFailures,
+  isLockedOut,
+  recordFailure,
+} from "@/server/auth/lockout";
 
 /*
  * ⚠️ כאן ישבה `startTestSession` — כפתור "כניסת בדיקה" שכתב עוגיית סשן
@@ -33,10 +38,25 @@ export async function signIn(_prev: string | null, formData: FormData) {
   // אותה המרה בדיוק רצה ביצירת המשתמש — ראה lib/loginId.ts
   const email = toLoginEmail(raw);
 
+  /*
+   * ⚠️ הנעילה נבדקת **לפני** אימות הסיסמה, לא אחריו: המטרה היא למנוע
+   * את הניחוש עצמו, לא רק להתעלם מתוצאתו. ראה server/auth/lockout.ts
+   */
+  if (await isLockedOut(email)) {
+    return "יותר מדי ניסיונות התחברות. נסה שוב בעוד רבע שעה.";
+  }
+
   const user = await verifyCredentials(email, password);
   // הודעה אחת לשני המקרים (שם לא קיים / סיסמה שגויה): הפרדה ביניהם
   // מסגירה אילו חשבונות קיימים במערכת
-  if (!user) return "שם משתמש או סיסמה שגויים.";
+  if (!user) {
+    await recordFailure(email);
+    return "שם משתמש או סיסמה שגויים.";
+  }
+
+  // התחברות מוצלחת מנקה את המונה — אחרת עובד שטעה כמה פעמים בבוקר
+  // היה נגרר עם הספירה הזו לאורך היום
+  await clearFailures(email);
 
   // שורת סשן ב-DB + טוקן אקראי בעוגייה. ראה server/auth/session.ts
   await startSession(user.id);

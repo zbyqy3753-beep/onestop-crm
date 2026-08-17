@@ -4,7 +4,7 @@ import type {
   Lead,
   LeadActivityType,
   StatusTone,
-  User,
+  UserRef,
 } from "@/lib/domain/types";
 import { ACTIVITY_CONFIG, STATUS_CONFIG } from "@/lib/domain/types";
 import { TONE_VAR, dateTime } from "@/lib/format";
@@ -27,7 +27,7 @@ export interface Entry {
   activityType?: LeadActivityType;
 }
 
-export function buildTimeline(lead: Lead, userById: Map<string, User>): Entry[] {
+export function buildTimeline(lead: Lead, userById: Map<string, UserRef>): Entry[] {
   const name = (id?: string) => (id ? userById.get(id)?.name : undefined);
 
   const entries: Entry[] = [
@@ -69,7 +69,7 @@ export function ActivityFeed({
   userById,
 }: {
   lead: Lead;
-  userById: Map<string, User>;
+  userById: Map<string, UserRef>;
 }) {
   const entries = buildTimeline(lead, userById);
 

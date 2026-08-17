@@ -45,6 +45,11 @@ function buildWhere(filter: LeadFilter): Prisma.LeadWhereInput {
   if (filter.provider?.length)
     and.push({ currentProvider: { in: filter.provider } });
 
+  // `filter.id` ולא `filter.id?.length`: מערך ריק חייב להחזיר אפס
+  // שורות. `?.length` היה מפיל את המסנן בשקט ומחזיר את כל המאגר —
+  // ראה LeadFilter.id
+  if (filter.id) and.push({ id: { in: filter.id } });
+
   if (filter.assigneeId?.length) {
     const ids = filter.assigneeId.filter((id): id is UserId => id !== null);
     const wantsUnassigned = filter.assigneeId.includes(null);

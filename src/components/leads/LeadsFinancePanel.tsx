@@ -16,7 +16,11 @@ export function LeadsFinancePanel({
 }: {
   cost: number;
   commission: number;
-  onEditCosts: () => void;
+  /**
+   * ⚠️ `undefined` = למשתמש אין הרשאה לערוך עלויות, והכפתור נעלם.
+   * הסתרה בלבד — האכיפה היא ב-`saveLeadCostsAction`.
+   */
+  onEditCosts?: () => void;
 }) {
   const profit = commission - cost;
 
@@ -24,9 +28,11 @@ export function LeadsFinancePanel({
     <section className="mb-4" aria-label="נתונים פיננסיים">
       <div className="mb-2 flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-ink-2">נתונים פיננסיים</h2>
-        <Button variant="ghost" onClick={onEditCosts}>
-          עדכון עלות לידים
-        </Button>
+        {onEditCosts && (
+          <Button variant="ghost" onClick={onEditCosts}>
+            עדכון עלות לידים
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">

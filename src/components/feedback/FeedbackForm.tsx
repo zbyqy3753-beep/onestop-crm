@@ -106,9 +106,12 @@ export function FeedbackForm() {
           />
         </Field>
 
-        <Field label="השם שלך" hint="לא חובה">
-          <input name="reporter" className={inputClass} placeholder="אנונימי" />
-        </Field>
+        {/*
+          ⚠️ אין כאן שדה "השם שלך", ואין להחזיר אותו. השם נלקח מהסשן
+          בצד השרת (`submitFeedback`), כי שדה זהות שהלקוח שולח אינו
+          זהות — אפשר היה לחתום בשם עובד אחר. שדה שהשרת מתעלם מערכו
+          גרוע משדה שאינו קיים.
+        */}
 
         <Button
           type="submit"

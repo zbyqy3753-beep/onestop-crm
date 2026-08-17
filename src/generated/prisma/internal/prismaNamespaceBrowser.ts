@@ -69,7 +69,8 @@ export const ModelName = {
   RenewalContact: 'RenewalContact',
   RenewalOptOut: 'RenewalOptOut',
   WhatsAppInbound: 'WhatsAppInbound',
-  BotSettings: 'BotSettings'
+  BotSettings: 'BotSettings',
+  LoginAttempt: 'LoginAttempt'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -375,6 +376,16 @@ export const BotSettingsScalarFieldEnum = {
 } as const
 
 export type BotSettingsScalarFieldEnum = (typeof BotSettingsScalarFieldEnum)[keyof typeof BotSettingsScalarFieldEnum]
+
+
+export const LoginAttemptScalarFieldEnum = {
+  loginId: 'loginId',
+  failures: 'failures',
+  lastFailedAt: 'lastFailedAt',
+  lockedUntil: 'lockedUntil'
+} as const
+
+export type LoginAttemptScalarFieldEnum = (typeof LoginAttemptScalarFieldEnum)[keyof typeof LoginAttemptScalarFieldEnum]
 
 
 export const SortOrder = {

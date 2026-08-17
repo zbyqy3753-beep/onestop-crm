@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { Lead, User } from "@/lib/domain/types";
+import type { Lead, UserRef } from "@/lib/domain/types";
 import { updateLeadAction } from "@/app/(app)/leads/actions";
 import { Button, Modal } from "@/components/ui/primitives";
 import { LeadFields } from "./LeadFields";
@@ -22,7 +22,7 @@ export function EditLeadModal({
 }: {
   open: boolean;
   lead: Lead | null;
-  users: User[];
+  users: UserRef[];
   onClose: () => void;
   onNotify: (message: string, tone?: "good" | "bad") => void;
 }) {

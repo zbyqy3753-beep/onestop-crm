@@ -1,4 +1,4 @@
-import type { Lead, LeadCostTable, User } from "@/lib/domain/types";
+import type { Lead, LeadCostTable, UserRef } from "@/lib/domain/types";
 import {
   KIND_CONFIG,
   LEAD_CATEGORY_CONFIG,
@@ -32,7 +32,7 @@ interface CsvColumn {
 
 export function leadsToCsvRows(
   leads: Lead[],
-  userById: Map<string, User>,
+  userById: Map<string, UserRef>,
   costs: LeadCostTable,
   canSeeAll: boolean,
 ): string[][] {

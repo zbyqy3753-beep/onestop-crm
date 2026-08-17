@@ -1,5 +1,7 @@
 import { db } from "@/server/repositories";
+import type { LeadFilter } from "@/server/repositories";
 import { requireStaffUser } from "@/server/auth/session";
+import { canSeeAllLeads } from "@/lib/domain/permissions";
 import { OPEN_STATUSES, ROLE_CONFIG } from "@/lib/domain/types";
 import { performanceByAgent } from "@/server/services/economics";
 import { TZ, startOfDay, startOfMonth } from "@/lib/tz";
@@ -41,12 +43,40 @@ export default async function DashboardPage() {
    */
   const currentUser = await requireStaffUser();
 
+  /*
+   * ⚠️ אותו חתך בדיוק כמו ב-`/leads`: עובד רואה רק לידים שמשויכים
+   * אליו. שלוש שאילתות הלידים כאן רצו בלי שום מסנן, כלומר כל עובד
+   * שפתח את מסך הבית קיבל את המספרים של כל הארגון ואת שמונת הלידים
+   * החדשים שלו — בדיוק מה ש-`/leads` נבנה כדי למנוע.
+   *
+   * ‏`RecentLeadsList` הוא רכיב **לקוח**, ולכן כל ליד שמגיע אליו יושב
+   * ב-payload של הדף וקריא בכלי הפיתוח — גם אם המסך מציג ממנו שם
+   * ותאריך בלבד.
+   *
+   * גם `countByStatus` מקבל את החתך, ולא רק הרשימה: קוביות ארגוניות
+   * מעל רשימה אישית הן שני מספרים סותרים במסך אחד, והן מדליפות את
+   * נפח הלידים הכולל של הארגון גם בלי להראות ליד בודד.
+   */
+  const scope: LeadFilter = canSeeAllLeads(currentUser.role)
+    ? {}
+    : { assigneeId: [currentUser.id] };
+
+  /*
+   * ‏`users` ו-`deals` נשארים ארגוניים במכוון: מבין ילדי הדשבורד רק
+   * `RecentLeadsList` נושא `"use client"`. `SummaryTiles` ו-`Leaderboard`
+   * הם רכיבי שרת, וה-props שלהם לא עוזבים את השרת — מה שמגיע לדפדפן
+   * הוא ה-HTML המרונדר, כלומר שם, תפקיד ומספר עסקאות.
+   *
+   * ⚠️ הסבת `Leaderboard` ל-`"use client"` תתחיל להדליף אובייקטי
+   * `User` מלאים (מייל, טלפון, חנות) ותחייב היטל `UserRef` כאן —
+   * ראה `lib/domain/types.ts`.
+   */
   const [users, allLeads, recentLeads, counts, deals, packages, costs] =
     await Promise.all([
       db.users.list(),
-      db.leads.list(),
-      db.leads.list(undefined, { field: "createdAt", direction: "desc" }, { offset: 0, limit: 8 }),
-      db.leads.countByStatus(),
+      db.leads.list(scope),
+      db.leads.list(scope, { field: "createdAt", direction: "desc" }, { offset: 0, limit: 8 }),
+      db.leads.countByStatus(scope),
       db.deals.list(),
       db.packages.list(),
       db.settings.getLeadCosts(),

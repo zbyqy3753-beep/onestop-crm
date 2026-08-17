@@ -5,7 +5,7 @@ import type {
   LeadCategoryKey,
   LeadStatus,
   Priority,
-  User,
+  UserRef,
 } from "@/lib/domain/types";
 import {
   LEAD_CATEGORY_CONFIG,
@@ -77,9 +77,9 @@ export function LeadRow({
 }: {
   lead: Lead;
   now: number | null;
-  assignee?: User;
+  assignee?: UserRef;
   /** למי שם הפעולות בציר הזמן שייך */
-  userById: Map<string, User>;
+  userById: Map<string, UserRef>;
   /** העמודות המוצגות, בסדר שנקבע ב-columns.ts */
   columns: ColumnDef[];
   /** העלות האפקטיבית — פרטנית אם הוגדרה, אחרת של הקטגוריה */
@@ -94,7 +94,7 @@ export function LeadRow({
   /** עריכה מהירה של שדה בודד מתוך השורה */
   onPatch: (patch: LeadPatch) => void;
   /** העובדים שאפשר לשייך אליהם — פעילים בלבד */
-  users: User[];
+  users: UserRef[];
 }) {
   const status = STATUS_CONFIG[lead.status];
   const priority = PRIORITY_CONFIG[lead.priority];

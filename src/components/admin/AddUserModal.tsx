@@ -95,12 +95,12 @@ export function AddUserModal({
           />
         </Field>
 
-        <Field label="סיסמה ראשונית" hint="לפחות 6 תווים">
+        <Field label="סיסמה ראשונית" hint="לפחות 10 תווים">
           <input
             name="password"
             type="password"
             required
-            minLength={6}
+            minLength={10}
             className={inputClass}
           />
         </Field>

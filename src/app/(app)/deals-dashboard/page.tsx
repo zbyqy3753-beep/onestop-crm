@@ -1,5 +1,5 @@
 import { LiveDashboardClient } from "@/components/live-dashboard/LiveDashboardClient";
-import { requireStaffUser } from "@/server/auth/session";
+import { requireRouteAccess } from "@/server/auth/session";
 
 /**
  * עטיפת Server Component דקה — הדשבורד עצמו לגמרי client-side
@@ -8,7 +8,7 @@ import { requireStaffUser } from "@/server/auth/session";
  */
 export default async function DealsDashboardPage() {
   // הפכה ל-async רק בשביל השער. הדשבורד עצמו נשאר client-side.
-  await requireStaffUser();
+  await requireRouteAccess("/deals-dashboard");
 
   return <LiveDashboardClient />;
 }

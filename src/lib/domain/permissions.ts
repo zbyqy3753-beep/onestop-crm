@@ -42,3 +42,71 @@ export function canSeeAllLeads(role: Role): boolean {
 export function isSupplier(role: Role): boolean {
   return role === "supplier";
 }
+
+/* ── גישה לנתיבים ─────────────────────────────────────────────────── */
+
+/**
+ * מי נכנס לאיזה מסך — **המקור היחיד**.
+ *
+ * ⚠️ הכוונה הזו הייתה כתובה פעמיים: בשדה `roles` של כל פריט ב-`nav.ts`,
+ * ובנוסף בקבוע `ALLOWED` מקומי בכל `page.tsx` בנפרד. שתי ההצהרות
+ * נפרדו זו מזו, ובדיוק שם נפער החור: `nav.ts` אמר ש-`/deals` שייך
+ * ל-owner/manager/bizManager/shopOwner, בזמן שהמסך עצמו הסתפק
+ * ב-`requireStaffUser` — שחוסם **רק ספק** ולא עובד רגיל. כל עובד
+ * שהקליד `/deals` בשורת הכתובת קיבל את כל העסקאות בארגון, את כל
+ * מאגר הלידים ואת רשימת המשתמשים המלאה.
+ *
+ * לכן `NavItem.roles` נמחק לגמרי. התפריט והשומר בשרת קוראים שניהם
+ * מכאן, ואין מקום שני שאפשר לעדכן רק אותו ולשכוח את השני.
+ *
+ * נתיב שאינו ברשימה פתוח לכל הצוות — זו ברירת המחדל הנכונה למערכת
+ * שרוב מסכיה משותפים, וההגבלה היא החריג שצריך להצהיר עליו.
+ */
+const ROUTE_ROLES = {
+  "/deals": ["owner", "manager", "bizManager", "shopOwner"],
+  "/deals-dashboard": ["owner", "manager", "bizManager"],
+  "/registrations": ["owner", "manager", "operator"],
+  "/bots": ["owner", "manager"],
+  "/renewals": ["owner", "manager"],
+  "/admin": ["owner", "manager"],
+} as const satisfies Record<string, readonly Role[]>;
+
+/**
+ * נתיב שיש עליו הגבלת תפקיד.
+ *
+ * הטיפוס נגזר מהמפה ולא נכתב ידנית, כך שכתיב שגוי בקריאה ל-
+ * `requireRouteAccess` נופל בקומפילציה ולא נשאר שומר שלא שומר על כלום.
+ */
+export type RestrictedRoute = keyof typeof ROUTE_ROLES;
+
+/**
+ * היעדים היחידים שספק לידים חיצוני רשאי להגיע אליהם.
+ *
+ * ⚠️ רשימת היתר (allow-list) ולא הגבלה פר-פריט: יעד חדש שמישהו יוסיף
+ * בעתיד בלי לחשוב על ספקים נחסם בפניו כברירת מחדל, במקום להיפתח.
+ *
+ * ישבה קודם ב-`nav.ts` והועברה לכאן, כדי שגם ההסתרה בתפריט וגם
+ * החסימה בשרת ייגזרו מאותה שורה.
+ */
+const SUPPLIER_HREFS: readonly string[] = ["/leads"];
+
+/** האם התפקיד רשאי להגיע לנתיב. */
+export function canAccessRoute(role: Role, href: string): boolean {
+  if (isSupplier(role)) return SUPPLIER_HREFS.includes(href);
+
+  const allowed: readonly Role[] | undefined =
+    ROUTE_ROLES[href as RestrictedRoute];
+  return !allowed || allowed.includes(role);
+}
+
+/**
+ * מי רשאי לשנות הגדרות ארגוניות — עלויות רכישת ליד וכיוצא בזה.
+ *
+ * ⚠️ בכוונה **לא** נגזר מ-`ROUTE_ROLES`. מסך החבילות פתוח לכל הצוות
+ * בצדק — עובד פותח אותו באמצע שיחה כדי לבדוק מחיר — ורק עורך
+ * העלויות שבתוכו הוא ניהולי. המצאת "נתיב" מדומה בשביל פקד בודד
+ * הייתה מעוותת את מפת הנתיבים ומקשה לקרוא אותה.
+ */
+export function canManageSettings(role: Role): boolean {
+  return role === "owner" || role === "manager";
+}

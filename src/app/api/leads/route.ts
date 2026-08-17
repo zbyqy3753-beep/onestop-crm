@@ -287,20 +287,28 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
   }
 
-  // הטלפון הוא מפתח הכפילות בכל המערכת (ייבוא CSV נשען על אותו כלל).
-  // שותף שמנסה שוב אחרי timeout לא אמור ליצור ליד שני — ולכן זו
-  // תשובת הצלחה עם `duplicate`, לא שגיאה שתגרור עוד ניסיונות.
+  /*
+   * הטלפון הוא מפתח הכפילות בכל המערכת (ייבוא CSV נשען על אותו כלל).
+   * שותף שמנסה שוב אחרי timeout לא אמור ליצור ליד שני — ולכן זו
+   * תשובת הצלחה עם `duplicate`, לא שגיאה שתגרור עוד ניסיונות.
+   *
+   * ⚠️ **המזהה לא מוחזר יותר בתשובת הכפילות.**
+   *
+   * קודם הוחזר כאן ה-`id` של הליד הקיים — מי שלא יהיה הבעלים שלו.
+   * המשמעות: מפתח שותף אחד הפך לכלי לשאול "האם המספר הזה כבר
+   * במאגר", ולקבל מזהה פנימי של ליד שהביא שותף אחר. דליפה **בין**
+   * שותפים, ממפתח שנועד רק להזרים לידים פנימה.
+   *
+   * שיוך המזהה לשותף הנכון אינו פתרון: כששותף שולח `source` משלו,
+   * `sourceDetail` הוא המחרוזת שלו ולא שמו, ולכן סינון לפי שם השותף
+   * היה מחזיר `null` דווקא בניסיון החוזר הלגיטימי שלו.
+   *
+   * `duplicate: true` נשאר, וזה כל מה שהשותף באמת צריך — "כבר קיים,
+   * אל תשלח שוב". הניסיון החוזר האידמפוטנטי עובד בדיוק כמו קודם.
+   */
   const existing = await db.leads.findPhones([phone]);
   if (existing.has(phone)) {
-    const { rows } = await db.leads.list({ query: phone }, undefined, {
-      offset: 0,
-      limit: 1,
-    });
-    return Response.json({
-      success: true,
-      duplicate: true,
-      id: rows[0]?.id ?? null,
-    });
+    return Response.json({ success: true, duplicate: true });
   }
 
   const createdById = await ownerId();

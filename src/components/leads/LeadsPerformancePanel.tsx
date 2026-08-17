@@ -1,6 +1,6 @@
 "use client";
 
-import type { User } from "@/lib/domain/types";
+import type { UserRef } from "@/lib/domain/types";
 import { ROLE_CONFIG } from "@/lib/domain/types";
 import type { AgentPerformance } from "@/server/services/economics";
 import { money, number } from "@/lib/format";
@@ -15,7 +15,7 @@ export function LeadsPerformancePanel({
   userById,
 }: {
   rows: AgentPerformance[];
-  userById: Map<string, User>;
+  userById: Map<string, UserRef>;
 }) {
   if (rows.length === 0) return null;
 

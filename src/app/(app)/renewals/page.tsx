@@ -1,20 +1,17 @@
-import { notFound } from "next/navigation";
 import { prisma } from "@/server/db/client";
-import { requireStaffUser } from "@/server/auth/session";
+import { requireRouteAccess } from "@/server/auth/session";
 import { RenewalsClient } from "@/components/renewals/RenewalsClient";
 
 /**
  * מסך החידושים — העלאת מסמכי לקוחות שהשנה שלהם הסתיימה.
  *
  * ⚠️ המסמכים כאן הם חשבוניות של לקוחות אמיתיים: שם, טלפון, כתובת
- * וצריכה. לכן אותה בדיקת הרשאה כמו במסך ניהול המערכת, ו-`notFound()`
- * ולא הפניה — מי שאין לו הרשאה לא צריך ללמוד שהמסך קיים.
+ * וצריכה. ההרשאה מוגדרת ב-`ROUTE_ROLES` יחד עם כל שאר המסכים
+ * המוגבלים — קודם ישב כאן קבוע `ALLOWED` מקומי, וריבוי הרשימות הוא
+ * בדיוק מה שאיפשר ל-`/deals` להיסחף.
  */
-const ALLOWED = ["owner", "manager"] as const;
-
 export default async function RenewalsPage() {
-  const actor = await requireStaffUser();
-  if (!ALLOWED.includes(actor.role as (typeof ALLOWED)[number])) notFound();
+  await requireRouteAccess("/renewals");
 
   const contacts = await prisma.renewalContact.findMany({
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],

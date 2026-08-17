@@ -1,6 +1,6 @@
 "use client";
 
-import type { Lead, User } from "@/lib/domain/types";
+import type { Lead, UserRef } from "@/lib/domain/types";
 import {
   KIND_CONFIG,
   KIND_ORDER,
@@ -28,7 +28,7 @@ export function LeadFields({
   lead,
   showNote = false,
 }: {
-  users: User[];
+  users: UserRef[];
   lead?: Lead;
   showNote?: boolean;
 }) {

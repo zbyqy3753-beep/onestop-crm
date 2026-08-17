@@ -1,5 +1,4 @@
-import { notFound } from "next/navigation";
-import { requireStaffUser } from "@/server/auth/session";
+import { requireRouteAccess } from "@/server/auth/session";
 import { botOverview } from "@/server/whatsapp/overview";
 import { BotsClient } from "@/components/bots/BotsClient";
 
@@ -10,11 +9,8 @@ import { BotsClient } from "@/components/bots/BotsClient";
  * כשלים ורשימת נמענים. מסך ניהול המערכת נשאר על מה שהוא — משתמשים —
  * ומציג רק את הרצועה עם קישור לכאן.
  */
-const ALLOWED = ["owner", "manager"] as const;
-
 export default async function BotsPage() {
-  const actor = await requireStaffUser();
-  if (!ALLOWED.includes(actor.role as (typeof ALLOWED)[number])) notFound();
+  await requireRouteAccess("/bots");
 
   const overview = await botOverview();
 

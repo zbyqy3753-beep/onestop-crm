@@ -3,19 +3,33 @@
 import { revalidatePath } from "next/cache";
 import { GENERAL_SCREEN, isFeedbackKind } from "@/lib/domain/feedback";
 import { feedbackStore } from "@/server/feedback";
+import { requireStaffUser } from "@/server/auth/session";
 
 export interface FeedbackFormState {
   ok: boolean;
   error?: string;
 }
 
+/**
+ * ⚠️ שתי תקלות היו כאן, ושתיהן נובעות מאותה הנחה — ש"רק מי שהמסך
+ * פתוח בפניו קורא לפונקציה":
+ *
+ * 1. לא הייתה שום קריאת אימות. `submitFeedback` היא נקודת קצה HTTP,
+ *    וכל מי שהגיע ל-origin יכול היה למלא את מאגר המשוב.
+ * 2. `reporter` הגיע מגוף הטופס — כלומר גם משתמש מחובר יכול היה
+ *    לחתום בשם עובד אחר. שדה זהות שהלקוח שולח אינו זהות.
+ *
+ * `requireStaffUser` ולא `requireSessionUser`: מסך המשוב עצמו סגור
+ * בפני ספק חיצוני, והפעולה צריכה להסכים איתו.
+ */
 export async function submitFeedback(
   _prev: FeedbackFormState | null,
   formData: FormData,
 ): Promise<FeedbackFormState> {
+  const user = await requireStaffUser();
+
   const kind = formData.get("kind");
   const body = String(formData.get("body") ?? "").trim();
-  const reporter = String(formData.get("reporter") ?? "").trim();
   const screen = String(formData.get("screen") ?? GENERAL_SCREEN);
   const rating = Number(formData.get("rating"));
 
@@ -30,7 +44,9 @@ export async function submitFeedback(
     screen,
     rating,
     body,
-    reporter: reporter || "אנונימי",
+    // הזהות מהסשן. "אנונימי" לא קיים יותר: משוב פנימי מזוהה תמיד,
+    // וברירת המחדל האנונימית רק הסתירה את זה שאיש לא אימת את השם.
+    reporter: user.name,
   });
 
   revalidatePath("/feedback");

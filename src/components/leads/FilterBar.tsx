@@ -6,7 +6,7 @@ import type {
   LeadKind,
   LeadStatus,
   Priority,
-  User,
+  UserRef,
 } from "@/lib/domain/types";
 import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
 import { Button, inputClass } from "@/components/ui/primitives";
@@ -69,7 +69,7 @@ export function FilterBar({
 }: {
   filters: Filters;
   onChange: (f: Filters) => void;
-  users: User[];
+  users: UserRef[];
   /** בורר העמודות, מוזרק מבחוץ כדי ש-FilterBar יישאר על סינון בלבד */
   columnPicker?: React.ReactNode;
   /**

@@ -431,6 +431,28 @@ export interface User {
   subscriptionEndsAt?: string;
 }
 
+/**
+ * המשתמש כפי שרכיב לקוח באמת צריך אותו — שם לתצוגה ותפקיד לתווית.
+ *
+ * ⚠️ קיים כדי ש-`User` המלא **לא** ייצא לדפדפן. מסך הלידים העביר
+ * `db.users.listActive()` כמות שהוא ל-`LeadsClient`, כלומר המייל,
+ * הטלפון והחנות של כל עובד בארגון ישבו ב-payload של דף שכל עובד
+ * פותח — קריאים לכל מי שפותח כלי פיתוח. אף רכיב לא קרא את השדות
+ * האלה בכלל; הם פשוט נסעו.
+ *
+ * ⚠️ ההיטל נעשה ב-destructuring מפורש (`({ id, name, role }) => ...`)
+ * ולא דרך עזר גנרי, כדי ששדה חדש שיתווסף ל-`User` בעתיד לא ידלוף
+ * דרכו בשקט.
+ *
+ * `User` ניתן להשמה ל-`UserRef`, ולכן קוראים שמעבירים משתמש מלא
+ * ממשיכים להתקמפל — הצמצום הוא בצד המקבל.
+ */
+export interface UserRef {
+  id: UserId;
+  name: string;
+  role: Role;
+}
+
 export interface LeadNote {
   id: string;
   leadId: LeadId;

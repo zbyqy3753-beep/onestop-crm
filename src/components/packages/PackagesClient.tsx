@@ -53,9 +53,18 @@ import { LeadCostsModal } from "@/components/settings/LeadCostsModal";
 export function PackagesClient({
   packages,
   leadCosts,
+  canEditCosts,
 }: {
   packages: Package[];
   leadCosts: LeadCostTable;
+  /**
+   * האם המשתמש רשאי לערוך את עלויות רכישת הלידים.
+   *
+   * ⚠️ המסך עצמו פתוח לכל הצוות בכוונה — עובד פותח אותו באמצע שיחה
+   * כדי לבדוק מחיר. רק הפקד הזה ניהולי. וזו הסתרה בלבד: האכיפה היא
+   * `canManageSettings` בתוך `saveLeadCostsAction`.
+   */
+  canEditCosts: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [provider, setProvider] = useState<ProviderKey | "all">("all");
@@ -127,9 +136,11 @@ export function PackagesClient({
             </button>
           </div>
 
-          <Button icon="admin" onClick={() => setCostsOpen(true)}>
-            עלויות לידים
-          </Button>
+          {canEditCosts && (
+            <Button icon="admin" onClick={() => setCostsOpen(true)}>
+              עלויות לידים
+            </Button>
+          )}
         </div>
       </header>
 
@@ -240,7 +251,7 @@ export function PackagesClient({
       )}
 
       <LeadCostsModal
-        open={costsOpen}
+        open={costsOpen && canEditCosts}
         costs={leadCosts}
         onClose={() => setCostsOpen(false)}
         onNotify={notify}

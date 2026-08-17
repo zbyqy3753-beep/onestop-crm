@@ -1,6 +1,6 @@
 "use client";
 
-import type { Lead, LeadCostTable, LeadStatus, User } from "@/lib/domain/types";
+import type { Lead, LeadCostTable, LeadStatus, UserRef } from "@/lib/domain/types";
 import { leadCost } from "@/server/services/economics";
 import { Button, EmptyState, useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
@@ -38,7 +38,7 @@ export function LeadsTable({
   busyIds,
 }: {
   leads: Lead[];
-  userById: Map<string, User>;
+  userById: Map<string, UserRef>;
   leadCosts: LeadCostTable;
   visibleColumns: ColumnKey[];
   selected: Set<string>;
@@ -51,7 +51,7 @@ export function LeadsTable({
   onStar: (id: string, next: boolean) => void;
   onPatch: (id: string, patch: LeadPatch) => void;
   /** עובדים פעילים — לבורר השיוך שבתוך השורה */
-  users: User[];
+  users: UserRef[];
   onAdd: () => void;
   hasFilters: boolean;
   /** רואה את כל הארגון — קובע את נוסח המצב הריק */

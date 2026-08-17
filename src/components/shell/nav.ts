@@ -1,4 +1,5 @@
 import type { Role } from "@/lib/domain/types";
+import { canAccessRoute } from "@/lib/domain/permissions";
 
 export interface NavItem {
   href: string;
@@ -6,8 +7,13 @@ export interface NavItem {
   /** תיאור קצר שמופיע כ-title ולקוראי מסך */
   hint: string;
   icon: IconName;
-  /** התפקידים שרואים את הפריט. ריק = כולם */
-  roles?: Role[];
+  /*
+   * ⚠️ **אין כאן שדה `roles`, ואין להחזיר אותו.** מי רואה איזה יעד
+   * מוגדר ב-`lib/domain/permissions.ts` (`ROUTE_ROLES`), ומשם קוראים
+   * גם התפריט וגם השומר בשרת. כשההגדרה ישבה כאן היא הייתה הצהרה
+   * שנייה לצד זו שבמסכים, השתיים נפרדו, ועובד שהקליד `/deals` קיבל
+   * מסך ניהולי מלא. שדה כזה כאן יחזיר בדיוק את אותו פער.
+   */
   /** המסך עדיין לא נבנה — יוצג כמושבת */
   planned?: boolean;
   /**
@@ -92,7 +98,6 @@ export const NAV: NavGroup[] = [
         shortLabel: "עסקאות",
         hint: "כל העסקאות בארגון",
         icon: "deals",
-        roles: ["owner", "manager", "bizManager", "shopOwner"],
         // גובר על "חבילות" למי שרואה אותו — זה מסך הניהול היומי
         mobileOrder: 2,
       },
@@ -101,7 +106,6 @@ export const NAV: NavGroup[] = [
         label: "דשבורד עסקאות",
         hint: "רווח, עמלות וביצועים",
         icon: "dashboard",
-        roles: ["owner", "manager", "bizManager"],
       },
       {
         href: "/registrations",
@@ -109,7 +113,6 @@ export const NAV: NavGroup[] = [
         shortLabel: "רישום",
         hint: "פניות שהגיעו מטפסים",
         icon: "registrations",
-        roles: ["owner", "manager", "operator"],
         mobileOrder: 3,
       },
       {
@@ -117,21 +120,18 @@ export const NAV: NavGroup[] = [
         label: "בוטים",
         hint: "בוט תזכורות הוואטסאפ — מצב, הגדרות ותור",
         icon: "whatsapp",
-        roles: ["owner", "manager"],
       },
       {
         href: "/renewals",
         label: "חידושים",
         hint: "העלאת מסמכי לקוחות שהשנה שלהם הסתיימה",
         icon: "upload",
-        roles: ["owner", "manager"],
       },
       {
         href: "/admin",
         label: "ניהול מערכת",
         hint: "משתמשים, הרשאות ועלויות",
         icon: "admin",
-        roles: ["owner", "manager"],
       },
     ],
   },
@@ -162,28 +162,21 @@ export const NAV: NavGroup[] = [
 ];
 
 /**
- * ספק לידים חיצוני רואה יעד יחיד — הרשימה שלו.
+ * היעדים שהתפקיד רואה בתפריט.
  *
- * ⚠️ רשימת היתר (allow-list) ולא הוספת `roles` לכל פריט בנפרד. פריט
- * **בלי** `roles` גלוי לכולם, וזו ברירת המחדל הנכונה לצוות; המשמעות
- * היא שכל יעד חדש שמישהו יוסיף ל-`NAV` בלי לחשוב על ספקים היה נוחת
- * להם בתפריט. כאן ההיגיון הפוך: מה שלא ברשימה — לא מוצג.
+ * ⚠️ **זו הסתרה ולא הרשאה** — הפרדה שחשוב לשמור עליה חדה. הפונקציה
+ * הזו רק מונעת מהמשתמש לראות קישור שאין לו מה לעשות איתו; מי שמקליד
+ * את הכתובת ידנית לא עובר כאן בכלל. מה שבאמת חוסם הוא
+ * `requireRouteAccess` בראש כל מסך מוגבל.
  *
- * זו עדיין הסתרה ולא הרשאה. מה שחוסם באמת הוא `requireStaffUser`.
+ * הסינון היחיד קורא ל-`canAccessRoute`, שמטפל גם בספק וגם בתפקידי
+ * הצוות — כך שהתפריט מציג בדיוק את מה שהשרת מוכן לתת, לא פחות ולא
+ * יותר.
  */
-const SUPPLIER_HREFS: readonly string[] = ["/leads"];
-
 export function visibleFor(role: Role): NavGroup[] {
-  if (role === "supplier") {
-    return NAV.map((g) => ({
-      ...g,
-      items: g.items.filter((i) => SUPPLIER_HREFS.includes(i.href)),
-    })).filter((g) => g.items.length > 0);
-  }
-
   return NAV.map((g) => ({
     ...g,
-    items: g.items.filter((i) => !i.roles || i.roles.includes(role)),
+    items: g.items.filter((i) => canAccessRoute(role, i.href)),
   })).filter((g) => g.items.length > 0);
 }
 
