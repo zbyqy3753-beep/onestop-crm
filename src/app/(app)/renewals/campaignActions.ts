@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { prisma } from "@/server/db/client";
+import { drainOutbox } from "@/server/whatsapp/drain";
 import { requireSessionUser } from "@/server/auth/session";
 import { approveAndQueue, extractContacts } from "@/server/renewals/campaign";
 import { renewalOpener } from "@/lib/domain/renewalMessages";
@@ -59,6 +61,35 @@ export async function approveContactsAction(
   const queued = await approveAndQueue(ids);
   revalidatePath("/renewals");
   revalidatePath("/bots");
+
+  /*
+   * ⚠️⚠️ **ניקוז מיידי, ולא המתנה לשעון.**
+   *
+   * השעון החיצוני (GitHub Actions) מתוזמן ל-5 דקות אבל בפועל רץ כל
+   * 25–47 דקות — GitHub מריצים cron כ"מאמץ סביר" ומעכבים אותו בעומס.
+   * זה מדיד: ראה `.github/workflows/whatsapp-cron.yml`.
+   *
+   * המשמעות בלי השורה הזו: מנהל מאשר שליחה, לא קורה כלום במשך חצי
+   * שעה, ומסך הבוטים מציג דופק בן 20+ דקות שנראה בדיוק כמו בוט מת.
+   * זו הייתה התלונה, וזה התיקון — אישור הוא הרגע שבו ההודעה יוצאת.
+   *
+   * `after` ולא `await`: השליחה למטא נמשכת שנייה-שתיים להודעה, ואין
+   * שום סיבה שהמנהל יסתכל על ספינר בזמן הזה. הקולבק רץ אחרי שהתשובה
+   * כבר נשלחה. **לא** promise יתום — ב-serverless הוא היה נקטע.
+   *
+   * ⚠️ `drainOutbox` מוגבל ל-10 הודעות למחזור (`BATCH`), ולכן קמפיין
+   * גדול ישלח 10 מיד והשאר ימתינו לשעון. זה מכוון: תקרה היא מה שמונע
+   * מבקשה בודדת לרוץ בלי גבול.
+   */
+  after(async () => {
+    try {
+      await drainOutbox();
+    } catch {
+      // כישלון ניקוז אינו כישלון אישור — השורות כבר בתור והשעון
+      // ינסה שוב. זריקה כאן הייתה הופכת אישור מוצלח לשגיאה במסך.
+    }
+  });
+
   return { ok: true, data: { queued } };
 }
 
