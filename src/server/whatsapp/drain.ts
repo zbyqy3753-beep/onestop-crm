@@ -13,6 +13,10 @@ import {
   sendText,
 } from "./cloudApi";
 import { RENEWAL_OPENER_TEMPLATE } from "@/lib/domain/renewalMessages";
+import {
+  FOLLOWUP_REMINDER_TEMPLATE,
+  followUpReminderParams,
+} from "@/lib/domain/whatsapp";
 
 /**
  * ניקוז התור דרך Cloud API — מחליף את לולאת הסקר של הבוט.
@@ -36,17 +40,23 @@ export interface DrainResult {
 }
 
 /**
- * האם ההודעה יוזמת שיחה ולכן חייבת תבנית.
+ * התבנית שההודעה חייבת לצאת דרכה, או `null` אם היא תשובה בתוך חלון
+ * 24 השעות ולכן מותרת כטקסט חופשי.
  *
  * ⚠️ נגזר ממפתח הדדופ, שהוא כבר מקור האמת לסוג ההודעה במערכת.
  * שדה נפרד בסכימה היה מוסיף מצב שאפשר לשכוח לעדכן.
  *
- * ⚠️ תזכורות לעובדים (`followup:`) הן גם יזומות, ולכן גם הן ידרשו
- * תבנית משלהן כשהן יעברו ל-API. כרגע הן עדיין יוצאות דרך הבוט, וזו
- * ההחלטה שנשארה פתוחה: להשאיר אותן שם (חינם) או לשלם עליהן.
+ * ⚠️ **גם תזכורת לעובד היא הודעה יזומה.** היא נראית פנימית, אבל מטא
+ * רואים רק מספר ששולח למספר — והעובד לא כתב לנו קודם. כשהיא יצאה
+ * דרך הבוט זה לא הפריע (הבוט הוא וואטסאפ רגיל); דרך Cloud API בלי
+ * תבנית היא נדחית ב-131047.
  */
-function needsTemplate(dedupeKey: string): boolean {
-  return dedupeKey.startsWith("renewal:opener:");
+function templateFor(
+  dedupeKey: string,
+): typeof RENEWAL_OPENER_TEMPLATE | typeof FOLLOWUP_REMINDER_TEMPLATE | null {
+  if (dedupeKey.startsWith("renewal:opener:")) return RENEWAL_OPENER_TEMPLATE;
+  if (dedupeKey.startsWith("followup:")) return FOLLOWUP_REMINDER_TEMPLATE;
+  return null;
 }
 
 /**
@@ -62,15 +72,22 @@ function nameFromBody(body: string): string {
 }
 
 async function deliver(msg: ClaimedMessage): Promise<string> {
-  if (!needsTemplate(msg.dedupeKey)) {
-    return sendText(msg.toPhone, msg.body);
-  }
+  const template = templateFor(msg.dedupeKey);
+  if (!template) return sendText(msg.toPhone, msg.body);
+
+  // ⚠️ שתי התבניות מחלצות את הפרמטרים מהגוף המרונדר ולא מהליד: בזמן
+  // השליחה יש בידינו רק את ה-snapshot. פונקציית החילוץ של כל תבנית
+  // יושבת ליד הפונקציה שמרנדרת אותה, כדי שהשתיים ישתנו יחד.
+  const params =
+    template === FOLLOWUP_REMINDER_TEMPLATE
+      ? followUpReminderParams(msg.body)
+      : [nameFromBody(msg.body)];
 
   return sendTemplate(
     msg.toPhone,
-    RENEWAL_OPENER_TEMPLATE.name,
-    RENEWAL_OPENER_TEMPLATE.language,
-    [nameFromBody(msg.body)],
+    template.name,
+    template.language,
+    params,
   );
 }
 
