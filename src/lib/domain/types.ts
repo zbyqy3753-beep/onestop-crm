@@ -23,7 +23,8 @@ export type Role =
   | "operator" // מתפעל
   | "shopOwner" // בעל חנות
   | "bizManager" // מנהל עסק
-  | "supplier"; // ספק לידים — מזין לידים מבחוץ, לא מטפל בהם
+  | "supplier" // ספק לידים — מזין לידים מבחוץ, לא מטפל בהם
+  | "siteManager"; // אחראי אתר — נכנס רק לניהול האתר, לא ל-CRM
 
 export const ROLE_CONFIG: Record<Role, { label: string; rank: number }> = {
   owner: { label: "מנהל ראשי", rank: 100 },
@@ -38,6 +39,11 @@ export const ROLE_CONFIG: Record<Role, { label: string; rank: number }> = {
    * שמשווה דרגות (מי רשאי לערוך את מי) צריך למקם אותו מתחת לכולם.
    */
   supplier: { label: "ספק לידים", rank: 0 },
+  /*
+   * דרגה 0 מאותה סיבה: אחראי האתר אינו עובד מוקד בדרגה כלשהי. הוא
+   * בכלל לא נכנס לכאן — ראה `canUseCrm` ב-permissions.ts.
+   */
+  siteManager: { label: "אחראי אתר", rank: 0 },
 };
 
 export const ROLE_ORDER: Role[] = [
@@ -49,6 +55,7 @@ export const ROLE_ORDER: Role[] = [
   "agent",
   "employee",
   "supplier",
+  "siteManager",
 ];
 
 /* ── סטטוס ליד ────────────────────────────────────────────────────────── */

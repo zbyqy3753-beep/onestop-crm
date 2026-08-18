@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { canUseCrm } from "@/lib/domain/permissions";
 import { GATE_COOKIE, GATE_COOKIE_OPTIONS } from "@/lib/gate";
 import { NEXT_PARAM, safeReturnTo } from "@/lib/returnTo";
 import { toLoginEmail } from "@/lib/loginId";
@@ -57,6 +58,20 @@ export async function signIn(_prev: string | null, formData: FormData) {
   // התחברות מוצלחת מנקה את המונה — אחרת עובד שטעה כמה פעמים בבוקר
   // היה נגרר עם הספירה הזו לאורך היום
   await clearFailures(email);
+
+  /*
+   * אחראי האתר — סיסמה נכונה, מערכת לא נכונה.
+   *
+   * ⚠️ הודעה מפורשת ולא "שם משתמש או סיסמה שגויים": כאן זו לא הסתרה
+   * של קיום חשבון (הסיסמה כבר אומתה בהצלחה), וההודעה הסתמית הייתה
+   * שולחת אותו לאפס סיסמה שעובדת מצוין.
+   *
+   * ⚠️ **אין כאן `startSession`.** זו לא הגנה בפני עצמה — `getSessionUser`
+   * חוסם אותו בכל מקרה — אלא סירוב לפתוח סשן שממילא לא יעבוד.
+   */
+  if (!canUseCrm(user.role)) {
+    return "החשבון הזה מיועד לניהול תוכן האתר בלבד, ואין לו גישה למערכת הלידים.";
+  }
 
   // שורת סשן ב-DB + טוקן אקראי בעוגייה. ראה server/auth/session.ts
   await startSession(user.id);

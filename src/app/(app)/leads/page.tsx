@@ -5,6 +5,7 @@ import { requireSessionUser } from "@/server/auth/session";
 import {
   canManageSettings,
   canSeeAllLeads,
+  canUseCrm,
   isSupplier,
 } from "@/lib/domain/permissions";
 import type { UserRef } from "@/lib/domain/types";
@@ -164,11 +165,19 @@ export default async function LeadsPage({
    * (מפת המשויכים, בורר השיוך, תווית התפקיד בפאנל הביצועים). המייל,
    * הטלפון והחנות של כל עובד בארגון נסעו לדפדפן בלי שאיש יקרא אותם.
    */
-  const users = allUsers.map(({ id, name, role }): UserRef => ({
-    id,
-    name,
-    role,
-  }));
+  /*
+   * ⚠️ מי שאינו נכנס ל-CRM לא מוצע כמטפל. `siteManager` הוא אחראי תוכן
+   * האתר — הוא יושב באותה טבלת משתמשים ולכן חוזר מ-`listActive`, אבל
+   * ליד שישויך אליו נופל לתיבה שאיש לא פותח: הוא לא יכול להתחבר לכאן
+   * בכלל.
+   */
+  const users = allUsers
+    .filter((u) => canUseCrm(u.role))
+    .map(({ id, name, role }): UserRef => ({
+      id,
+      name,
+      role,
+    }));
 
   /*
    * `deals` — רק עסקאות של הלידים שנשלחים למסך.

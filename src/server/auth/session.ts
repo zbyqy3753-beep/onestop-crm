@@ -7,7 +7,7 @@ import { db } from "@/server/repositories";
 import type { SessionRecord } from "@/server/repositories";
 import type { User } from "@/lib/domain/types";
 import type { RestrictedRoute } from "@/lib/domain/permissions";
-import { canAccessRoute, isSupplier } from "@/lib/domain/permissions";
+import { canAccessRoute, canUseCrm, isSupplier } from "@/lib/domain/permissions";
 import {
   SESSION_COOKIE,
   SESSION_COOKIE_OPTIONS,
@@ -145,7 +145,14 @@ export const getSessionUser = cache(async (): Promise<User | null> => {
   if (!session) return null;
 
   const user = await db.users.getById(session.impersonatingId ?? session.userId);
-  return user?.active ? user : null;
+  if (!user?.active) return null;
+
+  // ⚠️ **החסימה האמיתית של אחראי האתר.** מסך ההתחברות מחזיר לו הודעה
+  // מפורשת, אבל זו נוחות; כאן עוברים כל מסך וכל Server Action ב-CRM,
+  // ולכן גם עוגייה שהוזרקה ידנית וגם התחזות אליו מגיעות ל-null.
+  if (!canUseCrm(user.role)) return null;
+
+  return user;
 });
 
 /**
