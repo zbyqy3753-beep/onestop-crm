@@ -273,6 +273,14 @@ export interface ResetLinkView {
   name: string;
   email: string;
   url: string;
+  /**
+   * האם יצאה אליו התראה בוואטסאפ.
+   *
+   * ⚠️ `false` פירושו שהעובד אופס אבל **אינו יודע על כך** ואין לו דרך
+   * לגלות — אין לו טלפון תקין במערכת. הוא היחיד שחייב טיפול ידני,
+   * ולכן המסך מפריד בין השניים במקום להציג רשימה אחידה.
+   */
+  notified: boolean;
 }
 
 export interface ResetReport {
@@ -323,8 +331,10 @@ export async function resetPasswordsAction(
       links: results
         .filter((r) => r.ok)
         .map((r) => {
-          const { userId, name, email, url } = (r as { link: ResetLink }).link;
-          return { userId, name, email, url };
+          const { userId, name, email, url, notified } = (
+            r as { link: ResetLink }
+          ).link;
+          return { userId, name, email, url, notified };
         }),
       failures: results
         .filter((r) => !r.ok)

@@ -68,8 +68,9 @@ export function PasswordResetPanel({
         <div>
           <h2 className="font-semibold text-ink">סיסמאות</h2>
           <p className="mt-1 max-w-prose text-sm text-ink-3">
-            איפוס הורג את הסיסמה הקיימת מיד ומנפיק קישור חד-פעמי, תקף ל-3 ימים.
-            העובד בוחר סיסמה בעצמו — אף אחד, גם לא אתה, לא רואה אותה.
+            איפוס הורג את הסיסמה הקיימת מיד ושולח לעובד הודעה בוואטסאפ. הוא
+            נכנס דרך ״שכחת סיסמה?״, מקבל קוד, ובוחר סיסמה בעצמו — אף אחד, גם
+            לא אתה, לא רואה אותה.
           </p>
         </div>
 
@@ -79,7 +80,7 @@ export function PasswordResetPanel({
           onClick={() =>
             run(
               active.map((u) => u.id),
-              `לאפס סיסמה ל-${active.length} משתמשים פעילים?\n\nכולם ינותקו מיד ולא יוכלו להיכנס עד שיקבלו ממך קישור.`,
+              `לאפס סיסמה ל-${active.length} משתמשים פעילים?\n\nכולם ינותקו מיד. מי שיש לו טלפון במערכת יקבל הודעה בוואטסאפ ויסתדר לבד; השאר יוצגו לך לטיפול ידני.`,
             )
           }
         >
@@ -106,18 +107,28 @@ export function PasswordResetPanel({
         </div>
       )}
 
-      {links && links.length > 0 && (
+      {links && links.filter((l) => l.notified).length > 0 && (
+        <p className="mt-4 rounded-lg bg-save/10 px-3 py-2 text-sm text-save">
+          {links.filter((l) => l.notified).length} עובדים קיבלו הודעה בוואטסאפ.
+          הם ייכנסו דרך ״שכחת סיסמה?״ ויקבלו קוד — אין מה לשלוח להם.
+        </p>
+      )}
+
+      {/* ⚠️ רק מי שלא קיבל התראה. השאר מסתדרים לבד, ורשימה שמציגה את
+          כולם הייתה מטביעה את המקרים שבאמת דורשים טיפול. */}
+      {links && links.filter((l) => !l.notified).length > 0 && (
         <div className="mt-5 rounded-lg border border-brand/30 bg-brand/5 p-4">
           <p className="text-sm font-semibold text-ink">
-            ⚠️ הקישורים מוצגים פעם אחת בלבד
+            ⚠️ אלה לא קיבלו הודעה — אין להם טלפון במערכת
           </p>
           <p className="mt-1 text-sm text-ink-3">
-            אל תסגור ואל תרענן את הדף לפני שהעברת את כולם. קישור שנעלם מכאן אבד —
-            אפשר להנפיק חדש לכל עובד בנפרד.
+            הם אופסו ואינם יודעים על כך. העבר להם את הקישור ידנית. הקישורים
+            מוצגים פעם אחת בלבד — דף שנסגר לפני שהעתקת אותם משאיר אותם נעולים
+            בחוץ, ואז צריך להנפיק מחדש.
           </p>
 
           <ul className="mt-4 space-y-2">
-            {links.map((link) => (
+            {links.filter((l) => !l.notified).map((link) => (
               <li
                 key={link.userId}
                 className="flex flex-wrap items-center gap-2 rounded-lg bg-surface px-3 py-2"
@@ -140,7 +151,7 @@ export function PasswordResetPanel({
             onClick={() => setLinks(null)}
             className="mt-4 text-sm text-ink-4 hover:text-ink-2 hover:underline"
           >
-            העברתי את כולם — סגור את הרשימה
+            טיפלתי בכולם — סגור את הרשימה
           </button>
         </div>
       )}

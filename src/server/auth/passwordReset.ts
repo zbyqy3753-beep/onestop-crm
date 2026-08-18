@@ -4,6 +4,8 @@ import { randomBytes } from "node:crypto";
 import { prisma } from "@/server/db/client";
 import { db } from "@/server/repositories";
 import { updateAuthUser } from "./supabaseAdmin";
+import { toE164 } from "@/lib/format";
+import { resetNoticeDedupeKey } from "@/lib/domain/whatsapp";
 import { createSessionToken, hashSessionToken } from "./token";
 
 /**
@@ -37,6 +39,8 @@ export interface ResetLink {
   /** הכתובת המלאה להעברה לעובד. נוצרת פעם אחת ואי אפשר לשחזר אותה. */
   url: string;
   expiresAt: Date;
+  /** האם יצאה אליו התראה בוואטסאפ. `false` = אין לו טלפון תקין. */
+  notified: boolean;
 }
 
 /**
@@ -96,6 +100,8 @@ export async function resetUserPassword(
     },
   });
 
+  await queueNotice(userId, user.name, user.phone);
+
   const base = options.appUrl.replace(/\/$/, "");
   return {
     userId,
@@ -103,7 +109,45 @@ export async function resetUserPassword(
     email: user.email,
     url: `${base}/set-password?t=${token}`,
     expiresAt,
+    notified: Boolean(toE164(user.phone ?? "")),
   };
+}
+
+/**
+ * מודיע לעובד שהגישה שלו אופסה ומפנה אותו למסך הכניסה.
+ *
+ * ⚠️ **אין בהודעה קוד ואין בה קישור אישי** — היא רק מסבירה. הסוד
+ * מונפק רק כשהעובד מבקש אותו בעצמו, וכך הוא לא יושב בתור ולא בטלפון
+ * של מי שלא פתח את ההודעה.
+ *
+ * ⚠️ נכשלת בשקט. עובד בלי טלפון תקין עדיין אופס — הוא פשוט לא קיבל
+ * הודעה, והמנהל רואה זאת במסך ומעביר לו את הקישור ידנית. כישלון
+ * הודעה שמבטל איפוס היה משאיר חשבון עם סיסמה ישנה חיה.
+ */
+async function queueNotice(
+  userId: string,
+  name: string,
+  phone: string | null | undefined,
+): Promise<void> {
+  const to = toE164(phone ?? "");
+  if (!to) return;
+
+  const now = new Date();
+  try {
+    await prisma.whatsAppMessage.create({
+      data: {
+        dedupeKey: resetNoticeDedupeKey(userId, now),
+        toPhone: to,
+        // הפורמט הזה הוא מה ש-`nameFromBody` ב-drain מחלץ ממנו את
+        // הפרמטר של התבנית. ראה ההערה שם.
+        body: `שלום ${name}, הגישה שלך למערכת אופסה.`,
+        scheduledFor: now,
+        recipientUserId: userId,
+      },
+    });
+  } catch (error) {
+    console.error(`[reset] תור ההתראה נכשל עבור ${userId}:`, error);
+  }
 }
 
 export type ResetOutcome =

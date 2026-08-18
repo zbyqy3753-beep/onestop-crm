@@ -155,6 +155,29 @@ export function resetCodeDedupeKey(resetId: string): string {
 }
 
 /**
+ * ההתראה שקודמת לקוד.
+ *
+ * ⚠️ **בלעדיה העובד פשוט מוצא את עצמו מנותק בלי הסבר**, ומניח שהמערכת
+ * נשברה. ההתראה היא מה שהופך "אני לא מצליח להיכנס" ל"אני יודע מה
+ * לעשות", והיא גם מה שמונע גל שיחות למנהל.
+ *
+ * ⚠️ **אין בה קוד ואין בה קישור אישי** — רק הסבר וכפתור למסך הכניסה.
+ * זה מה שמאפשר לה להיות UTILITY: ברגע שיש בה סוד כלשהו מטא מסווגת
+ * אותה כ-Authentication, ואז כפתור URL אסור בה (זו בדיוק הדחייה
+ * שקיבלנו על `password_reset_he`).
+ */
+export const PASSWORD_RESET_NOTICE_TEMPLATE = {
+  name: "password_reset_notice_he",
+  language: "he",
+  category: "UTILITY",
+} as const;
+
+/** מפתח הדדופ של ההתראה. חותמת הזמן מבדילה בין מבצעי איפוס. */
+export function resetNoticeDedupeKey(userId: string, at: Date): string {
+  return `pwnotice:${userId}:${at.toISOString()}`;
+}
+
+/**
  * הפרמטרים של התבנית, מחולצים מהגוף שכבר רונדר.
  *
  * ⚠️⚠️ **חייב להישאר צמוד ל-`followUpReminder` שמעליו.** הגוף נשמר

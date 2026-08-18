@@ -17,6 +17,7 @@ import { RENEWAL_OPENER_TEMPLATE } from "@/lib/domain/renewalMessages";
 import {
   FOLLOWUP_REMINDER_TEMPLATE,
   PASSWORD_RESET_CODE_TEMPLATE,
+  PASSWORD_RESET_NOTICE_TEMPLATE,
   followUpReminderParams,
 } from "@/lib/domain/whatsapp";
 
@@ -59,10 +60,12 @@ function templateFor(
   | typeof RENEWAL_OPENER_TEMPLATE
   | typeof FOLLOWUP_REMINDER_TEMPLATE
   | typeof PASSWORD_RESET_CODE_TEMPLATE
+  | typeof PASSWORD_RESET_NOTICE_TEMPLATE
   | null {
   if (dedupeKey.startsWith("renewal:opener:")) return RENEWAL_OPENER_TEMPLATE;
   if (dedupeKey.startsWith("followup:")) return FOLLOWUP_REMINDER_TEMPLATE;
   if (dedupeKey.startsWith("pwcode:")) return PASSWORD_RESET_CODE_TEMPLATE;
+  if (dedupeKey.startsWith("pwnotice:")) return PASSWORD_RESET_NOTICE_TEMPLATE;
   return null;
 }
 
