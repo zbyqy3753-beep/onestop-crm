@@ -6,25 +6,21 @@ import { createAuthUser, updateAuthUser } from "@/server/auth/supabaseAdmin";
 import type { Role } from "@/lib/domain/types";
 import { isRole } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
+import { passwordProblem } from "@/lib/password";
 import { isValidLoginId, toLoginEmail } from "@/lib/loginId";
 import { revalidateUserSurfaces } from "@/app/(app)/_revalidate";
+import { resetPasswords, type ResetLink } from "@/server/auth/passwordReset";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
 
-/**
- * אורך סיסמה מזערי — ביצירה ובעריכה כאחד.
- *
- * ⚠️ קבוע אחד ולא שני מספרים קשיחים: הסף עמד על 6 בשני המקומות
- * בנפרד, וזה בדיוק סוג הכפילות שנסחפת. שישה תווים היו סף נמוך מדי
- * לכל חשבון, ובכלל זה חשבון מנהל ראשי.
- *
- * הועלה ל-10 ולא גבוה מזה: הסיסמאות מוקלדות בטלפון, ומדיניות שקשה
- * מדי לעמוד בה מייצרת פתקים על המסך.
+/*
+ * ⚠️ כאן ישב `MIN_PASSWORD_LENGTH = 10` ובדיקת אורך בלבד. היא עברה
+ * על `1234567890` ועל `aaaaaaaaaaaa` בלי להניד עפעף. הכללים עברו
+ * ל-`lib/password.ts` — מודול טהור שגם עמוד קביעת הסיסמה של העובד
+ * קורא לו, כדי שלא יתפתחו שתי מדיניות שונות בשני מסכים.
  */
-const MIN_PASSWORD_LENGTH = 10;
-const PASSWORD_TOO_SHORT = `סיסמה חייבת להכיל לפחות ${MIN_PASSWORD_LENGTH} תווים`;
 
 /**
  * יצירת משתמש חדש: גם רשומת User אצלנו, גם חשבון Supabase Auth
@@ -84,8 +80,8 @@ export async function createUserAction(
   if (role === "supplier" && !leadSourceName) {
     return { ok: false, error: "לספק לידים חובה להגדיר שם מקור" };
   }
-  if (password.length < MIN_PASSWORD_LENGTH)
-    return { ok: false, error: PASSWORD_TOO_SHORT };
+  const weak = passwordProblem(password, { email, name });
+  if (weak) return { ok: false, error: weak };
 
   const existing = await db.users.getByEmail(email);
   if (existing) return { ok: false, error: "כבר קיים משתמש עם האימייל הזה" };
@@ -171,8 +167,9 @@ export async function updateUserAction(
   const email = toLoginEmail(rawLoginId);
 
   // שדה ריק = "אל תשנה את הסיסמה", ולכן הבדיקה חלה רק כשהוזן משהו
-  if (password && password.length < MIN_PASSWORD_LENGTH) {
-    return { ok: false, error: PASSWORD_TOO_SHORT };
+  if (password) {
+    const weak = passwordProblem(password, { email, name });
+    if (weak) return { ok: false, error: weak };
   }
 
   const emailChanged = email.toLowerCase() !== target.email.toLowerCase();
@@ -267,4 +264,71 @@ export async function updateUserAction(
 
   revalidateUserSurfaces();
   return { ok: true };
+}
+
+/* ── איפוס סיסמאות ──────────────────────────────────────────────────── */
+
+export interface ResetLinkView {
+  userId: string;
+  name: string;
+  email: string;
+  url: string;
+}
+
+export interface ResetReport {
+  links: ResetLinkView[];
+  failures: { name: string; email: string; error: string }[];
+}
+
+/**
+ * מאפס סיסמאות ומחזיר קישורים חד-פעמיים להעברה ידנית.
+ *
+ * ⚠️ **הקישורים מוחזרים פעם אחת בלבד.** במסד נשמר רק ה-hash שלהם,
+ * בדיוק כמו בסשן, ולכן מסך שנסגר לפני שהעתקת אותם = קישורים אבודים.
+ * זו לא תקלה אלא התכונה — אבל היא מחייבת שהמסך יאמר את זה בבירור,
+ * ושתהיה דרך להנפיק מחדש (`userIds` עם משתמש בודד).
+ *
+ * ⚠️ רק בעלים. איפוס סיסמאות הוא השתלטות על חשבונות: מי שמריץ אותו
+ * מחזיק לרגע קישור שפותח כל חשבון במערכת, כולל של הבעלים. `manager`
+ * רשאי ליצור משתמשים אבל לא לקחת חשבון קיים.
+ */
+export async function resetPasswordsAction(
+  userIds: string[],
+): Promise<ActionResult<ResetReport>> {
+  const actor = await requireSessionUser();
+  if (actor.role !== "owner") {
+    return { ok: false, error: "רק מנהל ראשי יכול לאפס סיסמאות" };
+  }
+  if (userIds.length === 0) return { ok: false, error: "לא נבחר אף משתמש" };
+
+  const appUrl = process.env.APP_URL?.trim();
+  if (!appUrl) {
+    // ⚠️ בלי הכתובת היינו מייצרים קישורים יחסיים — כלומר מנפיקים
+    // טוקנים אמיתיים (שמבטלים סיסמאות!) ומדפיסים כתובת שבורה.
+    // עדיף להיכשל לפני שנגענו בחשבון של מישהו.
+    return { ok: false, error: "APP_URL אינו מוגדר — בלעדיו אי אפשר לבנות קישור" };
+  }
+
+  const results = await resetPasswords(userIds, {
+    appUrl,
+    issuedById: actor.id,
+    keepSessionOf: actor.id,
+  });
+
+  await revalidateUserSurfaces();
+
+  return {
+    ok: true,
+    data: {
+      links: results
+        .filter((r) => r.ok)
+        .map((r) => {
+          const { userId, name, email, url } = (r as { link: ResetLink }).link;
+          return { userId, name, email, url };
+        }),
+      failures: results
+        .filter((r) => !r.ok)
+        .map((r) => r as { name: string; email: string; error: string }),
+    },
+  };
 }

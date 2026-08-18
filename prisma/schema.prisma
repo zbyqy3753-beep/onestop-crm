@@ -88,6 +88,8 @@ model User {
   renewalDocuments      RenewalDocument[] @relation("RenewalUploader")
   sessions              Session[]         @relation("SessionUser")
   impersonatedSessions  Session[]         @relation("SessionImpersonated")
+  passwordResets        PasswordReset[]   @relation("PasswordResetUser")
+  issuedPasswordResets  PasswordReset[]   @relation("PasswordResetIssuer")
 
   @@index([role, active])
 }
@@ -120,6 +122,37 @@ model Session {
   lastSeenAt DateTime @default(now())
 
   @@index([userId])
+  @@index([expiresAt])
+}
+
+/// קישור חד-פעמי לקביעת סיסמה חדשה.
+///
+/// ⚠️ **אותו דפוס כמו `Session`, ומאותה סיבה:** הקישור מחזיק טוקן
+/// אקראי, והמסד מחזיק רק את ה-hash שלו. מי שמשיג גישת קריאה למסד לא
+/// יכול להרכיב ממנו קישור תקף — וזה קריטי כאן אפילו יותר מבסשן, כי
+/// קישור כזה שווה ערך לסיסמה של החשבון.
+///
+/// ⚠️ **לא נמחק אחרי שימוש — מסומן `usedAt`.** מחיקה הייתה הופכת
+/// "הקישור כבר נוצל" ו"הקישור לא היה קיים מעולם" לאותה תשובה בדיוק,
+/// ואי אפשר להסביר לעובד מה קרה.
+model PasswordReset {
+  /// ה-hash (SHA-256, hex) של הטוקן שבקישור
+  tokenHash String @id
+
+  userId String
+  user   User   @relation("PasswordResetUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  /// מתי נוצל. `null` = עדיין פתוח. חד-פעמיות נאכפת על השדה הזה.
+  usedAt    DateTime?
+
+  /// מי הנפיק אותו — ראיה מי אתחל את החשבון ומתי.
+  createdById String?
+  createdBy   User?   @relation("PasswordResetIssuer", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, usedAt])
   @@index([expiresAt])
 }
 

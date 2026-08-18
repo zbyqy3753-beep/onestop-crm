@@ -9,6 +9,7 @@ import { BotStatus, type BotHealth } from "./BotStatus";
 import { UsersTable } from "./UsersTable";
 import { AddUserModal } from "./AddUserModal";
 import { EditUserModal } from "./EditUserModal";
+import { PasswordResetPanel } from "./PasswordResetPanel";
 
 /**
  * מחזיק את מצב מסך ניהול המערכת ומעביר נתונים לילדים פרזנטציוניים.
@@ -91,6 +92,15 @@ export function AdminClient({
       />
 
       <AdminSummaryTiles users={users} />
+
+      {/* ⚠️ בעלים בלבד — `canImpersonate` הוא בדיוק אותו תנאי, ונקבע
+          בשרת. זו הסתרה של פקד, לא הרשאה: `resetPasswordsAction`
+          בודקת את התפקיד בעצמה. */}
+      {canImpersonate && (
+        <div className="mt-4">
+          <PasswordResetPanel users={users} currentUserId={currentUserId} />
+        </div>
+      )}
 
       <AddUserModal open={addOpen} onClose={() => setAddOpen(false)} />
 
