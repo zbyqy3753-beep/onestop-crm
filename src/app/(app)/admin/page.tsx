@@ -2,6 +2,7 @@ import { AdminClient } from "@/components/admin/AdminClient";
 import { db } from "@/server/repositories";
 import { prisma } from "@/server/db/client";
 import { requireRouteAccess } from "@/server/auth/session";
+import { resetStatuses } from "@/server/auth/passwordReset";
 import { readSettings } from "@/server/whatsapp/settings";
 
 /**
@@ -21,8 +22,15 @@ export default async function AdminPage() {
   // ⚠️ רק מה שהרצועה צריכה. הפירוט המלא — תור, היסטוריה, נמענים —
   // חי ב-`/bots`, ושליפתו כאן הייתה עולה בכל טעינה של מסך המשתמשים
   // בשביל נתונים שהמסך הזה לא מציג.
-  const [users, { rows: leads }, health, failureCount, queuedCount, settings] =
-    await Promise.all([
+  const [
+    users,
+    { rows: leads },
+    health,
+    failureCount,
+    queuedCount,
+    settings,
+    resets,
+  ] = await Promise.all([
       db.users.list(),
       db.leads.list(),
       // הדופק והספירות נקראים ישירות מ-Prisma ולא דרך repository: אין
@@ -32,6 +40,8 @@ export default async function AdminPage() {
       prisma.whatsAppMessage.count({ where: { status: "failed" } }),
       prisma.whatsAppMessage.count({ where: { status: "queued" } }),
       readSettings(),
+      // ⚠️ רק לבעלים — זו הרשימה שמראה מי אופס ומי עדיין נעול בחוץ.
+      actor.role === "owner" ? resetStatuses() : Promise.resolve([]),
     ]);
 
   return (
@@ -39,6 +49,13 @@ export default async function AdminPage() {
       users={users}
       leads={leads}
       canImpersonate={actor.role === "owner"}
+      resets={resets.map((r) => ({
+        userId: r.userId,
+        // ⚠️ ISO ולא Date: הגבול לרכיב לקוח מסדר ל-JSON, ותאריך שעובר
+        // אותו חוזר כמחרוזת בכל מקרה. עדיף במפורש מאשר בהפתעה.
+        resetAt: r.resetAt.toISOString(),
+        completedAt: r.completedAt?.toISOString() ?? null,
+      }))}
       currentUserId={actor.id}
       botHealth={
         health

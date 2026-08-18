@@ -9,7 +9,10 @@ import { BotStatus, type BotHealth } from "./BotStatus";
 import { UsersTable } from "./UsersTable";
 import { AddUserModal } from "./AddUserModal";
 import { EditUserModal } from "./EditUserModal";
-import { PasswordResetPanel } from "./PasswordResetPanel";
+import {
+  PasswordResetPanel,
+  type ResetStatusView,
+} from "./PasswordResetPanel";
 
 /**
  * מחזיק את מצב מסך ניהול המערכת ומעביר נתונים לילדים פרזנטציוניים.
@@ -27,6 +30,7 @@ export function AdminClient({
   botPaused,
   botFailureCount,
   botQueuedCount,
+  resets,
 }: {
   users: User[];
   leads: Lead[];
@@ -38,6 +42,8 @@ export function AdminClient({
   botPaused: boolean;
   botFailureCount: number;
   botQueuedCount: number;
+  /** מצב האיפוס של כל משתמש. ריק למי שאינו בעלים. */
+  resets: ResetStatusView[];
 }) {
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
@@ -98,7 +104,11 @@ export function AdminClient({
           בודקת את התפקיד בעצמה. */}
       {canImpersonate && (
         <div className="mt-4">
-          <PasswordResetPanel users={users} currentUserId={currentUserId} />
+          <PasswordResetPanel
+            users={users}
+            currentUserId={currentUserId}
+            resets={resets}
+          />
         </div>
       )}
 

@@ -275,9 +275,12 @@ export async function redeemCode(
    * מרגע שיש לו סיסמה, הזכאות מסתיימת: בקשת קוד נוספת תדרוש איפוס
    * חדש מהמנהל. בלי הסגירה הזו נשאר לו ערוץ פתוח לנצח.
    */
+  const done = new Date();
   await prisma.passwordReset.updateMany({
     where: { userId: user.id, usedAt: null },
-    data: { usedAt: new Date() },
+    // ⚠️ `completedAt` נכתב רק כאן ובזרימת הקישור — הוא מה שמבדיל
+    // "העובד קבע סיסמה" מ"השורה נסגרה כי המנהל איפס שוב".
+    data: { usedAt: done, completedAt: done },
   });
 
   // כל המכשירים מנותקים: אם החשבון נפרץ, קביעת סיסמה חייבת לזרוק את

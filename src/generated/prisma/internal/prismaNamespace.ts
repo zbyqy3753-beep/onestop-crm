@@ -2053,6 +2053,7 @@ export const PasswordResetScalarFieldEnum = {
   usedAt: 'usedAt',
   codeHash: 'codeHash',
   attempts: 'attempts',
+  completedAt: 'completedAt',
   createdById: 'createdById',
   createdAt: 'createdAt'
 } as const

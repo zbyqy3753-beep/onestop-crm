@@ -157,6 +157,14 @@ model PasswordReset {
   /// ניסיונות שגויים. ⚠️ 6 ספרות נשברות בניחוש אם אין תקרה.
   attempts Int @default(0)
 
+  /// מתי העובד באמת קבע סיסמה חדשה.
+  ///
+  /// ⚠️ **נפרד מ-`usedAt` בכוונה, ולא כפילות.** `usedAt` נסגר משלוש
+  /// סיבות: העובד סיים, הקוד הוחלף בחדש, או שהמנהל איפס שוב. רק
+  /// הראשונה מעניינת את מי ששואל "מי כבר טיפל בעצמו". בלי השדה הזה
+  /// איפוס חוזר היה מציג את העובד כמי שסיים, בזמן שהוא עדיין נעול.
+  completedAt DateTime?
+
   /// מי הנפיק אותו — ראיה מי אתחל את החשבון ומתי.
   createdById String?
   createdBy   User?   @relation("PasswordResetIssuer", fields: [createdById], references: [id], onDelete: SetNull)

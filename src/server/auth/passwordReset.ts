@@ -261,9 +261,11 @@ export async function completeReset(
   const target = await resetTarget(token);
   if (!target) return { ok: false, error: "הקישור אינו תקף" };
 
+  const now = new Date();
   const claimed = await prisma.passwordReset.updateMany({
     where: { tokenHash: hashSessionToken(token), usedAt: null },
-    data: { usedAt: new Date() },
+    // ⚠️ `completedAt` נכתב רק כאן ובזרימת הקוד — ראה ההערה בסכימה.
+    data: { usedAt: now, completedAt: now },
   });
   if (claimed.count === 0) return { ok: false, error: "הקישור אינו תקף" };
 
@@ -284,4 +286,41 @@ export async function completeReset(
   await db.sessions.deleteAllForUser(target.userId);
 
   return { ok: true, email: target.email };
+}
+
+export interface ResetStatus {
+  userId: string;
+  /** מתי המנהל איפס. */
+  resetAt: Date;
+  /** מתי העובד קבע סיסמה בעצמו. `null` = עדיין לא. */
+  completedAt: Date | null;
+}
+
+/**
+ * מצב האיפוס האחרון של כל משתמש — מי כבר טיפל בעצמו ומי עדיין תקוע.
+ *
+ * ⚠️ **שורת הזכאות בלבד** (`codeHash: null`). שורות הקוד הן שלב ביניים
+ * שנוצר בכל לחיצה על "קבל קוד"; ספירה שלהן הייתה מציגה את מי שביקש
+ * שלושה קודים כאילו אופס שלוש פעמים.
+ *
+ * ⚠️ האחרונה לכל משתמש ולא כולן: איפוס חוזר מחליף את הקודם, והמצב
+ * הרלוונטי הוא תמיד האחרון.
+ */
+export async function resetStatuses(): Promise<ResetStatus[]> {
+  const rows = await prisma.passwordReset.findMany({
+    where: { codeHash: null },
+    orderBy: { createdAt: "desc" },
+    select: { userId: true, createdAt: true, completedAt: true },
+  });
+
+  const latest = new Map<string, ResetStatus>();
+  for (const row of rows) {
+    if (latest.has(row.userId)) continue;
+    latest.set(row.userId, {
+      userId: row.userId,
+      resetAt: row.createdAt,
+      completedAt: row.completedAt,
+    });
+  }
+  return [...latest.values()];
 }

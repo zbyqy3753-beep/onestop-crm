@@ -8,6 +8,19 @@ import {
   type ResetLinkView,
 } from "@/app/(app)/admin/actions";
 
+/** ⚠️ תאריכים כמחרוזות — הם חצו את הגבול לרכיב לקוח דרך JSON. */
+export interface ResetStatusView {
+  userId: string;
+  resetAt: string;
+  completedAt: string | null;
+}
+
+/** `18.8, 14:32` — קצר מספיק לשורה בטבלה. */
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getDate()}.${d.getMonth() + 1}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 /**
  * איפוס סיסמאות והצגת הקישורים להעברה ידנית.
  *
@@ -19,9 +32,11 @@ import {
 export function PasswordResetPanel({
   users,
   currentUserId,
+  resets,
 }: {
   users: User[];
   currentUserId: string;
+  resets: ResetStatusView[];
 }) {
   const [pending, startTransition] = useTransition();
   const [links, setLinks] = useState<ResetLinkView[] | null>(null);
@@ -69,8 +84,8 @@ export function PasswordResetPanel({
           <h2 className="font-semibold text-ink">סיסמאות</h2>
           <p className="mt-1 max-w-prose text-sm text-ink-3">
             איפוס הורג את הסיסמה הקיימת מיד ושולח לעובד הודעה בוואטסאפ. הוא
-            נכנס דרך ״שכחת סיסמה?״, מקבל קוד, ובוחר סיסמה בעצמו — אף אחד, גם
-            לא אתה, לא רואה אותה.
+            מנסה להיכנס כרגיל, המערכת מזהה את האיפוס ושולחת לו קוד, והוא
+            בוחר סיסמה בעצמו — אף אחד, גם לא אתה, לא רואה אותה.
           </p>
         </div>
 
@@ -110,7 +125,7 @@ export function PasswordResetPanel({
       {links && links.filter((l) => l.notified).length > 0 && (
         <p className="mt-4 rounded-lg bg-save/10 px-3 py-2 text-sm text-save">
           {links.filter((l) => l.notified).length} עובדים קיבלו הודעה בוואטסאפ.
-          הם ייכנסו דרך ״שכחת סיסמה?״ ויקבלו קוד — אין מה לשלוח להם.
+          הם ינסו להיכנס, יקבלו קוד, ויסתדרו לבד — אין מה לשלוח להם.
         </p>
       )}
 
@@ -175,6 +190,12 @@ export function PasswordResetPanel({
               <span dir="ltr" className="truncate text-xs text-ink-4">
                 {u.email}
               </span>
+
+              {/* ⚠️ המצב שאתה באמת צריך: מי כבר קבע סיסמה בעצמו ומי
+                  עדיין נעול בחוץ. "אופס" בלי "קבע" פירושו עובד שלא
+                  יכול לעבוד — וזה מה שדורש מעקב. */}
+              <ResetState status={resets.find((r) => r.userId === u.id)} />
+
               <Button
                 className="ms-auto"
                 disabled={pending}
@@ -192,5 +213,31 @@ export function PasswordResetPanel({
         </ul>
       </details>
     </section>
+  );
+}
+
+/**
+ * מצב האיפוס של משתמש בודד.
+ *
+ * שלושה מצבים, ולכל אחד משמעות תפעולית אחרת:
+ *   אין שורה  — לא אופס מעולם. שום דבר לא נדרש.
+ *   אופס      — ⚠️ נעול בחוץ. **זה המצב שדורש אותך.**
+ *   קבע סיסמה — סיים לבד, אין מה לעשות.
+ */
+function ResetState({ status }: { status?: ResetStatusView }) {
+  if (!status) return null;
+
+  if (status.completedAt) {
+    return (
+      <span className="rounded bg-save/10 px-1.5 py-0.5 text-xs text-save">
+        קבע סיסמה · {shortDate(status.completedAt)}
+      </span>
+    );
+  }
+
+  return (
+    <span className="rounded bg-bad-soft px-1.5 py-0.5 text-xs text-bad">
+      אופס {shortDate(status.resetAt)} · ממתין
+    </span>
   );
 }
