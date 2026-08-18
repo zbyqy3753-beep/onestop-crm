@@ -184,7 +184,36 @@ export async function resetPasswords(
     }
   }
 
+  await flushNotices();
   return results;
+}
+
+/**
+ * מנקז את ההתראות שזה עתה נכנסו לתור.
+ *
+ * ⚠️⚠️ **בלי זה ההתראות פשוט יושבות.** הכנסה לתור אינה שליחה: מי
+ * שמנקז אותו הוא ה-cron, והוא רץ **פעם ביום** (מגבלת חשבון Hobby —
+ * ראה `api/whatsapp/cron/route.ts`). כלומר עובד היה מאבד את הסיסמה
+ * מיד ומקבל את ההסבר למחרת בבוקר. זה בדיוק מה שקרה לצביקי.
+ *
+ * ⚠️ בלולאה ולא קריאה אחת: `drainOutbox` מוגבל ל-10 הודעות למחזור,
+ * ו"אפס לכולם" מייצר יותר. תקרה של 5 מחזורים מונעת לולאה אינסופית
+ * אם משהו נתקע.
+ */
+async function flushNotices(): Promise<void> {
+  const { drainOutbox } = await import("@/server/whatsapp/drain");
+
+  for (let round = 0; round < 5; round++) {
+    try {
+      const res = await drainOutbox();
+      if (res.sent + res.failed === 0) return;
+    } catch (error) {
+      // ⚠️ כישלון ניקוז לא מבטל איפוס שכבר בוצע. ההתראות יישארו בתור
+      // ויצאו בניקוז הבא; הסיסמאות כבר מתו בין כה וכה.
+      console.error("[reset] ניקוז ההתראות נכשל:", error);
+      return;
+    }
+  }
 }
 
 export interface ResetTarget {
