@@ -2051,6 +2051,8 @@ export const PasswordResetScalarFieldEnum = {
   userId: 'userId',
   expiresAt: 'expiresAt',
   usedAt: 'usedAt',
+  codeHash: 'codeHash',
+  attempts: 'attempts',
   createdById: 'createdById',
   createdAt: 'createdAt'
 } as const
@@ -2424,6 +2426,20 @@ export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaM
 
 
 /**
+ * Reference to a field of type 'Int'
+ */
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+/**
+ * Reference to a field of type 'Int[]'
+ */
+export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+/**
  * Reference to a field of type 'LeadKind'
  */
 export type EnumLeadKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LeadKind'>
@@ -2602,20 +2618,6 @@ export type EnumWaMessageStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$
  * Reference to a field of type 'WaMessageStatus[]'
  */
 export type ListEnumWaMessageStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WaMessageStatus[]'>
-    
-
-
-/**
- * Reference to a field of type 'Int'
- */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
-
-
-/**
- * Reference to a field of type 'Int[]'
- */
-export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 

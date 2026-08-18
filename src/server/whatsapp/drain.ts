@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   attachProviderId,
+  scrubBody,
   pull,
   report,
   type ClaimedMessage,
@@ -15,6 +16,7 @@ import {
 import { RENEWAL_OPENER_TEMPLATE } from "@/lib/domain/renewalMessages";
 import {
   FOLLOWUP_REMINDER_TEMPLATE,
+  PASSWORD_RESET_CODE_TEMPLATE,
   followUpReminderParams,
 } from "@/lib/domain/whatsapp";
 
@@ -53,9 +55,14 @@ export interface DrainResult {
  */
 function templateFor(
   dedupeKey: string,
-): typeof RENEWAL_OPENER_TEMPLATE | typeof FOLLOWUP_REMINDER_TEMPLATE | null {
+):
+  | typeof RENEWAL_OPENER_TEMPLATE
+  | typeof FOLLOWUP_REMINDER_TEMPLATE
+  | typeof PASSWORD_RESET_CODE_TEMPLATE
+  | null {
   if (dedupeKey.startsWith("renewal:opener:")) return RENEWAL_OPENER_TEMPLATE;
   if (dedupeKey.startsWith("followup:")) return FOLLOWUP_REMINDER_TEMPLATE;
+  if (dedupeKey.startsWith("pwcode:")) return PASSWORD_RESET_CODE_TEMPLATE;
   return null;
 }
 
@@ -78,6 +85,21 @@ async function deliver(msg: ClaimedMessage): Promise<string> {
   // ⚠️ שתי התבניות מחלצות את הפרמטרים מהגוף המרונדר ולא מהליד: בזמן
   // השליחה יש בידינו רק את ה-snapshot. פונקציית החילוץ של כל תבנית
   // יושבת ליד הפונקציה שמרנדרת אותה, כדי שהשתיים ישתנו יחד.
+  /*
+   * ⚠️ הודעת קוד היא היחידה שהגוף שלה **הוא** הסוד ולא תיאור שלו:
+   * הוא מכיל את שש הספרות בלבד. אין כאן חילוץ בעזרת ביטוי רגולרי —
+   * הגוף עובר כמות שהוא.
+   */
+  if (template === PASSWORD_RESET_CODE_TEMPLATE) {
+    return sendTemplate(
+      msg.toPhone,
+      template.name,
+      template.language,
+      [msg.body.trim()],
+      { otpButton: true },
+    );
+  }
+
   const params =
     template === FOLLOWUP_REMINDER_TEMPLATE
       ? followUpReminderParams(msg.body)
@@ -125,6 +147,9 @@ export async function drainOutbox(appUrl?: string): Promise<DrainResult> {
       // ⚠️ לפני הדיווח: בלי הקישור הזה עדכון המסירה שיגיע ב-webhook
       // לא יידע לאיזו שורה הוא שייך
       await attachProviderId(msg.id, providerId);
+      // ⚠️ מיד אחרי השליחה, לא בניקוי מאוחר: הגוף של הודעת קוד **הוא**
+      // הקוד, וכל שנייה שהוא יושב במסד היא חלון מיותר.
+      if (msg.dedupeKey.startsWith("pwcode:")) await scrubBody(msg.id);
       results.push({ id: msg.id, status: "sent" });
     } catch (e) {
       results.push({

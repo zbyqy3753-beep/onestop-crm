@@ -132,6 +132,29 @@ export const FOLLOWUP_REMINDER_TEMPLATE = {
 } as const;
 
 /**
+ * קוד שחזור סיסמה.
+ *
+ * ⚠️ **AUTHENTICATION ולא UTILITY, ולא מרצון.** מטא מסווגת כל הודעת
+ * איפוס סיסמה לקטגוריה הזו, ותבנית שהוגשה כ-UTILITY נדחית ב-
+ * `INCORRECT_CATEGORY`. וקטגוריית האימות **אינה מרשה כפתור URL** —
+ * רק העתקת קוד. זו הסיבה שהזרימה מעבירה קוד בן 6 ספרות ולא קישור:
+ * אילוץ פלטפורמה, לא העדפה.
+ *
+ * ⚠️ הגוף והפוטר נכתבים על ידי מטא ולא על ידינו — בקטגוריה הזו אין
+ * טקסט חופשי. אין מה לערוך כאן בלי ליצור תבנית חדשה.
+ */
+export const PASSWORD_RESET_CODE_TEMPLATE = {
+  name: "password_reset_code_he",
+  language: "he",
+  category: "AUTHENTICATION",
+} as const;
+
+/** מפתח הדדופ של הודעת קוד. מזהה השורה מבטיח ייחודיות לכל הנפקה. */
+export function resetCodeDedupeKey(resetId: string): string {
+  return `pwcode:${resetId}`;
+}
+
+/**
  * הפרמטרים של התבנית, מחולצים מהגוף שכבר רונדר.
  *
  * ⚠️⚠️ **חייב להישאר צמוד ל-`followUpReminder` שמעליו.** הגוף נשמר

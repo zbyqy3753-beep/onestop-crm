@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { Button, Field, inputClass } from "@/components/ui/primitives";
 import { signIn } from "@/app/login/actions";
@@ -51,6 +52,16 @@ export function LoginForm({ next }: { next: string }) {
           {pending ? "בודק…" : "כניסה"}
         </Button>
       </form>
+
+      {/* ⚠️ הקישור היחיד שמוציא עובד נעול מהמבוי הסתום. בלעדיו כל
+          סיסמה שנשכחה היא פנייה למנהל, וזה בדיוק מה שגרם לכך
+          שהסיסמאות בארגון היו קלות מדי מלכתחילה. */}
+      <Link
+        href="/forgot-password"
+        className="mt-4 block text-center text-sm text-ink-4 hover:text-ink-2 hover:underline"
+      >
+        שכחת סיסמה?
+      </Link>
     </div>
   );
 }

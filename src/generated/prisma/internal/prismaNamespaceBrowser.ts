@@ -124,6 +124,8 @@ export const PasswordResetScalarFieldEnum = {
   userId: 'userId',
   expiresAt: 'expiresAt',
   usedAt: 'usedAt',
+  codeHash: 'codeHash',
+  attempts: 'attempts',
   createdById: 'createdById',
   createdAt: 'createdAt'
 } as const

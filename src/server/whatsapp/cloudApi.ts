@@ -131,9 +131,36 @@ export async function sendTemplate(
   name: string,
   language: string,
   params: string[],
+  options: { otpButton?: boolean } = {},
 ): Promise<string> {
   const phoneId = env("WHATSAPP_PHONE_NUMBER_ID");
   if (!phoneId) throw new Error("חסר WHATSAPP_PHONE_NUMBER_ID");
+
+  const components: unknown[] = params.length
+    ? [
+        {
+          type: "body",
+          parameters: params.map((text) => ({ type: "text", text })),
+        },
+      ]
+    : [];
+
+  /*
+   * ⚠️ תבנית אימות דורשת את הקוד **פעמיים** — גם בגוף וגם בכפתור.
+   *
+   * כפתור העתקת הקוד אינו טקסט אלא כתובת שמטא בונה
+   * (`.../otp/code/?...&code=otp{{1}}`), ויש לה משתנה משלה. שליחה עם
+   * פרמטר לגוף בלבד נדחית ב-132000 — "מספר הפרמטרים אינו תואם" —
+   * וזה נראה כמו תקלת תוכן בזמן שהבעיה היא רכיב חסר.
+   */
+  if (options.otpButton) {
+    components.push({
+      type: "button",
+      sub_type: "url",
+      index: "0",
+      parameters: [{ type: "text", text: params[0] }],
+    });
+  }
 
   const res = await graph<SendResponse>(`${phoneId}/messages`, {
     messaging_product: "whatsapp",
@@ -143,14 +170,7 @@ export async function sendTemplate(
     template: {
       name,
       language: { code: language },
-      components: params.length
-        ? [
-            {
-              type: "body",
-              parameters: params.map((text) => ({ type: "text", text })),
-            },
-          ]
-        : [],
+      components,
     },
   });
 

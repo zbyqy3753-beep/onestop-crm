@@ -655,14 +655,6 @@ export type EnumWaMessageStatusFieldUpdateOperationsInput = {
   set?: $Enums.WaMessageStatus
 }
 
-export type IntFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type WhatsAppMessageCreateWithoutRecipientInput = {
   id?: string
   dedupeKey: string

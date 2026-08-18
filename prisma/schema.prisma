@@ -146,6 +146,17 @@ model PasswordReset {
   /// מתי נוצל. `null` = עדיין פתוח. חד-פעמיות נאכפת על השדה הזה.
   usedAt    DateTime?
 
+  /// זרימת הקוד: HMAC-SHA256 של הקוד בן 6 הספרות. `null` בזרימת הקישור.
+  ///
+  /// ⚠️ **HMAC עם סוד מהסביבה ולא SHA-256 רגיל.** לקוד בן 6 ספרות יש
+  /// מיליון אפשרויות בלבד — מי שמשיג גישת קריאה למסד היה שובר hash
+  /// רגיל בשבריר שנייה, ואז קובע סיסמה חדשה לכל חשבון. הפלפל הופך
+  /// דליפת מסד לבדה לחסרת ערך כאן. ראה `PASSWORD_CODE_PEPPER`.
+  codeHash String?
+
+  /// ניסיונות שגויים. ⚠️ 6 ספרות נשברות בניחוש אם אין תקרה.
+  attempts Int @default(0)
+
   /// מי הנפיק אותו — ראיה מי אתחל את החשבון ומתי.
   createdById String?
   createdBy   User?   @relation("PasswordResetIssuer", fields: [createdById], references: [id], onDelete: SetNull)
