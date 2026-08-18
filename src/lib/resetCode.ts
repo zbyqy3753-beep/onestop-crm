@@ -58,3 +58,19 @@ export function isCodeShape(raw: string): boolean {
 export function formatCode(value: number): string {
   return String(value % 10 ** CODE_LENGTH).padStart(CODE_LENGTH, "0");
 }
+
+/**
+ * המספר כפי שמוצג למי שביקש קוד — ארבע ספרות אחרונות בלבד.
+ *
+ * ⚠️ **בלי זה המסך אומר "נשלח קוד" ולא לאן.** עובד שהטלפון שלו במערכת
+ * לא מעודכן ממתין להודעה שלא תגיע, בלי שום דרך להבין למה — וזה נראה
+ * כמו מערכת שבורה ולא כמו נתון שגוי בכרטיס שלו.
+ *
+ * ⚠️ ארבע ספרות ולא המספר המלא: מי שמגיע למסך הזה כבר עבר את שער
+ * הזכאות, אבל אין סיבה להדפיס מספר טלפון מלא של עובד על מסך פתוח.
+ */
+export function maskPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 4) return "•".repeat(4);
+  return `${"•".repeat(3)}${digits.slice(-4)}`;
+}

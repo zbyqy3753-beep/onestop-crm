@@ -10,6 +10,7 @@ import {
   MAX_CODE_ATTEMPTS,
   formatCode,
   isCodeShape,
+  maskPhone,
   normalizeCode,
 } from "@/lib/resetCode";
 import { createSessionToken, hashSessionToken } from "./token";
@@ -60,6 +61,8 @@ function sameHash(a: string, b: string): boolean {
 export interface IssuedCode {
   code: string;
   phone: string;
+  /** ארבע ספרות אחרונות, להצגה למי שביקש. */
+  maskedPhone: string;
   name: string;
   userId: string;
 }
@@ -78,11 +81,34 @@ export async function issueCode(email: string): Promise<IssuedCode | null> {
   const phone = toE164(user.phone);
   if (!phone) return null;
 
-  // ⚠️ קודים קודמים שטרם נוצלו נסגרים. אחרת בקשה חוזרת ("לא קיבלתי")
-  // הייתה משאירה כמה קודים חיים במקביל, וכל אחד מהם מכפיל את סיכויי
-  // הניחוש.
+  /*
+   * ⚠️⚠️ **שער הזכאות: קוד מונפק רק למי שמנהל באמת איפס.**
+   *
+   * בלי זה המסך היה נקודת קצה פתוחה — מי שמכיר שם משתמש של עובד היה
+   * יכול להפעיל לו וואטסאפ מתי שבא לו. זו גם הטרדה וגם עלות לכל
+   * הודעה, ובעיקר: הודעת אימות שמגיעה בלי סיבה מאמנת את הצוות
+   * להתעלם מהודעות אימות.
+   *
+   * ה"זכאות" היא שורת האיפוס שהמנהל יצר — שורה בלי `codeHash`. היא
+   * נשארת פתוחה לאורך כל התהליך ונסגרת רק כשנקבעת סיסמה, כדי שעובד
+   * שלא קיבל את ההודעה יוכל לבקש קוד שוב.
+   */
+  const entitled = await prisma.passwordReset.findFirst({
+    where: {
+      userId: user.id,
+      codeHash: null,
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    select: { tokenHash: true },
+  });
+  if (!entitled) return null;
+
+  // ⚠️ נסגרים רק קודים קודמים (`codeHash` קיים), **לא** שורת הזכאות.
+  // סגירתה הייתה חוסמת בקשה חוזרת של מי שההודעה הראשונה לא הגיעה
+  // אליו — בדיוק המקרה שבשבילו הכפתור "בקש קוד חדש" קיים.
   await prisma.passwordReset.updateMany({
-    where: { userId: user.id, usedAt: null },
+    where: { userId: user.id, usedAt: null, codeHash: { not: null } },
     data: { usedAt: new Date() },
   });
 
@@ -99,7 +125,13 @@ export async function issueCode(email: string): Promise<IssuedCode | null> {
     },
   });
 
-  return { code, phone, name: user.name, userId: user.id };
+  return {
+    code,
+    phone,
+    maskedPhone: maskPhone(phone),
+    name: user.name,
+    userId: user.id,
+  };
 }
 
 /**
@@ -113,8 +145,10 @@ export async function issueCode(email: string): Promise<IssuedCode | null> {
  * שמגיע בעוד חמש דקות שווה לקוד שלא הגיע — התוקף שלו עשר דקות.
  */
 export async function sendCode(issued: IssuedCode): Promise<void> {
+  // ⚠️ `codeHash: not null` — אחרת זה היה תופס את שורת הזכאות, שהיא
+  // גם פתוחה, ומייצר מפתח דדופ שמתנגש בין הנפקות.
   const row = await prisma.passwordReset.findFirst({
-    where: { userId: issued.userId, usedAt: null },
+    where: { userId: issued.userId, usedAt: null, codeHash: { not: null } },
     orderBy: { createdAt: "desc" },
     select: { tokenHash: true },
   });
@@ -207,6 +241,17 @@ export async function redeemCode(
       error: error instanceof Error ? error.message : "שמירת הסיסמה נכשלה",
     };
   }
+
+  /*
+   * ⚠️ **שורת הזכאות נסגרת כאן, ורק כאן.** כל עוד היא פתוחה העובד
+   * רשאי לבקש קודים נוספים — וזה נכון כל עוד הוא לא הצליח להיכנס.
+   * מרגע שיש לו סיסמה, הזכאות מסתיימת: בקשת קוד נוספת תדרוש איפוס
+   * חדש מהמנהל. בלי הסגירה הזו נשאר לו ערוץ פתוח לנצח.
+   */
+  await prisma.passwordReset.updateMany({
+    where: { userId: user.id, usedAt: null },
+    data: { usedAt: new Date() },
+  });
 
   // כל המכשירים מנותקים: אם החשבון נפרץ, קביעת סיסמה חייבת לזרוק את
   // מי שכבר בפנים.

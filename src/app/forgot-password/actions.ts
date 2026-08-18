@@ -16,7 +16,7 @@ import { isLockedOut, recordFailure } from "@/server/auth/lockout";
 
 export type ForgotState =
   | { step: "request"; error?: string }
-  | { step: "verify"; loginId: string; error?: string }
+  | { step: "verify"; loginId: string; maskedPhone?: string; error?: string }
   | { step: "done" };
 
 /**
@@ -59,7 +59,10 @@ export async function requestCode(
     }
   }
 
-  return { step: "verify", loginId: raw };
+  // ⚠️ `maskedPhone` קיים רק כשבאמת נשלח משהו. המסך מציג בזכותו
+  // "נשלח ל-•••0008" למי שזכאי, ומשפט כללי לכל השאר — בלי לגלות
+  // למי מהם יש חשבון.
+  return { step: "verify", loginId: raw, maskedPhone: issued?.maskedPhone };
 }
 
 /** שלב ב׳ — אימות הקוד וקביעת הסיסמה. */

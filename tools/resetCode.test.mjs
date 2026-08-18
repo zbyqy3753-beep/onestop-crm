@@ -48,3 +48,11 @@ test("resetCode: ההגנות לא נחלשו בטעות", () => {
   assert.ok(CODE_TTL_MS <= 15 * 60 * 1000, "תפוגה ארוכה מדי לקוד קצר");
   assert.ok(MAX_CODE_ATTEMPTS <= 5, "יותר מדי ניסיונות מותרים");
 });
+
+test("resetCode: מיסוך מספר חושף רק ארבע ספרות אחרונות", async () => {
+  const { maskPhone } = await import("../src/lib/resetCode.ts");
+  assert.equal(maskPhone("972534240008"), "•••0008");
+  assert.equal(maskPhone("0534240008"), "•••0008");
+  // מספר קצר מדי לא מדליף כלום
+  assert.equal(maskPhone("12"), "••••");
+});

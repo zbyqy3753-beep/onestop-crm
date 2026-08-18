@@ -28,7 +28,8 @@ export function ForgotPasswordForm() {
     return (
       <div className="rounded-xl border border-line bg-surface p-6">
         <p className="mb-5 text-sm text-ink-2">
-          נשלח קוד בן {CODE_LENGTH} ספרות לוואטסאפ שרשום במערכת.
+          המסך הזה מיועד למי שההנהלה איפסה לו את הסיסמה. נשלח קוד בן
+          {CODE_LENGTH} ספרות לוואטסאפ שרשום עליו במערכת.
         </p>
 
         <form action={reqAction} className="space-y-4">
@@ -62,10 +63,16 @@ export function ForgotPasswordForm() {
   // המהדר, לא בשביל זרימה אפשרית.
   if (reqState.step !== "verify") return null;
 
-  return <VerifyStep loginId={reqState.loginId} />;
+  return <VerifyStep loginId={reqState.loginId} maskedPhone={reqState.maskedPhone} />;
 }
 
-function VerifyStep({ loginId }: { loginId: string }) {
+function VerifyStep({
+  loginId,
+  maskedPhone,
+}: {
+  loginId: string;
+  maskedPhone?: string;
+}) {
   const [state, action, pending] = useActionState<ForgotState, FormData>(
     submitCode,
     { step: "verify", loginId },
@@ -90,9 +97,21 @@ function VerifyStep({ loginId }: { loginId: string }) {
 
   return (
     <div className="rounded-xl border border-line bg-surface p-6">
-      <p className="mb-1 text-sm text-ink-2">
-        אם השם קיים במערכת, נשלח קוד לוואטסאפ.
-      </p>
+      {/* ⚠️ שתי הודעות שונות, ובכוונה. מי שקיבל קוד רואה לאן הוא הלך —
+          אחרת הוא ממתין להודעה שלא תגיע כי הטלפון בכרטיס שלו שגוי.
+          מי שלא זכאי רואה משפט כללי שלא מגלה אם החשבון קיים בכלל. */}
+      {maskedPhone ? (
+        <p className="mb-1 text-sm text-ink-2">
+          נשלח קוד לוואטסאפ שמסתיים ב-
+          <span dir="ltr" className="mx-1 font-semibold text-ink">
+            {maskedPhone}
+          </span>
+        </p>
+      ) : (
+        <p className="mb-1 text-sm text-ink-2">
+          אם החשבון זכאי לאיפוס, נשלח אליו קוד בוואטסאפ.
+        </p>
+      )}
       <p className="mb-5 text-xs text-ink-4">הקוד תקף לעשר דקות.</p>
 
       <form action={action} className="space-y-4">
