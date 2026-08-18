@@ -41,8 +41,8 @@ export default async function LeadsPage({
    * יושבים ב-payload של הדף וקריאים לכל מי שפותח DevTools. prop אחד
    * שנשכח בעוד שנה מחזיר את הדליפה בשקט.
    *
-   * כאן במקום זה נשלפים רק הלידים שלו, וממופים לשם ותאריך **בשרת**,
-   * לפני שמשהו עוזב אותו.
+   * כאן במקום זה נשלפים רק הלידים שלו, וממופים **בשרת** לשם, טלפון,
+   * סטטוס, הערות ותאריך — ותו לא — לפני שמשהו עוזב אותו.
    */
   if (isSupplier(currentUser.role)) {
     /*
@@ -76,7 +76,26 @@ export default async function LeadsPage({
           // לשם+תאריך, הוא ייחודי גם לשני לידים זהים באותו יום.
           key: String(i),
           name: lead.name,
+          phone: lead.phone,
+          status: lead.status,
           createdAt: lead.createdAt,
+          /*
+           * ⚠️ ההערות עוברות שדה-שדה ולא כ-`lead.notes`. `LeadNote`
+           * נושא `id`, `leadId` ו-`authorId`, ושלושתם מזהים פנימיים
+           * שאין לספק מה לעשות איתם — ופיזור (`...note`) היה מצרף
+           * גם כל שדה שיתווסף לטיפוס בעתיד, בלי שאיש ישים לב.
+           */
+          notes: [...lead.notes]
+            /*
+             * מיון מפורש: ה-`include` של `list` מביא את ההערות בלי
+             * `orderBy`, כלומר Postgres מחזיר אותן בסדר בלתי מוגדר.
+             * שרשור הערות שמוצג לא לפי סדר הזמן קורא כשיחה מבולבלת.
+             */
+            .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+            .map((note) => ({
+              body: note.body,
+              createdAt: note.createdAt,
+            })),
         }))}
       />
     );
