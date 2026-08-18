@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { canUseCrm } from "@/lib/domain/permissions";
+import { hasOpenReset } from "@/server/auth/resetCode";
 import { GATE_COOKIE, GATE_COOKIE_OPTIONS } from "@/lib/gate";
 import { NEXT_PARAM, safeReturnTo } from "@/lib/returnTo";
 import { toLoginEmail } from "@/lib/loginId";
@@ -52,6 +53,19 @@ export async function signIn(_prev: string | null, formData: FormData) {
   // מסגירה אילו חשבונות קיימים במערכת
   if (!user) {
     await recordFailure(email);
+
+    /*
+     * ⚠️⚠️ **כאן מתחיל מסלול האיפוס, ולא בקישור ״שכחת סיסמה?״.**
+     *
+     * עובד שההנהלה איפסה לו את הסיסמה מנסה להיכנס כרגיל ונכשל — כי
+     * הסיסמה שלו נמחקה. במקום להשאיר אותו מול "סיסמה שגויה" בלי דרך
+     * קדימה, מזהים שממתין לו איפוס ומעבירים אותו למסך הקוד.
+     *
+     * זה מה שמאפשר שלא יהיה קישור שחזור גלוי במסך הכניסה: המסלול
+     * נפתח רק למי שבאמת אופס, ורק אחרי שהוא ניסה להיכנס בעצמו.
+     */
+    if (await hasOpenReset(email)) redirect(`/forgot-password?u=${encodeURIComponent(raw)}`);
+
     return "שם משתמש או סיסמה שגויים.";
   }
 

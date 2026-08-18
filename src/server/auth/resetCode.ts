@@ -58,6 +58,33 @@ function sameHash(a: string, b: string): boolean {
   return ba.length === bb.length && timingSafeEqual(ba, bb);
 }
 
+/**
+ * האם לחשבון יש איפוס פתוח שממתין לו.
+ *
+ * ⚠️ **זה מה שמחליף את הקישור ״שכחת סיסמה?״ במסך הכניסה.** במקום
+ * כפתור שכל אחד רואה ולוחץ, מסך ההתחברות בודק את השאלה הזו אחרי
+ * ניסיון כניסה כושל: עובד שהסיסמה שלו אופסה מנסה להיכנס כרגיל,
+ * נכשל — וההודעה שהוא מקבל היא לא "סיסמה שגויה" אלא הדרך קדימה.
+ *
+ * ⚠️ נבדק לפי `codeHash: null` — שורת הזכאות שהמנהל יצר, ולא שורת
+ * קוד שהונפקה בדרך.
+ */
+export async function hasOpenReset(email: string): Promise<boolean> {
+  const user = await db.users.getByEmail(email);
+  if (!user?.active) return false;
+
+  const row = await prisma.passwordReset.findFirst({
+    where: {
+      userId: user.id,
+      codeHash: null,
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    select: { tokenHash: true },
+  });
+  return Boolean(row);
+}
+
 export interface IssuedCode {
   code: string;
   phone: string;

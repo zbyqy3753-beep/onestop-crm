@@ -12,13 +12,16 @@ import { CODE_LENGTH } from "@/lib/resetCode";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
 
 /**
- * שני שלבים במסך אחד.
+ * שני שלבים במסך אחד: קבלת קוד, ואז קוד + סיסמה.
+ *
+ * ⚠️ שם המשתמש מגיע כ-prop מהשרת ולא מוקלד כאן. שדה פתוח היה מחזיר
+ * בדיוק את הבעיה שהמסך בא לפתור — מי שמכיר שם משתמש של עובד מפעיל
+ * לו וואטסאפ מתי שבא לו.
  *
  * ⚠️ שני `useActionState` נפרדים ולא אחד עם ענף: כל שלב הוא פעולה
- * אחרת עם ולידציה אחרת, ומיזוגם לפעולה אחת היה מייצר שדות שקיימים
- * רק לפעמים — הדרך הקצרה ביותר לשלוח שלב אחד עם נתוני השני.
+ * אחרת עם ולידציה אחרת, ומיזוגם היה מייצר שדות שקיימים רק לפעמים.
  */
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({ loginId }: { loginId: string }) {
   const [reqState, reqAction, reqPending] = useActionState<ForgotState, FormData>(
     requestCode,
     { step: "request" },
@@ -27,25 +30,28 @@ export function ForgotPasswordForm() {
   if (reqState.step === "request") {
     return (
       <div className="rounded-xl border border-line bg-surface p-6">
-        <p className="mb-5 text-sm text-ink-2">
-          המסך הזה מיועד למי שההנהלה איפסה לו את הסיסמה. נשלח קוד בן
-          {CODE_LENGTH} ספרות לוואטסאפ שרשום עליו במערכת.
+        <p className="font-semibold text-ink">הסיסמה שלך אופסה</p>
+        <p className="mt-2 mb-5 text-sm text-ink-3">
+          ההנהלה ריעננה את פרטי הגישה. נשלח לך קוד בן {CODE_LENGTH} ספרות
+          לוואטסאפ, ואיתו תקבע סיסמה חדשה.
         </p>
 
         <form action={reqAction} className="space-y-4">
-          <Field label="שם משתמש" error={reqState.error}>
-            <input
-              name="loginId"
-              type="text"
-              autoComplete="username"
-              dir="ltr"
-              className={`${inputClass} text-start`}
-              placeholder="idan"
-            />
-          </Field>
+          <input type="hidden" name="loginId" value={loginId} />
 
-          <Button type="submit" variant="primary" disabled={reqPending} className="w-full py-2">
-            {reqPending ? "שולח…" : "שלח קוד"}
+          {reqState.error && (
+            <p className="rounded-md bg-bad-soft px-3 py-2 text-sm text-bad">
+              {reqState.error}
+            </p>
+          )}
+
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={reqPending}
+            className="w-full py-2"
+          >
+            {reqPending ? "שולח…" : "קבל קוד"}
           </Button>
         </form>
 
@@ -63,7 +69,9 @@ export function ForgotPasswordForm() {
   // המהדר, לא בשביל זרימה אפשרית.
   if (reqState.step !== "verify") return null;
 
-  return <VerifyStep loginId={reqState.loginId} maskedPhone={reqState.maskedPhone} />;
+  return (
+    <VerifyStep loginId={reqState.loginId} maskedPhone={reqState.maskedPhone} />
+  );
 }
 
 function VerifyStep({
@@ -97,9 +105,9 @@ function VerifyStep({
 
   return (
     <div className="rounded-xl border border-line bg-surface p-6">
-      {/* ⚠️ שתי הודעות שונות, ובכוונה. מי שקיבל קוד רואה לאן הוא הלך —
-          אחרת הוא ממתין להודעה שלא תגיע כי הטלפון בכרטיס שלו שגוי.
-          מי שלא זכאי רואה משפט כללי שלא מגלה אם החשבון קיים בכלל. */}
+      {/* ⚠️ מציג לאן הקוד נשלח. בלי זה עובד שהטלפון בכרטיס שלו שגוי
+          ממתין להודעה שלא תגיע, ואין לו שום דרך להבין למה — זה נראה
+          כמו מערכת שבורה ולא כמו נתון שצריך לתקן. */}
       {maskedPhone ? (
         <p className="mb-1 text-sm text-ink-2">
           נשלח קוד לוואטסאפ שמסתיים ב-
@@ -109,7 +117,7 @@ function VerifyStep({
         </p>
       ) : (
         <p className="mb-1 text-sm text-ink-2">
-          אם החשבון זכאי לאיפוס, נשלח אליו קוד בוואטסאפ.
+          לא הצלחנו לשלוח קוד. פנה למנהל.
         </p>
       )}
       <p className="mb-5 text-xs text-ink-4">הקוד תקף לעשר דקות.</p>
@@ -153,13 +161,18 @@ function VerifyStep({
           />
         </Field>
 
-        <Button type="submit" variant="primary" disabled={pending} className="w-full py-2">
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={pending}
+          className="w-full py-2"
+        >
           {pending ? "שומר…" : "קבע סיסמה"}
         </Button>
       </form>
 
       <Link
-        href="/forgot-password"
+        href={`/forgot-password?u=${encodeURIComponent(loginId)}`}
         className="mt-4 block text-center text-sm text-ink-4 hover:text-ink-2 hover:underline"
       >
         לא קיבלת? בקש קוד חדש
