@@ -1,7 +1,13 @@
 import { revalidatePath } from "next/cache";
 import type { NextRequest } from "next/server";
 import { db } from "@/server/repositories";
-import { partnerFromKey, type ApiPartner } from "@/server/auth/apiKeys";
+import {
+  API_KEY_FIELD,
+  apiKeyFromBody,
+  apiKeyFromRequest,
+  partnerFromKey,
+  type ApiPartner,
+} from "@/server/auth/apiKeys";
 import type { LeadCategoryKey, ProviderKey, Role } from "@/lib/domain/types";
 import { matchLeadCategory } from "@/lib/domain/types";
 import {
@@ -15,7 +21,9 @@ import {
  *
  * זו נקודת הכניסה היחידה למערכת שאינה עוברת דרך הסשן: שותף (אתר,
  * דף נחיתה, מערכת של ספק) שולח ליד בודד ומקבל את מזהה הליד שנוצר.
- * האימות הוא מפתח בכותרת `x-api-key` (ראה `server/auth/apiKeys.ts`).
+ * האימות הוא מפתח שנשלח באחת משלוש דרכים, לפי סדר עדיפות יורד:
+ * כותרת `x-api-key`, שדה `api_key` בגוף ה-JSON, או `?api_key=` בכתובת.
+ * ראה `server/auth/apiKeys.ts` — שם מוסבר למה הכתובת אחרונה.
  *
  * הקצה מיועד לקריאה **שרת-אל-שרת**. אין כאן כותרות CORS בכוונה —
  * קריאה מדפדפן הייתה מחייבת להטמיע את המפתח ב-JS של הדף, כלומר
@@ -121,6 +129,14 @@ const KNOWN_FIELDS: ReadonlySet<string> = new Set([
   "plan",
   "providerName",
   "price",
+  /*
+   * ⚠️⚠️ `api_key` כאן **לא** בגלל שהוא שדה תוכן, אלא כדי שלא ייחשב
+   * "לא זוהה". `unknownFields` (למטה) כותב כל שדה לא מוכר אל תוך
+   * ההערה הראשונה של הליד — כלומר מפתח שנשלח בגוף היה נשמר ב-DB
+   * כטקסט קריא, מוצג בכרטיס הליד, ומאז שמסך הספק מציג הערות — גם
+   * לספק עצמו. מחיקת השורה הזו מחזירה את הדליפה בשקט.
+   */
+  API_KEY_FIELD,
 ]);
 
 /**
@@ -244,7 +260,18 @@ async function nextAssignee(): Promise<string | undefined> {
 /* ── הנקודה עצמה ──────────────────────────────────────────────────────── */
 
 export async function POST(request: NextRequest): Promise<Response> {
-  const partner = partnerFromKey(request.headers.get("x-api-key"));
+  /*
+   * ⚠️ הגוף נקרא **לפני** האימות, בניגוד לסדר המתבקש, כי המפתח יכול
+   * לשבת בתוכו. תקרת הגודל היא מה שהופך את זה לבטוח: היא נבדקת
+   * ראשונה, כך שגוף חריג נדחה בלי שנעשה בו שום דבר. הקריאה עצמה
+   * מוגבלת ל-16KB ואינה נוגעת ב-DB.
+   */
+  const raw = await request.text();
+  if (raw.length > MAX_BODY_BYTES) return fail(413, "גוף הבקשה גדול מדי");
+
+  const partner = partnerFromKey(
+    apiKeyFromRequest(request) ?? apiKeyFromBody(raw),
+  );
   if (!partner) return fail(401, "מפתח API חסר או לא תקין");
 
   if (overRateLimit(partner.name)) {
@@ -253,9 +280,6 @@ export async function POST(request: NextRequest): Promise<Response> {
       { status: 429, headers: { "Retry-After": "60" } },
     );
   }
-
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) return fail(413, "גוף הבקשה גדול מדי");
 
   let body: LeadPayload;
   try {
@@ -360,8 +384,10 @@ export async function POST(request: NextRequest): Promise<Response> {
  * לא חושפת דבר בלי מפתח תקין.
  */
 export async function GET(request: NextRequest): Promise<Response> {
+  // בלי גוף — ל-GET יש רק כותרת או כתובת. זו גם הדרך שבה שותף
+  // בודק שהמפתח שלו עובד מהדפדפן, לפני שהקרון שלו רץ בפעם הראשונה.
   const partner: ApiPartner | null = partnerFromKey(
-    request.headers.get("x-api-key"),
+    apiKeyFromRequest(request),
   );
   if (!partner) return fail(401, "מפתח API חסר או לא תקין");
 

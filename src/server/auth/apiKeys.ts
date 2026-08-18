@@ -60,13 +60,57 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 /**
- * מזהה את השותף מכותרת `x-api-key`, או `null` אם המפתח חסר/לא מוכר.
+ * מזהה את השותף מהמפתח שנשלח, או `null` אם הוא חסר/לא מוכר.
  *
  * הלולאה עוברת על **כל** המפתחות גם אחרי התאמה, כדי שזמן התשובה
  * לא יסגיר כמה מפתחות רשומים ואיפה ברשימה נמצא המפתח שנשלח.
  */
 export function partnerFromKey(provided: string | null): ApiPartner | null {
   return fromKey(provided, "LEADS_API_KEYS");
+}
+
+/** שם השדה/הפרמטר שנושא את המפתח מחוץ לכותרת. */
+export const API_KEY_FIELD = "api_key";
+
+/**
+ * המפתח מתוך הבקשה — כותרת `x-api-key` תחילה, ואם אין, `?api_key=`.
+ *
+ * ⚠️ **הכותרת קודמת, וזה לא סדר שרירותי.** מפתח ב-query string נרשם
+ * ב-URL המלא בלוגי הגישה של Vercel ובכל פרוקסי בדרך, ועלול לדלוף גם
+ * דרך `Referer`. הכותרת לא. מי ששולח את שניהם מקבל את הנתיב הבטוח.
+ *
+ * הפרמטר קיים משום ששותפים מריצים קרון שלא תמיד יודע להרכיב כותרות,
+ * והחלופה — שהם ישלחו לידים בלי אימות בכלל — גרועה יותר. **התיעוד
+ * לשותפים מציע קודם את הגוף** (`api_key` בתוך ה-JSON), שפותר את אותה
+ * מגבלה בלי שהמפתח יגיע לשום לוג. ראה docs/leads-api.md.
+ */
+export function apiKeyFromRequest(request: {
+  headers: { get(name: string): string | null };
+  nextUrl: { searchParams: URLSearchParams };
+}): string | null {
+  const header = request.headers.get("x-api-key");
+  if (header) return header;
+
+  return request.nextUrl.searchParams.get(API_KEY_FIELD);
+}
+
+/**
+ * המפתח מתוך גוף בקשה גולמי, אם הוא שם.
+ *
+ * ⚠️ סלחני בכוונה: גוף שאינו JSON תקין מחזיר `null` ולא זורק, כדי
+ * שבקשה לא מאומתת תיפול על 401 ולא על 400. 400 היה מאשר לכל מי
+ * שמנחש שהנקודה קיימת ומה החוזה שלה.
+ */
+export function apiKeyFromBody(raw: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+
+    const value = (parsed as Record<string, unknown>)[API_KEY_FIELD];
+    return typeof value === "string" && value ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
