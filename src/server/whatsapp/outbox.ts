@@ -3,7 +3,11 @@ import "server-only";
 import { prisma } from "@/server/db/client";
 import { STATUS_CONFIG } from "@/lib/domain/types";
 import { isIsraeliPhone, toE164 } from "@/lib/format";
-import { followUpReminder } from "@/lib/domain/whatsapp";
+import {
+  followUpReminder,
+  unassignedBody,
+  unassignedDedupeKey,
+} from "@/lib/domain/whatsapp";
 import { leadFromPrisma } from "@/server/repositories/prisma/mappers";
 import { israelHourMinute, startOfDay } from "@/lib/tz";
 import { readSettings, type BotSettingsView } from "./settings";
@@ -138,6 +142,10 @@ async function enqueueDueFollowUps(
   const win = settings;
   const leadMs = Math.max(0, settings.reminderLeadMinutes) * 60_000;
 
+  // ⚠️ הלידים חסרי השיוך מטופלים בנפרד ולא כאן — ראה
+  // `enqueueUnassignedAlerts`. הם היו נופלים מהתנאי שלמטה בשקט.
+  await enqueueUnassignedAlerts(leadMs, win);
+
   const due = await prisma.lead.findMany({
     where: {
       followUpAt: { not: null, lte: new Date(Date.now() + leadMs) },
@@ -202,7 +210,21 @@ async function enqueueDueFollowUps(
  */
 async function cancelSuperseded(): Promise<number> {
   const pending = await prisma.whatsAppMessage.findMany({
-    where: { status: "queued", leadId: { not: null } },
+    /*
+     * ⚠️⚠️ **תזכורות חזרה בלבד.** התנאים למטה נכתבו עבורן ובודקים,
+     * בין השאר, שלליד יש משויך פעיל — ולכן שורה מסוג אחר שיש לה
+     * `leadId` הייתה מבוטלת כאן בשקט, מיד עם יצירתה.
+     *
+     * זה בדיוק מה שהיה קורה להתראות `unassigned:`: הן קיימות **בגלל**
+     * שאין לליד משויך, כלומר הן היו נכשלות בתנאי שנועד להגן על
+     * התזכורות. בלי הסינון הזה התכונה כולה לא הייתה עובדת, ושום
+     * שגיאה לא הייתה מופיעה.
+     */
+    where: {
+      status: "queued",
+      leadId: { not: null },
+      dedupeKey: { startsWith: "followup:" },
+    },
     select: {
       id: true,
       dedupeKey: true,
@@ -548,4 +570,74 @@ export async function report(
   if (sentKeys.length > 0) await markOpenerSent(sentKeys);
 
   return applied;
+}
+
+/**
+ * מתריע לבעלים על ליד שנקבעה לו חזרה ואין לו משויך.
+ *
+ * ⚠️⚠️ **החור שזה סוגר היה שקט לחלוטין.** `enqueueDueFollowUps` דורש
+ * `assigneeId: { not: null }`, ובצדק — אין למי לשלוח תזכורת, וחלוקת
+ * לידים היא החלטה ניהולית שהבוט לא אמור לקבל. אבל התוצאה הייתה שליד
+ * עם חזרה שנקבעה פשוט נשמט: אין תזכורת, אין שגיאה, ואיש לא חוזר
+ * ללקוח. שום מסך לא הראה את זה.
+ *
+ * ⚠️ **לבעלים בלבד.** הם היחידים שרשאים לשייך לידים, ולכן הם היחידים
+ * שההתראה מבקשת מהם דבר שהם יכולים לעשות. שליחה לכל הצוות הייתה
+ * מייצרת הודעה שאיש אינו אחראי עליה.
+ *
+ * ⚠️ **עובד לא פעיל או בלי טלפון נספר כאן כמו חסר שיוך.** מבחינת
+ * הלקוח אין הבדל: גם אז אף תזכורת לא תצא. זו בדיוק הצורה שבה עובד
+ * שעזב משאיר אחריו לידים שקטים.
+ */
+async function enqueueUnassignedAlerts(
+  leadMs: number,
+  win: SendWindow,
+): Promise<void> {
+  const orphans = await prisma.lead.findMany({
+    where: {
+      followUpAt: { not: null, lte: new Date(Date.now() + leadMs) },
+      OR: [
+        { assigneeId: null },
+        { assignee: { active: false } },
+        { assignee: { phone: null } },
+      ],
+    },
+    select: { id: true, name: true, phone: true, status: true, followUpAt: true },
+  });
+  if (orphans.length === 0) return;
+
+  const owners = await prisma.user.findMany({
+    where: { role: "owner", active: true, phone: { not: null } },
+    select: { id: true, name: true, phone: true },
+  });
+  if (owners.length === 0) return;
+
+  for (const lead of orphans) {
+    if (STATUS_CONFIG[lead.status].terminal) continue;
+    const scheduled = lead.followUpAt!;
+
+    for (const owner of owners) {
+      const to = toE164(owner.phone ?? "");
+      if (!to || !isIsraeliPhone(owner.phone ?? "")) continue;
+
+      try {
+        await prisma.whatsAppMessage.create({
+          data: {
+            dedupeKey: unassignedDedupeKey(lead.id, owner.id, scheduled),
+            toPhone: to,
+            body: unassignedBody(owner.name, lead.name, lead.phone),
+            // ⚠️ יוצאת מיד ולא במועד החזרה: כל הנקודה היא לתת לבעלים
+            // זמן לשייך **לפני** שהשעה מגיעה. התראה שתגיע בשעת החזרה
+            // עצמה כבר מאחרת.
+            scheduledFor: nextSendableInstant(new Date(), win),
+            leadId: lead.id,
+            recipientUserId: owner.id,
+          },
+        });
+      } catch {
+        // מפתח כפול = כבר הותרענו על החזרה הזו לבעלים הזה. זו
+        // ההתנהגות הרצויה ולא שגיאה.
+      }
+    }
+  }
 }

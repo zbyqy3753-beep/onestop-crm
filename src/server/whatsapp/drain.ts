@@ -16,9 +16,11 @@ import {
 import { RENEWAL_OPENER_TEMPLATE } from "@/lib/domain/renewalMessages";
 import {
   FOLLOWUP_REMINDER_TEMPLATE,
+  LEAD_UNASSIGNED_TEMPLATE,
   PASSWORD_RESET_CODE_TEMPLATE,
   PASSWORD_RESET_NOTICE_TEMPLATE,
   followUpReminderParams,
+  unassignedParams,
 } from "@/lib/domain/whatsapp";
 
 /**
@@ -61,11 +63,13 @@ function templateFor(
   | typeof FOLLOWUP_REMINDER_TEMPLATE
   | typeof PASSWORD_RESET_CODE_TEMPLATE
   | typeof PASSWORD_RESET_NOTICE_TEMPLATE
+  | typeof LEAD_UNASSIGNED_TEMPLATE
   | null {
   if (dedupeKey.startsWith("renewal:opener:")) return RENEWAL_OPENER_TEMPLATE;
   if (dedupeKey.startsWith("followup:")) return FOLLOWUP_REMINDER_TEMPLATE;
   if (dedupeKey.startsWith("pwcode:")) return PASSWORD_RESET_CODE_TEMPLATE;
   if (dedupeKey.startsWith("pwnotice:")) return PASSWORD_RESET_NOTICE_TEMPLATE;
+  if (dedupeKey.startsWith("unassigned:")) return LEAD_UNASSIGNED_TEMPLATE;
   return null;
 }
 
@@ -106,7 +110,9 @@ async function deliver(msg: ClaimedMessage): Promise<string> {
   const params =
     template === FOLLOWUP_REMINDER_TEMPLATE
       ? followUpReminderParams(msg.body)
-      : [nameFromBody(msg.body)];
+      : template === LEAD_UNASSIGNED_TEMPLATE
+        ? unassignedParams(msg.body)
+        : [nameFromBody(msg.body)];
 
   return sendTemplate(
     msg.toPhone,

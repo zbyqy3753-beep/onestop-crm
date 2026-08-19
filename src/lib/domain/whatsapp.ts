@@ -178,6 +178,52 @@ export function resetNoticeDedupeKey(userId: string, at: Date): string {
 }
 
 /**
+ * ליד שנקבעה לו חזרה ואין לו משויך.
+ *
+ * ⚠️ **זה החור שהתבנית הזו סוגרת.** `enqueueDueFollowUps` מדלג על ליד
+ * בלי משויך — בצדק, כי אין למי לשלוח וחלוקת לידים היא החלטה ניהולית.
+ * אבל התוצאה הייתה שקטה: נקבעה חזרה, לא יצאה תזכורת, ואיש לא חזר
+ * ללקוח. איש גם לא ידע שזה קרה.
+ *
+ * ⚠️ נשלחת לבעלים בלבד, וזו לא בחירה שרירותית: הם היחידים שרשאים
+ * לשייך לידים, ולכן הם היחידים שההודעה הזו מבקשת מהם משהו שהם יכולים
+ * לעשות.
+ */
+export const LEAD_UNASSIGNED_TEMPLATE = {
+  name: "lead_unassigned_he",
+  language: "he",
+  category: "UTILITY",
+} as const;
+
+/**
+ * ⚠️ המפתח כולל את מזהה הנמען **ואת מועד החזרה**: כל בעלים מקבל
+ * הודעה משלו, ותזמון מחדש של אותה חזרה הוא התראה חדשה. בלי מועד
+ * החזרה, ליד שנדחה מיום ליום היה מתריע פעם אחת ואז שותק.
+ */
+export function unassignedDedupeKey(
+  leadId: string,
+  userId: string,
+  followUpAt: Date,
+): string {
+  return `unassigned:${leadId}:${userId}:${followUpAt.toISOString()}`;
+}
+
+/** הפרמטרים של התבנית — שם הבעלים, שם הלקוח, הטלפון שלו. */
+export function unassignedParams(body: string): string[] {
+  const m = /^שלום\s+(.+?),\s*נקבעה חזרה ללקוח\s+(.+?)\s+\((.+?)\)/.exec(body);
+  return m ? [m[1]!, m[2]!, m[3]!] : ["מנהל", "לקוח", "—"];
+}
+
+/** הגוף שנשמר בתור, ושממנו `unassignedParams` מחלץ בחזרה. */
+export function unassignedBody(
+  ownerName: string,
+  leadName: string,
+  leadPhone: string,
+): string {
+  return `שלום ${ownerName}, נקבעה חזרה ללקוח ${leadName} (${leadPhone}) אך הליד אינו משויך לאף עובד.`;
+}
+
+/**
  * הפרמטרים של התבנית, מחולצים מהגוף שכבר רונדר.
  *
  * ⚠️⚠️ **חייב להישאר צמוד ל-`followUpReminder` שמעליו.** הגוף נשמר
