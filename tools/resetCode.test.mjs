@@ -56,3 +56,24 @@ test("resetCode: מיסוך מספר חושף רק ארבע ספרות אחרו�
   // מספר קצר מדי לא מדליף כלום
   assert.equal(maskPhone("12"), "••••");
 });
+
+test("whatsapp: פרמטרים של התראות ניהוליות מחולצים מהגוף", async () => {
+  const { dealWonBody, dealWonParams, overdueBody, overdueParams } =
+    await import("../src/lib/domain/alerts.ts");
+
+  assert.deepEqual(dealWonParams(dealWonBody("דנה כהן", "0521234567", "ניב")), [
+    "דנה כהן",
+    "0521234567",
+    "ניב",
+  ]);
+
+  assert.deepEqual(
+    overdueParams(overdueBody("דנה כהן", "0521234567", "ניב", "10:30")),
+    ["דנה כהן", "0521234567", "ניב", "10:30"],
+  );
+
+  // ⚠️ גוף פגום לא מפיל שליחה — תבנית עם פרמטר ריק נדחית על ידי מטא,
+  // ולכן החילוץ נופל למחרוזות ניטרליות במקום לזרוק.
+  assert.equal(dealWonParams("זבל").length, 3);
+  assert.ok(dealWonParams("זבל").every((p) => p.length > 0));
+});

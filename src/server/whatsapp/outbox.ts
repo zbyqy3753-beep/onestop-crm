@@ -3,11 +3,15 @@ import "server-only";
 import { prisma } from "@/server/db/client";
 import { STATUS_CONFIG } from "@/lib/domain/types";
 import { isIsraeliPhone, toE164 } from "@/lib/format";
+import { followUpReminder } from "@/lib/domain/whatsapp";
 import {
-  followUpReminder,
+  dealWonBody,
+  dealWonDedupeKey,
+  overdueBody,
+  overdueDedupeKey,
   unassignedBody,
   unassignedDedupeKey,
-} from "@/lib/domain/whatsapp";
+} from "@/lib/domain/alerts";
 import { leadFromPrisma } from "@/server/repositories/prisma/mappers";
 import { israelHourMinute, startOfDay } from "@/lib/tz";
 import { readSettings, type BotSettingsView } from "./settings";
@@ -145,6 +149,8 @@ async function enqueueDueFollowUps(
   // ⚠️ הלידים חסרי השיוך מטופלים בנפרד ולא כאן — ראה
   // `enqueueUnassignedAlerts`. הם היו נופלים מהתנאי שלמטה בשקט.
   await enqueueUnassignedAlerts(leadMs, win);
+  await enqueueDealWonAlerts(win);
+  await enqueueOverdueAlerts(win);
 
   const due = await prisma.lead.findMany({
     where: {
@@ -637,6 +643,137 @@ async function enqueueUnassignedAlerts(
       } catch {
         // מפתח כפול = כבר הותרענו על החזרה הזו לבעלים הזה. זו
         // ההתנהגות הרצויה ולא שגיאה.
+      }
+    }
+  }
+}
+
+/**
+ * ⚠️ כמה זמן אחרי מועד החזרה נחשב "לא בוצע".
+ *
+ * לא אפס: עובד שמחייג בדיוק בשעה עדיין לא עדכן את המערכת, והתראה
+ * מיידית הייתה מאשימה אותו באיחור בזמן שהוא בשיחה. חצי שעה היא
+ * הפער שבו כבר סביר שהחזרה נשכחה ולא שהיא פשוט מתבצעת ברגע זה.
+ */
+const OVERDUE_AFTER_MS = 30 * 60_000;
+
+/** הבעלים שמקבלים התראות ניהוליות — פעילים ועם טלפון תקין. */
+async function alertOwners() {
+  const rows = await prisma.user.findMany({
+    where: { role: "owner", active: true, phone: { not: null } },
+    select: { id: true, name: true, phone: true },
+  });
+  return rows.filter((o) => isIsraeliPhone(o.phone ?? ""));
+}
+
+/**
+ * מתריע לבעלים על עסקה שנסגרה — מי הלקוח ומי סגר.
+ *
+ * ⚠️ **נקרא מ-`LeadStatusEvent` ולא מ-hook בנתיב הכתיבה.** אותה בחירה
+ * כמו ב-`cancelSuperseded`: hook היה מצמיד את מסך הלידים לתור ומוסיף
+ * מצב כשל לכל שינוי סטטוס. הטבלה כבר רושמת מי שינה ומתי, וזה כל מה
+ * שההתראה צריכה.
+ *
+ * ⚠️ החלון הוא שעה אחורה. הוא לא צריך להיות רחב — הניקוז רץ כל חמש
+ * דקות — אבל הוא כן צריך לספוג הפסקה קצרה של המתזמן בלי לאבד סגירה.
+ * המפתח מונע כפילות בכל מקרה.
+ */
+async function enqueueDealWonAlerts(win: SendWindow): Promise<void> {
+  const events = await prisma.leadStatusEvent.findMany({
+    where: {
+      to: "won",
+      createdAt: { gte: new Date(Date.now() - 3_600_000) },
+    },
+    select: {
+      id: true,
+      createdAt: true,
+      actor: { select: { name: true } },
+      lead: { select: { name: true, phone: true, id: true } },
+    },
+  });
+  if (events.length === 0) return;
+
+  const owners = await alertOwners();
+
+  for (const ev of events) {
+    for (const owner of owners) {
+      try {
+        await prisma.whatsAppMessage.create({
+          data: {
+            dedupeKey: dealWonDedupeKey(ev.id, owner.id),
+            toPhone: toE164(owner.phone!),
+            body: dealWonBody(ev.lead.name, ev.lead.phone, ev.actor.name),
+            scheduledFor: nextSendableInstant(new Date(), win),
+            leadId: ev.lead.id,
+            recipientUserId: owner.id,
+          },
+        });
+      } catch {
+        // כבר הותרענו על הסגירה הזו לבעלים הזה.
+      }
+    }
+  }
+}
+
+/**
+ * מתריע לבעלים על חזרה שהמועד שלה עבר והליד עדיין פתוח.
+ *
+ * ⚠️ **"לא בוצע" נגזר מכך שהחזרה עדיין קבועה לאותו מועד.** כשעובד
+ * מטפל בליד הוא מזיז את מועד החזרה או משנה סטטוס, ואז השורה הזו לא
+ * נתפסת. מי שנשאר תקוע על מועד שעבר — פשוט לא נגע בו.
+ *
+ * ⚠️ נשלח **גם** למשויך עצמו? לא. הוא כבר קיבל תזכורת במועד, וזו
+ * התראה ניהולית על כך שהיא לא הובילה לכלום. הודעה שנייה לאותו אדם
+ * הופכת את המערכת למציקה במקום למועילה.
+ */
+async function enqueueOverdueAlerts(win: SendWindow): Promise<void> {
+  const overdue = await prisma.lead.findMany({
+    where: {
+      followUpAt: {
+        not: null,
+        lt: new Date(Date.now() - OVERDUE_AFTER_MS),
+        // ⚠️ תקרה אחורה: בלעדיה כל ליד ישן עם תאריך חזרה נשכח היה
+        // מייצר התראה ברגע שהתכונה עולה לאוויר — הצפה במאות הודעות.
+        gt: new Date(Date.now() - 24 * 3_600_000),
+      },
+      assigneeId: { not: null },
+    },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      status: true,
+      followUpAt: true,
+      assignee: { select: { name: true } },
+    },
+  });
+  if (overdue.length === 0) return;
+
+  const owners = await alertOwners();
+
+  for (const lead of overdue) {
+    if (STATUS_CONFIG[lead.status].terminal) continue;
+    const at = lead.followUpAt!;
+
+    for (const owner of owners) {
+      try {
+        await prisma.whatsAppMessage.create({
+          data: {
+            dedupeKey: overdueDedupeKey(lead.id, owner.id, at),
+            toPhone: toE164(owner.phone!),
+            body: overdueBody(
+              lead.name,
+              lead.phone,
+              lead.assignee?.name ?? "—",
+              israelHourMinute(at.getTime()),
+            ),
+            scheduledFor: nextSendableInstant(new Date(), win),
+            leadId: lead.id,
+            recipientUserId: owner.id,
+          },
+        });
+      } catch {
+        // כבר הותרענו על החזרה הזו.
       }
     }
   }

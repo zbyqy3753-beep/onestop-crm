@@ -16,12 +16,18 @@ import {
 import { RENEWAL_OPENER_TEMPLATE } from "@/lib/domain/renewalMessages";
 import {
   FOLLOWUP_REMINDER_TEMPLATE,
-  LEAD_UNASSIGNED_TEMPLATE,
   PASSWORD_RESET_CODE_TEMPLATE,
   PASSWORD_RESET_NOTICE_TEMPLATE,
   followUpReminderParams,
-  unassignedParams,
 } from "@/lib/domain/whatsapp";
+import {
+  DEAL_WON_TEMPLATE,
+  FOLLOWUP_OVERDUE_TEMPLATE,
+  LEAD_UNASSIGNED_TEMPLATE,
+  dealWonParams,
+  overdueParams,
+  unassignedParams,
+} from "@/lib/domain/alerts";
 
 /**
  * ניקוז התור דרך Cloud API — מחליף את לולאת הסקר של הבוט.
@@ -64,12 +70,16 @@ function templateFor(
   | typeof PASSWORD_RESET_CODE_TEMPLATE
   | typeof PASSWORD_RESET_NOTICE_TEMPLATE
   | typeof LEAD_UNASSIGNED_TEMPLATE
+  | typeof DEAL_WON_TEMPLATE
+  | typeof FOLLOWUP_OVERDUE_TEMPLATE
   | null {
   if (dedupeKey.startsWith("renewal:opener:")) return RENEWAL_OPENER_TEMPLATE;
   if (dedupeKey.startsWith("followup:")) return FOLLOWUP_REMINDER_TEMPLATE;
   if (dedupeKey.startsWith("pwcode:")) return PASSWORD_RESET_CODE_TEMPLATE;
   if (dedupeKey.startsWith("pwnotice:")) return PASSWORD_RESET_NOTICE_TEMPLATE;
   if (dedupeKey.startsWith("unassigned:")) return LEAD_UNASSIGNED_TEMPLATE;
+  if (dedupeKey.startsWith("dealwon:")) return DEAL_WON_TEMPLATE;
+  if (dedupeKey.startsWith("overdue:")) return FOLLOWUP_OVERDUE_TEMPLATE;
   return null;
 }
 
@@ -112,7 +122,11 @@ async function deliver(msg: ClaimedMessage): Promise<string> {
       ? followUpReminderParams(msg.body)
       : template === LEAD_UNASSIGNED_TEMPLATE
         ? unassignedParams(msg.body)
-        : [nameFromBody(msg.body)];
+        : template === DEAL_WON_TEMPLATE
+          ? dealWonParams(msg.body)
+          : template === FOLLOWUP_OVERDUE_TEMPLATE
+            ? overdueParams(msg.body)
+            : [nameFromBody(msg.body)];
 
   return sendTemplate(
     msg.toPhone,
