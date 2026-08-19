@@ -2,7 +2,7 @@ import { db } from "@/server/repositories";
 import type { LeadFilter } from "@/server/repositories";
 import { requireStaffUser } from "@/server/auth/session";
 import { canSeeAllLeads } from "@/lib/domain/permissions";
-import { OPEN_STATUSES, ROLE_CONFIG } from "@/lib/domain/types";
+import { ROLE_CONFIG, STATUS_CONFIG } from "@/lib/domain/types";
 import { performanceByAgent } from "@/server/services/economics";
 import { TZ, startOfDay, startOfMonth } from "@/lib/tz";
 import { SummaryTiles } from "@/components/dashboard/SummaryTiles";
@@ -96,16 +96,39 @@ export default async function DashboardPage() {
   ).size;
 
   const totalLeads = allLeads.total;
-  const pendingLeads = OPEN_STATUSES.reduce((sum, s) => sum + (counts[s] ?? 0), 0);
+
+  /*
+   * ⚠️⚠️ **"ממתינים" סופר עבודה, ולכן דאטה קרה לא נספרת בו.**
+   *
+   * `counts` מגיע מ-`countByStatus` והוא לפי סטטוס בלבד. ייבוא אחד
+   * הכניס 358 שורות דאטה בסטטוס `new`, והאריח קפץ לארבע מאות —
+   * מספר שלא מייצג שום דבר שמישהו אמור לעשות היום. מנהל שמסתכל על
+   * המסך הזה בבוקר צריך לדעת כמה שיחות ממתינות לו, לא כמה שורות יש
+   * במסד.
+   *
+   * הדאטה לא נעלמת: היא מופיעה כפילוח משלה למטה, ובמסך הלידים תחת
+   * מסנן "מדאטה".
+   */
+  const pendingLeads = allLeads.rows.filter(
+    (l) => l.kind !== "data" && !STATUS_CONFIG[l.status].terminal,
+  ).length;
 
   /* ── חלוקת לידים ────────────────────────────────────────────────── */
 
   const hotCount = allLeads.rows.filter((l) => l.kind === "hot").length;
   const dataCount = allLeads.rows.filter((l) => l.kind === "data").length;
 
+  /*
+   * ⚠️ "חדשים" ו"בטיפול" סופרים לידים חמים בלבד, מאותה סיבה כמו
+   * "ממתינים": הם מתארים תור עבודה. הדאטה נספרת בפילוח משלה ממש
+   * לידם, כך ששום מספר לא נעלם — הוא רק מפסיק להתחזות לעבודה.
+   */
+  const hotByStatus = (s: string) =>
+    allLeads.rows.filter((l) => l.kind !== "data" && l.status === s).length;
+
   const breakdownSegments: StatusSegment[] = [
-    { key: "new", label: "חדשים", count: counts.new ?? 0, tone: "info" },
-    { key: "inProgress", label: "בטיפול", count: counts.inProgress ?? 0, tone: "active" },
+    { key: "new", label: "חדשים", count: hotByStatus("new"), tone: "info" },
+    { key: "inProgress", label: "בטיפול", count: hotByStatus("inProgress"), tone: "active" },
     { key: "won", label: "נסגרו", count: counts.won ?? 0, tone: "good" },
     { key: "hot", label: "חמים", count: hotCount, tone: "bad" },
     { key: "data", label: "מדאטה", count: dataCount, tone: "info" },

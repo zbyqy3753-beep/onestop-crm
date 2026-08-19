@@ -400,7 +400,24 @@ export function LeadsClient({
       }
 
       if (status.length && !status.includes(lead.status)) return false;
-      if (filters.kind.length && !filters.kind.includes(lead.kind)) return false;
+
+      /*
+       * ⚠️⚠️ **דאטה קרה מוסתרת עד שמבקשים אותה במפורש.**
+       *
+       * ייבוא אחד הכניס 358 שורות דאטה, וכולן בסטטוס `new`. בתור
+       * משותף הן קוברות את הלידים החמים של אותו יום — לא רק בסדר
+       * התצוגה אלא בעצם הנוכחות: מסך של 400 שורות שרובן קרות מפסיק
+       * להיות תור עבודה.
+       *
+       * ⚠️ **חיפוש מבטל את ההסתרה.** בלי זה, לקוח מהייבוא פשוט לא
+       * היה נמצא — מישהו מחפש שם, מקבל "אין תוצאות", ומסיק שהליד לא
+       * קיים. הסתרה שגורמת לנתונים להיעלם היא באג, לא סינון.
+       */
+      if (filters.kind.length === 0) {
+        if (!q && lead.kind === "data") return false;
+      } else if (!filters.kind.includes(lead.kind)) {
+        return false;
+      }
       if (filters.priority.length && !filters.priority.includes(lead.priority))
         return false;
       if (
