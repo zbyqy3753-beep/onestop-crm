@@ -4,14 +4,8 @@ import { useRef, useState, useTransition } from "react";
 import { importLeadsAction, type ImportRow } from "@/app/(app)/leads/actions";
 import { decodeSpreadsheetText, parseDelimited } from "@/lib/csv";
 import { readXlsxSheet } from "@/lib/xlsx";
-import {
-  LEAD_CATEGORY_CONFIG,
-  PROVIDER_CONFIG,
-  matchImportField,
-  matchLeadCategory,
-  type LeadImportField,
-} from "@/lib/domain/types";
-import { cleanText, matchProvider, parseInterest } from "@/lib/domain/interest";
+import { LEAD_CATEGORY_CONFIG, PROVIDER_CONFIG } from "@/lib/domain/types";
+import { buildRow, describeDetection, detectColumns } from "./importColumns";
 import { isIsraeliPhone, phone as formatPhone } from "@/lib/format";
 import { Button, Modal, type Toast } from "@/components/ui/primitives";
 
@@ -37,6 +31,8 @@ interface Parsed {
   invalid: number;
   /** האם זוהתה שורת כותרות */
   hadHeader: boolean;
+  /** מה זוהה בפועל, כשאין כותרות — להצגה מעל התצוגה המקדימה */
+  detection: string;
 }
 
 export function ImportLeadsModal({
@@ -95,14 +91,14 @@ export function ImportLeadsModal({
       return;
     }
 
-    const { mapping, hadHeader } = detectColumns(matrix[0]);
+    const { mapping, hadHeader, lastNameAt } = detectColumns(matrix);
     const body = hadHeader ? matrix.slice(1) : matrix;
 
     const rows: ImportRow[] = [];
     let invalid = 0;
 
     for (const cells of body) {
-      const row = buildRow(cells, mapping);
+      const row = buildRow(cells, mapping, lastNameAt);
       if (row.name.trim().length >= 2 && isIsraeliPhone(row.phone)) rows.push(row);
       else invalid++;
     }
@@ -127,12 +123,18 @@ export function ImportLeadsModal({
       setError(
         hadHeader
           ? "לא נמצאה אף שורה תקינה. כל שורה צריכה שם (2 תווים לפחות) וטלפון ישראלי."
-          : "לא זוהו כותרות ולא נמצאה אף שורה תקינה. ודא שהעמודה הראשונה היא שם והשנייה טלפון.",
+          : "לא זוהו כותרות, וגם לפי התוכן לא נמצאה עמודת טלפון ישראלי. הוסף שורת כותרות לקובץ ונסה שוב.",
       );
       return;
     }
 
-    setParsed({ filename: file.name, rows, invalid, hadHeader });
+    setParsed({
+      filename: file.name,
+      rows,
+      invalid,
+      hadHeader,
+      detection: describeDetection(mapping, lastNameAt),
+    });
   }
 
   function confirm() {
@@ -174,8 +176,9 @@ export function ImportLeadsModal({
             בחר קובץ CSV או Excel (.xlsx) עם עמודות של שם וטלפון.
           </p>
           <p className="mt-1 text-xs text-ink-3">
-            שורת כותרות בעברית או באנגלית תזוהה אוטומטית. אם אין כותרות, העמודה
-            הראשונה תיקרא כשם והשנייה כטלפון.
+            שורת כותרות בעברית או באנגלית תזוהה אוטומטית. אם אין כותרות, העמודות
+            יזוהו לפי התוכן — כולל שם פרטי ומשפחה בשתי עמודות, וטלפון שאיבד
+            את האפס המוביל באקסל.
           </p>
           <p className="mt-2 text-xs text-ink-4">
             עמודות שנקלטות: שם · טלפון · אימייל · עיר · קטגוריה · חבילה (או
@@ -217,7 +220,8 @@ export function ImportLeadsModal({
 
           {!parsed.hadHeader && (
             <p className="mb-3 rounded-md bg-warn-soft px-3 py-2 text-xs text-warn">
-              לא זוהתה שורת כותרות — העמודה הראשונה נקראת כשם והשנייה כטלפון.
+              לא זוהתה שורת כותרות — העמודות זוהו לפי התוכן: {parsed.detection}.
+              ודא בתצוגה שלמטה שהפענוח נכון לפני הייבוא.
             </p>
           )}
 
@@ -307,78 +311,4 @@ function packageLabel(row: ImportRow): string {
   ]
     .filter(Boolean)
     .join(" ");
-}
-
-/* ── זיהוי עמודות ─────────────────────────────────────────────────────── */
-
-type Mapping = Partial<Record<LeadImportField, number>>;
-
-/**
- * מנסה לקרוא את השורה הראשונה ככותרות. אם אף עמודה לא מזוהה, נופל
- * למיפוי לפי מיקום — כך שקובץ בלי כותרות עדיין עובד.
- */
-function detectColumns(first: string[]): { mapping: Mapping; hadHeader: boolean } {
-  const mapping: Mapping = {};
-
-  first.forEach((cell, i) => {
-    const field = matchImportField(cell);
-    if (field !== undefined && mapping[field] === undefined) mapping[field] = i;
-  });
-
-  // כותרות אמיתיות מזהות לפחות שם או טלפון
-  if (mapping.name !== undefined || mapping.phone !== undefined) {
-    return { mapping, hadHeader: true };
-  }
-
-  return { mapping: { name: 0, phone: 1, email: 2, city: 3 }, hadHeader: false };
-}
-
-/**
- * מזהה חיצוני נכנס להערה — אין לו עמודה משלנו, והוא הדרך היחידה
- * להצליב ליד מול המערכת שהוא הגיע ממנה.
- *
- * הסף קיים כי עמודת `#` היא לפעמים מזהה אמיתי ולפעמים סתם מונה שורות.
- * "מזהה חיצוני: 3" הוא רעש; "מזהה חיצוני: 42557025" הוא מידע.
- */
-const MIN_EXTERNAL_ID_LENGTH = 4;
-
-function buildRow(cells: string[], mapping: Mapping): ImportRow {
-  const at = (field: LeadImportField): string => {
-    const i = mapping[field];
-    return i === undefined ? "" : cleanText(cells[i] ?? "");
-  };
-
-  // ⚠️ עמודת החבילה של השותף מכילה בפועל **שני** פרטים במחרוזת אחת
-  // ("פלאפון – 300GB Perfect"), ולפעמים דווקא קטגוריה ("טריפל").
-  // אותו פענוח בדיוק שמשמש את `POST /api/leads` — ראה domain/interest.
-  const rawPackage = at("packageName");
-  const parsed = parseInterest(rawPackage);
-
-  // עמודת ספק מפורשת גוברת על מה שנחלץ מתוך שם החבילה
-  const provider = matchProvider(at("provider")) ?? parsed.provider;
-  const category = matchLeadCategory(at("category")) ?? parsed.category;
-
-  // אם הפענוח לא זיהה כלום, שם החבילה נשמר כפי שהוא — עדיף ערך גולמי
-  // מאשר לאבד אותו רק כי לא הצלחנו לפרק אותו
-  const packageName = parsed.packageName ?? (parsed.category ? "" : rawPackage);
-
-  const externalId = at("externalId");
-  const notes = [
-    at("note"),
-    externalId.length >= MIN_EXTERNAL_ID_LENGTH
-      ? `מזהה חיצוני: ${externalId}`
-      : "",
-  ].filter(Boolean);
-
-  return {
-    name: at("name"),
-    phone: at("phone"),
-    email: at("email") || undefined,
-    city: at("city") || undefined,
-    note: notes.join("\n") || undefined,
-    sourceDetail: at("sourceDetail") || undefined,
-    packageName: packageName || undefined,
-    currentProvider: provider,
-    category,
-  };
 }
