@@ -99,8 +99,32 @@ function buildWhere(filter: LeadFilter): Prisma.LeadWhereInput {
  * פעמיים בשני עמודים שונים, או ייעלם לגמרי. הקריאה המעומדת בדשבורד
  * (`page.tsx`, 8 הלידים האחרונים) כבר חשופה לזה היום.
  */
+const DEFAULT_SORT: LeadSort = { field: "updatedAt", direction: "desc" };
+
 function buildOrderBy(sort: LeadSort): Prisma.LeadOrderByWithRelationInput[] {
   const tieBreak: Prisma.LeadOrderByWithRelationInput = { id: "asc" };
+
+  /*
+   * ⚠️⚠️ **ליד חם קודם לדאטה קרה — אבל רק במיון ברירת המחדל.**
+   *
+   * הסיבה קונקרטית: ייבוא של כמה מאות שורות דאטה נוגע בכולן באותה
+   * דקה, וברירת המחדל היא `updatedAt desc` — כלומר כל התור נקבר מתחת
+   * לדאטה קרה, והלידים החמים שנכנסו באותו יום נדחקים לעמוד השלישי.
+   * זה קרה ב-19.8 עם ייבוא של 358 שורות.
+   *
+   * ⚠️ **לא מוחל על מיון מפורש.** מי שלחץ על "מיין לפי שם" מצפה לסדר
+   * אלפביתי, ולא לשתי רשימות אלפביתיות זו אחר זו. כפיית הקיבוץ שם
+   * הייתה שוברת את מה שהמשתמש ביקש במפורש.
+   *
+   * `kind` הוא enum, ו-Postgres ממיין לפי סדר ההצהרה: `hot` לפני
+   * `data`. אותו שיקול כמו ב-`LeadStatus` — ראה ההערה בסכמה.
+   */
+  const isDefault =
+    sort.field === DEFAULT_SORT.field &&
+    sort.direction === DEFAULT_SORT.direction;
+  const kindFirst: Prisma.LeadOrderByWithRelationInput[] = isDefault
+    ? [{ kind: "asc" }]
+    : [];
 
   switch (sort.field) {
     case "name":
@@ -115,11 +139,9 @@ function buildOrderBy(sort: LeadSort): Prisma.LeadOrderByWithRelationInput[] {
     case "createdAt":
     case "updatedAt":
     default:
-      return [{ [sort.field]: sort.direction }, tieBreak];
+      return [...kindFirst, { [sort.field]: sort.direction }, tieBreak];
   }
 }
-
-const DEFAULT_SORT: LeadSort = { field: "updatedAt", direction: "desc" };
 
 export const prismaLeadRepository: LeadRepository = {
   async list(
