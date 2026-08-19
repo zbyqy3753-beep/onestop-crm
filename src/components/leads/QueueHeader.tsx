@@ -121,6 +121,7 @@ export function QueueHeader({
           <Button
             variant="secondary"
             icon="download"
+            title="ייצוא לאקסל"
             onClick={onExport}
             disabled={showing === 0}
             className="h-9"

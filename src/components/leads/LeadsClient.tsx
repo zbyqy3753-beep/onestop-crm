@@ -35,7 +35,7 @@ import {
 } from "@/app/(app)/leads/actions";
 import { useNow } from "@/lib/clock";
 import { useIsNarrow } from "@/lib/media";
-import { downloadCsv, toCsv } from "@/lib/csv";
+import { downloadXlsx } from "@/lib/xlsxWrite";
 import {
   leadCost,
   payableCommission,
@@ -53,7 +53,7 @@ import { Icon } from "@/components/ui/Icon";
 import { LeadCostsModal } from "@/components/settings/LeadCostsModal";
 import { LeadsFinancePanel } from "./LeadsFinancePanel";
 import { LeadsPerformancePanel } from "./LeadsPerformancePanel";
-import { leadsCsvFilename, leadsToCsvRows } from "./leadsCsv";
+import { leadsSheet, leadsSheetFilename } from "./leadsSheet";
 import { QueueHeader } from "./QueueHeader";
 import { FilterBar, type Filters, EMPTY_FILTERS } from "./FilterBar";
 import { INITIAL_FILTERS, isOpeningStatus } from "./views";
@@ -777,10 +777,10 @@ export function LeadsClient({
   }
 
   /** מייצא את כל מה שתואם לסינון, לא רק את מה שנראה על המסך. */
-  function exportCsv() {
-    downloadCsv(
-      leadsCsvFilename(),
-      toCsv(leadsToCsvRows(sorted, userById, leadCosts, canSeeAll)),
+  function exportSheet() {
+    downloadXlsx(
+      leadsSheetFilename(),
+      leadsSheet(sorted, userById, leadCosts, canSeeAll),
     );
     notify(`${sorted.length} לידים יוצאו`);
   }
@@ -811,7 +811,7 @@ export function LeadsClient({
         total={leads.length}
         showing={sorted.length}
         onAdd={() => setAddOpen(true)}
-        onExport={exportCsv}
+        onExport={exportSheet}
         onImport={() => setImportOpen(true)}
         onToggleStats={() => setStatsOpen((v) => !v)}
         statsOpen={statsOpen}
@@ -1009,7 +1009,7 @@ export function LeadsClient({
         open={moreOpen}
         onClose={() => setMoreOpen(false)}
         onImport={() => setImportOpen(true)}
-        onExport={exportCsv}
+        onExport={exportSheet}
         onToggleStats={() => setStatsOpen((v) => !v)}
         statsOpen={statsOpen}
         onStartSelection={() => setSelecting(true)}

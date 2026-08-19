@@ -56,7 +56,7 @@ export function LeadsMoreSheet({
         <Row
           icon="download"
           label="ייצוא"
-          hint={canExport ? "הלידים המוצגים כרגע" : "אין לידים לייצוא"}
+          hint={canExport ? "קובץ אקסל של הלידים המוצגים" : "אין לידים לייצוא"}
           disabled={!canExport}
           onClick={() => run(onExport)}
         />
