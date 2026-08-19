@@ -744,6 +744,7 @@ async function enqueueOverdueAlerts(win: SendWindow): Promise<void> {
       phone: true,
       status: true,
       followUpAt: true,
+      lastContactAt: true,
       assignee: { select: { name: true } },
     },
   });
@@ -754,6 +755,25 @@ async function enqueueOverdueAlerts(win: SendWindow): Promise<void> {
   for (const lead of overdue) {
     if (STATUS_CONFIG[lead.status].terminal) continue;
     const at = lead.followUpAt!;
+
+    /*
+     * ⚠️⚠️ **"לא פנה" נקבע לפי `lastContactAt`, לא לפי מועד החזרה.**
+     *
+     * `changeStatus` **אינו מנקה** את מועד החזרה בסטטוס לא-סופי — יש
+     * על כך הערה מפורשת שם, והיא נכונה: מעבר ל"אין מענה" לא אמור
+     * למחוק חזרה שנקבעה מראש. אבל המשמעות היא שנציג שחייג, דיבר
+     * ועדכן ל"נוצר קשר" משאיר את התאריך הישן על הליד.
+     *
+     * בלי הבדיקה הזו ההתראה הייתה יוצאת בדיוק על מי שכן עשה את
+     * העבודה — ההפך הגמור ממה שהיא נועדה לתפוס, ובתוך יומיים היא
+     * הייתה נחשבת לרעש שמתעלמים ממנו.
+     *
+     * `lastContactAt` מתעדכן בכל שינוי סטטוס, ולכן "מגע אחרי המועד
+     * שנקבע" הוא בדיוק ההגדרה של "הנציג טיפל".
+     */
+    if (lead.lastContactAt && lead.lastContactAt.getTime() >= at.getTime()) {
+      continue;
+    }
 
     for (const owner of owners) {
       try {
