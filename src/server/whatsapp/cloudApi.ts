@@ -250,3 +250,76 @@ export async function sendList(
   if (!id) throw new Error("מטא לא החזירו מזהה הודעה");
   return id;
 }
+
+/**
+ * מזהה ה-Flow שפורסם אצל מטא.
+ *
+ * ⚠️ קבוע ולא משתנה סביבה. יש בדיוק אחד, הוא נוצר ידנית בלוח הבקרה,
+ * והוא שייך לחשבון הזה בלבד — משתנה סביבה היה מרמז שאפשר להחליף
+ * אותו בפריסה אחרת, וזה לא נכון. שם ה-Flow: "תיאום שעת שיחה —
+ * חידושים", פורסם 20/08/2026.
+ *
+ * ⚠️ **Flow שפורסם אינו ניתן לעריכה.** שינוי במסך מחייב יצירת גרסה
+ * חדשה בלוח הבקרה והחלפת המזהה כאן.
+ */
+export const RENEWAL_SLOTS_FLOW_ID = "1076409214769751";
+
+/**
+ * הודעת Flow — טופס שנפתח בתוך וואטסאפ.
+ *
+ * ⚠️⚠️ **הנתונים מוזרמים בזמן השליחה** דרך `flow_action_payload.data`.
+ * ה-Flow עצמו מגדיר רק את המבנה (רשימה נגללת בשם `slot`), והשעות
+ * מגיעות מכאן. זה מה שמאפשר להציע 42 חצאי שעות מבלי לקבע אותן
+ * בנכס שאי אפשר לערוך אחרי פרסום.
+ *
+ * ⚠️ `flow_token` הוא מה שיחזור אלינו עם התשובה. אנחנו לא נשענים
+ * עליו לזיהוי (המספר עושה את זה), אבל מטא דורשים ערך — והוא שימושי
+ * בלוג כשצריך לקשר תשובה לשליחה.
+ *
+ * ⚠️ **רק בתוך חלון 24 השעות**, כמו כל הודעה אינטראקטיבית.
+ */
+export async function sendFlow(
+  toPhone: string,
+  flow: {
+    header: string;
+    body: string;
+    footer?: string;
+    cta: string;
+    flowToken: string;
+    screen: string;
+    data: Record<string, unknown>;
+  },
+): Promise<string> {
+  const phoneId = env("WHATSAPP_PHONE_NUMBER_ID");
+  if (!phoneId) throw new Error("חסר WHATSAPP_PHONE_NUMBER_ID");
+
+  const res = await graph<SendResponse>(`${phoneId}/messages`, {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: toWaPhone(toPhone),
+    type: "interactive",
+    interactive: {
+      type: "flow",
+      header: { type: "text", text: flow.header.slice(0, 60) },
+      body: { text: flow.body.slice(0, 1024) },
+      ...(flow.footer ? { footer: { text: flow.footer.slice(0, 60) } } : {}),
+      action: {
+        name: "flow",
+        parameters: {
+          flow_message_version: "3",
+          flow_token: flow.flowToken,
+          flow_id: RENEWAL_SLOTS_FLOW_ID,
+          flow_cta: flow.cta.slice(0, 20),
+          // ⚠️ `navigate` ולא `data_exchange`: אין נקודת קצה, וכל
+          // המידע שהמסך צריך נשלח כאן מראש
+          flow_action: "navigate",
+          flow_action_payload: { screen: flow.screen, data: flow.data },
+        },
+      },
+    },
+  });
+
+  const id = res.messages?.[0]?.id;
+  if (!id) throw new Error("מטא לא החזירו מזהה הודעה");
+  return id;
+}

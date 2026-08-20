@@ -15,16 +15,20 @@ import { dayKey, instantFromIsraelDateTime, startOfDay } from "@/lib/tz";
  */
 
 /**
- * השעות המוצעות.
+ * טווח השעות המוצע, בחצאי שעות.
  *
- * ⚠️ לא כל שעה עגולה. רשימה של ארבע-עשרה שורות היא מסך גלילה שהלקוח
- * נוטש, וההבדל בין 09:00 ל-10:00 לא מעניין אף אחד בשלב הזה — מה
- * שנקבע כאן הוא חלון של שעה ממילא (`WINDOW_MINUTES` ב-`reply.ts`).
+ * ⚠️ 19:00 ולא 21:00 — זו שעת ההתחלה האחרונה, והחלון שמובטח נגמר
+ * ב-20:00. `LATEST_HOUR` ב-`reply.ts` הוא 21 ומתיר יותר, אבל הבטחה
+ * לשיחה שמתחילה ב-21:00 היא הבטחה שאיש לא יעמוד בה.
  *
- * ⚠️ כולן בתוך 08–21, טווח השעות ש-`reply.ts` מוכן לקבוע בו שיחה.
- * שעה שתיפול מחוץ לו הייתה מוצעת ללקוח ואז נדחית כשיבחר בה.
+ * ⚠️ חצאי שעות ולא שעות עגולות. הרשימה האינטראקטיבית לא יכלה להכיל
+ * 21 שורות (תקרת מטא היא 10), ולכן הגרסה הראשונה הציעה שש שעות
+ * בלבד — "אין כמעט שעות" בלשון הבעלים. ה-Flow הוא רשימה נגללת בלי
+ * תקרה כזו, וזו בדיוק הסיבה שעברנו אליו.
  */
-export const SLOT_HOURS = [9, 11, 13, 16, 18, 20];
+export const SLOT_START_HOUR = 9;
+export const SLOT_END_HOUR = 19;
+const SLOT_STEP_MINUTES = 30;
 
 /**
  * כמה זמן קדימה שעה עדיין נחשבת זמינה.
@@ -36,8 +40,14 @@ export const SLOT_HOURS = [9, 11, 13, 16, 18, 20];
  */
 const MIN_LEAD_MS = 60 * 60_000;
 
-/** תקרת מטא לשורות ברשימה אינטראקטיבית אחת. */
-const MAX_ROWS = 10;
+/**
+ * תקרת שורות.
+ *
+ * ⚠️ הערך הזה שייך ל**רשימה** האינטראקטיבית (`sendList`), שמטא
+ * מגבילים ל-10 שורות. ה-Flow אינו כפוף לה, ולכן `buildSlots` מקבל
+ * את התקרה כפרמטר במקום להניח אותה.
+ */
+export const LIST_MAX_ROWS = 10;
 
 export interface Slot {
   /** תחילת החלון, במילישניות */
@@ -67,12 +77,22 @@ function slotsForDay(
   const key = dayKeyPlus(now, days);
   const out: Slot[] = [];
 
-  for (const hour of SLOT_HOURS) {
-    const at = instantFromIsraelDateTime(key, hour, 0);
+  for (
+    let minutes = SLOT_START_HOUR * 60;
+    minutes <= SLOT_END_HOUR * 60;
+    minutes += SLOT_STEP_MINUTES
+  ) {
+    const hour = Math.floor(minutes / 60);
+    const minute = minutes % 60;
+    const at = instantFromIsraelDateTime(key, hour, minute);
     // ⚠️ `null` הוא שעה שלא קיימת ביום הזה (מעבר שעון) — מדלגים
     if (at === null) continue;
     if (at < now + MIN_LEAD_MS) continue;
-    out.push({ at, label: `${String(hour).padStart(2, "0")}:00`, day });
+    out.push({
+      at,
+      label: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+      day,
+    });
   }
 
   return out;
@@ -81,18 +101,26 @@ function slotsForDay(
 /**
  * השעות שמוצעות ללקוח כרגע — היום ומחר.
  *
- * ⚠️ "היום" נחתך ולא "מחר". בשעות הערב נשארת מהיום שעה אחת לכל
- * היותר, ואם נחתוך את המחר הלקוח יקבל רשימה כמעט ריקה. הסדר הוא
- * מה שחשוב: מי שפנוי היום רואה את זה ראשון.
+ * ⚠️ `max` אינו ברירת מחדל שרירותית: ה-Flow מציג את כל הרשימה בלי
+ * תקרה, והרשימה האינטראקטיבית חייבת להיחתך ל-10. מי שקורא מחליט,
+ * כי רק הוא יודע לאן זה נשלח.
+ *
+ * ⚠️ **החיתוך אוכל את "היום" ולא את "מחר".** נראה הפוך מהאינטואיציה
+ * — אבל 21 חצאי שעות ליום, ותקרה של 10, היו מוחקים את המחר לגמרי
+ * ומשאירים לקוח שפנוי רק מחר בלי שום אפשרות. עדיף לתת לו את מחר
+ * המלא ולתת להיום את מה שנשאר.
  *
  * ⚠️ מוחזר תמיד לפחות שורה אחת — שעות המחר לעולם לא עברו.
  */
-export function buildSlots(now = Date.now()): Slot[] {
+export function buildSlots(now = Date.now(), max = Infinity): Slot[] {
   const today = slotsForDay(now, 0, "today");
   const tomorrow = slotsForDay(now, 1, "tomorrow");
 
-  const room = Math.max(0, MAX_ROWS - tomorrow.length);
-  return [...today.slice(0, room), ...tomorrow];
+  if (!Number.isFinite(max)) return [...today, ...tomorrow];
+
+  const keptTomorrow = tomorrow.slice(0, max);
+  const room = Math.max(0, max - keptTomorrow.length);
+  return [...today.slice(0, room), ...keptTomorrow];
 }
 
 /** מזהה השורה שחוזר אלינו כשהלקוח בוחר. */

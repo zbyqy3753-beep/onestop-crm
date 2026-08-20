@@ -10,6 +10,7 @@ import {
 import {
   cloudApiConfigured,
   cloudApiSenderId,
+  sendFlow,
   sendList,
   sendTemplate,
   sendText,
@@ -19,7 +20,7 @@ import {
   renewalNoSlotsAck,
   renewalSlotsPrompt,
 } from "@/lib/domain/renewalMessages";
-import { buildSlots, slotRowId } from "@/server/renewals/slots";
+import { LIST_MAX_ROWS, buildSlots, slotRowId } from "@/server/renewals/slots";
 import {
   FOLLOWUP_REMINDER_TEMPLATE,
   PASSWORD_RESET_CODE_TEMPLATE,
@@ -113,10 +114,45 @@ function nameFromBody(body: string): string {
  * משאיר את הלקוח בלי תשובה אחרי שלחץ.
  */
 async function deliverSlots(msg: ClaimedMessage): Promise<string> {
-  const slots = buildSlots();
+  const prompt = renewalSlotsPrompt();
+
+  /*
+   * ⚠️ ה-Flow ראשון, והרשימה היא נפילה לאחור.
+   *
+   * ה-Flow מציג את כל 42 חצאי השעות במסך נגלל אחד; הרשימה מוגבלת
+   * ל-10 שורות בסך הכול, וזה בדיוק מה שהיה "אין כמעט שעות". אבל
+   * הודעת Flow יכולה להידחות — לקוח עם אפליקציה ישנה, או תקלה בנכס
+   * שאי אפשר לתקן מכאן — וללקוח שלחץ מגיעה תשובה כלשהי. עשר שעות
+   * גרועות מארבעים ושתיים, ושתיהן טובות משתיקה.
+   */
+  const all = buildSlots();
+  if (all.length > 0) {
+    try {
+      return await sendFlow(msg.toPhone, {
+        header: prompt.header,
+        body: prompt.body,
+        footer: prompt.footer,
+        cta: prompt.action,
+        // המפתח שנרשם בלוג ומקשר תשובה לשליחה
+        flowToken: msg.dedupeKey,
+        screen: "PICK_TIME",
+        data: {
+          slots: all.map((slot) => ({
+            id: slotRowId(slot.at),
+            // ⚠️ ב-Flow אין תיאור לצד הכותרת כמו ברשימה, ולכן היום
+            // נכנס לתוך הכותרת עצמה — בלעדיו "16:00" לא אומר מתי
+            title: `${slot.day === "today" ? "היום" : "מחר"} ${slot.label}`,
+          })),
+        },
+      });
+    } catch {
+      // נופלים לרשימה — ראה ההערה למעלה
+    }
+  }
+
+  const slots = buildSlots(Date.now(), LIST_MAX_ROWS);
   if (slots.length === 0) return sendText(msg.toPhone, renewalNoSlotsAck());
 
-  const prompt = renewalSlotsPrompt();
   const sections = (
     [
       { title: "היום", day: "today" as const },

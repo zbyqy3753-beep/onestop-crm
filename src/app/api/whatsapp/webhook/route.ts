@@ -76,6 +76,8 @@ interface WebhookMessage {
   interactive?: {
     button_reply?: { id?: string; title?: string };
     list_reply?: { id?: string; title?: string };
+    /** תשובה מטופס Flow — ראה `flowSelection` */
+    nfm_reply?: { response_json?: string; body?: string; name?: string };
   };
 }
 
@@ -106,6 +108,10 @@ function textOf(m: WebhookMessage): string {
     m.button?.text ??
     m.interactive?.button_reply?.title ??
     m.interactive?.list_reply?.title ??
+    // ⚠️ תשובת Flow נושאת את הבחירה ב-`response_json` ולא בטקסט.
+    // השורה הזו קיימת כדי שיומן ההודעות הנכנסות לא יציג שורה ריקה
+    // לצד ליד שנוצר — הפענוח עצמו נשען על `flowSelection`.
+    m.interactive?.nfm_reply?.body ??
     ""
   );
 }
@@ -123,11 +129,39 @@ function textOf(m: WebhookMessage): string {
  */
 function payloadIdOf(m: WebhookMessage): string | undefined {
   return (
+    flowSelection(m) ??
     m.interactive?.list_reply?.id ??
     m.interactive?.button_reply?.id ??
     m.button?.payload ??
     undefined
   );
+}
+
+/**
+ * השעה שנבחרה בטופס ה-Flow.
+ *
+ * ⚠️ מטא מחזירים את תשובת הטופס כ-**מחרוזת JSON** בתוך שדה, ולא
+ * כאובייקט. `response_json` הוא טקסט שצריך לפענח, והוא מגיע מהרשת
+ * ולא מאיתנו — ולכן עטוף ב-try. פענוח שנכשל מחזיר `undefined`,
+ * וההודעה ממשיכה למסלול הטקסטואלי הרגיל במקום להפיל את ה-webhook.
+ *
+ * ⚠️ `slot` הוא שם הרכיב ב-Flow JSON. שינוי שם שם מחייב שינוי כאן —
+ * ומכיוון ש-Flow שפורסם אינו ניתן לעריכה, זה קורה רק בגרסה חדשה.
+ *
+ * ⚠️ `flow_token` **לא** משמש לזיהוי. הוא נשלח על ידינו וחוזר, אבל
+ * המספר הוא הזהות בכל הזרימה, וסטייה מזה כאן הייתה יוצרת מסלול
+ * שני לשיוך — בדיוק סוג הכפילות שגרמה לבאג ה-LID בגרסת הבוט.
+ */
+function flowSelection(m: WebhookMessage): string | undefined {
+  const raw = m.interactive?.nfm_reply?.response_json;
+  if (!raw) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    const slot = (parsed as { slot?: unknown })?.slot;
+    return typeof slot === "string" && slot ? slot : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function POST(request: Request) {
