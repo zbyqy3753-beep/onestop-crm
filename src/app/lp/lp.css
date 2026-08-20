@@ -1,205 +1,36 @@
 /* ══════════════════════════════════════════════════════════════════════
-   דף הנחיתה הציבורי — שפת הפוסטרים של ONE STOP
-   (רקע שנהב, מסגרת זהב, נייבי)
+   דף הנחיתה הציבורי — מה שהקומפוננטות המועתקות צריכות ואינו טוקן
 
-   ⚠️ **הפלטה נעולה כאן ואינה משתמשת בטוקנים של globals.css.**
-   טוקני ה-CRM מתחלפים לפי `data-theme`, שנקבע מ-localStorage לפני
-   הציור הראשון — כלומר מבקר אקראי שהדפדפן שלו במצב כהה היה מקבל דף
-   נחיתה כהה, בזמן שכל העיצוב כאן בנוי על שנהב. זה דף חיצוני ללקוחות,
-   ואין לו תמה כהה.
-
-   הפונטים כן מגיעים מהשורש: `--font-frank` ו-`--font-assistant`
-   נטענים ב-`app/layout.tsx` וממילא נמצאים בכל עמוד.
+   הצבעים עצמם יושבים ב-`globals.css`, בבלוק `@theme`, תחת הקידומת
+   `lp-` (ושם גם מוסבר למה). כאן רק מה שאינו utility של Tailwind.
    ══════════════════════════════════════════════════════════════════════ */
 
 /*
- * ⚠️ גם ל-`body`, ולא רק ל-`.lp-root`.
+ * ⚠️ גם ל-`body`, ולא רק לעטיפה של הדף.
  *
  * `--c-bg` של ה-CRM נקבע מ-localStorage לפני הציור, ואצל מבקר שהיה
- * פעם במערכת במצב כהה הוא נייבי כמעט-שחור. `.lp-root` מכסה את המסך,
- * אבל גלילת הגומי של iOS חושפת את ה-`body` שמאחוריו — פס שחור שמהבהב
- * בכל משיכה, בדף שכולו שנהב.
+ * פעם במערכת במצב כהה הוא נייבי כמעט-שחור. העטיפה מכסה את המסך, אבל
+ * גלילת הגומי של iOS חושפת את ה-`body` שמאחוריה — פס שחור שמהבהב בכל
+ * משיכה, בדף שכולו לבן.
  */
 body:has(.lp-root) {
-  background: #fdfbf4;
+  background: #ffffff;
 }
 
 .lp-root {
-  --lp-ivory: #fdfbf4;
-  --lp-ivory-2: #f7f2e4;
-  --lp-gold: #c9a227;
-  --lp-gold-soft: #f2d479;
-  --lp-navy: #0d1f37;
-  --lp-ink-2: #4a5b70;
-  --lp-muted: #8b8069;
-  --lp-line: #e5dcc3;
-  --lp-bad: #a33a2f;
-
   min-height: 100dvh;
-  background: var(--lp-ivory);
-  color: var(--lp-navy);
+  background: #ffffff;
+  color: #0d1f37;
   font-family: var(--font-assistant), system-ui, sans-serif;
-  padding: 20px 14px calc(28px + env(safe-area-inset-bottom));
-  display: flex;
-  justify-content: center;
-}
-
-.lp-frame {
-  width: 100%;
-  max-width: 520px;
-  border: 2px solid var(--lp-gold);
-  border-radius: 18px;
-  background: var(--lp-ivory);
-  padding: 22px 18px 26px;
-  box-shadow: 0 18px 40px -24px rgb(13 31 55 / 0.35);
-}
-
-/* ── כותרת המותג ──────────────────────────────────────────────────────── */
-
-.lp-brand {
-  text-align: center;
-  font-weight: 800;
-  letter-spacing: 3px;
-  font-size: 15px;
-}
-
-.lp-rule {
-  text-align: center;
-  color: var(--lp-gold);
-  letter-spacing: 4px;
-  font-size: 11px;
-  margin: 4px 0 18px;
-}
-
-.lp-title {
-  font-family: var(--font-frank), Georgia, serif;
-  font-weight: 700;
-  font-size: clamp(26px, 7.5vw, 34px);
-  line-height: 1.22;
-  text-align: center;
-  margin-bottom: 10px;
-}
-
-.lp-title em {
-  font-style: normal;
-  color: var(--lp-gold);
-}
-
-.lp-lede {
-  text-align: center;
-  color: var(--lp-ink-2);
-  font-size: 15px;
-  line-height: 1.6;
-  margin-bottom: 18px;
-}
-
-/* ── ארבע הקטגוריות ───────────────────────────────────────────────────── */
-
-.lp-strip {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.lp-strip div {
-  background: var(--lp-ivory-2);
-  border: 1px solid var(--lp-line);
-  border-radius: 10px;
-  padding: 10px 4px;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.lp-strip span {
-  display: block;
-  font-size: 17px;
-  margin-bottom: 3px;
-}
-
-/* ── כרטיס הטופס ──────────────────────────────────────────────────────── */
-
-.lp-card {
-  background: #fff;
-  border: 1px solid var(--lp-line);
-  border-radius: 14px;
-  padding: 18px 16px;
-}
-
-.lp-field {
-  margin-bottom: 12px;
-}
-
-.lp-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.lp-label small {
-  font-weight: 400;
-  color: var(--lp-muted);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /*
- * ⚠️ 16px ולא פחות. ספארי בנייד מזום פנימה על כל שדה עם גופן קטן
- * מזה, והמשתמש נשאר עם דף מוגדל שהוא צריך לצבוט חזרה — אותו שיקול
- * שמתועד ב-`inputClass` של ה-CRM.
+ * תיאורי החבילות מגיעים מה-CRM כטקסט עם שורות חדשות. מציגים אותן כפי
+ * שנכתבו במקום לרסק אותן לפסקה אחת.
  */
-.lp-input,
-.lp-select,
-.lp-textarea {
-  width: 100%;
-  box-sizing: border-box;
-  font: inherit;
-  font-size: 16px;
-  color: var(--lp-navy);
-  background: var(--lp-ivory);
-  border: 1px solid var(--lp-line);
-  border-radius: 9px;
-  padding: 11px 12px;
-}
-
-.lp-textarea {
-  min-height: 76px;
-  resize: vertical;
-}
-
-.lp-input:focus-visible,
-.lp-select:focus-visible,
-.lp-textarea:focus-visible,
-.lp-chip:focus-visible,
-.lp-submit:focus-visible {
-  outline: 2px solid var(--lp-gold);
-  outline-offset: 2px;
-}
-
-/* ── שבבי הבחירה ──────────────────────────────────────────────────────── */
-
-.lp-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.lp-chip {
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--lp-ivory);
-  color: var(--lp-ink-2);
-  border: 1px solid var(--lp-line);
-  border-radius: 999px;
-  padding: 8px 13px;
-}
-
-.lp-chip[aria-pressed="true"] {
-  background: var(--lp-navy);
-  border-color: var(--lp-navy);
-  color: var(--lp-gold-soft);
+.lp-root .crm-text {
+  white-space: pre-line;
 }
 
 /* ── פיתיון ───────────────────────────────────────────────────────────── */
@@ -215,84 +46,4 @@ body:has(.lp-root) {
   width: 1px;
   height: 1px;
   overflow: hidden;
-}
-
-/* ── שליחה ────────────────────────────────────────────────────────────── */
-
-.lp-submit {
-  width: 100%;
-  font: inherit;
-  font-size: 16px;
-  font-weight: 800;
-  cursor: pointer;
-  color: var(--lp-gold-soft);
-  background: var(--lp-navy);
-  border: none;
-  border-radius: 10px;
-  padding: 13px;
-  margin-top: 4px;
-}
-
-.lp-submit:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
-
-.lp-error {
-  background: #fbeae7;
-  border: 1px solid #eccdc7;
-  color: var(--lp-bad);
-  border-radius: 9px;
-  padding: 9px 11px;
-  font-size: 13px;
-  margin-bottom: 12px;
-}
-
-/* ── תודה ─────────────────────────────────────────────────────────────── */
-
-.lp-thanks {
-  text-align: center;
-  padding: 26px 10px;
-}
-
-.lp-thanks .lp-mark {
-  font-size: 34px;
-  color: var(--lp-gold);
-  margin-bottom: 10px;
-}
-
-.lp-thanks h2 {
-  font-family: var(--font-frank), Georgia, serif;
-  font-size: 24px;
-  margin-bottom: 8px;
-}
-
-.lp-thanks p {
-  color: var(--lp-ink-2);
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-/* ── שובל ─────────────────────────────────────────────────────────────── */
-
-.lp-trust {
-  display: flex;
-  justify-content: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  color: var(--lp-muted);
-  font-size: 12px;
-  margin-top: 16px;
-}
-
-.lp-legal {
-  text-align: center;
-  color: var(--lp-muted);
-  font-size: 11px;
-  line-height: 1.6;
-  margin-top: 14px;
-}
-
-.lp-legal a {
-  color: inherit;
 }

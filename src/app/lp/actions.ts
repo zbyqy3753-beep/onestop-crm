@@ -111,6 +111,8 @@ function parseProvider(raw: string): ProviderKey | undefined {
 
 const MAX_NAME = 80;
 const MAX_MESSAGE = 500;
+/** שם חבילה מהקטלוג. הארוכה ביותר היום היא ~70 תווים. */
+const MAX_PACKAGE = 120;
 /** חלון הכפילות — פנייה חוזרת של אותו אדם באותו יום אינה ליד שני. */
 const DUPLICATE_WINDOW_MS = 24 * 60 * 60_000;
 
@@ -148,6 +150,13 @@ export async function submitLandingLead(
 
   const currentProvider = parseProvider(text(formData.get("provider")));
   const message = text(formData.get("message")).slice(0, MAX_MESSAGE);
+
+  /*
+   * החבילה שהגולש לחץ עליה. יש לה עמודה משלה ב-CRM ולכן היא **לא**
+   * נכנסת להערה — כפילות הייתה יוצרת שני מקומות שיכולים להיפרד בעריכה,
+   * בדיוק כפי שמתועד ב-`api/leads/route.ts`.
+   */
+  const packageName = text(formData.get("packageName")).slice(0, MAX_PACKAGE);
 
   if (overRateLimit(await clientIp())) {
     return error("נשלחו יותר מדי פניות מהמכשיר הזה. נסו שוב מאוחר יותר.");
@@ -204,6 +213,7 @@ export async function submitLandingLead(
     // `source` אומר **איך** נקלט (טופס), `sourceDetail` אומר **ממה**
     source: "form",
     sourceDetail: source,
+    packageName: packageName || undefined,
     note: message || undefined,
     assigneeId,
     createdById,

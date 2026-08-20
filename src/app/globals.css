@@ -193,6 +193,75 @@
   --shadow-card: var(--sh-card);
   --shadow-pop: var(--sh-pop);
   --shadow-lift: var(--sh-lift);
+
+  /* ── דף הנחיתה הציבורי (/lp) ────────────────────────────────────────
+   *
+   * ⚠️ **פלטה שנייה, עם קידומת `lp-`, ולא שימוש חוזר בטוקנים שמעל.**
+   *
+   * הקומפוננטות של הדף הועתקו מפרויקט האתר הציבורי (`onestop-site`),
+   * ולו יש בלוק `@theme` משלו עם **אותם שמות בדיוק** — `surface`,
+   * `ink-2`, `line`, `brand` — וערכים אחרים. בלי הקידומת הן היו
+   * יורשות את הטוקנים של ה-CRM, שמתחלפים לפי `data-theme`; מבקר
+   * שהדפדפן שלו במצב כהה היה מקבל אתר השוואות שחור.
+   *
+   * הערכים כאן קבועים ואינם תלויי תמה — לדף ציבורי אין מצב כהה.
+   * הכלי שמסב קובץ שהועתק מהאתר לקידומת הזו הוא
+   * `tools/lp-prefix-tokens.mjs`; להריץ אותו על כל קובץ חדש שמועתק.
+   * ──────────────────────────────────────────────────────────────── */
+
+  --color-lp-navy: #0d1f37;
+  --color-lp-navy-deep: #081421;
+  --color-lp-navy-2: #16304c;
+  --color-lp-navy-3: #1e3d5e;
+  --color-lp-navy-line: #21374f;
+
+  --color-lp-brand: #0b709d;
+  --color-lp-brand-bright: #14a6d8;
+  --color-lp-brand-glow: #1dade3;
+  --color-lp-silver: #a4aeb4;
+
+  --color-lp-surface: #ffffff;
+  --color-lp-surface-2: #f5f8fa;
+  --color-lp-surface-3: #dce4ea;
+  --color-lp-line: #dce4ea;
+  --color-lp-line-strong: #c2cdd6;
+
+  --color-lp-ink: #0d1f37;
+  --color-lp-ink-2: #4a5b6d;
+  --color-lp-ink-3: #7d8b99;
+  --color-lp-ink-invert: #ffffff;
+
+  --color-lp-on-navy: #ffffff;
+  --color-lp-on-navy-2: #b9c6d3;
+  --color-lp-on-navy-3: #9aabbb;
+
+  /* ירוק החיסכון ואדום העלייה שאחרי ההטבה — נקודת המכירה של הדף */
+  --color-lp-save: #0f8a6a;
+  --color-lp-rise: #b4453f;
+  --color-lp-rise-soft: #fdf1f0;
+
+  --radius-lp-card: 1rem;
+
+  /* 11px. רצפת הקריאוּת של עברית על טלפון — לא לרדת מזה. */
+  --text-lp-2xs: 0.6875rem;
+  --text-lp-2xs--line-height: 0.875rem;
+
+  --shadow-lp-card: 0 1px 2px rgb(13 31 55 / 0.06), 0 1px 3px rgb(13 31 55 / 0.05);
+  --shadow-lp-lift: 0 4px 12px -3px rgb(13 31 55 / 0.12);
+  --shadow-lp-pop: 0 16px 36px -10px rgb(13 31 55 / 0.22);
+
+  --animate-lp-rise: lp-rise 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes lp-rise {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 /* ── סדר השכבות ───────────────────────────────────────────────────────────
