@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CatalogTabs } from "./ui/CatalogTabs";
 import { LeadForm } from "./ui/LeadForm";
+import { SavingsCalculator } from "./ui/SavingsCalculator";
 import {
   basePackages,
   disclosedRiseCount,
@@ -80,6 +81,17 @@ export default function LandingPage() {
           </dl>
         </div>
       </header>
+
+      {/* ── מחשבון החיסכון ────────────────────────────────────────── */}
+      {/*
+        ⚠️ מעל הקטלוג ולא מתחתיו, בכוונה. מי שנוחת כאן לא יודע איזו
+        חבילה הוא רוצה — הוא יודע כמה הוא משלם. המחשבון הופך את הסכום
+        הזה לתשובה מול הקטלוג האמיתי, והוא גם מציג את החיסכון **לפני**
+        שהוא מבקש טלפון: מחשבון שמסתיר מספר שכבר חושב הוא מלכודת.
+      */}
+      <div className="mx-auto max-w-2xl px-4 pt-8">
+        <SavingsCalculator packages={packages} />
+      </div>
 
       {/* ── הקטלוג ────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-6xl px-4 py-8">

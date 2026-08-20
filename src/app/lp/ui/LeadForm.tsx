@@ -2,7 +2,11 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { PROVIDER_CONFIG, PROVIDER_ORDER } from "@/lib/domain/types";
+import {
+  PROVIDER_CONFIG,
+  PROVIDER_ORDER,
+  type LeadCategoryKey,
+} from "@/lib/domain/types";
 import { submitLandingLead, type LandingState } from "../actions";
 import { crmCategory } from "../config";
 import { btnPrimary } from "./button";
@@ -39,9 +43,20 @@ interface Props {
   /** החבילה שהכרטיס מציג. בטופס הכללי שבתחתית הדף אין כזו. */
   pkg?: Package;
   compact?: boolean;
+  /**
+   * קטגוריה כשאין חבילה — המחשבון יודע על מה נשאל, גם בלי שנבחרה
+   * חבילה מסוימת. עם `pkg` הקטגוריה נגזרת ממנו וזה נדרס.
+   */
+  category?: LeadCategoryKey;
+  /**
+   * הקשר שייכתב כהערה הראשונה של הליד (למשל "משלם היום 220 ₪, 3
+   * קווים"). כשהוא מסופק, תיבת הטקסט החופשית לא מוצגת: הנציג מקבל
+   * את הנתון שהמבקר כבר הזין, ולא מבקשים ממנו לכתוב אותו שוב.
+   */
+  note?: string;
 }
 
-export function LeadForm({ pkg, compact = false }: Props) {
+export function LeadForm({ pkg, compact = false, category, note }: Props) {
   const [state, action] = useActionState(submitLandingLead, INITIAL);
 
   if (state.status === "sent") {
@@ -124,7 +139,7 @@ export function LeadForm({ pkg, compact = false }: Props) {
         </select>
       </div>
 
-      {!pkg && (
+      {!pkg && !note && (
         <div>
           <label className={labelClass} htmlFor={`lp-msg-${uid}`}>
             משהו שנשמח לדעת מראש <span className="text-lp-ink-3">(לא חובה)</span>
@@ -139,12 +154,17 @@ export function LeadForm({ pkg, compact = false }: Props) {
           />
         </div>
       )}
+      {note && <input type="hidden" name="message" value={note} />}
 
       {/*
         הקשר החבילה. `category` נשלח כערך של ה-CRM ונבדק בשרת מול רשימה
         סגורה — ראה `crmCategory`.
       */}
-      <input type="hidden" name="category" value={pkg ? crmCategory(pkg) : "general"} />
+      <input
+        type="hidden"
+        name="category"
+        value={pkg ? crmCategory(pkg) : (category ?? "general")}
+      />
       {pkg && (
         <input
           type="hidden"
