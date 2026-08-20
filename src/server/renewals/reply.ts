@@ -30,21 +30,63 @@ export type ReplyIntent =
  * גם סירוב וגם הסרה, וההסרה היא החובה החוקית — לכן היא גוברת. סדר
  * הפוך היה מסווג את ההודעה כסירוב ומשאיר את הלקוח ברשימת הדיוור.
  */
-const OPT_OUT = [
+/*
+ * ⚠️⚠️ **מילים שלמות ולא הכלה.** הגרסה הקודמת בדקה `includes` על כל
+ * הרשימה, וזה נצפה בייצור: מספר נרשם כמוסר בגלל ההודעה "הגעתם
+ * לonestop ייעוץ בתחום התקשורת" — כי `"onestop".includes("stop")`.
+ * שם המותג שלנו הסיר לקוח מהדיוור. אותו דבר ל"הסר" בתוך "הסרטון".
+ *
+ * ⚠️ "הסרה" חייבת להופיע כאן במפורש. בהכלה היא נתפסה דרך "הסר";
+ * בהתאמת מילים שלמות היא מילה אחרת לגמרי — ובלעדיה **כפתור ההסרה
+ * בתבנית מפסיק לעבוד**, כי כותרתו היא "הסרה מהדיוור".
+ */
+const OPT_OUT_WORDS = [
   "הסר",
+  "הסרה",
   "הסירו",
   "תסיר",
   "תסירו",
   "להסיר",
+  "תפסיק",
+  "תפסיקו",
+];
+
+/**
+ * ביטויים רב-מיליים.
+ *
+ * ⚠️ כאן הכלה **בטוחה**: צירוף של שתי מילים לא נבלע בטעות בתוך מילה
+ * אחרת, וזו הדרך היחידה לתפוס אותם גם כשיש ביניהם ניסוח שונה.
+ */
+const OPT_OUT_PHRASES = [
   "הורד אותי",
   "תורידו אותי",
   "אל תשלח",
   "אל תשלחו",
   "די לשלוח",
-  "תפסיקו",
-  "stop",
-  "unsubscribe",
 ];
+
+/**
+ * מילים לועזיות, עם גבולות מילה.
+ *
+ * ⚠️ `\b` עובד עליהן ועל עברית לא — אותיות עבריות אינן `\w`, ולכן
+ * הגבול נמצא בין כל שתי אותיות. לכן העברית מטופלת בטוקנים למעלה
+ * ורק הלועזית כאן.
+ */
+const OPT_OUT_LATIN = /\b(stop|unsubscribe)\b/;
+
+/** המילים בטקסט, בלי סימני פיסוק. */
+function wordsOf(text: string): Set<string> {
+  return new Set(text.split(/[^\p{L}\p{N}]+/u).filter(Boolean));
+}
+
+function isOptOut(text: string): boolean {
+  const words = wordsOf(text);
+  return (
+    OPT_OUT_WORDS.some((w) => words.has(w)) ||
+    OPT_OUT_PHRASES.some((p) => text.includes(p)) ||
+    OPT_OUT_LATIN.test(text)
+  );
+}
 
 const DECLINE = [
   "לא מעוניין",
@@ -267,7 +309,7 @@ export function parseReply(
    * להישלח שוב על ידי מטא שעות אחרי שנשלחה.
    */
   const chosen = slotFromRowId(payloadId);
-  if (chosen !== null && !OPT_OUT.some((w) => text.includes(w))) {
+  if (chosen !== null && !isOptOut(text)) {
     if (chosen <= now) return { kind: "unclear" };
     return { kind: "time", at: chosen, label: labelFor(chosen, now) };
   }
@@ -275,7 +317,7 @@ export function parseReply(
   if (!text) return { kind: "unclear" };
 
   // ראשון בכוונה — ראה ההערה על OPT_OUT
-  if (OPT_OUT.some((w) => text.includes(w))) return { kind: "optOut" };
+  if (isOptOut(text)) return { kind: "optOut" };
 
   /*
    * ⚠️ אחרי ההסרה ולפני הסירוב.
