@@ -10,10 +10,16 @@ import {
 import {
   cloudApiConfigured,
   cloudApiSenderId,
+  sendList,
   sendTemplate,
   sendText,
 } from "./cloudApi";
-import { RENEWAL_OPENER_TEMPLATE } from "@/lib/domain/renewalMessages";
+import {
+  RENEWAL_OPENER_TEMPLATE,
+  renewalNoSlotsAck,
+  renewalSlotsPrompt,
+} from "@/lib/domain/renewalMessages";
+import { buildSlots, slotRowId } from "@/server/renewals/slots";
 import {
   FOLLOWUP_REMINDER_TEMPLATE,
   PASSWORD_RESET_CODE_TEMPLATE,
@@ -95,7 +101,57 @@ function nameFromBody(body: string): string {
   return m?.[1]?.trim() || "לקוח יקר";
 }
 
+/**
+ * רשימת השעות, מורכבת **ברגע הזה**.
+ *
+ * ⚠️⚠️ כאן ולא ב-`campaign.ts` שהכניס את השורה לתור. בין ההכנסה
+ * לשליחה עוברות דקות עד שעות — חלון השליחה, התקרה היומית, מתג
+ * ההשהיה — ורשימה שנבנתה בבוקר הייתה מציעה בערב שעות שכבר עברו.
+ * זה הרגע היחיד שבו "עכשיו" של המערכת שווה ל"עכשיו" של הלקוח.
+ *
+ * ⚠️ מקבץ ריק לא נשלח. מטא דוחים סעיף בלי שורות, וכישלון כאן היה
+ * משאיר את הלקוח בלי תשובה אחרי שלחץ.
+ */
+async function deliverSlots(msg: ClaimedMessage): Promise<string> {
+  const slots = buildSlots();
+  if (slots.length === 0) return sendText(msg.toPhone, renewalNoSlotsAck());
+
+  const prompt = renewalSlotsPrompt();
+  const sections = (
+    [
+      { title: "היום", day: "today" as const },
+      { title: "מחר", day: "tomorrow" as const },
+    ]
+  )
+    .map((s) => ({
+      title: s.title,
+      rows: slots
+        .filter((slot) => slot.day === s.day)
+        .map((slot) => ({
+          id: slotRowId(slot.at),
+          title: slot.label,
+          // ⚠️ הכותרת היא "16:00" בלבד, ובלי התיאור אי אפשר לדעת אם
+          // זה היום או מחר. השיוך האמיתי נשען על ה-id, אבל הלקוח
+          // רואה רק את הטקסט — והוא צריך לדעת על מה הוא לוחץ.
+          description: s.title === "היום" ? "היום" : "מחר",
+        })),
+    }))
+    .filter((s) => s.rows.length > 0);
+
+  return sendList(msg.toPhone, {
+    header: prompt.header,
+    body: prompt.body,
+    footer: prompt.footer,
+    action: prompt.action,
+    sections,
+  });
+}
+
 async function deliver(msg: ClaimedMessage): Promise<string> {
+  // ⚠️ לפני `templateFor`: זו אינה תבנית ואינה טקסט, והיא היחידה
+  // שהתוכן שלה נקבע כאן ולא ב-`body` השמור
+  if (msg.dedupeKey.startsWith("renewal:slots:")) return deliverSlots(msg);
+
   const template = templateFor(msg.dedupeKey);
   if (!template) return sendText(msg.toPhone, msg.body);
 

@@ -72,10 +72,10 @@ interface WebhookMessage {
   timestamp?: string;
   type?: string;
   text?: { body?: string };
-  button?: { text?: string };
+  button?: { text?: string; payload?: string };
   interactive?: {
-    button_reply?: { title?: string };
-    list_reply?: { title?: string };
+    button_reply?: { id?: string; title?: string };
+    list_reply?: { id?: string; title?: string };
   };
 }
 
@@ -107,6 +107,26 @@ function textOf(m: WebhookMessage): string {
     m.interactive?.button_reply?.title ??
     m.interactive?.list_reply?.title ??
     ""
+  );
+}
+
+/**
+ * המזהה שמאחורי לחיצה, כשיש כזה.
+ *
+ * ⚠️ הכותרת לבדה אינה מספיקה לרשימת השעות: שורה מציגה "16:00" ולא
+ * אומרת אם זה היום או מחר. המזהה נושא את הזמן המדויק שהוצע, וכל
+ * ההיגיון שנשען עליו יושב ב-`parseReply`.
+ *
+ * ⚠️ `button.payload` הוא הצורה שבה לחצן **בתבנית** חוזר; לחצן
+ * בהודעה אינטראקטיבית חוזר כ-`button_reply.id`. שתי הצורות קיימות
+ * במקביל, וקריאה של אחת בלבד הייתה משאירה חצי מהמקרים בלי מזהה.
+ */
+function payloadIdOf(m: WebhookMessage): string | undefined {
+  return (
+    m.interactive?.list_reply?.id ??
+    m.interactive?.button_reply?.id ??
+    m.button?.payload ??
+    undefined
   );
 }
 
@@ -143,6 +163,7 @@ export async function POST(request: Request) {
       if (!id || !from) continue;
 
       const body = textOf(m);
+      const payloadId = payloadIdOf(m);
       const ts = Number(m.timestamp);
 
       try {
@@ -150,6 +171,7 @@ export async function POST(request: Request) {
           waMessageId: id,
           fromPhone: from.replace(/\D/g, ""),
           body,
+          payloadId,
           receivedAt: new Date(
             Number.isFinite(ts) && ts > 0 ? ts * 1000 : Date.now(),
           ),

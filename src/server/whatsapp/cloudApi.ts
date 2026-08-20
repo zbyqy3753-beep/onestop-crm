@@ -178,3 +178,75 @@ export async function sendTemplate(
   if (!id) throw new Error("מטא לא החזירו מזהה הודעה");
   return id;
 }
+
+export interface ListRow {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+export interface ListSection {
+  title: string;
+  rows: ListRow[];
+}
+
+/**
+ * רשימה אינטראקטיבית — **רק בתוך חלון 24 השעות**.
+ *
+ * ⚠️⚠️ **אי אפשר לשלוח רשימה כתבנית.** מטא מתירים ברשימה יזומה רק
+ * תבנית מאושרת, ולתבנית מותרים לחצנים אבל לא רשימה. זו הסיבה
+ * שהזרימה מפוצלת: הפתיחה היא תבנית עם לחצן "לתאם שעה", והרשימה
+ * יוצאת רק אחרי שהלקוח לחץ — כלומר אחרי שהוא כתב אלינו והחלון נפתח.
+ * ניסיון לקצר את הדרך נדחה ב-131047.
+ *
+ * ⚠️ מטא מגבילים: 10 שורות בסך הכול, כותרת שורה עד 24 תווים, תיאור
+ * עד 72, וטקסט הכפתור עד 20. חריגה נדחית בשגיאת ולידציה ולא נחתכת
+ * בשקט — ולכן החיתוך נעשה כאן, ליד המגבלה שהוא מכבד.
+ */
+export async function sendList(
+  toPhone: string,
+  list: {
+    header: string;
+    body: string;
+    footer?: string;
+    action: string;
+    sections: ListSection[];
+  },
+): Promise<string> {
+  const phoneId = env("WHATSAPP_PHONE_NUMBER_ID");
+  if (!phoneId) throw new Error("חסר WHATSAPP_PHONE_NUMBER_ID");
+
+  const rows = list.sections.reduce((n, s) => n + s.rows.length, 0);
+  if (rows === 0) throw new Error("רשימה בלי שורות");
+  if (rows > 10) throw new Error(`רשימה עם ${rows} שורות — מטא מתירים 10`);
+
+  const res = await graph<SendResponse>(`${phoneId}/messages`, {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: toWaPhone(toPhone),
+    type: "interactive",
+    interactive: {
+      type: "list",
+      header: { type: "text", text: list.header.slice(0, 60) },
+      body: { text: list.body.slice(0, 1024) },
+      ...(list.footer ? { footer: { text: list.footer.slice(0, 60) } } : {}),
+      action: {
+        button: list.action.slice(0, 20),
+        sections: list.sections.map((s) => ({
+          title: s.title.slice(0, 24),
+          rows: s.rows.map((r) => ({
+            id: r.id.slice(0, 200),
+            title: r.title.slice(0, 24),
+            ...(r.description
+              ? { description: r.description.slice(0, 72) }
+              : {}),
+          })),
+        })),
+      },
+    },
+  });
+
+  const id = res.messages?.[0]?.id;
+  if (!id) throw new Error("מטא לא החזירו מזהה הודעה");
+  return id;
+}

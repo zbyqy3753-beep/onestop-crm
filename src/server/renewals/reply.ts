@@ -1,4 +1,6 @@
 import { dayKey, instantFromIsraelDateTime, startOfDay } from "@/lib/tz";
+import { SLOTS_BUTTON } from "@/lib/domain/renewalMessages";
+import { slotFromRowId } from "./slots";
 
 /**
  * פענוח תשובת לקוח בוואטסאפ.
@@ -16,6 +18,8 @@ import { dayKey, instantFromIsraelDateTime, startOfDay } from "@/lib/tz";
 export type ReplyIntent =
   | { kind: "optOut" }
   | { kind: "decline" }
+  /** ביקש לראות שעות — נשלחת אליו הרשימה */
+  | { kind: "slots" }
   | { kind: "time"; at: number; label: string }
   | { kind: "unclear" };
 
@@ -239,12 +243,48 @@ function labelFor(instant: number, now: number): string {
   return `ב${dayName} ${range}`;
 }
 
-export function parseReply(body: string, now = Date.now()): ReplyIntent {
+/**
+ * @param payloadId מזהה השורה/הלחצן שוואטסאפ החזירו, כשהתשובה הגיעה
+ *   מלחיצה ולא מהקלדה.
+ */
+export function parseReply(
+  body: string,
+  now = Date.now(),
+  payloadId?: string,
+): ReplyIntent {
   const text = normalize(body);
+
+  /*
+   * ⚠️ המזהה גובר על הטקסט, אבל **לא על בקשת הסרה**.
+   *
+   * שורה ברשימה מחזירה כותרת "16:00" בלבד — שאינה אומרת אם מדובר
+   * בהיום או במחר, ואם היא תיפול לפענוח הטקסטואלי היא תוכרע לפי
+   * השעה הנוכחית. המזהה נושא את הזמן המדויק שהוצע, ולכן אין כאן
+   * שום ניחוש: לא חלק-יום, לא "1–7 זה אחר הצהריים", ולא גבולות
+   * שעות פעילות — הרשימה מלכתחילה הציעה רק מה שתקין.
+   *
+   * ⚠️ עדיין נבדק שהמועד לא עבר. הודעה יכולה להמתין בתור הנכנס, או
+   * להישלח שוב על ידי מטא שעות אחרי שנשלחה.
+   */
+  const chosen = slotFromRowId(payloadId);
+  if (chosen !== null && !OPT_OUT.some((w) => text.includes(w))) {
+    if (chosen <= now) return { kind: "unclear" };
+    return { kind: "time", at: chosen, label: labelFor(chosen, now) };
+  }
+
   if (!text) return { kind: "unclear" };
 
   // ראשון בכוונה — ראה ההערה על OPT_OUT
   if (OPT_OUT.some((w) => text.includes(w))) return { kind: "optOut" };
+
+  /*
+   * ⚠️ אחרי ההסרה ולפני הסירוב.
+   *
+   * הכותרת מגיעה מהתבנית המאושרת ולא מהקלדה חופשית, ולכן ההשוואה
+   * בטוחה. היא נבדקת לפני `DECLINE` כי לקוח שמקליד "לתאם שעה לא
+   * עכשיו" עדיין ביקש שעות — והבדיקה למטה הייתה תופסת את "לא".
+   */
+  if (text.includes(normalize(SLOTS_BUTTON))) return { kind: "slots" };
   if (DECLINE.some((w) => text.includes(w))) return { kind: "decline" };
 
   // ראה ההערה על NIGHT_WORDS — נבדק לפני חילוץ השעה, לא אחריו

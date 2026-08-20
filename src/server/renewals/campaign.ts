@@ -8,6 +8,7 @@ import {
   renewalDeclineAck,
   renewalOpener,
   renewalOptOutAck,
+  renewalSlotsPrompt,
   renewalUnclearAck,
 } from "@/lib/domain/renewalMessages";
 
@@ -294,6 +295,14 @@ export async function handleInbound(input: {
   fromPhone: string;
   body: string;
   receivedAt: Date;
+  /**
+   * מזהה השורה/הלחצן, כשהלקוח לחץ במקום להקליד.
+   *
+   * ⚠️ אופציונלי כי הבוט הישן (Baileys) לא מדווח אותו — הוא מכיר רק
+   * טקסט. תשובה בלי מזהה ממשיכה לעבור את הפענוח הטקסטואלי בדיוק
+   * כמו קודם.
+   */
+  payloadId?: string;
 }): Promise<InboundOutcome> {
   /*
    * ⚠️ **בלי סינון סטטוס.** הגרסה הקודמת חיפשה רק
@@ -307,7 +316,11 @@ export async function handleInbound(input: {
     orderBy: { createdAt: "desc" },
   });
 
-  const intent = parseReply(input.body, input.receivedAt.getTime());
+  const intent = parseReply(
+    input.body,
+    input.receivedAt.getTime(),
+    input.payloadId,
+  );
 
   try {
     await prisma.whatsAppInbound.create({
@@ -377,6 +390,23 @@ export async function handleInbound(input: {
         data: { status: "declined" },
       });
       await enqueue(contact.id, "decline", contact.phone, renewalDeclineAck());
+      break;
+
+    /*
+     * ⚠️ הסטטוס **לא** משתנה. הלקוח באמצע בחירה ועדיין `awaitingReply`;
+     * סימונו כמשהו אחר היה מוציא אותו מהמסך שבו עוקבים אחרי מי לא ענה.
+     *
+     * ⚠️ חותמת הזמן במפתח הדדופ מכוונת: לקוח שלוחץ שוב (כי הרשימה
+     * נסגרה, כי התחרט) יקבל רשימה חדשה ועדכנית. מפתח קבוע היה הופך
+     * את הלחיצה השנייה ל-no-op שקט.
+     */
+    case "slots":
+      await enqueue(
+        contact.id,
+        `slots:${input.receivedAt.getTime()}`,
+        contact.phone,
+        renewalSlotsPrompt().body,
+      );
       break;
 
     case "time":
