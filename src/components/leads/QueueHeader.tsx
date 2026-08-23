@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import type { Filters } from "./FilterBar";
 import { StatusTiles } from "./StatusTiles";
-import { QUICK_VIEWS, isViewActive } from "./views";
+import { QUICK_VIEWS, isViewActive, toggleStatusFilter } from "./views";
 
 /**
  * כותרת המסך.
@@ -20,6 +20,7 @@ import { QUICK_VIEWS, isViewActive } from "./views";
  */
 export function QueueHeader({
   counts,
+  tileCounts,
   total,
   showing,
   onAdd,
@@ -34,7 +35,17 @@ export function QueueHeader({
   compact = false,
   onExpandStatuses,
 }: {
+  /**
+   * ספירות מהשרת לכל החתך.
+   *
+   * ⚠️ משמשות **רק** את מוני "N פתוחים / M נסגרו" שבשורה הזו, שהם
+   * מוני חתך ולא מוני קוביה. הקוביות מקבלות את `tileCounts`. אל
+   * תחזיר את אלה לקוביות — הן לא יודעות על אף מסנן שהמשתמש הדליק,
+   * וזה בדיוק מה שגרם לקוביה להבטיח 412 בזמן שהטבלה הציגה 38.
+   */
   counts: Record<LeadStatus, number>;
+  /** המספר שעל כל קוביה. נגזר בלקוח — ראה `LeadsClient` › `tileCounts` */
+  tileCounts: Record<LeadStatus, number>;
   total: number;
   showing: number;
   onAdd: () => void;
@@ -184,19 +195,16 @@ export function QueueHeader({
 
       {/* קוביות הסטטוס — מצב התור וגם הסינון, באותו פקד */}
       <StatusTiles
-        counts={counts}
+        counts={tileCounts}
         active={filters.status}
         compact={compact}
         onExpand={onExpandStatuses}
-        onToggle={(status) => {
-          const on = filters.status.includes(status);
+        onToggle={(status) =>
           onFiltersChange({
             ...filters,
-            status: on
-              ? filters.status.filter((s) => s !== status)
-              : [...filters.status, status],
-          });
-        }}
+            status: toggleStatusFilter(filters.status, status),
+          })
+        }
         onClear={() => onFiltersChange({ ...filters, status: [] })}
       />
     </header>

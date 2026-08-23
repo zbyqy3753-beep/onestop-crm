@@ -1,5 +1,6 @@
 import type { Filters } from "./FilterBar";
 import { EMPTY_FILTERS } from "./FilterBar";
+import type { LeadStatus } from "@/lib/domain/types";
 import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
 
 /**
@@ -156,4 +157,30 @@ export function isViewActive(
 
 function sameSet(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v) => b.includes(v));
+}
+
+/**
+ * לחיצה על אריח סטטוס — מה מסנן הסטטוס הופך להיות.
+ *
+ * ⚠️⚠️ **ברירת הפתיחה נדחקת הצידה בלחיצה הראשונה, ולא מצטרפת אליה.**
+ *
+ * המסך נפתח מסונן ל"חדשים" (`INITIAL_FILTERS`), ולכן צירוף נאיבי אמר
+ * שלחיצה על "אין מענה 1" נותנת `["new","no_answer_1"]` — כלומר האריח
+ * הבטיח 5 והטבלה הציגה 5 ועוד כל החדשים. זו בדיוק הסתירה שהמספר על
+ * האריח אמור למנוע: **המספר הוא כמה שורות יתקבלו בלחיצה עליו** (ראה
+ * `LeadsClient` › `tileCounts`), והוא נספר בלי מסנן הסטטוס.
+ *
+ * מהלחיצה השנייה ואילך זו כן בחירה מרובה אמיתית — מי שכבר בחר סטטוס
+ * מפורש התכוון אליו, ואילו "חדשים" של מסך הפתיחה איש לא בחר.
+ *
+ * מקור אמת יחיד: גם רצועת האריחים בכותרת וגם גיליון "כל הסטטוסים"
+ * בטלפון קוראים מכאן.
+ */
+export function toggleStatusFilter(
+  current: readonly LeadStatus[],
+  status: LeadStatus,
+): LeadStatus[] {
+  if (current.includes(status)) return current.filter((s) => s !== status);
+  if (isOpeningStatus(current)) return [status];
+  return [...current, status];
 }

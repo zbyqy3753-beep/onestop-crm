@@ -56,14 +56,14 @@ import { LeadsPerformancePanel } from "./LeadsPerformancePanel";
 import { leadsSheet, leadsSheetFilename } from "./leadsSheet";
 import { QueueHeader } from "./QueueHeader";
 import { FilterBar, type Filters, EMPTY_FILTERS } from "./FilterBar";
-import { INITIAL_FILTERS, isOpeningStatus } from "./views";
+import { INITIAL_FILTERS, isOpeningStatus, toggleStatusFilter } from "./views";
 import { LeadsTable } from "./LeadsTable";
 import { LeadCardList } from "./LeadCardList";
 import { LeadsMoreSheet } from "./LeadsMoreSheet";
 import { StatusTiles } from "./StatusTiles";
 import { Pagination, PAGE_SIZES } from "./Pagination";
 import { ColumnPicker } from "./ColumnPicker";
-import { setVisibleColumns, useVisibleColumns } from "./columns";
+import { SORT_PRIMARY_DIR, setVisibleColumns, useVisibleColumns } from "./columns";
 import { LeadDrawer } from "./LeadDrawer";
 import { AddLeadModal } from "./AddLeadModal";
 import { EditLeadModal } from "./EditLeadModal";
@@ -379,18 +379,19 @@ export function LeadsClient({
 
   // התצוגה כולה נגזרת מהשכבה האופטימית — כך שינוי סטטוס/עדיפות/כוכב
   // נראה מיד, עוד לפני שהשרת אישר
-  const matched = useMemo(() => {
+  /**
+   * כל המסננים **חוץ מהסטטוס**.
+   *
+   * ⚠️⚠️ שלב נפרד ולא שורה בתוך `matched`, כי **ממנו נספרות הקוביות**.
+   * זו הנקודה שמחזיקה יחד את שתי התכונות שנראו סותרות:
+   *
+   *   • הסטטוס מוחרג ⇒ לחיצה על קוביה לא משנה אף מספר על המסך. קוביה
+   *     שמראה "12" ואז "0" ברגע שלוחצים עליה היא קוביה חסרת שימוש.
+   *   • כל שאר הממדים כלולים ⇒ הספירה יורדת יחד עם הטבלה כשמסננים,
+   *     ולכן היא לא יכולה לסתור אותה.
+   */
+  const preStatus = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
-
-    /*
-      ⚠️ חיפוש מבטל את **ברירת הפתיחה** של הסטטוס, לא בחירה מפורשת.
-
-      המסך נפתח מסונן ל"חדשים". בלי השורה הזו, חיפוש שם של לקוח או של
-      עובד היה מחזיר אפס תוצאות בכל ליד שכבר טופל — כלומר כמעט תמיד,
-      ובלי שום רמז למה. לחיצה על אריח סטטוס לעומת זאת היא כן בחירה,
-      והיא נשמרת גם תוך כדי חיפוש.
-    */
-    const status = q && isOpeningStatus(filters.status) ? [] : filters.status;
 
     return optimisticLeads.filter((lead) => {
       if (filters.dueToday) {
@@ -398,8 +399,6 @@ export function LeadsClient({
         if (!lead.followUpAt) return false;
         if (Date.parse(lead.followUpAt) > endOfToday) return false;
       }
-
-      if (status.length && !status.includes(lead.status)) return false;
 
       /*
        * ⚠️⚠️ **דאטה קרה מוסתרת עד שמבקשים אותה במפורש.**
@@ -476,7 +475,63 @@ export function LeadsClient({
 
       return true;
     });
-  }, [optimisticLeads, filters, endOfToday, userById]);
+  }, [
+    optimisticLeads,
+    filters.dueToday,
+    filters.kind,
+    filters.priority,
+    filters.category,
+    filters.assignee,
+    filters.starred,
+    filters.query,
+    endOfToday,
+    userById,
+  ]);
+
+  /**
+   * המספר שעל כל קוביית סטטוס.
+   *
+   * ⚠️⚠️ **החוזה: המספר הוא בדיוק כמה שורות יתקבלו בלחיצה על הקוביה.**
+   *
+   * קודם הוא הגיע מ-`countByStatus` בשרת, שספר את כל החתך ולא ידע על
+   * שום מסנן שהמשתמש הדליק — וגם לא על כך שדאטה קרה מוסתרת כברירת
+   * מחדל (ראה `preStatus`). התוצאה: הקוביה הבטיחה 412 והטבלה הראתה 38.
+   *
+   * הגזירה כאן היא מעל אותם לידים שמזינים את הטבלה, ולכן היא לא יכולה
+   * לסתור אותה. השרת שולח את **כל** הלידים בחתך (`db.leads.list` נקרא
+   * בלי `page`), אז הספירה בלקוח מלאה ולא מדגמית.
+   *
+   * ⚠️ שער הסטטוסים הסופיים (`filtered`) **לא** מוחל כאן, בכוונה: הוא
+   * נסגר ממילא ברגע שנבחר סטטוס מפורש, כלומר בדיוק ברגע שאחרי הלחיצה.
+   * קוביית "נסגר בהצלחה" שמראה 20 מעל טבלה שמסתירה סגורים היא נכונה —
+   * לחיצה עליה תיתן 20 שורות.
+   *
+   * אתחול מפורש ל-0: סטטוס בלי לידים חייב להציג "0" ולא להיעלם מהמפה.
+   */
+  const tileCounts = useMemo(() => {
+    const out = {} as Record<LeadStatus, number>;
+    for (const status of STATUS_ORDER) out[status] = 0;
+    for (const lead of preStatus) out[lead.status] += 1;
+    return out;
+  }, [preStatus]);
+
+  const matched = useMemo(() => {
+    /*
+      ⚠️ חיפוש מבטל את **ברירת הפתיחה** של הסטטוס, לא בחירה מפורשת.
+
+      המסך נפתח מסונן ל"חדשים". בלי השורה הזו, חיפוש שם של לקוח או של
+      עובד היה מחזיר אפס תוצאות בכל ליד שכבר טופל — כלומר כמעט תמיד,
+      ובלי שום רמז למה. לחיצה על אריח סטטוס לעומת זאת היא כן בחירה,
+      והיא נשמרת גם תוך כדי חיפוש.
+    */
+    const status =
+      filters.query.trim() && isOpeningStatus(filters.status)
+        ? []
+        : filters.status;
+
+    if (status.length === 0) return preStatus;
+    return preStatus.filter((lead) => status.includes(lead.status));
+  }, [preStatus, filters.status, filters.query]);
 
   /**
    * `matched` + שער הסטטוסים הסגורים.
@@ -517,7 +572,7 @@ export function LeadsClient({
       return 2;
     };
 
-    return [...filtered].sort((a, b) => {
+    const byField = (a: Lead, b: Lead): number => {
       switch (sort.field) {
         case "queue": {
           // בשרת ולפני ההרכבה אין שעון — נופלים למיון "עודכן לאחרונה"
@@ -559,6 +614,21 @@ export function LeadsClient({
         default:
           return (Date.parse(a[sort.field]) - Date.parse(b[sort.field])) * dir;
       }
+    };
+
+    return [...filtered].sort((a, b) => {
+      const primary = byField(a, b);
+      if (primary !== 0) return primary;
+      /*
+        ⚠️ שובר שוויון, ולא "מיון יציב מספיק".
+        `Array.prototype.sort` אמנם יציב, אבל מה שהוא משמר בשוויון הוא
+        סדר השליפה מה-DB — כלומר סדר שלמשתמש אין אליו גישה ואין לו שם.
+        וזה לא מקרה קצה: מיון לפי "עדיפות" הוא שלושה ערכים בלבד, ולפי
+        "סטטוס" שבעה-עשר, כך שכמעט **כל** השורות שם נמצאות בשוויון.
+        לחיצה על "עדיפות" נראתה כאילו היא מערבבת את הרשימה בתוך כל
+        קבוצה, כי בדיוק את זה היא עשתה. בשוויון: העדכני ביותר קודם.
+      */
+      return Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
     });
   }, [filtered, sort, endOfToday]);
 
@@ -825,6 +895,7 @@ export function LeadsClient({
 
       <QueueHeader
         counts={counts}
+        tileCounts={tileCounts}
         total={leads.length}
         showing={sorted.length}
         onAdd={() => setAddOpen(true)}
@@ -884,10 +955,7 @@ export function LeadsClient({
                 value={sort.field}
                 onChange={(e) => {
                   const field = e.target.value as SortField;
-                  applySort({
-                    field,
-                    dir: field === "name" || field === "followUpAt" ? "asc" : "desc",
-                  });
+                  applySort({ field, dir: SORT_PRIMARY_DIR[field] });
                 }}
                 aria-label="מיון"
                 className={`${inputClass} min-h-11 w-auto`}
@@ -1102,17 +1170,14 @@ export function LeadsClient({
         title="סינון לפי סטטוס"
       >
         <StatusTiles
-          counts={counts}
+          counts={tileCounts}
           active={filters.status}
-          onToggle={(status) => {
-            const on = filters.status.includes(status);
+          onToggle={(status) =>
             applyFilters({
               ...filters,
-              status: on
-                ? filters.status.filter((s) => s !== status)
-                : [...filters.status, status],
-            });
-          }}
+              status: toggleStatusFilter(filters.status, status),
+            })
+          }
           onClear={() => applyFilters({ ...filters, status: [] })}
         />
       </Modal>

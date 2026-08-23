@@ -5,7 +5,7 @@ import { leadCost } from "@/server/services/economics";
 import { Button, EmptyState, useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import type { SortField } from "./LeadsClient";
-import { COLUMNS, allowedColumns, type ColumnKey } from "./columns";
+import { COLUMNS, SORT_PRIMARY_DIR, allowedColumns, type ColumnKey } from "./columns";
 import { LeadRow } from "./LeadRow";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
 
@@ -86,12 +86,21 @@ export function LeadsTable({
     onSelectedChange(next);
   }
 
+  /**
+   * מחזור של שלושה מצבים: הכיוון השימושי → ההפוך → חזרה לתור העבודה.
+   *
+   * ⚠️ המצב השלישי הוא לא קישוט. מיון "תור עבודה" הוא ברירת המחדל של
+   * המסך ואין לו כותרת עמודה משלו, ולכן בלי הלחיצה השלישית לחיצה אחת
+   * על כותרת הייתה **חד-כיוונית**: אין בשולחן שום פקד שמחזיר לתור,
+   * והדרך היחידה חזרה הייתה לרענן את הדף. עמודה שאי אפשר לבטל היא
+   * עמודה שלוחצים עליה פעם אחת ואז נלחמים בה.
+   */
   function sortBy(field: SortField) {
-    onSortChange(
-      sort.field === field
-        ? { field, dir: sort.dir === "asc" ? "desc" : "asc" }
-        : { field, dir: field === "name" ? "asc" : "desc" },
-    );
+    const primary = SORT_PRIMARY_DIR[field];
+    if (sort.field !== field) return onSortChange({ field, dir: primary });
+    if (sort.dir === primary)
+      return onSortChange({ field, dir: primary === "asc" ? "desc" : "asc" });
+    onSortChange({ field: "queue", dir: "desc" });
   }
 
   if (leads.length === 0) {
@@ -152,30 +161,50 @@ export function LeadsTable({
                 className="accent-[var(--c-brand)]"
               />
             </th>
-            {shown.map((col) => (
-              <th
-                key={col.key}
-                className="whitespace-nowrap px-3 py-2.5 text-start font-medium"
-              >
-                {col.sort ? (
-                  <button
-                    onClick={() => sortBy(col.sort!)}
-                    className="inline-flex items-center gap-1 hover:text-ink-1"
-                  >
-                    {col.label}
-                    {sort.field === col.sort && (
+            {shown.map((col) => {
+              const active = col.sort !== undefined && sort.field === col.sort;
+              return (
+                <th
+                  key={col.key}
+                  className="whitespace-nowrap px-3 py-2.5 text-start font-medium"
+                  /* מה שקורא המסך מקריא, ומה שמבדיל בין "לא ממוין"
+                     ל"ממוין עולה" בלי להסתמך על כיוון של חץ */
+                  aria-sort={
+                    active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined
+                  }
+                >
+                  {col.sort ? (
+                    <button
+                      onClick={() => sortBy(col.sort!)}
+                      title={sortHint(col.label, col.sort, sort)}
+                      className={`group inline-flex items-center gap-1 hover:text-ink-1 ${
+                        active ? "text-ink-1" : ""
+                      }`}
+                    >
+                      {col.label}
+                      {/*
+                        ⚠️ החץ מרונדר **תמיד**, ולא רק בעמודה הפעילה.
+                        בלעדיו שום דבר בכותרת לא רמז שהיא בכלל ניתנת
+                        ללחיצה: חמש עמודות מתוך אחת-עשרה מיוּנות, וכולן
+                        נראו זהות לשש שאינן. בעמודה שאינה פעילה הוא
+                        עמום, ומתמלא בריחוף.
+                      */}
                       <Icon
                         name="chevronDown"
                         size={13}
-                        className={sort.dir === "asc" ? "rotate-180" : ""}
+                        className={`transition ${sort.dir === "asc" && active ? "rotate-180" : ""} ${
+                          active
+                            ? "opacity-100"
+                            : "opacity-0 group-hover:opacity-40"
+                        }`}
                       />
-                    )}
-                  </button>
-                ) : (
-                  col.label
-                )}
-              </th>
-            ))}
+                    </button>
+                  ) : (
+                    col.label
+                  )}
+                </th>
+              );
+            })}
             <th className="w-20">
               <span className="sr-only">פעולות</span>
             </th>
@@ -207,4 +236,41 @@ export function LeadsTable({
       </table>
     </div>
   );
+}
+
+/**
+ * מה תעשה הלחיצה הבאה, במילים.
+ *
+ * ⚠️ "עולה"/"יורד" לא נאמר כאן בכוונה. למי שמסתכל על עמודת "חזרה"
+ * "עולה" הוא לא מידע — "הכי דחוף קודם" כן. וכיוון שהמצב השלישי מחזיר
+ * לתור העבודה ולא מהפך שוב, בלי הרמז הזה הלחיצה השלישית נראית כאילו
+ * המיון פשוט קרס.
+ */
+function sortHint(
+  label: string,
+  field: SortField,
+  sort: { field: SortField; dir: "asc" | "desc" },
+): string {
+  const next: "asc" | "desc" | "queue" =
+    sort.field !== field
+      ? SORT_PRIMARY_DIR[field]
+      : sort.dir === SORT_PRIMARY_DIR[field]
+        ? SORT_PRIMARY_DIR[field] === "asc"
+          ? "desc"
+          : "asc"
+        : "queue";
+
+  if (next === "queue") return "חזרה לתור העבודה";
+
+  const meaning: Partial<Record<SortField, { asc: string; desc: string }>> = {
+    name: { asc: "א׳ עד ת׳", desc: "ת׳ עד א׳" },
+    status: { asc: "מהחדשים לסגורים", desc: "מהסגורים לחדשים" },
+    priority: { asc: "רגיל קודם", desc: "דחוף קודם" },
+    followUpAt: { asc: "הכי דחוף קודם", desc: "הרחוק ביותר קודם" },
+    updatedAt: { asc: "הישן קודם", desc: "העדכני קודם" },
+    createdAt: { asc: "הוותיק קודם", desc: "החדש קודם" },
+  };
+
+  const m = meaning[field];
+  return m ? `${label}: ${m[next]}` : label;
 }

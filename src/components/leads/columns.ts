@@ -80,6 +80,37 @@ export const COLUMNS: ColumnDef[] = [
   { key: "lastContactAt", label: "קשר אחרון", defaultOn: false },
 ];
 
+/**
+ * הכיוון שלחיצה **ראשונה** על כותרת נותנת, לכל שדה מיון.
+ *
+ * ⚠️ לא `desc` לכולם. "יורד" הוא מונח של מחשב, לא של שולחן עבודה:
+ * הלחיצה הראשונה חייבת להביא למעלה את מה שמישהו באמת רצה לראות
+ * כשלחץ, וזה שונה מעמודה לעמודה —
+ *
+ *   • `status` — `asc`. `STATUS_ORDER` הוא סדר המשפך, מ"חדש" ועד
+ *     "אבוד". `desc` פתח ב"אבוד"/"מכחיש", כלומר לחיצה על "סטטוס"
+ *     הציגה בדיוק את הלידים שאין מה לעשות איתם.
+ *   • `followUpAt` — `asc`. `desc` דחף את מי שהכי באיחור לתחתית
+ *     והתחיל מתאריכים שעוד לא הגיעו — ההפך הגמור מהשאלה "במי
+ *     לטפל עכשיו" ששואל מי שלוחץ על "חזרה".
+ *   • `priority` / `updatedAt` / `createdAt` — `desc`, כי הגדול
+ *     (דחוף, אחרון) הוא המבוקש.
+ *   • `name` — `asc`, א׳ עד ת׳.
+ *
+ * מקור אמת יחיד: גם כותרות הטבלה וגם בורר המיון בטלפון
+ * (`LeadsClient`) קוראים מכאן, כדי ששתי הדרכים לבקש "מיון לפי חזרה"
+ * לא יחזירו שני סדרים הפוכים.
+ */
+export const SORT_PRIMARY_DIR: Record<SortField, "asc" | "desc"> = {
+  queue: "desc",
+  name: "asc",
+  status: "asc",
+  followUpAt: "asc",
+  priority: "desc",
+  updatedAt: "desc",
+  createdAt: "desc",
+};
+
 export const DEFAULT_VISIBLE: ColumnKey[] = COLUMNS.filter((c) => c.defaultOn).map(
   (c) => c.key,
 );
