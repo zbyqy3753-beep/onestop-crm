@@ -105,16 +105,13 @@ export const QUICK_VIEWS: QuickView[] = [
       status: STATUS_ORDER.filter((s) => STATUS_CONFIG[s].terminal),
     }),
   },
-  {
-    key: "hot",
-    label: "לידים חמים",
-    patch: () => ({ ...EMPTY_FILTERS, kind: ["hot"] }),
-  },
-  {
-    key: "data",
-    label: "לידים מדאטה",
-    patch: () => ({ ...EMPTY_FILTERS, kind: ["data"] }),
-  },
+  /*
+    ⚠️ "לידים חמים" ו"לידים מדאטה" **הוסרו מכאן** לטובת `KindToggle`.
+    כתצוגות הן היו `patch: () => ({ ...EMPTY_FILTERS, kind })`, כלומר
+    הדרך היחידה לראות דאטה קרה מחקה בדרך כל סטטוס, שיוך או עדיפות
+    שהיו פעילים — "הדאטה הקרה שבאין מענה" לא היה ניתן לביטוי. סוג
+    הליד הוא ממד שמצטלב עם השאר, לא תצוגה שמחליפה אותם.
+  */
 ];
 
 /**

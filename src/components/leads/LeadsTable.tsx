@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import type { Lead, LeadCostTable, LeadStatus, UserRef } from "@/lib/domain/types";
 import { leadCost } from "@/server/services/economics";
 import { Button, EmptyState, useNow } from "@/components/ui/primitives";
@@ -7,6 +8,8 @@ import { Icon } from "@/components/ui/Icon";
 import type { SortField } from "./LeadsClient";
 import { COLUMNS, SORT_PRIMARY_DIR, allowedColumns, type ColumnKey } from "./columns";
 import { LeadRow } from "./LeadRow";
+import { QUEUE_TIER_META, type QueueTiers } from "./queue";
+import { TONE_SOFT_VAR, TONE_VAR, number } from "@/lib/format";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
 
 /**
@@ -19,6 +22,7 @@ import type { LeadPatch } from "@/app/(app)/leads/actions";
 
 export function LeadsTable({
   leads,
+  tiers,
   userById,
   leadCosts,
   visibleColumns,
@@ -38,6 +42,11 @@ export function LeadsTable({
   busyIds,
 }: {
   leads: Lead[];
+  /**
+   * שכבות התור — הכותרות המפרידות. `null` = בלי כותרות (מיון שאינו
+   * "תור עבודה", או לפני ההרכבה). ראה `LeadsClient` › `queueTiers`.
+   */
+  tiers: QueueTiers | null;
   userById: Map<string, UserRef>;
   leadCosts: LeadCostTable;
   visibleColumns: ColumnKey[];
@@ -193,9 +202,7 @@ export function LeadsTable({
                         name="chevronDown"
                         size={13}
                         className={`transition ${sort.dir === "asc" && active ? "rotate-180" : ""} ${
-                          active
-                            ? "opacity-100"
-                            : "opacity-0 group-hover:opacity-40"
+                          active ? "opacity-100" : "opacity-0 group-hover:opacity-40"
                         }`}
                       />
                     </button>
@@ -212,26 +219,45 @@ export function LeadsTable({
         </thead>
 
         <tbody>
-          {leads.map((lead) => (
-            <LeadRow
-              key={lead.id}
-              lead={lead}
-              now={now}
-              assignee={lead.assigneeId ? userById.get(lead.assigneeId) : undefined}
-              userById={userById}
-              columns={shown}
-              cost={leadCost(lead, leadCosts)}
-              checked={selected.has(lead.id)}
-              busy={busyIds.has(lead.id)}
-              onToggle={() => toggleOne(lead.id)}
-              onOpen={() => onOpen(lead.id)}
-              onStatus={(to) => onStatus(lead.id, to)}
-              onCost={(cost) => onCost(lead.id, cost)}
-              onStar={(next) => onStar(lead.id, next)}
-              onPatch={(patch) => onPatch(lead.id, patch)}
-              users={users}
-            />
-          ))}
+          {leads.map((lead, i) => {
+            /*
+              כותרת נפתחת רק כשהשכבה **משתנה** מהשורה הקודמת. השכבות
+              רציפות במיון התור (זו ההגדרה שלהן), ולכן זה נותן בדיוק
+              כותרת אחת לכל שכבה שמופיעה בעמוד הזה.
+
+              ⚠️ `i === 0` נחשב שינוי גם באמצע התוצאה: בעמוד 2 השכבה
+              הראשונה נמשכת מהעמוד הקודם, ובלי כותרת בראשו העמוד היה
+              נפתח ברשימת שורות בלי שם.
+            */
+            const tier = tiers?.of(lead);
+            const opens =
+              tier !== undefined && (i === 0 || tiers!.of(leads[i - 1]) !== tier);
+
+            return (
+              <Fragment key={lead.id}>
+                {opens && (
+                  <QueueTierRow tier={tier!} tiers={tiers!} span={shown.length + 2} />
+                )}
+                <LeadRow
+                  lead={lead}
+                  now={now}
+                  assignee={lead.assigneeId ? userById.get(lead.assigneeId) : undefined}
+                  userById={userById}
+                  columns={shown}
+                  cost={leadCost(lead, leadCosts)}
+                  checked={selected.has(lead.id)}
+                  busy={busyIds.has(lead.id)}
+                  onToggle={() => toggleOne(lead.id)}
+                  onOpen={() => onOpen(lead.id)}
+                  onStatus={(to) => onStatus(lead.id, to)}
+                  onCost={(cost) => onCost(lead.id, cost)}
+                  onStar={(next) => onStar(lead.id, next)}
+                  onPatch={(patch) => onPatch(lead.id, patch)}
+                  users={users}
+                />
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -273,4 +299,51 @@ function sortHint(
 
   const m = meaning[field];
   return m ? `${label}: ${m[next]}` : label;
+}
+
+/**
+ * כותרת מפרידה בין שכבות התור.
+ *
+ * ⚠️ `<tr>` בתוך ה-`<tbody>` ולא `<tbody>` נפרד לכל שכבה: הטבלה
+ * גוללת בגובה קבוע עם `<thead>` דביק, וכמה `<tbody>`-ים היו נותנים
+ * לדפדפן הזדמנות לצייר גבול פנימי בין כל אחד מהם.
+ *
+ * המספר הוא סך השכבה בתוצאה המסוננת כולה ולא בעמוד המוצג — ראה
+ * `LeadsClient` › `queueTiers`.
+ */
+function QueueTierRow({
+  tier,
+  tiers,
+  span,
+}: {
+  tier: keyof QueueTiers["totals"];
+  tiers: QueueTiers;
+  span: number;
+}) {
+  const meta = QUEUE_TIER_META[tier];
+
+  return (
+    <tr>
+      <td
+        colSpan={span}
+        style={{ background: TONE_SOFT_VAR[meta.tone] }}
+        className="px-3 py-1.5"
+      >
+        <span className="flex items-baseline gap-2">
+          <span
+            className="text-[12px] font-semibold"
+            style={{ color: TONE_VAR[meta.tone] }}
+          >
+            {meta.label}
+          </span>
+          <span className="nums text-[12px] text-ink-3">
+            {number(tiers.totals[tier])}
+          </span>
+          {/* ההסבר מה השכבה אומרת. "באיחור" לבדו לא מבדיל בין "מועד
+              החזרה עבר" לבין "הליד יושב יותר מדי זמן" */}
+          <span className="text-[11px] text-ink-4">{meta.hint}</span>
+        </span>
+      </td>
+    </tr>
+  );
 }

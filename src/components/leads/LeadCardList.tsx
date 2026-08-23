@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import type { Lead, LeadStatus, UserRef } from "@/lib/domain/types";
 import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
 import { Button, EmptyState, inputClass, useNow } from "@/components/ui/primitives";
 import { LeadCard } from "./LeadCard";
+import { QUEUE_TIER_META, type QueueTiers } from "./queue";
+import { TONE_SOFT_VAR, TONE_VAR, number } from "@/lib/format";
 
 /**
  * תצוגת הלידים בטלפון — רשימת כרטיסים במקום טבלה.
@@ -17,6 +19,7 @@ import { LeadCard } from "./LeadCard";
  */
 export function LeadCardList({
   leads,
+  tiers,
   users,
   selected,
   onSelectedChange,
@@ -37,6 +40,15 @@ export function LeadCardList({
   onSelectingChange,
 }: {
   leads: Lead[];
+  /**
+   * שכבות התור — הכותרות המפרידות. `null` = בלי כותרות. ראה
+   * `LeadsClient` › `queueTiers`.
+   *
+   * ⚠️ בטלפון זה **הפקד היחיד** שמסביר את הסדר: אין כותרות עמודה,
+   * ובורר המיין נפתח כ-`<select>` שאיש לא פותח סתם. רשימת כרטיסים
+   * שממוינת "נכון" בלי כותרות היא רשימה שנראית אקראית.
+   */
+  tiers: QueueTiers | null;
   users: UserRef[];
   selected: Set<string>;
   onSelectedChange: (s: Set<string>) => void;
@@ -181,26 +193,35 @@ export function LeadCardList({
           (הכפתור) ≈ 7.75rem, ו-`pb-20` נותן 5rem מעבר לריפוד הקיים.
         */
         <ul className={`flex flex-col gap-2 ${selecting ? "pb-56" : "pb-20"}`}>
-          {leads.map((lead) => (
-            <LeadCard
-              key={lead.id}
-              lead={lead}
-              now={now}
-              checked={selected.has(lead.id)}
-              selecting={selecting}
-              busy={busyIds.has(lead.id)}
-              onToggle={() => toggle(lead.id)}
-              onOpen={() => onOpen(lead.id)}
-              onStatus={(to) => onStatus(lead.id, to)}
-              onQuickStatus={(to) => onQuickStatus(lead.id, to)}
-              onStar={(next) => onStar(lead.id, next)}
-              onPatch={(patch) => onPatch(lead.id, patch)}
-              canSeeAll={canSeeAll}
-              assigneeName={
-                lead.assigneeId ? userById.get(lead.assigneeId)?.name : undefined
-              }
-            />
-          ))}
+          {leads.map((lead, i) => {
+            // כותרת רק כשהשכבה משתנה — ראה `LeadsTable`, אותו כלל
+            const tier = tiers?.of(lead);
+            const opens =
+              tier !== undefined && (i === 0 || tiers!.of(leads[i - 1]) !== tier);
+
+            return (
+              <Fragment key={lead.id}>
+                {opens && <QueueTierHeading tier={tier!} tiers={tiers!} />}
+                <LeadCard
+                  lead={lead}
+                  now={now}
+                  checked={selected.has(lead.id)}
+                  selecting={selecting}
+                  busy={busyIds.has(lead.id)}
+                  onToggle={() => toggle(lead.id)}
+                  onOpen={() => onOpen(lead.id)}
+                  onStatus={(to) => onStatus(lead.id, to)}
+                  onQuickStatus={(to) => onQuickStatus(lead.id, to)}
+                  onStar={(next) => onStar(lead.id, next)}
+                  onPatch={(patch) => onPatch(lead.id, patch)}
+                  canSeeAll={canSeeAll}
+                  assigneeName={
+                    lead.assigneeId ? userById.get(lead.assigneeId)?.name : undefined
+                  }
+                />
+              </Fragment>
+            );
+          })}
         </ul>
       )}
 
@@ -306,5 +327,40 @@ export function LeadCardList({
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * כותרת שכבה ברשימת הכרטיסים.
+ *
+ * ⚠️ `<li>` ולא `<div>`: ההורה הוא `<ul>`, וילד שאינו `<li>` שם הוא
+ * HTML לא תקין שקוראי מסך מדווחים עליו כרשימה שבורה. `role="presentation"`
+ * מוציא אותו מספירת הפריטים — הוא כותרת, לא ליד.
+ */
+function QueueTierHeading({
+  tier,
+  tiers,
+}: {
+  tier: keyof QueueTiers["totals"];
+  tiers: QueueTiers;
+}) {
+  const meta = QUEUE_TIER_META[tier];
+
+  return (
+    <li role="presentation" className="mt-1 first:mt-0">
+      <div
+        style={{ background: TONE_SOFT_VAR[meta.tone] }}
+        className="flex items-baseline gap-2 rounded-card px-3 py-1.5"
+      >
+        <span
+          className="text-[13px] font-semibold"
+          style={{ color: TONE_VAR[meta.tone] }}
+        >
+          {meta.label}
+        </span>
+        <span className="nums text-[12px] text-ink-3">{number(tiers.totals[tier])}</span>
+        <span className="truncate text-[11px] text-ink-4">{meta.hint}</span>
+      </div>
+    </li>
   );
 }

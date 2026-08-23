@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import type { Filters } from "./FilterBar";
 import { StatusTiles } from "./StatusTiles";
+import { KindToggle } from "./KindToggle";
 import { QUICK_VIEWS, isViewActive, toggleStatusFilter } from "./views";
 
 /**
@@ -191,6 +192,18 @@ export function QueueHeader({
             </button>
           );
         })}
+
+        {/*
+          ⚠️ מתגי הסוג יושבים **באותה שורה** עם התצוגות המהירות, אחרי
+          מפריד. הם ממד ולא תצוגה (ראה `KindToggle`), אבל הם נשאלים
+          באותו רגע — "מה אני צריך לעשות עכשיו, ובאיזה סוג לידים" —
+          ושורה שנייה בשבילם הייתה עולה 44px בטלפון בשביל שני כפתורים.
+        */}
+        <span className="mx-0.5 w-px shrink-0 self-stretch bg-line" aria-hidden />
+        <KindToggle
+          value={filters.kind}
+          onChange={(kind) => onFiltersChange({ ...filters, kind })}
+        />
       </div>
 
       {/* קוביות הסטטוס — מצב התור וגם הסינון, באותו פקד */}

@@ -57,6 +57,12 @@ import { leadsSheet, leadsSheetFilename } from "./leadsSheet";
 import { QueueHeader } from "./QueueHeader";
 import { FilterBar, type Filters, EMPTY_FILTERS } from "./FilterBar";
 import { INITIAL_FILTERS, isOpeningStatus, toggleStatusFilter } from "./views";
+import {
+  compareQueue,
+  countByTier,
+  queueTier,
+  type QueueTiers,
+} from "./queue";
 import { LeadsTable } from "./LeadsTable";
 import { LeadCardList } from "./LeadCardList";
 import { LeadsMoreSheet } from "./LeadsMoreSheet";
@@ -370,6 +376,15 @@ export function LeadsClient({
     return d.getTime();
   }, [now]);
 
+  // תחילת היום — יחד עם `endOfToday` הם מגדירים את "היום" עבור שכבות
+  // התור (`queue.ts`). אותה תלות בשעון הלקוח, ולכן אותו `null`.
+  const startOfToday = useMemo(() => {
+    if (now === null) return null;
+    const d = new Date(now);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, [now]);
+
   // ⚠️ מעל `matched` ולא ליד שאר המפות: החיפוש קורא ממנו את שם העובד
   // המשויך, ו-`const` שמוצהר אחרי השימוש נופל ב-TDZ בזמן הרינדור
   const userById = useMemo(
@@ -556,43 +571,21 @@ export function LeadsClient({
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
 
-    /**
-     * דירוג "תור העבודה": 0 — תאריך החזרה הגיע (באיחור או היום),
-     * 1 — ליד חדש שטרם טופל, 2 — כל השאר. לפני ההרכבה אין "היום"
-     * (`endOfToday === null`) ולכן אין קבוצה 0 — ראה מקרה "queue".
-     */
-    const queueRank = (l: Lead): number => {
-      if (
-        endOfToday !== null &&
-        l.followUpAt &&
-        Date.parse(l.followUpAt) <= endOfToday
-      )
-        return 0;
-      if (l.status === "new") return 1;
-      return 2;
-    };
-
     const byField = (a: Lead, b: Lead): number => {
       switch (sort.field) {
-        case "queue": {
-          // בשרת ולפני ההרכבה אין שעון — נופלים למיון "עודכן לאחרונה"
-          // בלבד, זהה בשני הצדדים, בלי אי-התאמת הידרציה
-          if (endOfToday === null)
-            return Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
+        case "queue":
+          /*
+            ⚠️ ההשוואה חיה ב-`queue.ts` ולא כאן, כי **הכותרות שהרשימה
+            מציירת נגזרות מאותו קובץ**. כשהדירוג ישב בתוך ה-`useMemo`
+            הזה, הטבלה שרינדרה את התוצאה לא יכלה לדעת למה שורה יושבת
+            איפה שהיא יושבת — והסדר היה נכון ונראה אקראי.
 
-          const ra = queueRank(a);
-          const rb = queueRank(b);
-          if (ra !== rb) return ra - rb;
-          // בתוך קבוצה 0: החזרה המוקדמת ביותר קודם (הכי באיחור למעלה)
-          if (ra === 0)
-            return Date.parse(a.followUpAt!) - Date.parse(b.followUpAt!);
-          // בתוך קבוצה 1: החדש ביותר קודם
-          if (ra === 1)
-            return Date.parse(b.createdAt) - Date.parse(a.createdAt);
-          // קבוצה 2: העדכני ביותר קודם. הכיוון (dir) לא חל על התור —
-          // "תור הפוך" הוא לא סדר שמישהו מתכוון אליו
-          return Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
-        }
+            בשרת ולפני ההרכבה אין שעון, ולכן אין "היום": נופלים למיון
+            "עודכן לאחרונה" בלבד, זהה בשני הצדדים, בלי אי-התאמת הידרציה.
+          */
+          if (startOfToday === null || endOfToday === null)
+            return Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
+          return compareQueue(a, b, startOfToday, endOfToday);
         case "name":
           return a.name.localeCompare(b.name, "he") * dir;
         case "priority":
@@ -630,7 +623,34 @@ export function LeadsClient({
       */
       return Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
     });
-  }, [filtered, sort, endOfToday]);
+  }, [filtered, sort, startOfToday, endOfToday]);
+
+  /**
+   * הכותרות המפרידות שהרשימה מציירת — ומאיזו שכבה כל שורה.
+   *
+   * ⚠️ `null` בשלושה מצבים תקפים, וזה לא מקרה קצה:
+   *
+   *   • **מיון שאינו "תור עבודה"** — כותרת "באיחור" מעל רשימה שממוינת
+   *     לפי שם היא שקר: השכבות לא רציפות שם, וכל שורה שנייה הייתה
+   *     פותחת כותרת חדשה.
+   *   • **לפני ההרכבה** — אין שעון לקוח, ולכן אין "היום".
+   *
+   * הרשימה פשוט לא מציירת כותרות. זו הסיבה שזה prop אופציונלי ולא
+   * דגל בוליאני: אין מצב שבו יש כותרות בלי הפונקציה שיודעת לחשב אותן.
+   *
+   * ⚠️ הסכומים נספרים על `filtered` — התוצאה המסוננת **כולה** ולא
+   * העמוד המוצג. "באיחור 24" מעל עמוד שמראה 12 מהם הוא המספר הנכון:
+   * השאלה שהכותרת עונה עליה היא כמה עבודה יש בשכבה, לא כמה ממנה
+   * נכנס למסך.
+   */
+  const queueTiers = useMemo<QueueTiers | null>(() => {
+    if (sort.field !== "queue") return null;
+    if (startOfToday === null || endOfToday === null) return null;
+    return {
+      of: (lead) => queueTier(lead, startOfToday, endOfToday),
+      totals: countByTier(filtered, startOfToday, endOfToday),
+    };
+  }, [sort.field, startOfToday, endOfToday, filtered]);
 
   /**
    * העמוד מוגבל בזמן הרינדור ולא מאופס באפקט. אם התוצאה התכווצה
@@ -990,6 +1010,7 @@ export function LeadsClient({
       {narrow ? (
         <LeadCardList
           leads={paged}
+          tiers={queueTiers}
           users={users}
           selected={selected}
           onSelectedChange={setSelected}
@@ -1014,6 +1035,7 @@ export function LeadsClient({
       ) : (
         <LeadsTable
           leads={paged}
+          tiers={queueTiers}
           userById={userById}
           leadCosts={leadCosts}
           visibleColumns={visibleColumns}
