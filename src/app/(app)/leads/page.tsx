@@ -8,7 +8,8 @@ import {
   canUseCrm,
   isSupplier,
 } from "@/lib/domain/permissions";
-import type { UserRef } from "@/lib/domain/types";
+import type { LeadStatus, UserRef } from "@/lib/domain/types";
+import { STATUS_ORDER } from "@/lib/domain/types";
 import type { LeadFilter } from "@/server/repositories";
 import { periodFromParams } from "@/lib/domain/period";
 import { PeriodPicker } from "@/components/leads/PeriodPicker";
@@ -52,24 +53,56 @@ export default async function LeadsPage({
      * מציג לספק את כל מאגר הלידים של הארגון.
      */
     const sourceName = currentUser.leadSourceName?.trim();
+
+    /*
+     * ── סינון לפי סטטוס ───────────────────────────────────────────────
+     *
+     * ⚠️ **דרך ה-URL ולא במצב React, בכוונה.** `SupplierLeadsList` הוא
+     * רכיב שרת (ראה ההערה בראשו), וזו הסיבה היחידה שאין בדפדפן שלו
+     * payload של לידים מלאים. סרגל סינון עם `useState` היה הופך אותו
+     * לרכיב לקוח ומחזיר בדיוק את הדליפה שהמסלול הזה קיים כדי למנוע.
+     *
+     * ⚠️ הערך מאומת מול `STATUS_ORDER` ולא מועבר כמו שהוא — הוא נכנס
+     * ל-`LeadFilter.status`, וקלט מה-URL אינו נאמן.
+     */
+    const askedStatus = (await searchParams).status;
+    const asked = Array.isArray(askedStatus) ? askedStatus[0] : askedStatus;
+    const status = STATUS_ORDER.find((s) => s === asked) ?? null;
+
     /*
      * מיון מפורש לפי `createdAt` ולא ברירת המחדל (`updatedAt`): המסך
      * מציג את תאריך **הקליטה**, ומיון לפי עדכון אחרון היה מקפיץ לראש
      * ליד בן חודש רק משום שעובד נגע בו הבוקר — רשימה שנראית מעורבבת
      * למי שרואה רק את התאריך השני.
      */
-    const rows = sourceName
-      ? (
-          await db.leads.list({ sourceDetail: sourceName }, {
-            field: "createdAt",
-            direction: "desc",
-          })
-        ).rows
-      : [];
+    /*
+     * ⚠️ `sourceDetail` נשאר בשתי השאילתות **תמיד**. הוא לא נוחות אלא
+     * מסנן ההרשאה היחיד כאן (ראה server/repositories/types.ts), וכל
+     * תנאי שמתווסף עליו מוסיף — לא מחליף.
+     *
+     * ⚠️ הספירות **בלי** `status`: עם הסטטוס בתוכן כל שאר הקוביות היו
+     * מתאפסות ברגע שמסננים, כלומר הסרגל היה מוחק את הדרך חזרה.
+     */
+    const [rows, statusCounts] = sourceName
+      ? await Promise.all([
+          db.leads
+            .list(
+              {
+                sourceDetail: sourceName,
+                ...(status ? { status: [status] } : {}),
+              },
+              { field: "createdAt", direction: "desc" },
+            )
+            .then((r) => r.rows),
+          db.leads.countByStatus({ sourceDetail: sourceName }),
+        ])
+      : [[], {} as Record<LeadStatus, number>];
 
     return (
       <SupplierLeadsList
         supplierName={currentUser.name}
+        counts={statusCounts}
+        active={status}
         rows={rows.map((lead, i) => ({
           // מזהה הליד עצמו לא נשלח: הוא המפתח לכל Server Action על
           // הליד, ולספק אין שום פעולה לבצע. הרשימה מרונדרת בשרת ולא

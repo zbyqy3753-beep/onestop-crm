@@ -1,6 +1,8 @@
+import Link from "next/link";
+
 import { EmptyState } from "@/components/ui/primitives";
-import { date, dateTime, TONE_CLASS } from "@/lib/format";
-import { STATUS_CONFIG, type LeadStatus } from "@/lib/domain/types";
+import { date, dateTime, number, TONE_CLASS, TONE_SOFT_VAR, TONE_VAR } from "@/lib/format";
+import { STATUS_CONFIG, STATUS_ORDER, type LeadStatus } from "@/lib/domain/types";
 
 /**
  * המסך היחיד של ספק לידים חיצוני: מה הוא הביא, למי, ומה עלה בגורלו.
@@ -35,28 +37,162 @@ export interface SupplierLeadRow {
 export function SupplierLeadsList({
   supplierName,
   rows,
+  counts,
+  active,
 }: {
   supplierName: string;
   rows: SupplierLeadRow[];
+  /**
+   * כמה לידים בכל סטטוס — **מכלל הלידים של הספק**, לא מהחתך המוצג.
+   *
+   * ⚠️ קוביה שמתאפסת ברגע שלוחצים עליה היא קוביה שאי אפשר לחזור ממנה.
+   * לכן הספירה נשלפת בלי מסנן הסטטוס, ראה `leads/page.tsx`.
+   */
+  counts: Record<LeadStatus, number>;
+  /** הסטטוס שמסונן כרגע, מה-URL. `null` = הכל. */
+  active: LeadStatus | null;
 }) {
+  /*
+   * ⚠️ רק סטטוסים שיש בהם לידים. לספק אין מה לעשות עם 19 השלבים
+   * הפנימיים של המוקד — "אין מענה 2" ו"נמכר ע״י משווק מקביל" הם אוצר
+   * מילים של הצוות, וקוביה ריקה שלהם היא רעש במסך שכל תפקידו לענות על
+   * "מה קרה למה שהבאתי".
+   */
+  const shown = STATUS_ORDER.filter((s) => (counts[s] ?? 0) > 0);
+  const total = shown.reduce((sum, s) => sum + counts[s], 0);
+  const activeLabel = active ? STATUS_CONFIG[active].label : null;
+
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:py-8">
-      <header className="mb-5">
+      <header className="mb-4">
         <h1 className="font-display text-xl font-bold tracking-tight text-ink-1">
           הלידים שלי
         </h1>
         <p className="mt-1 text-sm text-ink-3">
-          {supplierName} · {rows.length}{" "}
-          {rows.length === 1 ? "ליד" : "לידים"} במערכת
+          {supplierName} ·{" "}
+          {activeLabel ? (
+            <>
+              <span className="nums">{number(rows.length)}</span> מתוך{" "}
+              <span className="nums">{number(total)}</span> לידים ·{" "}
+              <span className="text-ink-2">{activeLabel}</span>
+            </>
+          ) : (
+            <>
+              <span className="nums">{number(total)}</span>{" "}
+              {total === 1 ? "ליד" : "לידים"} במערכת
+            </>
+          )}
         </p>
       </header>
 
+      {/*
+        ⚠️ **קישורים, לא כפתורים.** המסך הזה הוא רכיב שרת בכוונה (ראה
+        ההערה בראש הקובץ), וסינון דרך ה-URL הוא הדרך היחידה להוסיף לו
+        סינון בלי להפוך אותו לרכיב לקוח שנושא payload.
+
+        מוצג רק כשיש יותר מסטטוס אחד — סרגל סינון עם אפשרות אחת הוא
+        פקד שלוחצים עליו, לא רואים שינוי, ומפסיקים להאמין לו.
+      */}
+      {shown.length > 1 && (
+        <nav
+          className="mb-5 grid grid-cols-3 gap-1.5 sm:grid-cols-4"
+          aria-label="סינון לפי סטטוס"
+        >
+          <Link
+            href="/leads"
+            aria-current={active ? undefined : "true"}
+            className={`relative block rounded-card border bg-surface-2 py-1.5 pe-2 ps-2.5 text-start transition-all active:scale-95 ${
+              active
+                ? "border-transparent hover:brightness-105"
+                : "border-brand bg-brand-soft"
+            }`}
+          >
+            <span
+              className="nums block text-base font-bold leading-none"
+              style={{ color: active ? "var(--c-ink-2)" : "var(--c-brand)" }}
+            >
+              {number(total)}
+            </span>
+            <span
+              className={`mt-0.5 block truncate text-[11px] ${
+                active ? "text-ink-2" : "text-brand"
+              }`}
+            >
+              הכל
+            </span>
+          </Link>
+
+          {shown.map((status) => {
+            const meta = STATUS_CONFIG[status];
+            const on = active === status;
+            return (
+              <Link
+                key={status}
+                // לחיצה על הסטטוס הפעיל מנקה — אותה מחווה כמו בקוביות
+                // של המוקד, ובלי זה "הכל" הוא המילוט היחיד
+                href={on ? "/leads" : `/leads?status=${status}`}
+                aria-current={on ? "true" : undefined}
+                title={`${meta.label} — ${counts[status]}`}
+                style={
+                  {
+                    "--spine-c": TONE_VAR[meta.tone],
+                    "--spine-w": "4px",
+                    ...(on ? {} : { background: TONE_SOFT_VAR[meta.tone] }),
+                  } as React.CSSProperties
+                }
+                className={`spine relative block min-w-0 rounded-card border py-1.5 pe-2 ps-2.5 text-start transition-all active:scale-95 ${
+                  on
+                    ? "border-brand bg-brand-soft"
+                    : "border-transparent hover:brightness-105"
+                }`}
+              >
+                <span
+                  className="nums block text-base font-bold leading-none"
+                  style={{ color: on ? "var(--c-brand)" : TONE_VAR[meta.tone] }}
+                >
+                  {number(counts[status])}
+                </span>
+                {/* truncate: "נמכר ע״י משווק מקביל" היה מותח את הקוביה
+                    שלו לרוחב שלוש אחרות */}
+                <span
+                  className={`mt-0.5 block truncate text-[11px] ${
+                    on ? "text-brand" : "text-ink-2"
+                  }`}
+                >
+                  {meta.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+
       {rows.length === 0 ? (
         <div className="rounded-card border border-line bg-surface">
-          <EmptyState
-            title="עדיין לא התקבלו לידים"
-            body="לידים שיישלחו למערכת יופיעו כאן."
-          />
+          {active ? (
+            /*
+              ⚠️ "עדיין לא התקבלו לידים" בתוך חתך הוא שקר: יש לידים, הם
+              פשוט בסטטוס אחר. מצב ריק שמכחיש נתונים קיימים הוא הדרך
+              המהירה ביותר לגרום למישהו לחשוב שמשהו נמחק.
+            */
+            <EmptyState
+              title={`אין לידים בסטטוס "${activeLabel}"`}
+              body="נסה סטטוס אחר, או חזור לרשימה המלאה."
+              action={
+                <Link
+                  href="/leads"
+                  className="text-sm font-medium text-brand underline underline-offset-2"
+                >
+                  הצג את כל הלידים
+                </Link>
+              }
+            />
+          ) : (
+            <EmptyState
+              title="עדיין לא התקבלו לידים"
+              body="לידים שיישלחו למערכת יופיעו כאן."
+            />
+          )}
         </div>
       ) : (
         <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface">
