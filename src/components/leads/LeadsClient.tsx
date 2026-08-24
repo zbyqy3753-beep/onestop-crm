@@ -58,6 +58,7 @@ import { QueueHeader } from "./QueueHeader";
 import { FilterBar, type Filters, EMPTY_FILTERS } from "./FilterBar";
 import { INITIAL_FILTERS, isOpeningStatus, toggleStatusFilter } from "./views";
 import {
+  compareByProximity,
   compareQueue,
   countByTier,
   queueTier,
@@ -568,12 +569,33 @@ export function LeadsClient({
     return matched.filter((lead) => !STATUS_CONFIG[lead.status].terminal);
   }, [matched, filters.openOnly, filters.status, filters.query]);
 
+  /**
+   * האם המסך הוא **לשונית "חזרה ללקוח"** ולא תור העבודה הכללי.
+   *
+   * ⚠️ אריח סטטוס יחיד ולא "מכיל את הסטטוס": חתך שמערבב חזרות עם
+   * סטטוסים אחרים הוא עדיין תור עבודה, ושם המוקדם ביותר קודם. ברגע
+   * שכל השורות על המסך הן חזרות מתוזמנות, הרשימה נקראת כלוח זמנים —
+   * ראה `compareByProximity`.
+   *
+   * ⚠️ חל רק על מיון ברירת המחדל. מי שלחץ על כותרת עמודה בחר מיון
+   * מפורש, והלשונית לא אמורה לבטל אותו.
+   */
+  const isFollowUpTab =
+    sort.field === "queue" &&
+    filters.status.length === 1 &&
+    filters.status[0] === "futureTracking";
+
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
 
     const byField = (a: Lead, b: Lead): number => {
       switch (sort.field) {
         case "queue":
+          /*
+            לשונית "חזרה ללקוח" — הכי קרוב לשעה עכשיו למעלה, ולא
+            המוקדם ביותר. ההסבר המלא ב-`compareByProximity`.
+          */
+          if (isFollowUpTab && now !== null) return compareByProximity(a, b, now);
           /*
             ⚠️ ההשוואה חיה ב-`queue.ts` ולא כאן, כי **הכותרות שהרשימה
             מציירת נגזרות מאותו קובץ**. כשהדירוג ישב בתוך ה-`useMemo`
@@ -623,7 +645,7 @@ export function LeadsClient({
       */
       return Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
     });
-  }, [filtered, sort, startOfToday, endOfToday]);
+  }, [filtered, sort, startOfToday, endOfToday, isFollowUpTab, now]);
 
   /**
    * הכותרות המפרידות שהרשימה מציירת — ומאיזו שכבה כל שורה.
@@ -645,12 +667,18 @@ export function LeadsClient({
    */
   const queueTiers = useMemo<QueueTiers | null>(() => {
     if (sort.field !== "queue") return null;
+    /*
+      ⚠️ בלשונית "חזרה ללקוח" הסדר הוא מרחק מעכשיו, ולכן השכבות אינן
+      רציפות: "באיחור" ו"להיום" מתחלפות שורה אחר שורה סביב השעה
+      הנוכחית. כותרת מפרידה כל שורה שנייה גרועה מאין כותרות בכלל.
+    */
+    if (isFollowUpTab) return null;
     if (startOfToday === null || endOfToday === null) return null;
     return {
       of: (lead) => queueTier(lead, startOfToday, endOfToday),
       totals: countByTier(filtered, startOfToday, endOfToday),
     };
-  }, [sort.field, startOfToday, endOfToday, filtered]);
+  }, [sort.field, isFollowUpTab, startOfToday, endOfToday, filtered]);
 
   /**
    * העמוד מוגבל בזמן הרינדור ולא מאופס באפקט. אם התוצאה התכווצה

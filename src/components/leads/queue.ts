@@ -135,3 +135,36 @@ export function countByTier(
   for (const lead of leads) out[queueTier(lead, startOfToday, endOfToday)] += 1;
   return out;
 }
+
+/**
+ * ההשוואה של לשונית "חזרה ללקוח": **הכי קרוב לשעה עכשיו — למעלה.**
+ *
+ * ⚠️ שונה במתכוון מ-`compareQueue`. שם המוקדם ביותר קודם, כלומר חזרה
+ * שנקבעה לפני שבועיים ופוספסה יושבת מעל חזרה שנקבעה לעוד עשר דקות.
+ * בתור העבודה הכללי זה נכון — איחור הוא חוב. בלשונית שכולה חזרות
+ * מתוזמנות זה הפוך: היא נקראת כלוח זמנים, ומה שרלוונטי לשעה הנוכחית
+ * הוא מה שצריך להיות ראשון.
+ *
+ * לכן המפתח הוא **המרחק המוחלט מעכשיו** ולא הזמן עצמו: חזרה שאיחרה
+ * ברבע שעה וחזרה שבעוד רבע שעה שוות ברלוונטיות, ושתיהן קודמות לחזרה
+ * של מחר בבוקר או של השבוע שעבר.
+ *
+ * ⚠️ ליד בלי תאריך חזרה תמיד בסוף — אין לו מקום על ציר השעות.
+ */
+export function compareByProximity(a: Lead, b: Lead, now: number): number {
+  const av = distanceFromNow(a, now);
+  const bv = distanceFromNow(b, now);
+  if (av === null && bv === null) return 0;
+  if (av === null) return 1;
+  if (bv === null) return -1;
+  return av - bv;
+}
+
+/** המרחק המוחלט בין מועד החזרה לעכשיו. `null` = אין מועד תקף. */
+function distanceFromNow(lead: Lead, now: number): number | null {
+  if (!lead.followUpAt) return null;
+  const at = Date.parse(lead.followUpAt);
+  // תאריך פגום מגיע לכאן כ-NaN, וכל השוואה איתו מחזירה false — כלומר
+  // הליד היה נוחת במקום אקראי ברשימה. סופו של הסדר, כמו ליד בלי מועד.
+  return Number.isNaN(at) ? null : Math.abs(at - now);
+}
