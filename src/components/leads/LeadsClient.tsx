@@ -103,7 +103,6 @@ export type SortField =
 export function LeadsClient({
   leads,
   users,
-  counts,
   leadCosts,
   deals,
   packages,
@@ -114,7 +113,6 @@ export function LeadsClient({
 }: {
   leads: Lead[];
   users: UserRef[];
-  counts: Record<LeadStatus, number>;
   leadCosts: LeadCostTable;
   deals: Deal[];
   packages: Package[];
@@ -139,7 +137,7 @@ export function LeadsClient({
    * בורר התקופה, מרונדר בשרת ומוזרק כ-slot.
    *
    * ⚠️ slot ולא רכיב שנבנה כאן: הטווח נקבע ב-`page.tsx` **לפני**
-   * השליפה — הוא חותך גם את `leads` וגם את `counts`. אילו הבורר היה
+   * השליפה — הוא חותך את `leads`, ואיתם כל מה שנגזר מהם. אילו הבורר היה
    * יושב בלקוח, הוא היה מסנן מחדש נתונים שכבר הגיעו חתוכים, והמספר
    * שבריבוע היה מפסיק להתאים לטבלה.
    */
@@ -530,6 +528,35 @@ export function LeadsClient({
     for (const lead of preStatus) out[lead.status] += 1;
     return out;
   }, [preStatus]);
+
+  /**
+   * המונים שבכותרת: **"N לידים במערכת · X פתוחים · Y נסגרו".**
+   *
+   * ⚠️⚠️ **דאטה קרה לא נספרת כאן.** "לידים במערכת" הוא המספר שעונה על
+   * "כמה עבודה יש לי", וייבוא אחד של 358 שורות דאטה הפך אותו למספר
+   * שאי אפשר להסיק ממנו כלום — הוא קפץ פי עשרה בלי שנכנס ליד חם אחד.
+   * זו אותה הבחנה שכבר מפרידה בין דאטה קרה לתור העבודה ב-`preStatus`,
+   * רק ברמת הכותרת. הדאטה לא נעלמה: מתג הסוג ב-`KindToggle` מציג אותה,
+   * וגם חיפוש מגיע אליה.
+   *
+   * ⚠️ נגזר בלקוח מכל הלידים בחתך, ולא מ-`countByStatus` בשרת: הספירה
+   * בשרת אינה יודעת על סוג הליד, ולכן "פתוחים" משם היה סותר את "לידים
+   * במערכת" שכאן — מונה גדול יותר מהסך הכול שמעליו.
+   *
+   * ⚠️ בכוונה **לא** מסונן לפי שאר המסננים. אלה מוני חתך ולא מוני
+   * קוביה — הקוביות מקבלות את `tileCounts`, שנספר אחרת ומסיבה אחרת.
+   */
+  const hotLeads = useMemo(
+    () => optimisticLeads.filter((lead) => lead.kind !== "data"),
+    [optimisticLeads],
+  );
+
+  const headerCounts = useMemo(() => {
+    const out = {} as Record<LeadStatus, number>;
+    for (const status of STATUS_ORDER) out[status] = 0;
+    for (const lead of hotLeads) out[lead.status] += 1;
+    return out;
+  }, [hotLeads]);
 
   const matched = useMemo(() => {
     /*
@@ -942,9 +969,9 @@ export function LeadsClient({
       {periodPicker}
 
       <QueueHeader
-        counts={counts}
+        counts={headerCounts}
         tileCounts={tileCounts}
-        total={leads.length}
+        total={hotLeads.length}
         showing={sorted.length}
         onAdd={() => setAddOpen(true)}
         onExport={exportSheet}

@@ -162,7 +162,6 @@ export default async function LeadsPage({
   const [
     { rows: leads },
     allUsers,
-    counts,
     openInRange,
     openAllTime,
     leadCosts,
@@ -171,7 +170,6 @@ export default async function LeadsPage({
   ] = await Promise.all([
     db.leads.list(scoped),
     db.users.listActive(),
-    db.leads.countByStatus(scoped),
 
     /*
      * ⚠️⚠️ שתי ספירות של לידים **פתוחים** — בתוך הטווח ומחוץ לזמן.
@@ -238,7 +236,6 @@ export default async function LeadsPage({
     <LeadsClient
       leads={leads}
       users={users}
-      counts={counts}
       leadCosts={leadCosts}
       deals={deals}
       packages={packages}

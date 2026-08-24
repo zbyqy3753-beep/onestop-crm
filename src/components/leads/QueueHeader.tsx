@@ -37,7 +37,8 @@ export function QueueHeader({
   onExpandStatuses,
 }: {
   /**
-   * ספירות מהשרת לכל החתך.
+   * ספירות החתך כולו, **לידים חמים בלבד** — ראה `LeadsClient` ›
+   * `headerCounts`.
    *
    * ⚠️ משמשות **רק** את מוני "N פתוחים / M נסגרו" שבשורה הזו, שהם
    * מוני חתך ולא מוני קוביה. הקוביות מקבלות את `tileCounts`. אל
@@ -47,6 +48,7 @@ export function QueueHeader({
   counts: Record<LeadStatus, number>;
   /** המספר שעל כל קוביה. נגזר בלקוח — ראה `LeadsClient` › `tileCounts` */
   tileCounts: Record<LeadStatus, number>;
+  /** לידים חמים בחתך — "N לידים במערכת". דאטה קרה לא נספרת. */
   total: number;
   showing: number;
   onAdd: () => void;
