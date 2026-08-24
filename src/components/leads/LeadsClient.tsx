@@ -592,8 +592,8 @@ export function LeadsClient({
       switch (sort.field) {
         case "queue":
           /*
-            לשונית "חזרה ללקוח" — הכי קרוב לשעה עכשיו למעלה, ולא
-            המוקדם ביותר. ההסבר המלא ב-`compareByProximity`.
+            לשונית "חזרה ללקוח" — קודם מה שעוד לפנינו לפי השעה,
+            ומתחת מה שכבר עבר. ההסבר המלא ב-`compareByProximity`.
           */
           if (isFollowUpTab && now !== null) return compareByProximity(a, b, now);
           /*
@@ -668,9 +668,9 @@ export function LeadsClient({
   const queueTiers = useMemo<QueueTiers | null>(() => {
     if (sort.field !== "queue") return null;
     /*
-      ⚠️ בלשונית "חזרה ללקוח" הסדר הוא מרחק מעכשיו, ולכן השכבות אינן
-      רציפות: "באיחור" ו"להיום" מתחלפות שורה אחר שורה סביב השעה
-      הנוכחית. כותרת מפרידה כל שורה שנייה גרועה מאין כותרות בכלל.
+      ⚠️ בלשונית "חזרה ללקוח" הסדר הוא לוח זמנים ולא שכבות התור, ולכן
+      "באיחור" ו"להיום" אינן רציפות בו — חזרה של היום שעברה יושבת עם
+      האיחורים למטה. כותרת שקופצת באמצע גרועה מאין כותרות בכלל.
     */
     if (isFollowUpTab) return null;
     if (startOfToday === null || endOfToday === null) return null;
