@@ -13,7 +13,10 @@ type Track = "cellular" | "home";
  * converting pattern on the competing sites. Two differences here:
  *
  *  1. The result is computed against the real catalogue, never a made-up
- *     percentage, and we show which package produced the number.
+ *     percentage — but the headline is the SAVING, not the package behind it.
+ *     Naming the package turns the answer into a price list; "how much you
+ *     keep" is what the visitor came for, and the package itself is the sales
+ *     conversation the lead is supposed to start.
  *  2. The saving is shown BEFORE the phone number is requested. Asking for a
  *     phone to reveal a figure we already know is what makes these calculators
  *     feel like a trap.
@@ -41,12 +44,11 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
   const newMonthly = track === "cellular" ? cheapestPrice * units : cheapestPrice;
   const monthlySaving = monthlySpend - newMonthly;
   /*
-   * ⚠️ מעוגל לשקל, בשונה מהמקור באתר.
+   * ⚠️ מעוגל לשקל.
    *
    * חבילה במחיר 21.9 ₪ כפול שלושה קווים מייצרת "חיסכון של ₪1,851.6
    * בשנה" — והאגורות האלה הן בדיוק מה שגורם למספר להיראות מומצא.
-   * המספר שמתחתיו (`newMonthly`) שומר על האגורות שלו כי הוא מחיר של
-   * חבילה אמיתית שאפשר לבדוק מולה.
+   * מאז שהמספר הזה הוא הכותרת של המסך, העיגול חשוב כפליים.
    */
   const yearlySaving = Math.round(monthlySaving * 12);
   const worthwhile = monthlySpend > 0 && monthlySaving > 0;
@@ -68,7 +70,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
       {step === 0 && (
         <div>
           <h3 className="text-lg font-bold text-lp-ink">על מה תרצו לחסוך?</h3>
-          <p className="mt-1 text-sm text-lp-ink-2">נשווה מול הקטלוג המלא שלנו ונראה לכם כמה אפשר לרדת.</p>
+          <p className="mt-1 text-sm text-lp-ink-2">נשווה מול הקטלוג המלא שלנו ונראה לכם כמה אפשר לחסוך.</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {(
               [
@@ -163,30 +165,29 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
               <p className="text-sm text-lp-ink-2">
                 אתם משלמים <span className="nums font-semibold text-lp-ink">{shekels(monthlySpend)}</span> בחודש.
               </p>
-              <p className="mt-1 text-2xl font-extrabold text-lp-ink">
-                אפשר לרדת ל־<span className="nums text-lp-brand">{shekels(newMonthly)}</span>
+              <p className="mt-1 text-sm font-semibold text-lp-ink">אפשר לחסוך עד</p>
+              <p className="nums mt-1 text-4xl font-extrabold leading-none text-lp-save sm:text-5xl">
+                {shekels(yearlySaving)}
               </p>
-              <p className="nums mt-2 inline-block rounded-lg bg-lp-save/10 px-3 py-2 text-sm font-semibold text-lp-save">
-                חיסכון של {shekels(yearlySaving)} בשנה
+              <p className="mt-1.5 text-sm text-lp-ink-2">
+                בשנה —{" "}
+                <span className="nums font-semibold text-lp-ink">{shekels(Math.round(monthlySaving))}</span>{" "}
+                כל חודש שנשאר אצלכם.
               </p>
 
-              {cheapest && (
-                <p className="mt-3 text-xs leading-relaxed text-lp-ink-3">
-                  החישוב מבוסס על{" "}
-                  <span className="font-semibold text-lp-ink-2">{cheapest.name}</span>{" "}
-                  של {cheapest.provider.name}
-                  {track === "cellular" && units > 1 ? ` × ${units} ${unitLabel}` : ""} — החבילה הזולה
-                  ביותר בקטלוג שלנו. המחיר בפועל תלוי בזמינות ובתנאי החברה, ויכול להשתנות אחרי תום ההטבה.
-                </p>
-              )}
+              <p className="mt-4 text-xs leading-relaxed text-lp-ink-3">
+                החישוב מבוסס על החבילה המשתלמת ביותר בקטלוג שלנו בקטגוריה הזו
+                {track === "cellular" && units > 1 ? `, לפי ${units} ${unitLabel}` : ""}. הסכום המדויק
+                תלוי בזמינות, בתנאי החברה ובמה שכלול היום בחשבון שלכם — נציג יעבור אתכם על החשבון
+                ויגיד לכם בדיוק כמה תחסכו.
+              </p>
             </>
           ) : (
             <>
               <p className="text-lg font-bold text-lp-ink">אתם כבר משלמים מעט יחסית</p>
               <p className="mt-1 text-sm text-lp-ink-2">
-                החבילה הזולה בקטלוג שלנו עולה {shekels(newMonthly)} בחודש, כך שלא נוכל להבטיח חיסכון על
-                סמך הסכום שהזנתם. עדיין שווה בדיקה — לפעמים ההבדל הוא במה שכלול, או במחיר שיקפוץ בתום
-                ההטבה הנוכחית שלכם.
+                לפי הסכום שהזנתם לא נוכל להבטיח חיסכון בתשלום החודשי. עדיין שווה בדיקה — לפעמים
+                ההבדל הוא במה שכלול, או במחיר שיקפוץ בתום ההטבה הנוכחית שלכם.
               </p>
             </>
           )}
