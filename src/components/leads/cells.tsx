@@ -134,10 +134,21 @@ export function InlinePicker({
 /**
  * תאריך **ושעת** חזרה, עם עריכה במקום.
  *
- * `<input type="datetime-local">` שקוף מעל התצוגה — אותו היגיון כמו
- * `InlinePicker`, אבל עם בורר מקורי במקום רשימה. השעה נדרשת כי התזכורת
- * בוואטסאפ יוצאת בשעה הזו בדיוק; `step` של רבע שעה כי אף אחד לא קובע
- * חזרה ל-14:37.
+ * השעה נדרשת כי התזכורת בוואטסאפ יוצאת בשעה הזו בדיוק; `step` של רבע
+ * שעה כי אף אחד לא קובע חזרה ל-14:37.
+ *
+ * ⚠️ **הבורר נפתח גלוי, ולא כ-input שקוף מעל התצוגה.** הדפוס השקוף
+ * עובד ל-`<select>` (`InlinePicker`, `StatusPicker`) כי לחיצה בכל מקום
+ * פותחת את הרשימה. ל-`datetime-local` הוא נשבר: הרוחב שלו נגזר מהתא
+ * שהוא עוטף — נמדד 89px מול 177px שהבורר באמת צריך — וכל מה שמעבר
+ * נחתך. השדות נחתכים מהסוף, כלומר **השעה והדקה הן בדיוק מה שיוצא
+ * מהמסגרת**: הנציג הצליח לבחור תאריך מלוח השנה הקופץ, אבל לא הייתה לו
+ * שום דרך להגיע לשעה. השקיפות החמירה — אין משוב על איזה שדה במיקוד.
+ *
+ * לכן: לחיצה על התא פותחת input אמיתי ברוחב מלא, במיקום מוחלט כדי
+ * שרוחב העמודה לא יקפוץ. אותו דפוס כמו `CostCell`, כולל השמירה
+ * ב-blur/Enter ולא בכל הקשה — עריכת שעה ידנית עוברת דרך ערכים
+ * חוקיים-אך-לא-מכוונים (14:00 בדרך ל-14:30), וכל אחד מהם היה נשמר.
  */
 export function FollowUpCell({
   value,
@@ -151,21 +162,62 @@ export function FollowUpCell({
   busy?: boolean;
   children: React.ReactNode;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  function open() {
+    setDraft(value);
+    setEditing(true);
+  }
+
+  function commit() {
+    setEditing(false);
+    // אין שינוי — לא שולחים בקשה סתם
+    if (draft !== value) onPick(draft);
+  }
+
   return (
     // אותה סיבה כמו ב-InlinePicker: נמדד בפועל 61×16 בלי זה — התאריך
-    // הריק ("קבע חזרה") הוא הטקסט הכי נמוך בכרטיס, וה-input השקוף
-    // ירש את הגובה שלו.
+    // הריק ("קבע חזרה") הוא הטקסט הכי נמוך בכרטיס, והשכבה שמעליו
+    // ירשה את הגובה שלו.
     <span className="relative inline-flex min-h-11 min-w-11 items-center rounded hover:bg-surface-3 lg:min-h-0 lg:min-w-0">
       {children}
-      <input
-        type="datetime-local"
-        step={900}
-        value={value}
-        disabled={busy}
-        onChange={(e) => onPick(e.target.value)}
-        aria-label="תאריך ושעת חזרה"
-        className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-wait"
-      />
+      {editing ? (
+        <input
+          type="datetime-local"
+          step={900}
+          autoFocus
+          value={draft}
+          disabled={busy}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") setEditing(false);
+          }}
+          // הלחיצה על השורה פותחת את הליד; בלי זה כל נגיעה בבורר
+          // הייתה פותחת את המגירה מעליו
+          onClick={(e) => e.stopPropagation()}
+          aria-label="תאריך ושעת חזרה"
+          /*
+            ⚠️ רוחב קבוע ומיקום מוחלט, ולא `inputClass` עם `w-full`:
+            הבורר רחב מהתא, ובזרימה רגילה הוא היה מרחיב את העמודה בכל
+            פתיחה. `z` כדי שלא ייחתך מתחת לתא השכן.
+          */
+          className="nums absolute top-1/2 end-0 z-20 w-[13rem] -translate-y-1/2 rounded-md border border-line bg-surface px-2 py-1.5 text-base text-ink-1 focus:border-brand focus:outline-none lg:text-sm"
+        />
+      ) : (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={(e) => {
+            e.stopPropagation();
+            open();
+          }}
+          aria-label="שינוי תאריך ושעת חזרה"
+          className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-wait"
+        />
+      )}
     </span>
   );
 }
