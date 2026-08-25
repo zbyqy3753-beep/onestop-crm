@@ -246,9 +246,19 @@
   --text-lp-2xs: 0.6875rem;
   --text-lp-2xs--line-height: 0.875rem;
 
+  /* כותרת ההירו. מתכווצת עם המסך במקום לשבור לשלוש שורות בנייד. */
+  --text-lp-hero: clamp(2.25rem, 5.6vw, 3.5rem);
+  --text-lp-hero--line-height: 1.08;
+  --text-lp-hero--letter-spacing: -0.02em;
+
   --shadow-lp-card: 0 1px 2px rgb(13 31 55 / 0.06), 0 1px 3px rgb(13 31 55 / 0.05);
   --shadow-lp-lift: 0 4px 12px -3px rgb(13 31 55 / 0.12);
   --shadow-lp-pop: 0 16px 36px -10px rgb(13 31 55 / 0.22);
+  /*
+   * הצל הדולק היחיד בדף. צבוע בתכלת המותג ולא בשחור — צל שחור מתחת
+   * לריבוע תכלת נקרא כלכלוך, וצל בצבע העצם נקרא כאור.
+   */
+  --shadow-lp-glow: 0 10px 24px -8px rgb(29 173 227 / 0.55);
 
   --animate-lp-rise: lp-rise 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
 

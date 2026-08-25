@@ -1,5 +1,5 @@
 import catalogJson from "./packages.json";
-import type { Catalog, Category, Package } from "./types";
+import type { Catalog, Category, HomeSpec, Package, Provider } from "./types";
 
 /**
  * ── הקטלוג של דף הנחיתה ────────────────────────────────────────────────
@@ -24,18 +24,28 @@ export function basePackages(): Package[] {
   return catalog.packages;
 }
 
-export const CATEGORY_META: Record<Category, { he: string; blurb: string }> = {
+/**
+ * ⚠️ `hash` ולא `path`, בשונה מהאתר הציבורי.
+ *
+ * שם לכל קטגוריה יש עמוד משלה (`/cellular`, `/home`, `/electricity`).
+ * כאן הכול עמוד אחד, והקטלוג מחליף קטגוריה בצד הלקוח — ראה
+ * `CatalogTabs`, שמאזין לעוגן הזה. נתיב אמיתי כאן היה קישור מת.
+ */
+export const CATEGORY_META: Record<Category, { he: string; blurb: string; hash: string }> = {
   cellular: {
     he: "סלולר",
     blurb: "חבילות סלולר מכל החברות — כולל המחיר אחרי תום ההטבה",
+    hash: "#cellular",
   },
   home: {
     he: "אינטרנט וטלוויזיה",
     blurb: "סיבים, טריפל, טלוויזיה וקו ביתי — מחיר, מהירות ועלות התקנה",
+    hash: "#home",
   },
   electricity: {
     he: "חשמל",
     blurb: "מסלולי הנחה על חשבון החשמל, לבית ולעסק",
+    hash: "#electricity",
   },
 };
 
@@ -84,6 +94,79 @@ export function listableCounts(packages: Package[]) {
     home: shown.filter((p) => p.category === "home").length,
     electricity: shown.filter((p) => p.category === "electricity").length,
   };
+}
+
+/**
+ * המספרים שמאחורי רצועת "מה אנחנו משווקים".
+ *
+ * ⚠️ `internet`, `tv` ו-`bundle` **חופפים בכוונה**: חבילת טריפל נספרת
+ * בשלושתם, כי כל אחד מהם עונה על שאלה אחרת שהמבקר שואל ("יש לכם
+ * טלוויזיה?"). לכן אין לחבר אותם — הסכום גדול מ-`home`.
+ */
+export function serviceCounts(packages: Package[]) {
+  const shown = listable(packages);
+  const home = shown.filter((p) => p.category === "home");
+  const spec = (p: Package) => p.spec as HomeSpec;
+  return {
+    cellular: shown.filter((p) => p.category === "cellular").length,
+    internet: home.filter((p) => spec(p).hasInternet).length,
+    tv: home.filter((p) => spec(p).hasTv).length,
+    bundle: home.filter((p) => spec(p).hasTv && spec(p).hasInternet).length,
+    electricity: shown.filter((p) => p.category === "electricity").length,
+  };
+}
+
+/**
+ * ערך הדירוג של "כמה זה עולה היום".
+ *
+ * ⚠️ מסלול חשמל מדורג לפי אחוז ההנחה בסימן שלילי — כלומר **כל** מסלול
+ * חשמל קטן מכל מחיר חודשי. זו הסיבה שכל מי שקורא ל-`cheapest` חייב
+ * לסנן לקטגוריה קודם.
+ */
+export function byPrice(a: Package, b: Package): number {
+  const av = a.category === "electricity" ? -(a.discountPercent ?? -Infinity) : (a.price ?? Infinity);
+  const bv = b.category === "electricity" ? -(b.discountPercent ?? -Infinity) : (b.price ?? Infinity);
+  return av - bv;
+}
+
+/** הזולה ביותר לפי המחיר שמוצג היום. */
+export function cheapest(packages: Package[], limit = 3): Package[] {
+  return listable(packages).slice().sort(byPrice).slice(0, limit);
+}
+
+/**
+ * הבחירה של הדף לקטגוריה: מוצמד ידנית קודם, אחריו הדגל "מומלץ" שהגיע
+ * מהחברה, ורק אז מחיר.
+ *
+ * ⚠️ באתר הציבורי המיון הזה מגיע משכבת העריכה (`byEditorialThen`).
+ * כאן אין מסד כזה, ולכן הסדר משוחזר מהשדות שקיימים בקטלוג עצמו. אם
+ * יום אחד תיכנס לכאן שכבת עריכה — זו הפונקציה שצריכה להיעלם לטובתה.
+ */
+export function highlights(packages: Package[], category: Category, limit = 3): Package[] {
+  const rank = (p: Package) => (p.editorial?.featured ? 0 : p.recommended ? 1 : 2);
+  return listable(byCategory(packages, category))
+    .slice()
+    .sort((a, b) => rank(a) - rank(b) || byPrice(a, b))
+    .slice(0, limit);
+}
+
+/**
+ * הספקים שיש להם בפועל חבילה גלויה, לפי עומק הקטלוג.
+ *
+ * ⚠️ המונה נספר מהרשימה שנמסרה ולא מ-`provider.count` שהגיע מהחילוץ:
+ * ספק שכל חבילותיו נפלו ב-`isListable` חייב להיעלם מהרצועה, ולא
+ * להישאר כלוגו שאין מאחוריו כלום.
+ */
+export function providers(packages: Package[]): Provider[] {
+  const counts = new Map<string, number>();
+  for (const p of listable(packages)) {
+    counts.set(p.provider.slug, (counts.get(p.provider.slug) ?? 0) + 1);
+  }
+
+  return catalog.providers
+    .filter((p) => (counts.get(p.slug) ?? 0) > 0)
+    .map((p) => ({ ...p, count: counts.get(p.slug)! }))
+    .sort((a, b) => b.count - a.count);
 }
 
 /** כמה חבילות מגלות את המחיר שאחרי ההטבה — נתון האמון של הדף. */
