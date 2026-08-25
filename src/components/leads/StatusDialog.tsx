@@ -143,8 +143,12 @@ export function StatusDialog({
             type="datetime-local"
             step={900}
             value={followUpDate}
-            // תחילת היום ולא 09:00 — אחרת אי אפשר לקבוע חזרה להיום ב-08:00
-            min={`${today().slice(0, 10)}T00:00`}
+            /*
+              ⚠️ **אין `min`.** קודם ישב כאן רצפה של תחילת היום, וכל
+              ניסיון לקבוע מועד חזרה שכבר עבר נחסם בבורר עצמו. זה חסם
+              תיעוד של חזרה שהייתה אמורה לקרות לפני שבוע-שבועיים.
+              השרת מקבל תאריכי עבר — ראה `parseFollowUpDate`.
+            */
             onChange={(e) => setFollowUpDate(e.target.value)}
             className={`${inputClass} nums`}
           />

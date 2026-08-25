@@ -237,12 +237,18 @@ const FRONT_LINE: readonly Role[] = ["agent", "employee"];
  * שמשויכים אליו (`lib/domain/permissions.ts`), ולכן ליד ששויך
  * אוטומטית היה מגיע לעובד בלי שאיש החליט על כך.
  *
+ * `LEADS_API_PARTNER_ASSIGNEE` קודם לכל השאר: שותף שרשום שם מקבל
+ * יעד קבוע, ללא תלות בעומס. ראה `partnerAssignee`.
+ *
  * `LEADS_API_AUTO_ASSIGN="on"` מפעיל חלוקה אוטומטית: הליד הולך לנציג
  * הפעיל עם הכי מעט לידים פתוחים. "הכי פחות עמוס" ולא סבב מחזורי, כי
  * סבב דורש לזכור מי היה אחרון; העומס כבר יושב ב-DB ומתקן את עצמו.
  * שוויון נשבר לפי סדר השמות, כך שהתוצאה דטרמיניסטית.
  */
-async function nextAssignee(): Promise<string | undefined> {
+async function nextAssignee(partner: ApiPartner): Promise<string | undefined> {
+  const fixed = await partnerAssignee(partner.name);
+  if (fixed) return fixed;
+
   if (process.env.LEADS_API_AUTO_ASSIGN !== "on") return undefined;
 
   const agents = (await db.users.listActive()).filter((u) =>
@@ -255,6 +261,46 @@ async function nextAssignee(): Promise<string | undefined> {
     (load[agent.id] ?? 0) < (load[best.id] ?? 0) ? agent : best,
   );
   return lightest.id;
+}
+
+/**
+ * יעד שיוך קבוע לפי שם השותף — **גובר על כל חלוקה אוטומטית**.
+ *
+ * פורמט `LEADS_API_PARTNER_ASSIGNEE` — זוגות `שם שותף:אימייל`,
+ * מופרדים בפסיק, באותה מוסכמה כמו `LEADS_API_KEYS`:
+ *
+ *   LEADS_API_PARTNER_ASSIGNEE="עידן:aliran@onestop.co.il"
+ *
+ * השם חייב להיות זהה לשם שרשום ב-`LEADS_API_KEYS` — זה אותו שדה
+ * שנכנס ל-`sourceDetail` של הליד.
+ *
+ * ⚠️ בכוונה ב-env ולא בקוד: מי מקבל את לידי איזה ספק היא החלטה
+ * עסקית שמשתנה, ולא צריכה פריסה. אותו שיקול בדיוק כמו
+ * `LANDING_ASSIGNEE_EMAIL` בטופס הנחיתה.
+ *
+ * ⚠️ שותף שאינו ברשימה, אימייל שאינו קיים, או עובד לא פעיל — כולם
+ * מחזירים `undefined` ונופלים חזרה להתנהגות הרגילה. שיוך ליד לעובד
+ * מושבת היה מסתיר אותו מכולם חוץ מההנהלה.
+ */
+async function partnerAssignee(
+  partnerName: string,
+): Promise<string | undefined> {
+  const raw = process.env.LEADS_API_PARTNER_ASSIGNEE?.trim();
+  if (!raw) return undefined;
+
+  for (const entry of raw.split(",")) {
+    // רק המפריד הראשון נחשב — שם שותף יכול להכיל נקודתיים
+    const separator = entry.indexOf(":");
+    if (separator === -1) continue;
+
+    const name = entry.slice(0, separator).trim();
+    const email = entry.slice(separator + 1).trim();
+    if (name !== partnerName || !email) continue;
+
+    const user = await db.users.getByEmail(email);
+    return user?.active ? user.id : undefined;
+  }
+  return undefined;
 }
 
 /* ── הנקודה עצמה ──────────────────────────────────────────────────────── */
@@ -371,7 +417,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     sourceDetail,
     packageName: packageName || undefined,
     note: buildNote(body, currentProvider) || undefined,
-    assigneeId: await nextAssignee(),
+    assigneeId: await nextAssignee(partner),
     createdById,
   });
 

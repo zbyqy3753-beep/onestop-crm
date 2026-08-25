@@ -18,7 +18,7 @@ import {
   isProvider,
 } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
-import { instantFromIsraelDateTime, startOfDay } from "@/lib/tz";
+import { instantFromIsraelDateTime } from "@/lib/tz";
 import { canSeeAllLeads, isSupplier } from "@/lib/domain/permissions";
 import { revalidateLeadSurfaces } from "@/app/(app)/_revalidate";
 
@@ -414,10 +414,17 @@ function parseFollowUpDate(raw: string): string | undefined {
   );
   if (instant === null) return undefined;
 
-  // תאריך בעבר הוא כמעט תמיד טעות הקלדה, לא כוונה. הסף הוא תחילת אתמול
-  // בשעון ישראל — לא "לפני 24 שעות", שהיה תלוי בשעה שבה נשמר.
-  if (instant < startOfDay() - 86_400_000) return undefined;
-
+  /*
+   * ⚠️ **תאריך בעבר מותר בכוונה.** כאן ישב קודם סף שדחה כל מועד לפני
+   * תחילת אתמול, מתוך הנחה שתאריך עבר הוא טעות הקלדה. בפועל זה חסם
+   * את התרחיש הנפוץ: ליד שמועד החזרה שלו עבר לפני שבוע-שבועיים,
+   * והנציג רוצה לתקן או לתעד את המועד — הוא קיבל "תאריך החזרה לא
+   * תקין" ולא הייתה לו שום דרך לעקוף.
+   *
+   * ⚠️ יש לכך תופעת לוואי מכוונת: `outbox.ts` שולף כל ליד עם
+   * `followUpAt <= now`, ולכן מועד שכבר עבר מפיק תזכורת וואטסאפ
+   * כמעט מיד. זו התנהגות רצויה — היא אומרת לנציג "הליד הזה באיחור".
+   */
   return new Date(instant).toISOString();
 }
 
