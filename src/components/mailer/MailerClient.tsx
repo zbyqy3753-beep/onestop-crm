@@ -10,10 +10,9 @@ import {
   type DetectedRecipients,
   type ParsedRecipient,
 } from "./recipientColumns";
-import {
-  emptyFieldsIn,
-  renderMerge,
-} from "@/lib/domain/mailMerge";
+import { emptyFieldsIn, renderMerge } from "@/lib/domain/mailMerge";
+import { CampaignList } from "./CampaignList";
+import type { MailerOverview } from "@/server/mailer/overview";
 
 interface EnqueueResult {
   campaignId: string;
@@ -33,9 +32,11 @@ interface EnqueueResult {
 export function MailerClient({
   configured,
   sender,
+  overview,
 }: {
   configured: boolean;
   sender: string | null;
+  overview: MailerOverview;
 }) {
   const [step, setStep] = useState<"upload" | "write" | "confirm" | "done">(
     "upload",
@@ -142,6 +143,8 @@ export function MailerClient({
   return (
     <main dir="rtl" className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
       <h1 className="text-2xl font-semibold">דיוור במייל</h1>
+
+      <CampaignList overview={overview} />
 
       {!configured && (
         <p className="rounded-lg border border-warn/40 bg-warn/8 p-4 text-sm">
