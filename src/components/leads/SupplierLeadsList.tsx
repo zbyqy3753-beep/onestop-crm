@@ -22,6 +22,10 @@ import { STATUS_CONFIG, STATUS_ORDER, type LeadStatus } from "@/lib/domain/types
  * ⚠️ **ההערות מגיעות כטקסט ותאריך, בלי `authorId`.** הספק אמור לדעת
  * מה נאמר על הליד שלו, לא מי מהצוות אמר את זה — מזהי עובדים הם
  * המפתח לכל Server Action במערכת, ולספק אין בהם שום שימוש לגיטימי.
+ *
+ * ⚠️ **"הערה" כאן היא גם פירוט של שינוי סטטוס.** רוב מה שעובד כותב
+ * נכנס לתיבת הפירוט של הסטטוס ולא להערה חופשית; המיזוג של שני
+ * המקורות קורה בשרת, ב-`teamNotes` שב-`leads/page.tsx`.
  */
 export interface SupplierLeadRow {
   /** מפתח רינדור בלבד. **לא** מזהה הליד — ראה ההערה למעלה. */
@@ -30,8 +34,12 @@ export interface SupplierLeadRow {
   phone: string;
   status: LeadStatus;
   createdAt: string;
-  /** הערות הצוות על הליד, מהישנה לחדשה. טקסט ותאריך בלבד. */
-  notes: { body: string; createdAt: string }[];
+  /**
+   * הערות הצוות על הליד, מהישנה לחדשה. טקסט, תאריך, ו-`status` —
+   * הסטטוס שאליו הליד עבר כשההערה נכתבה, כשהיא הגיעה משינוי סטטוס.
+   * `undefined` = הערה חופשית שאינה קשורה למעבר.
+   */
+  notes: { body: string; createdAt: string; status?: LeadStatus }[];
 }
 
 export function SupplierLeadsList({
@@ -242,6 +250,21 @@ export function SupplierLeadsList({
                   <ul className="mt-2 space-y-1.5 border-t border-line pt-2">
                     {row.notes.map((note, i) => (
                       <li key={i} className="text-sm text-ink-2">
+                        {/*
+                          הסטטוס שקדם להערה, כשיש — "מחר ב-10" בלי לדעת
+                          שזה נכתב במעבר ל"חיזור" הוא חצי משפט. הערה
+                          חופשית נשארת בלי תגית: אין לה שלב להצמיד אליו.
+                        */}
+                        {note.status && (
+                          <span
+                            className="me-1.5 text-xs font-medium"
+                            style={{
+                              color: TONE_VAR[STATUS_CONFIG[note.status].tone],
+                            }}
+                          >
+                            {STATUS_CONFIG[note.status].label}
+                          </span>
+                        )}
                         <span className="whitespace-pre-wrap">{note.body}</span>
                         <span className="nums mr-2 text-xs text-ink-3">
                           {dateTime(note.createdAt)}

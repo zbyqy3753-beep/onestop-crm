@@ -1,5 +1,8 @@
 import { LeadsClient } from "@/components/leads/LeadsClient";
-import { SupplierLeadsList } from "@/components/leads/SupplierLeadsList";
+import {
+  SupplierLeadsList,
+  type SupplierLeadRow,
+} from "@/components/leads/SupplierLeadsList";
 import { db } from "@/server/repositories";
 import { requireSessionUser } from "@/server/auth/session";
 import {
@@ -8,11 +11,44 @@ import {
   canUseCrm,
   isSupplier,
 } from "@/lib/domain/permissions";
-import type { LeadStatus, UserRef } from "@/lib/domain/types";
+import type { Lead, LeadStatus, UserRef } from "@/lib/domain/types";
 import { STATUS_ORDER } from "@/lib/domain/types";
 import type { LeadFilter } from "@/server/repositories";
 import { periodFromParams } from "@/lib/domain/period";
 import { PeriodPicker } from "@/components/leads/PeriodPicker";
+
+/**
+ * מה הצוות כתב על הליד, בערוץ אחד ולפי סדר הזמן.
+ *
+ * ⚠️ **שני מקורות ולא אחד.** `lead.notes` הן הערות חופשיות מהמגירה,
+ * אבל רוב מה שעובד כותב בפועל נכנס לתיבת הפירוט של שינוי הסטטוס
+ * (`LeadStatusEvent.detail`) — ובלעדיה מסך הספק נראה ריק גם כשהצוות
+ * מתעד כל שיחה.
+ *
+ * ⚠️ אירוע סטטוס **בלי** `detail` נשמט: "עבר ל׳אין מענה׳" בלי מילה
+ * הוא סטטוס ולא הערה, והוא כבר מוצג בתגית של השורה עצמה.
+ *
+ * ⚠️ ההערות עוברות שדה-שדה ולא כ-`lead.notes`. `LeadNote` נושא `id`,
+ * `leadId` ו-`authorId`, ושלושתם מזהים פנימיים שאין לספק מה לעשות
+ * איתם — ופיזור (`...note`) היה מצרף גם כל שדה שיתווסף לטיפוס
+ * בעתיד, בלי שאיש ישים לב. אותו שיקול ב-`actorId` של אירוע סטטוס.
+ *
+ * המיון מפורש: ה-`include` של `list` מביא את ההערות בלי `orderBy`,
+ * כלומר Postgres מחזיר אותן בסדר בלתי מוגדר — ובלי מיון משותף שני
+ * המקורות היו מופיעים כשני בלוקים נפרדים במקום כשיחה אחת.
+ */
+function teamNotes(lead: Lead): SupplierLeadRow["notes"] {
+  return [
+    ...lead.notes.map((note) => ({
+      body: note.body,
+      createdAt: note.createdAt,
+    })),
+    ...lead.history.flatMap((event) => {
+      const body = event.detail?.trim();
+      return body ? [{ body, createdAt: event.createdAt, status: event.to }] : [];
+    }),
+  ].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
 
 /**
  * רכיב שרת. שולף דרך שכבת ה-repository בלבד ומעביר למטה.
@@ -25,6 +61,7 @@ import { PeriodPicker } from "@/components/leads/PeriodPicker";
  * אותו מסנן מוזרק גם ל-`countByStatus`, אחרת הקוביות היו מונות את
  * כל הארגון בזמן שהטבלה מציגה חתך אישי — שני מספרים סותרים במסך אחד.
  */
+
 export default async function LeadsPage({
   searchParams,
 }: {
@@ -113,23 +150,7 @@ export default async function LeadsPage({
           phone: lead.phone,
           status: lead.status,
           createdAt: lead.createdAt,
-          /*
-           * ⚠️ ההערות עוברות שדה-שדה ולא כ-`lead.notes`. `LeadNote`
-           * נושא `id`, `leadId` ו-`authorId`, ושלושתם מזהים פנימיים
-           * שאין לספק מה לעשות איתם — ופיזור (`...note`) היה מצרף
-           * גם כל שדה שיתווסף לטיפוס בעתיד, בלי שאיש ישים לב.
-           */
-          notes: [...lead.notes]
-            /*
-             * מיון מפורש: ה-`include` של `list` מביא את ההערות בלי
-             * `orderBy`, כלומר Postgres מחזיר אותן בסדר בלתי מוגדר.
-             * שרשור הערות שמוצג לא לפי סדר הזמן קורא כשיחה מבולבלת.
-             */
-            .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-            .map((note) => ({
-              body: note.body,
-              createdAt: note.createdAt,
-            })),
+          notes: teamNotes(lead),
         }))}
       />
     );
