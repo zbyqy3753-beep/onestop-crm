@@ -14,6 +14,7 @@ import {
 } from "@/lib/domain/alerts";
 import { leadFromPrisma } from "@/server/repositories/prisma/mappers";
 import { israelHourMinute, startOfDay } from "@/lib/tz";
+import { reminderTiming } from "@/lib/domain/reminderTiming";
 import { readSettings, type BotSettingsView } from "./settings";
 import { markOpenerSent } from "@/server/renewals/campaign";
 
@@ -24,9 +25,13 @@ import { markOpenerSent } from "@/server/renewals/campaign";
  * לשלוח. הבוט מקבל שורות מוכנות ומדווח תוצאה — הוא לא מכיר את מודל
  * הנתונים ולא מחזיק את פרטי החיבור למסד.
  *
- * הבוט הוא גם **השעון היחיד**: אין cron. כשהמחשב במשרד כבוי התור
- * מצטבר, וכשהוא חוזר הוא מתנקז. שני שעונים בלתי תלויים היו יכולים
- * שניהם להחליט ששורה בשלה.
+ * ⚠️ **השעון הוא `pg_cron` שב-Supabase, שדופק את `/api/whatsapp/cron`
+ * כל דקה.** (הפסקה שהייתה כאן קודם אמרה "הבוט הוא השעון היחיד, אין
+ * cron" — זה נכון היה לגרסת הבוט הלא רשמי, ומאז השתנה.)
+ *
+ * המרווח הזה הוא גם **הדיוק של התזכורת**: מילוי התור קורה רק
+ * בתקתוק, ולכן תקתוק גס אוכל מההקדמה שהובטחה. ראה `reminderTiming`
+ * ואת ההערה ב-`route.ts` של ה-cron.
  */
 
 /** שורה שנתבעה ולא דווחה — הבוט קרס באמצע. משוחררת אחרי זה. */
@@ -178,6 +183,21 @@ async function enqueueDueFollowUps(
     // מתי ההודעה אמורה לצאת — מוקדם ממועד החזרה, ומוסט קדימה אם
     // ההקדמה הוציאה אותה מחוץ לחלון (חזרה ב-08:05 פחות 10 דקות)
     const sendAt = new Date(scheduled.getTime() - leadMs);
+    const plannedSend = nextSendableInstant(sendAt, win);
+
+    /*
+     * ⚠️ הרגע שבו ההודעה תצא **בפועל**, ולא הרגע המתוכנן.
+     *
+     * השורה נתבעת באותו מחזור שבו היא נוצרת, ולכן מועד מתוכנן שכבר
+     * עבר פירושו "עכשיו": השעון מנקז את התור אחת לכמה דקות, ומילוי
+     * התור קורה רק בתקתוק — חזרה ב-10:31 נכנסת ב-10:25 ולא ב-10:21.
+     * חישוב הנוסח מול המתוכנן הוא בדיוק מה שהוציא "תזכורת באיחור"
+     * שש דקות לפני החזרה. ראה `reminderTiming`.
+     */
+    const timing = reminderTiming(
+      scheduled.getTime(),
+      Math.max(plannedSend.getTime(), Date.now()),
+    );
 
     try {
       await prisma.whatsAppMessage.create({
@@ -186,12 +206,15 @@ async function enqueueDueFollowUps(
           toPhone: toE164(recipient.phone),
           body: followUpReminder(leadFromPrisma(row), {
             appUrl,
-            leadMinutes: settings.reminderLeadMinutes,
-            // מועד החזרה כבר עבר ברגע הכניסה לתור = המחשב במשרד היה
-            // כבוי. "בעוד 10 דקות" על חזרה מלפני שעתיים הוא שקר
-            late: sendAt.getTime() < Date.now() - 60_000,
+            // הדקות שנשארו באמת, ולא ההקדמה שבהגדרות: "בעוד 10 דק׳"
+            // על חזרה שבעוד שש הוא אותו שקר קטן, מהכיוון השני
+            leadMinutes: timing.aheadMinutes,
+            // מועד החזרה עצמו כבר עבר = המחשב במשרד היה כבוי, או
+            // שהתזכורת נדחתה לפתיחת החלון. "בעוד 10 דקות" על חזרה
+            // מלפני שעתיים הוא שקר
+            late: timing.late,
           }),
-          scheduledFor: nextSendableInstant(sendAt, win),
+          scheduledFor: plannedSend,
           leadId: row.id,
           recipientUserId: recipient.id,
         },
