@@ -193,3 +193,36 @@ export type BotSettings = Prisma.BotSettingsModel
  * מסגיר אילו חשבונות קיימים — בדיוק מה שההודעה האחידה מונעת.
  */
 export type LoginAttempt = Prisma.LoginAttemptModel
+/**
+ * Model EmailCampaign
+ * דיוור אחד — הרשימה, הטקסט, ומי שלח.
+ * 
+ * הנמענים מגיעים מקובץ חיצוני ולא מהלידים, ולכן אין כאן שום קשר
+ * ל-`Lead`: הרשימה היא קלט חד-פעמי ולא ישות במערכת.
+ */
+export type EmailCampaign = Prisma.EmailCampaignModel
+/**
+ * Model EmailMessage
+ * שורה בתור המיילים היוצאים.
+ * 
+ * ⚠️ `subject` ו-`body` הם snapshot מרונדר ולא נגזרים בזמן השליחה,
+ * מאותה סיבה שכתובה ב-`WhatsAppMessage`: אחרי שהמייל יצא, מה שנשלח
+ * הוא עובדה היסטורית שלא משתנה כשעורכים את הקמפיין.
+ */
+export type EmailMessage = Prisma.EmailMessageModel
+/**
+ * Model EmailOptOut
+ * מי ביקש להסיר את עצמו. מקביל ל-`RenewalOptOut`.
+ * 
+ * ⚠️ נבדק פעמיים — בהעלאה ושוב ברגע התביעה. בין השתיים עוברות שעות,
+ * ומי שהסיר את עצמו באמצע לא אמור לקבל את שאר הדיוור.
+ */
+export type EmailOptOut = Prisma.EmailOptOutModel
+/**
+ * Model MailerSettings
+ * הגדרות הדיוור — שורה יחידה (`id = "default"`), במקביל ל-`BotSettings`.
+ * 
+ * במסד ולא בקוד מאותה סיבה: עצירת דיוור שיצא לא נכון חייבת להיות
+ * לחיצה אחת, ומחזור פריסה של Vercel הוא דקות.
+ */
+export type MailerSettings = Prisma.MailerSettingsModel

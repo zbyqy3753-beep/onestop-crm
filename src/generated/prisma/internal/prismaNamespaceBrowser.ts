@@ -71,7 +71,11 @@ export const ModelName = {
   RenewalOptOut: 'RenewalOptOut',
   WhatsAppInbound: 'WhatsAppInbound',
   BotSettings: 'BotSettings',
-  LoginAttempt: 'LoginAttempt'
+  LoginAttempt: 'LoginAttempt',
+  EmailCampaign: 'EmailCampaign',
+  EmailMessage: 'EmailMessage',
+  EmailOptOut: 'EmailOptOut',
+  MailerSettings: 'MailerSettings'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -402,6 +406,65 @@ export const LoginAttemptScalarFieldEnum = {
 } as const
 
 export type LoginAttemptScalarFieldEnum = (typeof LoginAttemptScalarFieldEnum)[keyof typeof LoginAttemptScalarFieldEnum]
+
+
+export const EmailCampaignScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  subjectTemplate: 'subjectTemplate',
+  bodyTemplate: 'bodyTemplate',
+  status: 'status',
+  totalCount: 'totalCount',
+  createdById: 'createdById',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailCampaignScalarFieldEnum = (typeof EmailCampaignScalarFieldEnum)[keyof typeof EmailCampaignScalarFieldEnum]
+
+
+export const EmailMessageScalarFieldEnum = {
+  id: 'id',
+  dedupeKey: 'dedupeKey',
+  campaignId: 'campaignId',
+  toEmail: 'toEmail',
+  toName: 'toName',
+  subject: 'subject',
+  body: 'body',
+  status: 'status',
+  scheduledFor: 'scheduledFor',
+  attempts: 'attempts',
+  lastError: 'lastError',
+  claimedAt: 'claimedAt',
+  sentAt: 'sentAt',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailMessageScalarFieldEnum = (typeof EmailMessageScalarFieldEnum)[keyof typeof EmailMessageScalarFieldEnum]
+
+
+export const EmailOptOutScalarFieldEnum = {
+  email: 'email',
+  reason: 'reason',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailOptOutScalarFieldEnum = (typeof EmailOptOutScalarFieldEnum)[keyof typeof EmailOptOutScalarFieldEnum]
+
+
+export const MailerSettingsScalarFieldEnum = {
+  id: 'id',
+  paused: 'paused',
+  pausedReason: 'pausedReason',
+  pausedAt: 'pausedAt',
+  sendWindowStartHour: 'sendWindowStartHour',
+  sendWindowEndHour: 'sendWindowEndHour',
+  dailyCap: 'dailyCap',
+  perTick: 'perTick',
+  updatedAt: 'updatedAt',
+  updatedById: 'updatedById'
+} as const
+
+export type MailerSettingsScalarFieldEnum = (typeof MailerSettingsScalarFieldEnum)[keyof typeof MailerSettingsScalarFieldEnum]
 
 
 export const SortOrder = {

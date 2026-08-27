@@ -189,3 +189,24 @@ export const RenewalContactStatus = {
 } as const
 
 export type RenewalContactStatus = (typeof RenewalContactStatus)[keyof typeof RenewalContactStatus]
+
+
+export const EmailCampaignStatus = {
+  draft: 'draft',
+  sending: 'sending',
+  paused: 'paused',
+  done: 'done'
+} as const
+
+export type EmailCampaignStatus = (typeof EmailCampaignStatus)[keyof typeof EmailCampaignStatus]
+
+
+export const EmailMessageStatus = {
+  queued: 'queued',
+  sending: 'sending',
+  sent: 'sent',
+  failed: 'failed',
+  cancelled: 'cancelled'
+} as const
+
+export type EmailMessageStatus = (typeof EmailMessageStatus)[keyof typeof EmailMessageStatus]
