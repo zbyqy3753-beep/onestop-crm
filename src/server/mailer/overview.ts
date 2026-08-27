@@ -80,3 +80,63 @@ export async function mailerOverview(): Promise<MailerOverview> {
     campaigns: rows,
   };
 }
+
+/** שורת נמען ברשימת הדיוור. */
+export interface RecipientRow {
+  id: string;
+  email: string;
+  name: string | null;
+  status: string;
+  sentAt: Date | null;
+  error: string | null;
+}
+
+/**
+ * הנמענים של דיוור אחד.
+ *
+ * ⚠️ **קיים כדי לענות על "לא קיבלתי".** בלי הרשימה הזו, דילר שטוען
+ * שלא קיבל מייל מייצר בירור שאי אפשר להכריע: המונה אומר "22 נשלחו"
+ * ולא אומר למי. כאן רואים את השורה שלו, את הסטטוס ואת השעה.
+ *
+ * ⚠️ תקרה של 500 שורות. דיוור גדול יותר יוצג חלקית, והחיפוש הוא
+ * הדרך להגיע לכתובת מסוימת — עדיף מלמשוך עשרות אלפי שורות לדפדפן.
+ */
+export async function campaignRecipients(
+  campaignId: string,
+  search?: string,
+): Promise<RecipientRow[]> {
+  const q = search?.trim();
+
+  const rows = await prisma.emailMessage.findMany({
+    where: {
+      campaignId,
+      ...(q
+        ? {
+            OR: [
+              { toEmail: { contains: q, mode: "insensitive" as const } },
+              { toName: { contains: q, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+    },
+    orderBy: [{ sentAt: "asc" }, { toEmail: "asc" }],
+    take: 500,
+    select: {
+      id: true,
+      toEmail: true,
+      toName: true,
+      status: true,
+      sentAt: true,
+      lastError: true,
+    },
+  });
+
+  return rows.map((r) => ({
+    id: r.id,
+    email: r.toEmail,
+    name: r.toName,
+    status: r.status,
+    sentAt: r.sentAt,
+    error: r.lastError,
+  }));
+}
