@@ -2,6 +2,8 @@ import "server-only";
 
 import nodemailer, { type Transporter } from "nodemailer";
 
+import { fromHeader } from "@/lib/domain/mailFrom";
+
 /**
  * השליחה בפועל — **המקום היחיד** שיודע מי הספק.
  *
@@ -36,6 +38,17 @@ export function mailerSenderAddress(): string | null {
   return credentials()?.user ?? null;
 }
 
+/**
+ * השם שהנמען רואה ליד הכתובת.
+ *
+ * ⚠️ **ברירת מחדל ולא `undefined`.** מייל שמגיע מכתובת ג'ימייל חשופה,
+ * בלי שם, נראה לנמען כמו הודעה מאדם אקראי — וגם מסונן חזק יותר.
+ * זה אחד המשקלים הבודדים בסיווג שיש עליו שליטה מכאן.
+ */
+export function mailerSenderName(): string {
+  return process.env.MAILER_FROM_NAME?.trim() || "ONE STOP";
+}
+
 function transport(): Transporter {
   const creds = credentials();
   if (!creds) {
@@ -64,8 +77,9 @@ export async function sendMail(input: {
   text: string;
   unsubscribeUrl: string;
 }): Promise<string> {
+  const address = mailerSenderAddress();
   const info = await transport().sendMail({
-    from: mailerSenderAddress() ?? undefined,
+    from: address ? fromHeader(address, mailerSenderName()) : undefined,
     to: input.to,
     subject: input.subject,
     html: input.html,
