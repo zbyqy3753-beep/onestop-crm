@@ -90,6 +90,7 @@ const ROUTE_ROLES = {
   "/registrations": ["owner", "manager", "operator"],
   "/bots": ["owner", "manager"],
   "/renewals": ["owner", "manager"],
+  "/mailer": ["owner", "manager"],
   "/admin": ["owner", "manager"],
 } as const satisfies Record<string, readonly Role[]>;
 

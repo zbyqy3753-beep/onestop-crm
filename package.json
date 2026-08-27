@@ -11,7 +11,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "test": "node --test \"tools/*.test.mjs\"",
+    "test": "tsx --test \"tools/*.test.mjs\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -21,6 +21,7 @@
     "@prisma/client": "^7.8.0",
     "@supabase/supabase-js": "^2.110.9",
     "next": "16.2.10",
+    "nodemailer": "^9.0.5",
     "pg": "^8.13.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -30,6 +31,7 @@
     "@capacitor/cli": "^8.5.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.11.10",
     "@types/react": "^19",
     "@types/react-dom": "^19",

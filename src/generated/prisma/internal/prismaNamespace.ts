@@ -404,7 +404,11 @@ export const ModelName = {
   RenewalOptOut: 'RenewalOptOut',
   WhatsAppInbound: 'WhatsAppInbound',
   BotSettings: 'BotSettings',
-  LoginAttempt: 'LoginAttempt'
+  LoginAttempt: 'LoginAttempt',
+  EmailCampaign: 'EmailCampaign',
+  EmailMessage: 'EmailMessage',
+  EmailOptOut: 'EmailOptOut',
+  MailerSettings: 'MailerSettings'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -420,7 +424,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "session" | "passwordReset" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "renewalContact" | "renewalOptOut" | "whatsAppInbound" | "botSettings" | "loginAttempt"
+    modelProps: "user" | "session" | "passwordReset" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "renewalContact" | "renewalOptOut" | "whatsAppInbound" | "botSettings" | "loginAttempt" | "emailCampaign" | "emailMessage" | "emailOptOut" | "mailerSettings"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1978,6 +1982,302 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    EmailCampaign: {
+      payload: Prisma.$EmailCampaignPayload<ExtArgs>
+      fields: Prisma.EmailCampaignFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EmailCampaignFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailCampaignPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EmailCampaignFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailCampaignPayload>
+        }
+        findFirst: {
+          args: Prisma.EmailCampaignFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailCampaignPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EmailCampaignFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailCampaignPayload>
+        }
+        findMany: {
+          args: Prisma.EmailCampaignFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailCampaignPayload>[]
+        }
+        create: {
+          args: Prisma.EmailCampaignCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailCampaignPayload>
+        }
+        createMany: {
+          args: Prisma.EmailCampaignCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.EmailCampaignCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailCampaignPayload>[]
+        }
+        delete: {
+          args: Prisma.EmailCampaignDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailCampaignPayload>
+        }
+        update: {
+          args: Prisma.EmailCampaignUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailCampaignPayload>
+        }
+        deleteMany: {
+          args: Prisma.EmailCampaignDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EmailCampaignUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.EmailCampaignUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailCampaignPayload>[]
+        }
+        upsert: {
+          args: Prisma.EmailCampaignUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailCampaignPayload>
+        }
+        aggregate: {
+          args: Prisma.EmailCampaignAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEmailCampaign>
+        }
+        groupBy: {
+          args: Prisma.EmailCampaignGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmailCampaignGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EmailCampaignCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmailCampaignCountAggregateOutputType> | number
+        }
+      }
+    }
+    EmailMessage: {
+      payload: Prisma.$EmailMessagePayload<ExtArgs>
+      fields: Prisma.EmailMessageFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EmailMessageFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailMessagePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EmailMessageFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailMessagePayload>
+        }
+        findFirst: {
+          args: Prisma.EmailMessageFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailMessagePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EmailMessageFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailMessagePayload>
+        }
+        findMany: {
+          args: Prisma.EmailMessageFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailMessagePayload>[]
+        }
+        create: {
+          args: Prisma.EmailMessageCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailMessagePayload>
+        }
+        createMany: {
+          args: Prisma.EmailMessageCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.EmailMessageCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailMessagePayload>[]
+        }
+        delete: {
+          args: Prisma.EmailMessageDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailMessagePayload>
+        }
+        update: {
+          args: Prisma.EmailMessageUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailMessagePayload>
+        }
+        deleteMany: {
+          args: Prisma.EmailMessageDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EmailMessageUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.EmailMessageUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailMessagePayload>[]
+        }
+        upsert: {
+          args: Prisma.EmailMessageUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailMessagePayload>
+        }
+        aggregate: {
+          args: Prisma.EmailMessageAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEmailMessage>
+        }
+        groupBy: {
+          args: Prisma.EmailMessageGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmailMessageGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EmailMessageCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmailMessageCountAggregateOutputType> | number
+        }
+      }
+    }
+    EmailOptOut: {
+      payload: Prisma.$EmailOptOutPayload<ExtArgs>
+      fields: Prisma.EmailOptOutFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EmailOptOutFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOptOutPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EmailOptOutFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOptOutPayload>
+        }
+        findFirst: {
+          args: Prisma.EmailOptOutFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOptOutPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EmailOptOutFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOptOutPayload>
+        }
+        findMany: {
+          args: Prisma.EmailOptOutFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOptOutPayload>[]
+        }
+        create: {
+          args: Prisma.EmailOptOutCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOptOutPayload>
+        }
+        createMany: {
+          args: Prisma.EmailOptOutCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.EmailOptOutCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOptOutPayload>[]
+        }
+        delete: {
+          args: Prisma.EmailOptOutDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOptOutPayload>
+        }
+        update: {
+          args: Prisma.EmailOptOutUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOptOutPayload>
+        }
+        deleteMany: {
+          args: Prisma.EmailOptOutDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EmailOptOutUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.EmailOptOutUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOptOutPayload>[]
+        }
+        upsert: {
+          args: Prisma.EmailOptOutUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOptOutPayload>
+        }
+        aggregate: {
+          args: Prisma.EmailOptOutAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEmailOptOut>
+        }
+        groupBy: {
+          args: Prisma.EmailOptOutGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmailOptOutGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EmailOptOutCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmailOptOutCountAggregateOutputType> | number
+        }
+      }
+    }
+    MailerSettings: {
+      payload: Prisma.$MailerSettingsPayload<ExtArgs>
+      fields: Prisma.MailerSettingsFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.MailerSettingsFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailerSettingsPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.MailerSettingsFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailerSettingsPayload>
+        }
+        findFirst: {
+          args: Prisma.MailerSettingsFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailerSettingsPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.MailerSettingsFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailerSettingsPayload>
+        }
+        findMany: {
+          args: Prisma.MailerSettingsFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailerSettingsPayload>[]
+        }
+        create: {
+          args: Prisma.MailerSettingsCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailerSettingsPayload>
+        }
+        createMany: {
+          args: Prisma.MailerSettingsCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.MailerSettingsCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailerSettingsPayload>[]
+        }
+        delete: {
+          args: Prisma.MailerSettingsDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailerSettingsPayload>
+        }
+        update: {
+          args: Prisma.MailerSettingsUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailerSettingsPayload>
+        }
+        deleteMany: {
+          args: Prisma.MailerSettingsDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.MailerSettingsUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.MailerSettingsUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailerSettingsPayload>[]
+        }
+        upsert: {
+          args: Prisma.MailerSettingsUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MailerSettingsPayload>
+        }
+        aggregate: {
+          args: Prisma.MailerSettingsAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateMailerSettings>
+        }
+        groupBy: {
+          args: Prisma.MailerSettingsGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MailerSettingsGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.MailerSettingsCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MailerSettingsCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2331,6 +2631,65 @@ export const LoginAttemptScalarFieldEnum = {
 export type LoginAttemptScalarFieldEnum = (typeof LoginAttemptScalarFieldEnum)[keyof typeof LoginAttemptScalarFieldEnum]
 
 
+export const EmailCampaignScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  subjectTemplate: 'subjectTemplate',
+  bodyTemplate: 'bodyTemplate',
+  status: 'status',
+  totalCount: 'totalCount',
+  createdById: 'createdById',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailCampaignScalarFieldEnum = (typeof EmailCampaignScalarFieldEnum)[keyof typeof EmailCampaignScalarFieldEnum]
+
+
+export const EmailMessageScalarFieldEnum = {
+  id: 'id',
+  dedupeKey: 'dedupeKey',
+  campaignId: 'campaignId',
+  toEmail: 'toEmail',
+  toName: 'toName',
+  subject: 'subject',
+  body: 'body',
+  status: 'status',
+  scheduledFor: 'scheduledFor',
+  attempts: 'attempts',
+  lastError: 'lastError',
+  claimedAt: 'claimedAt',
+  sentAt: 'sentAt',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailMessageScalarFieldEnum = (typeof EmailMessageScalarFieldEnum)[keyof typeof EmailMessageScalarFieldEnum]
+
+
+export const EmailOptOutScalarFieldEnum = {
+  email: 'email',
+  reason: 'reason',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailOptOutScalarFieldEnum = (typeof EmailOptOutScalarFieldEnum)[keyof typeof EmailOptOutScalarFieldEnum]
+
+
+export const MailerSettingsScalarFieldEnum = {
+  id: 'id',
+  paused: 'paused',
+  pausedReason: 'pausedReason',
+  pausedAt: 'pausedAt',
+  sendWindowStartHour: 'sendWindowStartHour',
+  sendWindowEndHour: 'sendWindowEndHour',
+  dailyCap: 'dailyCap',
+  perTick: 'perTick',
+  updatedAt: 'updatedAt',
+  updatedById: 'updatedById'
+} as const
+
+export type MailerSettingsScalarFieldEnum = (typeof MailerSettingsScalarFieldEnum)[keyof typeof MailerSettingsScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -2651,6 +3010,34 @@ export type ListEnumRenewalContactStatusFieldRefInput<$PrismaModel> = FieldRefIn
 
 
 /**
+ * Reference to a field of type 'EmailCampaignStatus'
+ */
+export type EnumEmailCampaignStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EmailCampaignStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'EmailCampaignStatus[]'
+ */
+export type ListEnumEmailCampaignStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EmailCampaignStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'EmailMessageStatus'
+ */
+export type EnumEmailMessageStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EmailMessageStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'EmailMessageStatus[]'
+ */
+export type ListEnumEmailMessageStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EmailMessageStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -2794,6 +3181,10 @@ export type GlobalOmitConfig = {
   whatsAppInbound?: Prisma.WhatsAppInboundOmit
   botSettings?: Prisma.BotSettingsOmit
   loginAttempt?: Prisma.LoginAttemptOmit
+  emailCampaign?: Prisma.EmailCampaignOmit
+  emailMessage?: Prisma.EmailMessageOmit
+  emailOptOut?: Prisma.EmailOptOutOmit
+  mailerSettings?: Prisma.MailerSettingsOmit
 }
 
 /* Types for Logging */

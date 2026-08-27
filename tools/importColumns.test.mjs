@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-// הרצה: npx tsx --test tools/importColumns.test.mjs
-// (ולא node --test כמו שאר הבדיקות כאן: המודול מייבא דרך "@/..." ,
-// והפתרון של הכינוי מגיע מ-tsconfig.)
+// הרצה: npm test
+// (המריץ הוא tsx ולא node --test: המודולים מייבאים דרך "@/...",
+// ופתרון הכינוי מגיע מ-tsconfig.)
 import {
   buildRow,
   describeDetection,

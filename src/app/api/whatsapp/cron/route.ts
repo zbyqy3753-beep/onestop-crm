@@ -87,7 +87,27 @@ async function run(request: Request): Promise<Response> {
   }
 
   const result = await drainOutbox(new URL(request.url).origin);
-  return NextResponse.json({ success: true, ...result });
+
+  /*
+   * ⚠️ **תור הדיוור נתלה על התקתוק הזה ואין לו מתזמן משלו.** מתזמן
+   * שני היה מעיר את הפונקציה בנפרד ושורף ממכסת `Fluid Active CPU`
+   * של Hobby, שהיא ארבע שעות לחודש.
+   *
+   * ⚠️ **ה-catch אינו עצלנות.** תקלה בדיוור — סיסמת אפליקציה שפגה,
+   * Gmail שחוסם — אסור לה לעצור את תזכורות החזרה, שהן מה שהמוקד
+   * עובד לפיו. הדיוור נכשל בשקט וממשיך בתקתוק הבא; התזכורות לא.
+   */
+  const { drainMailOutbox } = await import("@/server/mailer/drain");
+  const mail = await drainMailOutbox(new URL(request.url).origin).catch(
+    (error: unknown) => ({
+      sent: 0,
+      failed: 0,
+      skipped: null,
+      error: error instanceof Error ? error.message : String(error),
+    }),
+  );
+
+  return NextResponse.json({ success: true, ...result, mail });
 }
 
 /**

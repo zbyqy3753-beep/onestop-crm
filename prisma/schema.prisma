@@ -70,7 +70,7 @@ model User {
   /// שמנהל עלול לערוך ("עידן" → "עידן כהן"), ואילו השם שב-env נקבע
   /// מול מערכת חיצונית. קשירת השניים הייתה מרוקנת לספק את המסך
   /// בשקט, בלי שגיאה ובלי שאיש יבין למה.
-  leadSourceName     String?
+  leadSourceName String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -90,6 +90,7 @@ model User {
   impersonatedSessions  Session[]         @relation("SessionImpersonated")
   passwordResets        PasswordReset[]   @relation("PasswordResetUser")
   issuedPasswordResets  PasswordReset[]   @relation("PasswordResetIssuer")
+  emailCampaigns        EmailCampaign[]   @relation("EmailCampaignCreator")
 
   @@index([role, active])
 }
@@ -117,8 +118,8 @@ model Session {
   impersonating   User?   @relation("SessionImpersonated", fields: [impersonatingId], references: [id], onDelete: Cascade)
 
   /// תפוגה מתגלגלת — ראה `touchIfStale` ב-server/auth/session.ts
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
   lastSeenAt DateTime @default(now())
 
   @@index([userId])
@@ -854,4 +855,128 @@ model LoginAttempt {
   lockedUntil DateTime?
 
   @@index([lockedUntil])
+}
+
+/**
+ * ── דיוור במייל ──────────────────────────────────────────────────────
+ */
+
+enum EmailCampaignStatus {
+  draft
+  sending
+  paused
+  done
+}
+
+enum EmailMessageStatus {
+  queued
+  sending
+  sent
+  failed
+  cancelled
+}
+
+/// דיוור אחד — הרשימה, הטקסט, ומי שלח.
+///
+/// הנמענים מגיעים מקובץ חיצוני ולא מהלידים, ולכן אין כאן שום קשר
+/// ל-`Lead`: הרשימה היא קלט חד-פעמי ולא ישות במערכת.
+model EmailCampaign {
+  id String @id @default(cuid())
+
+  /// שם פנימי, למסך בלבד
+  name String
+
+  /// התבנית **לפני** מיזוג, כפי שהמשתמש כתב אותה. נשמרת לתיעוד
+  /// ולשכפול דיוור — לא לשליחה. מה שנשלח יושב ב-`EmailMessage`.
+  subjectTemplate String
+  bodyTemplate    String
+
+  status EmailCampaignStatus @default(draft)
+
+  /// נקבע ביצירה ולא משתנה. שאר המונים (נשלחו/נכשלו/ממתינים) נספרים
+  /// מ-`EmailMessage` ולא נשמרים בשדה — שדה כזה יכול לסתור את התור.
+  totalCount Int @default(0)
+
+  createdById String?
+  createdBy   User?   @relation("EmailCampaignCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  messages EmailMessage[]
+
+  @@index([status, createdAt])
+}
+
+/// שורה בתור המיילים היוצאים.
+///
+/// ⚠️ `subject` ו-`body` הם snapshot מרונדר ולא נגזרים בזמן השליחה,
+/// מאותה סיבה שכתובה ב-`WhatsAppMessage`: אחרי שהמייל יצא, מה שנשלח
+/// הוא עובדה היסטורית שלא משתנה כשעורכים את הקמפיין.
+model EmailMessage {
+  id String @id @default(cuid())
+
+  /// `campaign:<campaignId>:<מייל מנורמל>`. זה מה שהופך העלאה כפולה
+  /// של אותו קובץ ל-no-op, וגם כתובת שמופיעה פעמיים בקובץ נכנסת פעם אחת.
+  dedupeKey String @unique
+
+  campaignId String
+  campaign   EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  /// מנורמל (`normalizeEmail`), כי הוא חלק ממפתח הכפילות
+  toEmail String
+  toName  String?
+
+  subject String
+  body    String
+
+  status       EmailMessageStatus @default(queued)
+  scheduledFor DateTime
+  /// עולה בכל תביעה. 3 כישלונות = failed.
+  attempts     Int                @default(0)
+  lastError    String?
+  claimedAt    DateTime?
+  sentAt       DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([status, scheduledFor])
+  @@index([campaignId, status])
+}
+
+/// מי ביקש להסיר את עצמו. מקביל ל-`RenewalOptOut`.
+///
+/// ⚠️ נבדק פעמיים — בהעלאה ושוב ברגע התביעה. בין השתיים עוברות שעות,
+/// ומי שהסיר את עצמו באמצע לא אמור לקבל את שאר הדיוור.
+model EmailOptOut {
+  /// המייל המנורמל הוא המפתח
+  email     String   @id
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+/// הגדרות הדיוור — שורה יחידה (`id = "default"`), במקביל ל-`BotSettings`.
+///
+/// במסד ולא בקוד מאותה סיבה: עצירת דיוור שיצא לא נכון חייבת להיות
+/// לחיצה אחת, ומחזור פריסה של Vercel הוא דקות.
+model MailerSettings {
+  id String @id @default("default")
+
+  paused       Boolean   @default(false)
+  pausedReason String?
+  pausedAt     DateTime?
+
+  /// חלון שליחה בשעון ישראל. דיוור שיוצא ב-03:00 נראה כמו ספאם.
+  sendWindowStartHour Int @default(8)
+  sendWindowEndHour   Int @default(21)
+
+  /// תקרה ליום קלנדרי (שעון ישראל). 400 ולא 500 — מתחת לתקרה של
+  /// גוגל, כי חשבון שנשרף אינו ניתן לשחזור. 0 = בלי תקרה.
+  dailyCap Int @default(400)
+
+  /// כמה מיילים לתקתוק אחד. Gmail חוסם התפרצויות, ולכן לא שולחים
+  /// את כל הרשימה בבת אחת גם כשהתקרה מרשה.
+  perTick Int @default(20)
+
+  updatedAt   DateTime @updatedAt
+  updatedById String?
 }
