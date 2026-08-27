@@ -65,6 +65,14 @@ export function MailerClient({
       }
       setDetected(d);
       setRows(buildRecipients(matrix, d));
+
+      /*
+       * ⚠️ **הפתיחה נגזרת מהקובץ ולא קבועה.** ברירת המחדל היא
+       * "שלום {{שם}}," — ובקובץ בלי עמודת שם היא מרנדרת "שלום ,"
+       * אצל כל נמען. מי שמעלה רשימת כתובות בלבד לא אמור לזכור למחוק
+       * שדה שהמערכת כבר יודעת שאין לו ערך.
+       */
+      setBody(d.mapping.nameAt === null ? "שלום,\n\n" : "שלום {{שם}},\n\n");
       setStep("write");
     } catch {
       setError("לא הצלחנו לקרוא את הקובץ. שמור אותו כ-CSV או XLSX ונסה שוב.");
@@ -105,10 +113,17 @@ export function MailerClient({
     };
   }, [valid, subject, body]);
 
-  const fields = useMemo(
-    () => (detected ? ["שם", ...detected.headers] : ["שם"]),
-    [detected],
-  );
+  /*
+   * ⚠️ `שם` מוצע רק כשיש לו עמודה בקובץ. הצעת שדה שאין לו ערך היא
+   * הזמנה לייצר "שלום ," אצל 88 נמענים.
+   */
+  const fields = useMemo(() => {
+    if (!detected?.mapping) return [];
+    const rest = detected.headers.filter(
+      (_, i) => i !== detected.mapping!.emailAt && i !== detected.mapping!.nameAt,
+    );
+    return detected.mapping.nameAt === null ? rest : ["שם", ...rest];
+  }, [detected]);
 
   async function send() {
     setBusy(true);

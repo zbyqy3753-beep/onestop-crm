@@ -27,6 +27,7 @@ export interface MailerOverview {
   pausedReason: string | null;
   sentToday: number;
   dailyCap: number;
+  perTick: number;
   campaigns: CampaignRow[];
 }
 
@@ -75,6 +76,7 @@ export async function mailerOverview(): Promise<MailerOverview> {
     pausedReason: settings.pausedReason,
     sentToday: today,
     dailyCap: settings.dailyCap,
+    perTick: settings.perTick,
     campaigns: rows,
   };
 }
