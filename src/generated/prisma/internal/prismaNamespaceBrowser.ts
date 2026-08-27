@@ -75,7 +75,8 @@ export const ModelName = {
   EmailCampaign: 'EmailCampaign',
   EmailMessage: 'EmailMessage',
   EmailOptOut: 'EmailOptOut',
-  MailerSettings: 'MailerSettings'
+  MailerSettings: 'MailerSettings',
+  WaCampaign: 'WaCampaign'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -296,6 +297,7 @@ export const WhatsAppMessageScalarFieldEnum = {
   providerMessageId: 'providerMessageId',
   leadId: 'leadId',
   recipientUserId: 'recipientUserId',
+  campaignId: 'campaignId',
   createdAt: 'createdAt'
 } as const
 
@@ -465,6 +467,19 @@ export const MailerSettingsScalarFieldEnum = {
 } as const
 
 export type MailerSettingsScalarFieldEnum = (typeof MailerSettingsScalarFieldEnum)[keyof typeof MailerSettingsScalarFieldEnum]
+
+
+export const WaCampaignScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  message: 'message',
+  status: 'status',
+  totalCount: 'totalCount',
+  createdById: 'createdById',
+  createdAt: 'createdAt'
+} as const
+
+export type WaCampaignScalarFieldEnum = (typeof WaCampaignScalarFieldEnum)[keyof typeof WaCampaignScalarFieldEnum]
 
 
 export const SortOrder = {

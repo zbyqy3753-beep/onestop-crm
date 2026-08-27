@@ -210,3 +210,13 @@ export const EmailMessageStatus = {
 } as const
 
 export type EmailMessageStatus = (typeof EmailMessageStatus)[keyof typeof EmailMessageStatus]
+
+
+export const WaCampaignStatus = {
+  draft: 'draft',
+  sending: 'sending',
+  paused: 'paused',
+  done: 'done'
+} as const
+
+export type WaCampaignStatus = (typeof WaCampaignStatus)[keyof typeof WaCampaignStatus]

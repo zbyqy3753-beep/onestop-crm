@@ -129,6 +129,13 @@ export const NAV: NavGroup[] = [
         icon: "mail",
       },
       {
+        href: "/broadcast",
+        label: "דיוור וואטסאפ",
+        shortLabel: "וואטסאפ",
+        hint: "שליחת הודעת וואטסאפ לרשימת מספרים",
+        icon: "whatsapp",
+      },
+      {
         href: "/renewals",
         label: "חידושים",
         hint: "העלאת מסמכי לקוחות שהשנה שלהם הסתיימה",

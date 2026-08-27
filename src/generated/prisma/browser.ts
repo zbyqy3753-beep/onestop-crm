@@ -226,3 +226,15 @@ export type EmailOptOut = Prisma.EmailOptOutModel
  * לחיצה אחת, ומחזור פריסה של Vercel הוא דקות.
  */
 export type MailerSettings = Prisma.MailerSettingsModel
+/**
+ * Model WaCampaign
+ * דיוור המוני אחד — הרשימה, הטקסט, ומי שלח.
+ * 
+ * ⚠️ **אין כאן תור משלו.** הנמענים נכנסים ל-`WhatsAppMessage`, אותו
+ * תור שממנו יוצאות התזכורות, עם `dedupeKey` בתחילית `broadcast:`.
+ * תור שני היה מכפיל את חלון השליחה, את מתג ההשהיה ואת התקרה
+ * היומית — ואת התקרה במיוחד אסור לפצל: מטא סופרים מספר אחד.
+ * 
+ * הנמענים מגיעים מהדבקה או מקובץ ולא מהלידים, ולכן אין קשר ל-`Lead`.
+ */
+export type WaCampaign = Prisma.WaCampaignModel

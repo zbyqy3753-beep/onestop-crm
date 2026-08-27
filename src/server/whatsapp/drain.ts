@@ -27,6 +27,7 @@ import {
   PASSWORD_RESET_NOTICE_TEMPLATE,
   followUpReminderParams,
 } from "@/lib/domain/whatsapp";
+import { BROADCAST_TEMPLATE } from "@/lib/domain/broadcast";
 import {
   DEAL_WON_TEMPLATE,
   FOLLOWUP_OVERDUE_TEMPLATE,
@@ -79,6 +80,7 @@ function templateFor(
   | typeof LEAD_UNASSIGNED_TEMPLATE
   | typeof DEAL_WON_TEMPLATE
   | typeof FOLLOWUP_OVERDUE_TEMPLATE
+  | typeof BROADCAST_TEMPLATE
   | null {
   if (dedupeKey.startsWith("renewal:opener:")) return RENEWAL_OPENER_TEMPLATE;
   if (dedupeKey.startsWith("followup:")) return FOLLOWUP_REMINDER_TEMPLATE;
@@ -87,6 +89,7 @@ function templateFor(
   if (dedupeKey.startsWith("unassigned:")) return LEAD_UNASSIGNED_TEMPLATE;
   if (dedupeKey.startsWith("dealwon:")) return DEAL_WON_TEMPLATE;
   if (dedupeKey.startsWith("overdue:")) return FOLLOWUP_OVERDUE_TEMPLATE;
+  if (dedupeKey.startsWith("broadcast:")) return BROADCAST_TEMPLATE;
   return null;
 }
 
@@ -207,6 +210,17 @@ async function deliver(msg: ClaimedMessage): Promise<string> {
       [msg.body.trim()],
       { otpButton: true },
     );
+  }
+
+  /*
+   * ⚠️ הדיוור ההמוני הוא היחיד שהגוף שלו **הוא** הפרמטר, בלי חילוץ:
+   * מה שהמשתמש כתב נשמר כבר מנורמל (`normalizeBroadcastText`), וכל
+   * עיבוד נוסף כאן היה משנה טקסט שהוא כבר אישר בתצוגה המקדימה.
+   */
+  if (template === BROADCAST_TEMPLATE) {
+    return sendTemplate(msg.toPhone, template.name, template.language, [
+      msg.body,
+    ]);
   }
 
   const params =

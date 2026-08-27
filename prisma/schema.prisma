@@ -91,6 +91,7 @@ model User {
   passwordResets        PasswordReset[]   @relation("PasswordResetUser")
   issuedPasswordResets  PasswordReset[]   @relation("PasswordResetIssuer")
   emailCampaigns        EmailCampaign[]   @relation("EmailCampaignCreator")
+  waCampaigns           WaCampaign[]      @relation("WaCampaignCreator")
 
   @@index([role, active])
 }
@@ -600,10 +601,19 @@ model WhatsAppMessage {
   recipientUserId String?
   recipient       User?   @relation("WaRecipient", fields: [recipientUserId], references: [id], onDelete: SetNull)
 
+  /// שיוך לדיוור המוני, כשהשורה נולדה ממסך "דיוור וואטסאפ".
+  ///
+  /// ⚠️ ריק בכל שאר השורות — תזכורות, התראות וחידושים — וזה בכוונה:
+  /// התור אחד, ורק המקור שונה. Cascade ולא SetNull, כי דיוור שנמחק
+  /// מוחק גם את השורות שלו: הן חסרות משמעות בלעדיו.
+  campaignId String?
+  campaign   WaCampaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
 
   @@index([status, scheduledFor])
   @@index([leadId, status])
+  @@index([campaignId, status])
 }
 
 /// דופק הבוט — שורה יחידה (`id = "default"`).
@@ -979,4 +989,51 @@ model MailerSettings {
 
   updatedAt   DateTime @updatedAt
   updatedById String?
+}
+
+/**
+ * ── דיוור בוואטסאפ ───────────────────────────────────────────────────
+ */
+
+/// סטטוס דיוור וואטסאפ. ערכים זהים ל-`EmailCampaignStatus` אבל טיפוס
+/// נפרד: enum משותף היה קושר שני מסכים שאין ביניהם שום קשר, ושינוי
+/// באחד היה נוחת על השני.
+enum WaCampaignStatus {
+  draft
+  sending
+  paused
+  done
+}
+
+/// דיוור המוני אחד — הרשימה, הטקסט, ומי שלח.
+///
+/// ⚠️ **אין כאן תור משלו.** הנמענים נכנסים ל-`WhatsAppMessage`, אותו
+/// תור שממנו יוצאות התזכורות, עם `dedupeKey` בתחילית `broadcast:`.
+/// תור שני היה מכפיל את חלון השליחה, את מתג ההשהיה ואת התקרה
+/// היומית — ואת התקרה במיוחד אסור לפצל: מטא סופרים מספר אחד.
+///
+/// הנמענים מגיעים מהדבקה או מקובץ ולא מהלידים, ולכן אין קשר ל-`Lead`.
+model WaCampaign {
+  id String @id @default(cuid())
+
+  /// שם פנימי, למסך בלבד
+  name String
+
+  /// הטקסט **כפי שהמשתמש כתב אותו**, לפני הנרמול לפרמטר תבנית.
+  /// נשמר לתיעוד ולשכפול; מה שנשלח בפועל יושב ב-`WhatsAppMessage.body`.
+  message String
+
+  status WaCampaignStatus @default(draft)
+
+  /// נקבע ביצירה ולא משתנה. שאר המונים נספרים מהתור, כמו בדיוור במייל.
+  totalCount Int @default(0)
+
+  createdById String?
+  createdBy   User?   @relation("WaCampaignCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  messages WhatsAppMessage[]
+
+  @@index([status, createdAt])
 }

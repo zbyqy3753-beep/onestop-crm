@@ -133,7 +133,10 @@ export function MailerClient({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          name,
+          // ⚠️ נופל לנושא כשלא הוקלד שם. השם הוא תווית פנימית
+          // לרשימה בלבד, והדילר לא רואה אותו — אין סיבה שהוא יחסום
+          // שליחה של מי שכבר כתב נושא וגוף.
+          name: name.trim() || subject.trim(),
           subjectTemplate: subject,
           bodyTemplate: body,
           recipients: valid.map((r) => ({
@@ -202,7 +205,7 @@ export function MailerClient({
 
           <input
             className="rounded-lg border border-line bg-surface-2 p-3"
-            placeholder="שם הדיוור (פנימי)"
+            placeholder="שם הדיוור (פנימי, לא חובה)"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -244,7 +247,6 @@ export function MailerClient({
             type="button"
             className="rounded-lg bg-brand p-3 font-medium disabled:opacity-50"
             disabled={
-              !name.trim() ||
               !subject.trim() ||
               !body.trim() ||
               valid.length === 0

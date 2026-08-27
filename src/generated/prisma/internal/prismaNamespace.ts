@@ -408,7 +408,8 @@ export const ModelName = {
   EmailCampaign: 'EmailCampaign',
   EmailMessage: 'EmailMessage',
   EmailOptOut: 'EmailOptOut',
-  MailerSettings: 'MailerSettings'
+  MailerSettings: 'MailerSettings',
+  WaCampaign: 'WaCampaign'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -424,7 +425,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "session" | "passwordReset" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "renewalContact" | "renewalOptOut" | "whatsAppInbound" | "botSettings" | "loginAttempt" | "emailCampaign" | "emailMessage" | "emailOptOut" | "mailerSettings"
+    modelProps: "user" | "session" | "passwordReset" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "renewalContact" | "renewalOptOut" | "whatsAppInbound" | "botSettings" | "loginAttempt" | "emailCampaign" | "emailMessage" | "emailOptOut" | "mailerSettings" | "waCampaign"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2278,6 +2279,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    WaCampaign: {
+      payload: Prisma.$WaCampaignPayload<ExtArgs>
+      fields: Prisma.WaCampaignFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WaCampaignFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaCampaignPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WaCampaignFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaCampaignPayload>
+        }
+        findFirst: {
+          args: Prisma.WaCampaignFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaCampaignPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WaCampaignFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaCampaignPayload>
+        }
+        findMany: {
+          args: Prisma.WaCampaignFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaCampaignPayload>[]
+        }
+        create: {
+          args: Prisma.WaCampaignCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaCampaignPayload>
+        }
+        createMany: {
+          args: Prisma.WaCampaignCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.WaCampaignCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaCampaignPayload>[]
+        }
+        delete: {
+          args: Prisma.WaCampaignDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaCampaignPayload>
+        }
+        update: {
+          args: Prisma.WaCampaignUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaCampaignPayload>
+        }
+        deleteMany: {
+          args: Prisma.WaCampaignDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WaCampaignUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.WaCampaignUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaCampaignPayload>[]
+        }
+        upsert: {
+          args: Prisma.WaCampaignUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaCampaignPayload>
+        }
+        aggregate: {
+          args: Prisma.WaCampaignAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWaCampaign>
+        }
+        groupBy: {
+          args: Prisma.WaCampaignGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WaCampaignGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WaCampaignCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WaCampaignCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2519,6 +2594,7 @@ export const WhatsAppMessageScalarFieldEnum = {
   providerMessageId: 'providerMessageId',
   leadId: 'leadId',
   recipientUserId: 'recipientUserId',
+  campaignId: 'campaignId',
   createdAt: 'createdAt'
 } as const
 
@@ -2688,6 +2764,19 @@ export const MailerSettingsScalarFieldEnum = {
 } as const
 
 export type MailerSettingsScalarFieldEnum = (typeof MailerSettingsScalarFieldEnum)[keyof typeof MailerSettingsScalarFieldEnum]
+
+
+export const WaCampaignScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  message: 'message',
+  status: 'status',
+  totalCount: 'totalCount',
+  createdById: 'createdById',
+  createdAt: 'createdAt'
+} as const
+
+export type WaCampaignScalarFieldEnum = (typeof WaCampaignScalarFieldEnum)[keyof typeof WaCampaignScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -3038,6 +3127,20 @@ export type ListEnumEmailMessageStatusFieldRefInput<$PrismaModel> = FieldRefInpu
 
 
 /**
+ * Reference to a field of type 'WaCampaignStatus'
+ */
+export type EnumWaCampaignStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WaCampaignStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'WaCampaignStatus[]'
+ */
+export type ListEnumWaCampaignStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WaCampaignStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -3185,6 +3288,7 @@ export type GlobalOmitConfig = {
   emailMessage?: Prisma.EmailMessageOmit
   emailOptOut?: Prisma.EmailOptOutOmit
   mailerSettings?: Prisma.MailerSettingsOmit
+  waCampaign?: Prisma.WaCampaignOmit
 }
 
 /* Types for Logging */

@@ -246,6 +246,7 @@ export type UserWhereInput = {
   passwordResets?: Prisma.PasswordResetListRelationFilter
   issuedPasswordResets?: Prisma.PasswordResetListRelationFilter
   emailCampaigns?: Prisma.EmailCampaignListRelationFilter
+  waCampaigns?: Prisma.WaCampaignListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -276,6 +277,7 @@ export type UserOrderByWithRelationInput = {
   passwordResets?: Prisma.PasswordResetOrderByRelationAggregateInput
   issuedPasswordResets?: Prisma.PasswordResetOrderByRelationAggregateInput
   emailCampaigns?: Prisma.EmailCampaignOrderByRelationAggregateInput
+  waCampaigns?: Prisma.WaCampaignOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -309,6 +311,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   passwordResets?: Prisma.PasswordResetListRelationFilter
   issuedPasswordResets?: Prisma.PasswordResetListRelationFilter
   emailCampaigns?: Prisma.EmailCampaignListRelationFilter
+  waCampaigns?: Prisma.WaCampaignListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -373,6 +376,7 @@ export type UserCreateInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -403,6 +407,7 @@ export type UserUncheckedCreateInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUpdateInput = {
@@ -433,6 +438,7 @@ export type UserUpdateInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -463,6 +469,7 @@ export type UserUncheckedUpdateInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -821,6 +828,22 @@ export type UserUpdateOneWithoutEmailCampaignsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutEmailCampaignsInput, Prisma.UserUpdateWithoutEmailCampaignsInput>, Prisma.UserUncheckedUpdateWithoutEmailCampaignsInput>
 }
 
+export type UserCreateNestedOneWithoutWaCampaignsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutWaCampaignsInput, Prisma.UserUncheckedCreateWithoutWaCampaignsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutWaCampaignsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutWaCampaignsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutWaCampaignsInput, Prisma.UserUncheckedCreateWithoutWaCampaignsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutWaCampaignsInput
+  upsert?: Prisma.UserUpsertWithoutWaCampaignsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutWaCampaignsInput, Prisma.UserUpdateWithoutWaCampaignsInput>, Prisma.UserUncheckedUpdateWithoutWaCampaignsInput>
+}
+
 export type UserCreateWithoutSessionsInput = {
   id?: string
   name: string
@@ -848,6 +871,7 @@ export type UserCreateWithoutSessionsInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -877,6 +901,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -911,6 +936,7 @@ export type UserCreateWithoutImpersonatedSessionsInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutImpersonatedSessionsInput = {
@@ -940,6 +966,7 @@ export type UserUncheckedCreateWithoutImpersonatedSessionsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutImpersonatedSessionsInput = {
@@ -985,6 +1012,7 @@ export type UserUpdateWithoutSessionsInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -1014,6 +1042,7 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUpsertWithoutImpersonatedSessionsInput = {
@@ -1054,6 +1083,7 @@ export type UserUpdateWithoutImpersonatedSessionsInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutImpersonatedSessionsInput = {
@@ -1083,6 +1113,7 @@ export type UserUncheckedUpdateWithoutImpersonatedSessionsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutPasswordResetsInput = {
@@ -1112,6 +1143,7 @@ export type UserCreateWithoutPasswordResetsInput = {
   impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutPasswordResetsInput = {
@@ -1141,6 +1173,7 @@ export type UserUncheckedCreateWithoutPasswordResetsInput = {
   impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutPasswordResetsInput = {
@@ -1175,6 +1208,7 @@ export type UserCreateWithoutIssuedPasswordResetsInput = {
   impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutIssuedPasswordResetsInput = {
@@ -1204,6 +1238,7 @@ export type UserUncheckedCreateWithoutIssuedPasswordResetsInput = {
   impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutIssuedPasswordResetsInput = {
@@ -1249,6 +1284,7 @@ export type UserUpdateWithoutPasswordResetsInput = {
   impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPasswordResetsInput = {
@@ -1278,6 +1314,7 @@ export type UserUncheckedUpdateWithoutPasswordResetsInput = {
   impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUpsertWithoutIssuedPasswordResetsInput = {
@@ -1318,6 +1355,7 @@ export type UserUpdateWithoutIssuedPasswordResetsInput = {
   impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutIssuedPasswordResetsInput = {
@@ -1347,6 +1385,7 @@ export type UserUncheckedUpdateWithoutIssuedPasswordResetsInput = {
   impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutAssignedLeadsInput = {
@@ -1376,6 +1415,7 @@ export type UserCreateWithoutAssignedLeadsInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutAssignedLeadsInput = {
@@ -1405,6 +1445,7 @@ export type UserUncheckedCreateWithoutAssignedLeadsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutAssignedLeadsInput = {
@@ -1439,6 +1480,7 @@ export type UserCreateWithoutCreatedLeadsInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutCreatedLeadsInput = {
@@ -1468,6 +1510,7 @@ export type UserUncheckedCreateWithoutCreatedLeadsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutCreatedLeadsInput = {
@@ -1513,6 +1556,7 @@ export type UserUpdateWithoutAssignedLeadsInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAssignedLeadsInput = {
@@ -1542,6 +1586,7 @@ export type UserUncheckedUpdateWithoutAssignedLeadsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUpsertWithoutCreatedLeadsInput = {
@@ -1582,6 +1627,7 @@ export type UserUpdateWithoutCreatedLeadsInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedLeadsInput = {
@@ -1611,6 +1657,7 @@ export type UserUncheckedUpdateWithoutCreatedLeadsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutNotesInput = {
@@ -1640,6 +1687,7 @@ export type UserCreateWithoutNotesInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutNotesInput = {
@@ -1669,6 +1717,7 @@ export type UserUncheckedCreateWithoutNotesInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutNotesInput = {
@@ -1714,6 +1763,7 @@ export type UserUpdateWithoutNotesInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotesInput = {
@@ -1743,6 +1793,7 @@ export type UserUncheckedUpdateWithoutNotesInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutLeadActivityInput = {
@@ -1772,6 +1823,7 @@ export type UserCreateWithoutLeadActivityInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutLeadActivityInput = {
@@ -1801,6 +1853,7 @@ export type UserUncheckedCreateWithoutLeadActivityInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutLeadActivityInput = {
@@ -1846,6 +1899,7 @@ export type UserUpdateWithoutLeadActivityInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutLeadActivityInput = {
@@ -1875,6 +1929,7 @@ export type UserUncheckedUpdateWithoutLeadActivityInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutStatusEventsInput = {
@@ -1904,6 +1959,7 @@ export type UserCreateWithoutStatusEventsInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutStatusEventsInput = {
@@ -1933,6 +1989,7 @@ export type UserUncheckedCreateWithoutStatusEventsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutStatusEventsInput = {
@@ -1978,6 +2035,7 @@ export type UserUpdateWithoutStatusEventsInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutStatusEventsInput = {
@@ -2007,6 +2065,7 @@ export type UserUncheckedUpdateWithoutStatusEventsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutDealsInput = {
@@ -2036,6 +2095,7 @@ export type UserCreateWithoutDealsInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutDealsInput = {
@@ -2065,6 +2125,7 @@ export type UserUncheckedCreateWithoutDealsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutDealsInput = {
@@ -2110,6 +2171,7 @@ export type UserUpdateWithoutDealsInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDealsInput = {
@@ -2139,6 +2201,7 @@ export type UserUncheckedUpdateWithoutDealsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutDealStageEventsInput = {
@@ -2168,6 +2231,7 @@ export type UserCreateWithoutDealStageEventsInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutDealStageEventsInput = {
@@ -2197,6 +2261,7 @@ export type UserUncheckedCreateWithoutDealStageEventsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutDealStageEventsInput = {
@@ -2242,6 +2307,7 @@ export type UserUpdateWithoutDealStageEventsInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDealStageEventsInput = {
@@ -2271,6 +2337,7 @@ export type UserUncheckedUpdateWithoutDealStageEventsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutReferredRegistrationsInput = {
@@ -2300,6 +2367,7 @@ export type UserCreateWithoutReferredRegistrationsInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutReferredRegistrationsInput = {
@@ -2329,6 +2397,7 @@ export type UserUncheckedCreateWithoutReferredRegistrationsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutReferredRegistrationsInput = {
@@ -2363,6 +2432,7 @@ export type UserCreateWithoutHandledRegistrationsInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutHandledRegistrationsInput = {
@@ -2392,6 +2462,7 @@ export type UserUncheckedCreateWithoutHandledRegistrationsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutHandledRegistrationsInput = {
@@ -2437,6 +2508,7 @@ export type UserUpdateWithoutReferredRegistrationsInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReferredRegistrationsInput = {
@@ -2466,6 +2538,7 @@ export type UserUncheckedUpdateWithoutReferredRegistrationsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUpsertWithoutHandledRegistrationsInput = {
@@ -2506,6 +2579,7 @@ export type UserUpdateWithoutHandledRegistrationsInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutHandledRegistrationsInput = {
@@ -2535,6 +2609,7 @@ export type UserUncheckedUpdateWithoutHandledRegistrationsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutWhatsappMessagesInput = {
@@ -2564,6 +2639,7 @@ export type UserCreateWithoutWhatsappMessagesInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutWhatsappMessagesInput = {
@@ -2593,6 +2669,7 @@ export type UserUncheckedCreateWithoutWhatsappMessagesInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutWhatsappMessagesInput = {
@@ -2638,6 +2715,7 @@ export type UserUpdateWithoutWhatsappMessagesInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutWhatsappMessagesInput = {
@@ -2667,6 +2745,7 @@ export type UserUncheckedUpdateWithoutWhatsappMessagesInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutRenewalDocumentsInput = {
@@ -2696,6 +2775,7 @@ export type UserCreateWithoutRenewalDocumentsInput = {
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutRenewalDocumentsInput = {
@@ -2725,6 +2805,7 @@ export type UserUncheckedCreateWithoutRenewalDocumentsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutRenewalDocumentsInput = {
@@ -2770,6 +2851,7 @@ export type UserUpdateWithoutRenewalDocumentsInput = {
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutRenewalDocumentsInput = {
@@ -2799,6 +2881,7 @@ export type UserUncheckedUpdateWithoutRenewalDocumentsInput = {
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
   emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutEmailCampaignsInput = {
@@ -2828,6 +2911,7 @@ export type UserCreateWithoutEmailCampaignsInput = {
   impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
   passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutEmailCampaignsInput = {
@@ -2857,6 +2941,7 @@ export type UserUncheckedCreateWithoutEmailCampaignsInput = {
   impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
   passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutEmailCampaignsInput = {
@@ -2902,6 +2987,7 @@ export type UserUpdateWithoutEmailCampaignsInput = {
   impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
   passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutEmailCampaignsInput = {
@@ -2931,6 +3017,143 @@ export type UserUncheckedUpdateWithoutEmailCampaignsInput = {
   impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
   passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
   issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserCreateWithoutWaCampaignsInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
+  renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
+  passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
+  issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
+  emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutWaCampaignsInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
+  renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
+  passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
+  issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
+  emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutWaCampaignsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutWaCampaignsInput, Prisma.UserUncheckedCreateWithoutWaCampaignsInput>
+}
+
+export type UserUpsertWithoutWaCampaignsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutWaCampaignsInput, Prisma.UserUncheckedUpdateWithoutWaCampaignsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutWaCampaignsInput, Prisma.UserUncheckedCreateWithoutWaCampaignsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutWaCampaignsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutWaCampaignsInput, Prisma.UserUncheckedUpdateWithoutWaCampaignsInput>
+}
+
+export type UserUpdateWithoutWaCampaignsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
+  renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
+  passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
+  issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
+  emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutWaCampaignsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
+  renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
+  passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
+  issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
+  emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 
@@ -2955,6 +3178,7 @@ export type UserCountOutputType = {
   passwordResets: number
   issuedPasswordResets: number
   emailCampaigns: number
+  waCampaigns: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2974,6 +3198,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   passwordResets?: boolean | UserCountOutputTypeCountPasswordResetsArgs
   issuedPasswordResets?: boolean | UserCountOutputTypeCountIssuedPasswordResetsArgs
   emailCampaigns?: boolean | UserCountOutputTypeCountEmailCampaignsArgs
+  waCampaigns?: boolean | UserCountOutputTypeCountWaCampaignsArgs
 }
 
 /**
@@ -3098,6 +3323,13 @@ export type UserCountOutputTypeCountEmailCampaignsArgs<ExtArgs extends runtime.T
   where?: Prisma.EmailCampaignWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountWaCampaignsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.WaCampaignWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -3127,6 +3359,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   passwordResets?: boolean | Prisma.User$passwordResetsArgs<ExtArgs>
   issuedPasswordResets?: boolean | Prisma.User$issuedPasswordResetsArgs<ExtArgs>
   emailCampaigns?: boolean | Prisma.User$emailCampaignsArgs<ExtArgs>
+  waCampaigns?: boolean | Prisma.User$waCampaignsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -3190,6 +3423,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   passwordResets?: boolean | Prisma.User$passwordResetsArgs<ExtArgs>
   issuedPasswordResets?: boolean | Prisma.User$issuedPasswordResetsArgs<ExtArgs>
   emailCampaigns?: boolean | Prisma.User$emailCampaignsArgs<ExtArgs>
+  waCampaigns?: boolean | Prisma.User$waCampaignsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -3214,6 +3448,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     passwordResets: Prisma.$PasswordResetPayload<ExtArgs>[]
     issuedPasswordResets: Prisma.$PasswordResetPayload<ExtArgs>[]
     emailCampaigns: Prisma.$EmailCampaignPayload<ExtArgs>[]
+    waCampaigns: Prisma.$WaCampaignPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -3649,6 +3884,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   passwordResets<T extends Prisma.User$passwordResetsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$passwordResetsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PasswordResetPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   issuedPasswordResets<T extends Prisma.User$issuedPasswordResetsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$issuedPasswordResetsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PasswordResetPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   emailCampaigns<T extends Prisma.User$emailCampaignsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$emailCampaignsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EmailCampaignPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  waCampaigns<T extends Prisma.User$waCampaignsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$waCampaignsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WaCampaignPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4463,6 +4699,30 @@ export type User$emailCampaignsArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.EmailCampaignScalarFieldEnum | Prisma.EmailCampaignScalarFieldEnum[]
+}
+
+/**
+ * User.waCampaigns
+ */
+export type User$waCampaignsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WaCampaign
+   */
+  select?: Prisma.WaCampaignSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WaCampaign
+   */
+  omit?: Prisma.WaCampaignOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WaCampaignInclude<ExtArgs> | null
+  where?: Prisma.WaCampaignWhereInput
+  orderBy?: Prisma.WaCampaignOrderByWithRelationInput | Prisma.WaCampaignOrderByWithRelationInput[]
+  cursor?: Prisma.WaCampaignWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.WaCampaignScalarFieldEnum | Prisma.WaCampaignScalarFieldEnum[]
 }
 
 /**
