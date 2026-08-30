@@ -9,7 +9,7 @@ import type {
   UserRef,
 } from "@/lib/domain/types";
 import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
-import { Button, inputClass } from "@/components/ui/primitives";
+import { Button, MultiSelect, inputClass } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 
 export interface Filters {
@@ -58,6 +58,7 @@ export function FilterBar({
   onChange,
   users,
   searchRef,
+  canFilterByAssignee,
   selectedCount,
   onBulkAssign,
   onBulkStatus,
@@ -78,6 +79,15 @@ export function FilterBar({
    */
   overflow?: React.ReactNode;
   searchRef: RefObject<HTMLInputElement | null>;
+  /**
+   * האם להציג את מסנן השיוך.
+   *
+   * ⚠️ אותו תנאי כמו `canSeeAll`: לעובד שרואה רק את הלידים שלו
+   * המסנן הזה הוא רשימה של אנשים שאין לו לידים שלהם — תפריט שכל
+   * בחירה בו מרוקנת את המסך. הוא נוחות תצוגה ולא הרשאה; מה שבאמת
+   * חוסם הוא ההיקף שנקבע בשרת.
+   */
+  canFilterByAssignee: boolean;
   selectedCount: number;
   onBulkAssign: (assigneeId: string | null) => void;
   onBulkStatus: (to: LeadStatus) => void;
@@ -215,11 +225,35 @@ export function FilterBar({
       </div>
 
       {/*
-        אין כאן יותר MultiSelect-ים לסוג/עדיפות/קטגוריה/עובד.
+        מסנן השיוך חזר, ולבדו.
+
+        ⚠️ הוא ירד בזמנו יחד עם שלושת האחרים (סוג/עדיפות/קטגוריה)
+        בטענה שהתצוגות המהירות מכסות אותו — וזה נכון בדיוק לשני מצבים,
+        "שלי" ו"ללא שיוך". מנהל ששואל "מה יש לטלי" לא היה יכול לענות
+        על זה בשום דרך חוץ מהקלדת השם בחיפוש החופשי, ששולף גם לידים
+        שרק מזכירים אותה בהערה. שלושת האחרים לא חוזרים — להם באמת יש
+        תחליף בקוביות הסטטוס.
+      */}
+      {canFilterByAssignee && (
+        <MultiSelect
+          label="שיוך"
+          selected={filters.assignee}
+          onChange={(assignee) => onChange({ ...filters, assignee })}
+          options={[
+            // ⚠️ ראשון ולא בסוף הרשימה: זו הבחירה שמנהל צריך הכי הרבה,
+            // והיא היחידה שאינה שם של אדם.
+            { value: "unassigned", label: "ללא שיוך" },
+            ...users.map((u) => ({ value: u.id, label: u.name })),
+          ]}
+        />
+      )}
+
+      {/*
+        אין כאן יותר MultiSelect-ים לסוג/עדיפות/קטגוריה.
         קוביות הסטטוס (`StatusTiles`) מסננות לפי הדבר שבאמת מסננים
-        לפיו, והתצוגות המהירות ב-`QueueHeader` מכסות את השאר — "שלי",
-        "דחוף", "ללא שיוך", "לידים חמים". ארבעה תפריטים שצריך לפתוח
-        כדי לגלות אם יש בהם משהו היו עלות בלי תמורה.
+        לפיו, והתצוגות המהירות ב-`QueueHeader` מכסות את השאר — "דחוף"
+        ו"לידים חמים". שלושה תפריטים שצריך לפתוח כדי לגלות אם יש בהם
+        משהו היו עלות בלי תמורה.
 
         השדות עצמם נשארו ב-`Filters` ובשרת: התצוגות המהירות משתמשות
         בהם, והם יחזרו כשיהיה צורך אמיתי בסינון עדין יותר.

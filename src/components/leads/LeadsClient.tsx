@@ -1002,6 +1002,7 @@ export function LeadsClient({
         onChange={applyFilters}
         users={users}
         searchRef={searchRef}
+        canFilterByAssignee={canSeeAll}
         selectedCount={narrow ? 0 : visibleSelected.length}
         onBulkAssign={(id) => assign(visibleSelected, id)}
         onBulkStatus={(to) => requestStatus(visibleSelected, to)}
