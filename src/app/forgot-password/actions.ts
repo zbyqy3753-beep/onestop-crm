@@ -83,7 +83,7 @@ export async function submitCode(
   const email = toLoginEmail(loginId);
 
   // ⚠️ נבדק בשרת ולא רק בטופס — Server Action היא נקודת קצה HTTP.
-  const weak = passwordProblem(password, { email });
+  const weak = passwordProblem(password);
   if (weak) return back(weak);
 
   const result = await redeemCode(email, code, password);

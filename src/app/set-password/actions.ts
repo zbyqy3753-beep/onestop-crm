@@ -45,10 +45,7 @@ export async function setPassword(
     return { status: "error", message: "הקישור אינו תקף. בקש קישור חדש." };
   }
 
-  const weak = passwordProblem(password, {
-    email: target.email,
-    name: target.name,
-  });
+  const weak = passwordProblem(password);
   if (weak) return { status: "error", message: weak };
 
   const result = await completeReset(token, password);

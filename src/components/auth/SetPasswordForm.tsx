@@ -41,7 +41,7 @@ export function SetPasswordForm({
         שלום {name}, בחר סיסמה חדשה לחשבון שלך.
       </p>
       <p className="mb-5 text-xs text-ink-4">
-        לפחות {MIN_PASSWORD_LENGTH} תווים, ובלי השם שלך בתוכה.
+        לפחות {MIN_PASSWORD_LENGTH} תווים.
       </p>
 
       <form action={formAction} className="space-y-4">

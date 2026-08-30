@@ -84,7 +84,7 @@ export async function createUserAction(
   if (role === "supplier" && !leadSourceName) {
     return { ok: false, error: "לספק לידים חובה להגדיר שם מקור" };
   }
-  const weak = passwordProblem(password, { email, name });
+  const weak = passwordProblem(password);
   if (weak) return { ok: false, error: weak };
 
   const existing = await db.users.getByEmail(email);
@@ -172,7 +172,7 @@ export async function updateUserAction(
 
   // שדה ריק = "אל תשנה את הסיסמה", ולכן הבדיקה חלה רק כשהוזן משהו
   if (password) {
-    const weak = passwordProblem(password, { email, name });
+    const weak = passwordProblem(password);
     if (weak) return { ok: false, error: weak };
   }
 
