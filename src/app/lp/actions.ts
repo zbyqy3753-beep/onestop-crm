@@ -10,6 +10,11 @@ import {
   type ProviderKey,
 } from "@/lib/domain/types";
 import { cleanText } from "@/lib/domain/interest";
+import { isYesLead } from "@/lib/domain/yes";
+import {
+  assigneeForIncoming,
+  notifyOwnersOfYesLead,
+} from "@/server/leads/yesRouting";
 import {
   DEFAULT_ASSIGNEE_EMAIL,
   DEFAULT_SOURCE_DETAIL,
@@ -187,7 +192,16 @@ export async function submitLandingLead(
    * את המאגר הלא-משויך. עדיף לידים ללא שיוך על לידים שנעלמו.
    */
   const assignee = await db.users.getByEmail(assigneeEmail());
-  const assigneeId = assignee?.active ? assignee.id : undefined;
+  /*
+   * ⚠️ כלל יאס גובר גם על היעד הקבוע של דף הנחיתה. ליד של יאס הולך
+   * לעובד שמטפל ביאס — זה מה שנקבע, וההחרגה של דף הנחיתה הייתה
+   * מייצרת מסלול שקט שבו לידים של יאס נוחתים אצל מישהו אחר.
+   */
+  const yesFacts = { currentProvider, packageName, sourceDetail: source };
+  const assigneeId = await assigneeForIncoming(
+    yesFacts,
+    assignee?.active ? assignee.id : undefined,
+  );
 
   /*
    * `createdById` הוא מפתח זר חובה. הנמען הוא גם היוצר הטבעי כאן —
@@ -202,7 +216,7 @@ export async function submitLandingLead(
     return error("שגיאה זמנית בשמירת הפנייה. נסו שוב בעוד רגע.");
   }
 
-  await db.leads.create({
+  const lead = await db.leads.create({
     name,
     phone,
     // ליד שמילא טופס מרצונו הוא ליד חם, לא רשומת דאטה
@@ -218,6 +232,17 @@ export async function submitLandingLead(
     assigneeId,
     createdById,
   });
+
+  // ⚠️ אחרי היצירה, ובולעת חריגות בעצמה: הגולש שלחץ "שליחה" לא
+  // אמור לראות שגיאה בגלל הודעה פנימית שלא יצאה.
+  if (isYesLead(yesFacts)) {
+    await notifyOwnersOfYesLead({
+      id: lead.id,
+      name: lead.name,
+      phone: lead.phone,
+      assigneeId,
+    });
+  }
 
   revalidatePath("/leads");
   return { status: "sent" };

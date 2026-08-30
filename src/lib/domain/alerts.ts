@@ -121,3 +121,42 @@ export function unassignedBody(
 ): string {
   return `שלום ${ownerName}, נקבעה חזרה ללקוח ${leadName} (${leadPhone}) אך הליד אינו משויך לאף עובד.`;
 }
+
+/* ── ליד חדש של יאס ───────────────────────────────────────────────────── */
+
+/**
+ * ליד של יאס נכנס והוא כבר שויך אוטומטית.
+ *
+ * ⚠️ **ההתראה הזו אינה מבקשת פעולה — היא מדווחת שהיא כבר נעשתה.** זה
+ * ההבדל מ-`LEAD_UNASSIGNED_TEMPLATE`, ולכן זו תבנית נפרדת ולא מיחזור
+ * של הקיימת: הודעה שכתוב בה "הליד אינו משויך" על ליד ששויך היא שקר
+ * שגורם למנהל לפתוח את המערכת בשביל כלום.
+ */
+export const LEAD_YES_TEMPLATE = {
+  name: "lead_yes_he",
+  language: "he",
+  category: "UTILITY",
+} as const;
+
+/**
+ * ⚠️ המפתח הוא ליד + נמען, בלי חותמת זמן. ליד נוצר פעם אחת, ולכן
+ * ההתראה יוצאת פעם אחת לכל בעלים — גם אם השורה תיכנס שוב אחרי
+ * כישלון שליחה.
+ */
+export function yesLeadDedupeKey(leadId: string, userId: string): string {
+  return `yeslead:${leadId}:${userId}`;
+}
+
+export function yesLeadBody(
+  leadName: string,
+  leadPhone: string,
+  assigneeName: string,
+): string {
+  return `ליד חדש מיאס | לקוח: ${leadName} | טלפון: ${leadPhone} | שויך ל: ${assigneeName}`;
+}
+
+/** אותו דפוס חילוץ כמו `dealWonParams` — הגוף הוא ה-snapshot. */
+export function yesLeadParams(body: string): string[] {
+  const [name, phone, assignee] = fields(body).slice(1);
+  return [name || "לקוח", phone || "—", assignee || "—"];
+}

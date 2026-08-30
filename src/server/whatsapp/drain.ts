@@ -32,9 +32,11 @@ import {
   DEAL_WON_TEMPLATE,
   FOLLOWUP_OVERDUE_TEMPLATE,
   LEAD_UNASSIGNED_TEMPLATE,
+  LEAD_YES_TEMPLATE,
   dealWonParams,
   overdueParams,
   unassignedParams,
+  yesLeadParams,
 } from "@/lib/domain/alerts";
 
 /**
@@ -78,6 +80,7 @@ function templateFor(
   | typeof PASSWORD_RESET_CODE_TEMPLATE
   | typeof PASSWORD_RESET_NOTICE_TEMPLATE
   | typeof LEAD_UNASSIGNED_TEMPLATE
+  | typeof LEAD_YES_TEMPLATE
   | typeof DEAL_WON_TEMPLATE
   | typeof FOLLOWUP_OVERDUE_TEMPLATE
   | typeof BROADCAST_TEMPLATE
@@ -87,6 +90,7 @@ function templateFor(
   if (dedupeKey.startsWith("pwcode:")) return PASSWORD_RESET_CODE_TEMPLATE;
   if (dedupeKey.startsWith("pwnotice:")) return PASSWORD_RESET_NOTICE_TEMPLATE;
   if (dedupeKey.startsWith("unassigned:")) return LEAD_UNASSIGNED_TEMPLATE;
+  if (dedupeKey.startsWith("yeslead:")) return LEAD_YES_TEMPLATE;
   if (dedupeKey.startsWith("dealwon:")) return DEAL_WON_TEMPLATE;
   if (dedupeKey.startsWith("overdue:")) return FOLLOWUP_OVERDUE_TEMPLATE;
   if (dedupeKey.startsWith("broadcast:")) return BROADCAST_TEMPLATE;
@@ -223,16 +227,20 @@ async function deliver(msg: ClaimedMessage): Promise<string> {
     ]);
   }
 
-  const params =
-    template === FOLLOWUP_REMINDER_TEMPLATE
-      ? followUpReminderParams(msg.body)
-      : template === LEAD_UNASSIGNED_TEMPLATE
-        ? unassignedParams(msg.body)
-        : template === DEAL_WON_TEMPLATE
-          ? dealWonParams(msg.body)
-          : template === FOLLOWUP_OVERDUE_TEMPLATE
-            ? overdueParams(msg.body)
-            : [nameFromBody(msg.body)];
+  /*
+   * שרשרת התנאים הפכה לטבלה: חמש תבניות בשרשור טרנרי אחד כבר לא
+   * נקראות, והוספת השישית הייתה מזיזה את ההזחה של כל מה שמתחתיה.
+   */
+  const extractors = new Map<unknown, (body: string) => string[]>([
+    [FOLLOWUP_REMINDER_TEMPLATE, followUpReminderParams],
+    [LEAD_UNASSIGNED_TEMPLATE, unassignedParams],
+    [LEAD_YES_TEMPLATE, yesLeadParams],
+    [DEAL_WON_TEMPLATE, dealWonParams],
+    [FOLLOWUP_OVERDUE_TEMPLATE, overdueParams],
+  ]);
+  const params = (extractors.get(template) ?? ((b: string) => [nameFromBody(b)]))(
+    msg.body,
+  );
 
   return sendTemplate(
     msg.toPhone,
