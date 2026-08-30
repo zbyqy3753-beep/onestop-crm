@@ -17,14 +17,16 @@ import {
 /**
  * מחזיק את מצב מסך ניהול המערכת ומעביר נתונים לילדים פרזנטציוניים.
  *
- * שתי מוטציות: יצירת משתמש ועריכת משתמש (admin/actions.ts). בנוסף,
- * בעלים יכול להיכנס למערכת בתור משתמש אחר — ראה admin/impersonation.ts.
+ * שלוש מוטציות: יצירת משתמש, עריכת משתמש ומחיקתו (admin/actions.ts).
+ * בנוסף, בעלים יכול להיכנס למערכת בתור משתמש אחר — ראה
+ * admin/impersonation.ts.
  * אריחי הסיכום תמיד משקפים את כלל המשתמשים, לא את תוצאת החיפוש.
  */
 export function AdminClient({
   users,
   leads,
   canImpersonate,
+  canDelete,
   currentUserId,
   botHealth,
   botPaused,
@@ -36,6 +38,8 @@ export function AdminClient({
   leads: Lead[];
   /** בעלים בלבד — נקבע בשרת ב-page.tsx */
   canImpersonate: boolean;
+  /** בעלים בלבד. הסתרת הכפתור בלבד — `deleteUserAction` בודקת בעצמה. */
+  canDelete: boolean;
   currentUserId: string;
   /** `null` = הבוט מעולם לא דיווח דופק */
   botHealth: BotHealth | null;
@@ -115,9 +119,12 @@ export function AdminClient({
       <AddUserModal open={addOpen} onClose={() => setAddOpen(false)} />
 
       {/* ה-key מרענן את ערכי ברירת המחדל של הטופס בין משתמשים */}
+      {/* המחיקה יושבת במודל העריכה ולא בשורת הטבלה: כפתור מחיקה ליד
+          כל שורה הוא לחיצה אחת מהחלקה בטלפון, והמסך הזה נפתח גם שם. */}
       <EditUserModal
         key={editUser?.id ?? "none"}
         user={editUser}
+        canDelete={canDelete && editUser?.id !== currentUserId}
         onClose={() => setEditUser(null)}
       />
 

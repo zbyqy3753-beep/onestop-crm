@@ -63,6 +63,45 @@ const users: UserRepository = {
     const row = await prisma.user.update({ where: { id }, data: input });
     return userFromPrisma(row);
   },
+  /*
+   * שבע ספירות בטרנזקציה אחת ולא שבע נסיעות: המסך קורא לזה לפני כל
+   * מחיקה, והמספרים חייבים לתאר את אותו רגע — אחרת ההודעה "יש לו 3
+   * לידים" עלולה להיות מורכבת משני מצבים שונים של המסד.
+   */
+  async historyCounts(id) {
+    const [
+      createdLeads,
+      notes,
+      statusEvents,
+      activity,
+      deals,
+      dealStageEvents,
+      renewalDocuments,
+    ] = await prisma.$transaction([
+      prisma.lead.count({ where: { createdById: id } }),
+      prisma.leadNote.count({ where: { authorId: id } }),
+      prisma.leadStatusEvent.count({ where: { actorId: id } }),
+      prisma.leadActivity.count({ where: { actorId: id } }),
+      prisma.deal.count({ where: { agentId: id } }),
+      prisma.dealStageEvent.count({ where: { actorId: id } }),
+      prisma.renewalDocument.count({ where: { uploadedById: id } }),
+    ]);
+
+    return {
+      createdLeads,
+      notes,
+      statusEvents,
+      activity,
+      deals,
+      dealStageEvents,
+      renewalDocuments,
+    };
+  },
+  async delete(id) {
+    // הסשנים, הטוקנים והשיוכים נופלים לבד: Cascade ו-SetNull מוגדרים
+    // על הקשרים עצמם ב-schema.prisma.
+    await prisma.user.delete({ where: { id } });
+  },
 };
 
 const packages: PackageRepository = {

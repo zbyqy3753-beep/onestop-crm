@@ -49,6 +49,7 @@ export default async function AdminPage() {
       users={users}
       leads={leads}
       canImpersonate={actor.role === "owner"}
+      canDelete={actor.role === "owner"}
       resets={resets.map((r) => ({
         userId: r.userId,
         // ⚠️ ISO ולא Date: הגבול לרכיב לקוח מסדר ל-JSON, ותאריך שעובר

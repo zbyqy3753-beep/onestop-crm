@@ -3,7 +3,10 @@
 import { useState, useTransition } from "react";
 import type { User } from "@/lib/domain/types";
 import { ROLE_CONFIG, ROLE_ORDER } from "@/lib/domain/types";
-import { updateUserAction } from "@/app/(app)/admin/actions";
+import {
+  deleteUserAction,
+  updateUserAction,
+} from "@/app/(app)/admin/actions";
 import { Button, Field, Modal, inputClass } from "@/components/ui/primitives";
 
 /**
@@ -18,14 +21,29 @@ import { Button, Field, Modal, inputClass } from "@/components/ui/primitives";
  */
 export function EditUserModal({
   user,
+  canDelete,
   onClose,
 }: {
   /** המשתמש לעריכה, או `null` כשהמודל סגור */
   user: User | null;
+  /**
+   * בעלים בלבד, ולא על עצמו. הסתרה של פקד ולא הרשאה —
+   * `deleteUserAction` בודקת את התפקיד ואת הזהות בעצמה.
+   */
+  canDelete: boolean;
   onClose: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startSubmit] = useTransition();
+  /**
+   * שלב האישור, לא `window.confirm`.
+   *
+   * ⚠️ דיאלוג המערכת נחסם בחלק מהדפדפנים בטלפון, ואז המחיקה פשוט
+   * לא קורית בלי שום הודעה. אישור בתוך המודל עובד בכל מקום, וגם
+   * מאפשר לנסח בעברית מה בדיוק עומד להימחק.
+   */
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, startDelete] = useTransition();
 
   function submit(formData: FormData) {
     if (!user) return;
@@ -33,6 +51,22 @@ export function EditUserModal({
       const result = await updateUserAction(user.id, formData);
       if (!result.ok) {
         setError(result.error);
+        return;
+      }
+      onClose();
+    });
+  }
+
+  function remove() {
+    if (!user) return;
+    startDelete(async () => {
+      const result = await deleteUserAction(user.id);
+      if (!result.ok) {
+        setError(result.error);
+        // חזרה למצב הרגיל: ההודעה מסבירה שהמחיקה חסומה (למשל יש לו
+        // לידים), ושורת האישור הפתוחה הייתה מזמינה לחיצה נוספת על
+        // כפתור שכבר ידוע שייכשל.
+        setConfirming(false);
         return;
       }
       onClose();
@@ -141,11 +175,54 @@ export function EditUserModal({
           </p>
         )}
 
-        <div className="flex justify-end gap-2 sm:col-span-2">
-          <Button type="button" onClick={onClose} disabled={pending}>
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:col-span-2">
+          {/* המחיקה בקצה הנגדי של השורה, ולא צמודה ל"שמירת שינויים" */}
+          {canDelete && !confirming && (
+            <Button
+              type="button"
+              icon="trash"
+              onClick={() => {
+                setError(null);
+                setConfirming(true);
+              }}
+              disabled={pending || deleting}
+              className="me-auto text-bad"
+            >
+              מחיקת משתמש
+            </Button>
+          )}
+
+          {canDelete && confirming && (
+            <div className="me-auto flex flex-wrap items-center gap-2">
+              <span className="text-sm text-ink-2">
+                למחוק את {user.name} לצמיתות?
+              </span>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={remove}
+                disabled={deleting}
+              >
+                {deleting ? "מוחק…" : "כן, למחוק"}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setConfirming(false)}
+                disabled={deleting}
+              >
+                לא
+              </Button>
+            </div>
+          )}
+
+          <Button type="button" onClick={onClose} disabled={pending || deleting}>
             ביטול
           </Button>
-          <Button type="submit" variant="primary" disabled={pending}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={pending || deleting}
+          >
             {pending ? "שומר…" : "שמירת שינויים"}
           </Button>
         </div>

@@ -1,8 +1,12 @@
 "use server";
 
-import { db } from "@/server/repositories";
+import { db, type UserHistoryCounts } from "@/server/repositories";
 import { requireSessionUser } from "@/server/auth/session";
-import { createAuthUser, updateAuthUser } from "@/server/auth/supabaseAdmin";
+import {
+  createAuthUser,
+  deleteAuthUser,
+  updateAuthUser,
+} from "@/server/auth/supabaseAdmin";
 import type { Role } from "@/lib/domain/types";
 import { isRole } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
@@ -261,6 +265,111 @@ export async function updateUserAction(
   if (!active || password || emailChanged) {
     await db.sessions.deleteAllForUser(userId);
   }
+
+  revalidateUserSurfaces();
+  return { ok: true };
+}
+
+/* ── מחיקת משתמש ────────────────────────────────────────────────────── */
+
+/**
+ * מה מחזיק את המשתמש, בעברית, כדי להסביר למה המחיקה נחסמה.
+ *
+ * מחזירה רק את הסוגים שהמספר שלהם אינו 0: "3 לידים ו-2 עסקאות"
+ * קריא, ורשימה של שבעה סוגים שרובם אפסים אינה.
+ */
+function historySummary(counts: UserHistoryCounts): string {
+  const parts: string[] = [];
+  if (counts.createdLeads) parts.push(`${counts.createdLeads} לידים שהוא יצר`);
+  if (counts.deals) parts.push(`${counts.deals} עסקאות`);
+  if (counts.notes) parts.push(`${counts.notes} הערות`);
+  const events = counts.statusEvents + counts.activity + counts.dealStageEvents;
+  if (events) parts.push(`${events} רישומי פעילות`);
+  if (counts.renewalDocuments) {
+    parts.push(`${counts.renewalDocuments} מסמכי חידוש`);
+  }
+
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0];
+  return `${parts.slice(0, -1).join(", ")} ו-${parts[parts.length - 1]}`;
+}
+
+/**
+ * מחיקה סופית של משתמש — גם השורה אצלנו וגם חשבון ה-Supabase Auth.
+ *
+ * ⚠️ **מחיקה אינה תחליף להשבתה, והיא לא זמינה למי שכבר עבד במערכת.**
+ * לידים, עסקאות, הערות ורישומי פעילות נושאים את מזהה המשתמש בעמודה
+ * שאינה יכולה להיות ריקה, ולכן מחיקתו הייתה מחייבת למחוק גם אותם —
+ * כלומר להשמיד היסטוריה עסקית כדי לנקות שורה בטבלת משתמשים. במקרה
+ * הזה הפעולה נחסמת עם הסבר, וההשבתה היא התשובה הנכונה. מה שכן נמחק
+ * הוא בדיוק מה שצריך: חשבונות שנפתחו בטעות, כפילויות, ועובדים
+ * שמעולם לא נגעו בכלום.
+ *
+ * ⚠️ רק בעלים, ובדיוק מאותה סיבה שרק בעלים מאפס סיסמאות: זו פעולה
+ * בלתי הפיכה על חשבון של מישהו אחר.
+ *
+ * הסדר הוא Supabase קודם ואז המסד — ההפך מ-`updateUserAction`.
+ * מחיקה שנעצרת באמצע משאירה חשבון התחברות בלי שורה במערכת, וזה
+ * חשבון שלא יכול להיכנס (`verifyCredentials` לא ימצא לו שורה). הסדר
+ * ההפוך היה משאיר שורה בלי חשבון — משתמש שמופיע במסך ולא יכול
+ * להתחבר, וזו תקלה שקשה יותר לאבחן.
+ */
+export async function deleteUserAction(userId: string): Promise<ActionResult> {
+  const actor = await requireSessionUser();
+  if (actor.role !== "owner") {
+    return { ok: false, error: "רק מנהל ראשי יכול למחוק משתמשים" };
+  }
+
+  const target = await db.users.getById(userId);
+  if (!target) return { ok: false, error: "המשתמש לא נמצא" };
+
+  if (target.id === actor.id) {
+    return { ok: false, error: "אי אפשר למחוק את החשבון שלך" };
+  }
+  /*
+   * גם בעלים אחר לא נמחק. שני בעלים הם גיבוי זה לזה, ומחיקה של אחד
+   * מהם היא הדרך הקצרה ביותר להישאר בלי אף חשבון עם גישה מלאה.
+   */
+  if (target.role === "owner") {
+    return { ok: false, error: "אי אפשר למחוק מנהל ראשי" };
+  }
+
+  const counts = await db.users.historyCounts(userId);
+  const summary = historySummary(counts);
+  if (summary) {
+    return {
+      ok: false,
+      error:
+        `אי אפשר למחוק את ${target.name} — רשומים עליו ${summary}. ` +
+        `מחיקה הייתה מוחקת גם אותם. במקום זה אפשר לסמן אותו כלא פעיל ` +
+        `בעריכה, וזה מנתק אותו מיד מכל המכשירים.`,
+    };
+  }
+
+  try {
+    await deleteAuthUser(target.email);
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "מחיקת חשבון ההתחברות נכשלה",
+    };
+  }
+
+  try {
+    await db.users.delete(userId);
+  } catch (e) {
+    return {
+      ok: false,
+      error:
+        `חשבון ההתחברות של ${target.name} נמחק אבל מחיקת השורה נכשלה: ` +
+        `${e instanceof Error ? e.message : "שגיאה לא ידועה"}. ` +
+        `הוא לא יכול להתחבר יותר — צריך לנסות שוב או להשבית אותו.`,
+    };
+  }
+
+  // הסשנים נופלים עם השורה (Cascade), אבל לא בזיכרון ולא בשום מימוש
+  // עתידי — לכן זה מפורש כאן ולא נשען על ההגדרה במסד.
+  await db.sessions.deleteAllForUser(userId);
 
   revalidateUserSurfaces();
   return { ok: true };

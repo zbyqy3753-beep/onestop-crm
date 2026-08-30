@@ -64,6 +64,48 @@ const users: UserRepository = {
     }
     return structuredClone(user);
   },
+  /*
+   * אותן שבע ספירות כמו במימוש Prisma, על אותם שדות בדיוק. חידושי
+   * מסמכים אינם קיימים בזיכרון ולכן תמיד 0 — זה לא "חסר" אלא היעדר
+   * הישות כולה במימוש הזה.
+   */
+  async historyCounts(id) {
+    let notes = 0;
+    let statusEvents = 0;
+    let activity = 0;
+    for (const lead of state.leads) {
+      notes += lead.notes.filter((n) => n.authorId === id).length;
+      statusEvents += lead.history.filter((e) => e.actorId === id).length;
+      activity += lead.activity.filter((a) => a.actorId === id).length;
+    }
+
+    return {
+      createdLeads: state.leads.filter((l) => l.createdById === id).length,
+      notes,
+      statusEvents,
+      activity,
+      deals: state.deals.filter((d) => d.agentId === id).length,
+      dealStageEvents: state.deals.reduce(
+        (sum, d) => sum + d.stageHistory.filter((e) => e.actorId === id).length,
+        0,
+      ),
+      renewalDocuments: 0,
+    };
+  },
+  async delete(id) {
+    const index = state.users.findIndex((u) => u.id === id);
+    if (index === -1) throw new Error(`משתמש ${id} לא נמצא`);
+    state.users.splice(index, 1);
+
+    // מה שב-Postgres עושים Cascade ו-SetNull, כאן צריך ביד — אחרת
+    // נשארים סשן תקף למשתמש מחוק ולידים שמצביעים לשום מקום.
+    state.sessions = state.sessions.filter(
+      (s) => s.userId !== id && s.impersonatingId !== id,
+    );
+    for (const lead of state.leads) {
+      if (lead.assigneeId === id) lead.assigneeId = undefined;
+    }
+  },
 };
 
 const packages: PackageRepository = {

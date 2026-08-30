@@ -255,6 +255,28 @@ export interface UpdateUserInput {
   active?: boolean;
 }
 
+/**
+ * כמה רשומות היסטוריה רשומות על שם המשתמש, לפי סוג.
+ *
+ * ⚠️ אלה בדיוק הקשרים שאי אפשר לנתק: ב-schema.prisma הם `User`
+ * ולא `User?`, כלומר המסד יסרב למחוק שורה שיש לה אפילו אחד מהם.
+ * שאר הקשרים (שיוך ליד, מפנה בהרשמה, יוצר דיוור) מוגדרים
+ * `onDelete: SetNull` ומתנקים לבד, ולכן אינם נספרים כאן.
+ *
+ * המספרים הם גם ההסבר למנהל: "אי אפשר למחוק" בלי לומר מה מחזיק
+ * שולח אותו לנחש.
+ */
+export interface UserHistoryCounts {
+  /** לידים שהוא **יצר**. שיוך אינו חוסם — הוא מתנקה לבד. */
+  createdLeads: number;
+  notes: number;
+  statusEvents: number;
+  activity: number;
+  deals: number;
+  dealStageEvents: number;
+  renewalDocuments: number;
+}
+
 export interface UserRepository {
   list(): Promise<User[]>;
   getById(id: UserId): Promise<User | null>;
@@ -262,6 +284,18 @@ export interface UserRepository {
   listActive(): Promise<User[]>;
   create(input: CreateUserInput): Promise<User>;
   update(id: UserId, input: UpdateUserInput): Promise<User>;
+
+  /** ההיסטוריה שחוסמת מחיקה. סכום 0 = המשתמש ניתן למחיקה. */
+  historyCounts(id: UserId): Promise<UserHistoryCounts>;
+
+  /**
+   * מחיקה סופית של המשתמש.
+   *
+   * ⚠️ הקורא חייב לבדוק `historyCounts` קודם. כאן אין בדיקה בכוונה —
+   * המסד הוא זה שאוכף, וכפילות של הכלל בשתי שכבות מייצרת שתי
+   * תשובות שונות לשאלה "מה קורה למי שיש לו לידים".
+   */
+  delete(id: UserId): Promise<void>;
 }
 
 /* ── סשנים ────────────────────────────────────────────────────────────── */

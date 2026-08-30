@@ -95,3 +95,20 @@ export async function updateAuthUser(
   });
   if (error) throw new Error(error.message);
 }
+
+/**
+ * מוחק חשבון Auth לפי מייל.
+ *
+ * ⚠️ שקט כשאין חשבון, בניגוד ל-`updateAuthUser` שזורק. מחיקת משתמש
+ * חייבת להצליח גם כשה-Auth כבר לא מסונכרן איתנו — שורה שנוצרה
+ * ישירות במסד, או חשבון שנמחק ידנית ב-Supabase. חסימת המחיקה במקרה
+ * הזה הייתה משאירה בדיוק את השורות שהכי צריך לנקות.
+ */
+export async function deleteAuthUser(email: string): Promise<void> {
+  const id = await findAuthUserId(email);
+  if (!id) return;
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.auth.admin.deleteUser(id);
+  if (error) throw new Error(error.message);
+}
