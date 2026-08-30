@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { ROLE_CONFIG, ROLE_ORDER } from "@/lib/domain/types";
 import { createUserAction } from "@/app/(app)/admin/actions";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password";
 import { Button, Field, Modal, inputClass } from "@/components/ui/primitives";
 
 export function AddUserModal({
@@ -95,7 +96,13 @@ export function AddUserModal({
           />
         </Field>
 
-        <Field label="סיסמה ראשונית" hint="לפחות 10 תווים">
+        {/* ⚠️ נגזר מהקבוע ולא כתוב ביד. הטקסט הזה נשאר תקוע על
+            "לפחות 10 תווים" בזמן שהסף עצמו היה 12 ואז 6 — כלומר המסך
+            הבטיח מספר שלא היה נכון באף אחת משתי הגרסאות. */}
+        <Field
+          label="סיסמה ראשונית"
+          hint={`לפחות ${MIN_PASSWORD_LENGTH} תווים`}
+        >
           <input
             name="password"
             type="password"

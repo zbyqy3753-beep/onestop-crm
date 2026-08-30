@@ -27,6 +27,32 @@ export type ActionResult<T = undefined> =
  */
 
 /**
+ * הודעת שגיאה של Supabase → עברית.
+ *
+ * ⚠️ ההודעות של Supabase מגיעות באנגלית ומתארות את המודל שלו, לא את
+ * המסך שלנו: מנהל שרואה "Unable to validate email address: invalid
+ * format" אחרי שהקליד שם משתמש לא יודע שהבעיה היא רווח בשדה, ולא
+ * יודע שהמערכת בכלל מרכיבה ממנו כתובת מייל. שאר ההודעות עוברות כפי
+ * שהן — עדיף אנגלית מובנת מ"שגיאה לא ידועה".
+ */
+function authErrorInHebrew(error: unknown, email: string): string {
+  const message = error instanceof Error ? error.message : "";
+
+  if (/validate email address|invalid format/i.test(message)) {
+    return (
+      `מערכת ההתחברות דחתה את הכתובת ${email} כלא תקינה. ` +
+      `שם המשתמש הוא מילה אחת רצופה באנגלית, בלי רווחים — ` +
+      `השם המלא נכנס בשדה "שם מלא".`
+    );
+  }
+  if (/already been registered|already registered|already exists/i.test(message)) {
+    return `כבר קיים חשבון התחברות עם הכתובת ${email}.`;
+  }
+
+  return message || "יצירת חשבון האימות נכשלה";
+}
+
+/**
  * יצירת משתמש חדש: גם רשומת User אצלנו, גם חשבון Supabase Auth
  * (כדי שיוכל להתחבר מייד עם המייל/סיסמה שהוזנו כאן).
  *
@@ -93,7 +119,7 @@ export async function createUserAction(
   try {
     await createAuthUser(email, password);
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "יצירת חשבון האימות נכשלה" };
+    return { ok: false, error: authErrorInHebrew(e, email) };
   }
 
   await db.users.create({
@@ -208,10 +234,7 @@ export async function updateUserAction(
         password: password || undefined,
       });
     } catch (e) {
-      return {
-        ok: false,
-        error: e instanceof Error ? e.message : "עדכון חשבון ההתחברות נכשל",
-      };
+      return { ok: false, error: authErrorInHebrew(e, email) };
     }
   }
 
