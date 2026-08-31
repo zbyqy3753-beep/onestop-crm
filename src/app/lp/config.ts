@@ -46,5 +46,12 @@ export function crmCategory(pkg: Package): LeadCategoryKey {
 /** ברירת המחדל לערך שנרשם בעמודת "מקור" של כל ליד מהדף. */
 export const DEFAULT_SOURCE_DETAIL = "האתר של אלירן";
 
-/** ברירת המחדל לנמען — המייל של אלירן ב-CRM. */
-export const DEFAULT_ASSIGNEE_EMAIL = "aliran@onestop.co.il";
+/**
+ * ברירת המחדל לנמען — המייל של אלירן ב-CRM.
+ *
+ * ⚠️ כאן ישב `aliran@onestop.co.il`, כתובת שאינה קיימת: המייל האמיתי
+ * הוא `eliranklein@`. התוצאה הייתה כשל שקט לגמרי — `getByEmail`
+ * החזיר null, הליד נשמר בלי שיוך, ואיש לא ראה שגיאה. אותה טעות בדיוק
+ * ישבה גם ב-LEADS_API_PARTNER_ASSIGNEE בייצור.
+ */
+export const DEFAULT_ASSIGNEE_EMAIL = "eliranklein@onestop.co.il";

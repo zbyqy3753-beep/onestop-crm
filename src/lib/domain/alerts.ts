@@ -160,3 +160,36 @@ export function yesLeadParams(body: string): string[] {
   const [name, phone, assignee] = fields(body).slice(1);
   return [name || "לקוח", phone || "—", assignee || "—"];
 }
+
+/* ── ליד חם שהגיע לעובד ───────────────────────────────────────────────── */
+
+/**
+ * ליד חם ששויך לעובד.
+ *
+ * ⚠️ **חם בלבד, ובכוונה.** ליד חם הוא אדם שממש עכשיו מילא טופס או
+ * דיבר עם מישהו, ושווה החזרה מיידית; רשומת דאטה קרה אינה. התראה על
+ * כל שיוך הייתה הופכת תוך יומיים לרעש שמתעלמים ממנו — וזה בדיוק מה
+ * שמחסל גם את ההתראות שכן חשובות.
+ */
+export const LEAD_HOT_TEMPLATE = {
+  name: "lead_hot_he",
+  language: "he",
+  category: "UTILITY",
+} as const;
+
+/**
+ * ⚠️ ליד + עובד, בלי חותמת זמן: מי שקיבל ליד, החזיר אותו וקיבל שוב
+ * לא צריך התראה שנייה על אותו לקוח.
+ */
+export function hotLeadDedupeKey(leadId: string, userId: string): string {
+  return `hotlead:${leadId}:${userId}`;
+}
+
+export function hotLeadBody(leadName: string, leadPhone: string): string {
+  return `ליד חם חדש אצלך | לקוח: ${leadName} | טלפון: ${leadPhone}`;
+}
+
+export function hotLeadParams(body: string): string[] {
+  const [name, phone] = fields(body).slice(1);
+  return [name || "לקוח", phone || "—"];
+}

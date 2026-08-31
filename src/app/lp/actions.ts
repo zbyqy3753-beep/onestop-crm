@@ -15,6 +15,7 @@ import {
   assigneeForIncoming,
   notifyOwnersOfYesLead,
 } from "@/server/leads/yesRouting";
+import { notifyHotLeadAssigned } from "@/server/leads/hotLeadAlert";
 import {
   DEFAULT_ASSIGNEE_EMAIL,
   DEFAULT_SOURCE_DETAIL,
@@ -192,6 +193,12 @@ export async function submitLandingLead(
    * את המאגר הלא-משויך. עדיף לידים ללא שיוך על לידים שנעלמו.
    */
   const assignee = await db.users.getByEmail(assigneeEmail());
+  // ⚠️ כתובת שהוגדרה ואינה קיימת היא טעות הקלדה, לא מצב תקין. בלי
+  // השורה הזו היא נראית בדיוק כמו "אין יעד מוגדר" — הליד נשמר בלי
+  // שיוך ואיש לא יודע למה.
+  if (!assignee) {
+    console.warn(`[lp] יעד השיוך ${assigneeEmail()} לא נמצא — הליד נשמר ללא שיוך`);
+  }
   /*
    * ⚠️ כלל יאס גובר גם על היעד הקבוע של דף הנחיתה. ליד של יאס הולך
    * לעובד שמטפל ביאס — זה מה שנקבע, וההחרגה של דף הנחיתה הייתה
@@ -243,6 +250,11 @@ export async function submitLandingLead(
       assigneeId,
     });
   }
+
+  await notifyHotLeadAssigned({
+    lead: { id: lead.id, name: lead.name, phone: lead.phone, kind: lead.kind },
+    assigneeId,
+  });
 
   revalidatePath("/leads");
   return { status: "sent" };

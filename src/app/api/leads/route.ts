@@ -20,6 +20,7 @@ import {
   assigneeForIncoming,
   notifyOwnersOfYesLead,
 } from "@/server/leads/yesRouting";
+import { notifyHotLeadAssigned } from "@/server/leads/hotLeadAlert";
 
 /**
  * `POST /api/leads` — קליטת לידים משותפים חיצוניים.
@@ -303,6 +304,12 @@ async function partnerAssignee(
     if (name !== partnerName || !email) continue;
 
     const user = await db.users.getByEmail(email);
+    // ⚠️ ראה ההסבר המקביל ב-`lp/actions.ts`: טעות הקלדה בכתובת נראית
+    // כאן בדיוק כמו "לשותף הזה אין יעד", והלידים שלו מפסיקים להשתייך
+    // בלי שום סימן. זה קרה בפועל — `aliran@` במקום `eliranklein@`.
+    if (!user) {
+      console.warn(`[leads-api] יעד השיוך ${email} של ${partnerName} לא נמצא`);
+    }
     return user?.active ? user.id : undefined;
   }
   return undefined;
@@ -452,6 +459,13 @@ export async function POST(request: NextRequest): Promise<Response> {
       assigneeId,
     });
   }
+
+  // כל ליד שנכנס מה-API הוא "חם" (ראה למעלה), ולכן העובד שקיבל אותו
+  // מקבל הודעה. אין כאן `actorId` — לא אדם ביצע את השיוך.
+  await notifyHotLeadAssigned({
+    lead: { id: lead.id, name: lead.name, phone: lead.phone, kind: lead.kind },
+    assigneeId,
+  });
 
   revalidatePath("/leads");
   return Response.json({ success: true, id: lead.id }, { status: 201 });

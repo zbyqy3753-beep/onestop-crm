@@ -21,6 +21,7 @@ import { isIsraeliPhone } from "@/lib/format";
 import { instantFromIsraelDateTime } from "@/lib/tz";
 import { canSeeAllLeads, isSupplier } from "@/lib/domain/permissions";
 import { revalidateLeadSurfaces } from "@/app/(app)/_revalidate";
+import { notifyHotLeadAssigned } from "@/server/leads/hotLeadAlert";
 
 /**
  * כל הכתיבות למסך הלידים.
@@ -118,7 +119,10 @@ export async function createLeadAction(
   const packageName = String(formData.get("packageName") ?? "").trim();
   const actorId = await actor();
 
-  await db.leads.create({
+  const kind = (formData.get("kind") as LeadKind) ?? "data";
+  const targetId = assigneeId || actorId;
+
+  const created = await db.leads.create({
     name,
     // ספרות בלבד — הייבוא, העריכה וקצה ה-API כולם מנרמלים כך, והדדופ
     // לפי טלפון הוא השוואת מחרוזות מדויקת. ליד שנשמר כאן כ-
@@ -127,16 +131,24 @@ export async function createLeadAction(
     email: email || undefined,
     city: city || undefined,
     note: note || undefined,
-    kind: (formData.get("kind") as LeadKind) ?? "data",
+    kind,
     priority: (formData.get("priority") as Priority) ?? "normal",
     category: (category as LeadCategoryKey) || undefined,
     currentProvider: (currentProvider as ProviderKey) || undefined,
     sourceDetail: sourceDetail || undefined,
     packageName: packageName || undefined,
     // ללא בחירה = משויך ליוצר, לא ל"ללא שיוך" — תואם לטופס האמיתי
-    assigneeId: assigneeId || actorId,
+    assigneeId: targetId,
     source: "manual",
     createdById: actorId,
+  });
+
+  // ⚠️ `actorId` מועבר כדי שמי שיצר ליד לעצמו לא יקבל וואטסאפ על
+  // פעולה שהוא בדיוק עשה במסך.
+  await notifyHotLeadAssigned({
+    lead: { id: created.id, name: created.name, phone: created.phone, kind },
+    assigneeId: targetId,
+    actorId,
   });
 
   revalidateLeadSurfaces();
@@ -447,7 +459,26 @@ export async function assignAction(
     if (!user.active) return { ok: false, error: "העובד אינו פעיל" };
   }
 
-  await db.leads.assign(leadIds, assigneeId, await actor());
+  const actorId = await actor();
+  await db.leads.assign(leadIds, assigneeId, actorId);
+
+  /*
+   * ⚠️ אחרי השיוך ולא לפניו, ורק על לידים חמים — `notifyHotLeadAssigned`
+   * מסננת בעצמה לפי `kind`. השליפה כאן היא כדי לדעת את הסוג ואת פרטי
+   * הלקוח; היא לא חוסמת את הפעולה, שכבר הצליחה.
+   */
+  if (assigneeId) {
+    for (const id of leadIds) {
+      const lead = await db.leads.getById(id);
+      if (!lead) continue;
+      await notifyHotLeadAssigned({
+        lead: { id: lead.id, name: lead.name, phone: lead.phone, kind: lead.kind },
+        assigneeId,
+        actorId,
+      });
+    }
+  }
+
   revalidateLeadSurfaces();
   return { ok: true };
 }
