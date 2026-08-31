@@ -9,7 +9,7 @@ import {
 } from "@/server/auth/supabaseAdmin";
 import type { Role } from "@/lib/domain/types";
 import { isRole } from "@/lib/domain/types";
-import { isIsraeliPhone } from "@/lib/format";
+import { isIsraeliPhone, parsePhoneList } from "@/lib/format";
 import { passwordProblem } from "@/lib/password";
 import { isValidLoginId, toLoginEmail } from "@/lib/loginId";
 import { revalidateUserSurfaces } from "@/app/(app)/_revalidate";
@@ -50,6 +50,23 @@ function authErrorInHebrew(error: unknown, email: string): string {
   }
 
   return message || "יצירת חשבון האימות נכשלה";
+}
+
+/**
+ * הטלפונים הנוספים מהטופס, או הודעת שגיאה.
+ *
+ * ⚠️ ⁠מספר לא תקין נפסל ולא מסונן בשקט. עובד שהקליד ספרה חסרה היה
+ * מקבל מסך ששמר בהצלחה ולא מקבל הודעות לאותו מספר לעולם, בלי שום
+ * רמז לכך.
+ */
+function extraPhonesFrom(formData: FormData): string[] | { error: string } {
+  const { phones, invalid } = parsePhoneList(
+    String(formData.get("extraPhones") ?? ""),
+  );
+  if (invalid.length) {
+    return { error: `מספר טלפון לא תקין: ${invalid.join(", ")}` };
+  }
+  return phones;
 }
 
 /**
@@ -96,6 +113,8 @@ export async function createUserAction(
   if (phone && !isIsraeliPhone(phone)) {
     return { ok: false, error: "מספר טלפון לא תקין" };
   }
+  const extraPhones = extraPhonesFrom(formData);
+  if (!Array.isArray(extraPhones)) return { ok: false, error: extraPhones.error };
   if (!isRole(rawRole)) return { ok: false, error: "תפקיד לא מוכר" };
   const role: Role = rawRole;
   if (role === "owner" && actor.role !== "owner") {
@@ -131,6 +150,7 @@ export async function createUserAction(
     // רק לספק: לשאר התפקידים השדה חסר משמעות, ושמירתו הייתה יוצרת
     // משתמשים שנראים כספקים בכל שאילתה שתיכתב בעתיד על העמודה הזו
     leadSourceName: role === "supplier" ? leadSourceName : undefined,
+    extraPhones,
     role,
   });
 
@@ -184,6 +204,8 @@ export async function updateUserAction(
   if (phone && !isIsraeliPhone(phone)) {
     return { ok: false, error: "מספר טלפון לא תקין" };
   }
+  const extraPhones = extraPhonesFrom(formData);
+  if (!Array.isArray(extraPhones)) return { ok: false, error: extraPhones.error };
   if (!isRole(rawRole)) return { ok: false, error: "תפקיד לא מוכר" };
   const role: Role = rawRole;
 
@@ -247,6 +269,7 @@ export async function updateUserAction(
       // `null` ולא `undefined` כשהתפקיד אינו ספק: הורדת תפקיד מספק
       // לעובד חייבת לנקות את השדה, אחרת הוא נשאר תלוי על החשבון
       leadSourceName: role === "supplier" ? leadSourceName : null,
+      extraPhones,
       role,
       active,
     });

@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/server/db/client";
 import { STATUS_CONFIG } from "@/lib/domain/types";
-import { isIsraeliPhone, toE164 } from "@/lib/format";
+import { isIsraeliPhone } from "@/lib/format";
 import { followUpReminder } from "@/lib/domain/whatsapp";
 import {
   dealWonBody,
@@ -16,6 +16,7 @@ import { leadFromPrisma } from "@/server/repositories/prisma/mappers";
 import { israelHourMinute, startOfDay } from "@/lib/tz";
 import { reminderTiming } from "@/lib/domain/reminderTiming";
 import { readSettings, type BotSettingsView } from "./settings";
+import { enqueueForUser } from "./recipients";
 import { markOpenerSent } from "@/server/renewals/campaign";
 
 /**
@@ -200,12 +201,12 @@ async function enqueueDueFollowUps(
       Math.max(plannedSend.getTime(), Date.now()),
     );
 
-    try {
-      await prisma.whatsAppMessage.create({
-        data: {
-          dedupeKey: key,
-          toPhone: toE164(recipient.phone),
-          body: followUpReminder(leadFromPrisma(row), {
+    created += await enqueueForUser({
+      user: recipient,
+      dedupeKey: key,
+      scheduledFor: plannedSend,
+      leadId: row.id,
+      body: followUpReminder(leadFromPrisma(row), {
             appUrl,
             // הדקות שנשארו באמת, ולא ההקדמה שבהגדרות: "בעוד 10 דק׳"
             // על חזרה שבעוד שש הוא אותו שקר קטן, מהכיוון השני
@@ -213,18 +214,9 @@ async function enqueueDueFollowUps(
             // מועד החזרה עצמו כבר עבר = המחשב במשרד היה כבוי, או
             // שהתזכורת נדחתה לפתיחת החלון. "בעוד 10 דקות" על חזרה
             // מלפני שעתיים הוא שקר
-            late: timing.late,
-          }),
-          scheduledFor: plannedSend,
-          leadId: row.id,
-          recipientUserId: recipient.id,
-        },
-      });
-      created++;
-    } catch {
-      // הפרת ייחודיות = התזכורת הזו כבר בתור או כבר נשלחה. זה המצב
-      // הרגיל בכל סקר אחרי הראשון, ולא שגיאה.
-    }
+        late: timing.late,
+      }),
+    });
   }
   return created;
 }
@@ -638,7 +630,7 @@ async function enqueueUnassignedAlerts(
 
   const owners = await prisma.user.findMany({
     where: { role: "owner", active: true, phone: { not: null } },
-    select: { id: true, name: true, phone: true },
+    select: { id: true, name: true, phone: true, extraPhones: true },
   });
   if (owners.length === 0) return;
 
@@ -647,27 +639,16 @@ async function enqueueUnassignedAlerts(
     const scheduled = lead.followUpAt!;
 
     for (const owner of owners) {
-      const to = toE164(owner.phone ?? "");
-      if (!to || !isIsraeliPhone(owner.phone ?? "")) continue;
-
-      try {
-        await prisma.whatsAppMessage.create({
-          data: {
-            dedupeKey: unassignedDedupeKey(lead.id, owner.id, scheduled),
-            toPhone: to,
-            body: unassignedBody(owner.name, lead.name, lead.phone),
-            // ⚠️ יוצאת מיד ולא במועד החזרה: כל הנקודה היא לתת לבעלים
-            // זמן לשייך **לפני** שהשעה מגיעה. התראה שתגיע בשעת החזרה
-            // עצמה כבר מאחרת.
-            scheduledFor: nextSendableInstant(new Date(), win),
-            leadId: lead.id,
-            recipientUserId: owner.id,
-          },
-        });
-      } catch {
-        // מפתח כפול = כבר הותרענו על החזרה הזו לבעלים הזה. זו
-        // ההתנהגות הרצויה ולא שגיאה.
-      }
+      await enqueueForUser({
+        user: owner,
+        dedupeKey: unassignedDedupeKey(lead.id, owner.id, scheduled),
+        body: unassignedBody(owner.name, lead.name, lead.phone),
+        // ⚠️ יוצאת מיד ולא במועד החזרה: כל הנקודה היא לתת לבעלים
+        // זמן לשייך **לפני** שהשעה מגיעה. התראה שתגיע בשעת החזרה
+        // עצמה כבר מאחרת.
+        scheduledFor: nextSendableInstant(new Date(), win),
+        leadId: lead.id,
+      });
     }
   }
 }
@@ -685,7 +666,7 @@ const OVERDUE_AFTER_MS = 30 * 60_000;
 async function alertOwners() {
   const rows = await prisma.user.findMany({
     where: { role: "owner", active: true, phone: { not: null } },
-    select: { id: true, name: true, phone: true },
+    select: { id: true, name: true, phone: true, extraPhones: true },
   });
   return rows.filter((o) => isIsraeliPhone(o.phone ?? ""));
 }
@@ -721,20 +702,13 @@ async function enqueueDealWonAlerts(win: SendWindow): Promise<void> {
 
   for (const ev of events) {
     for (const owner of owners) {
-      try {
-        await prisma.whatsAppMessage.create({
-          data: {
-            dedupeKey: dealWonDedupeKey(ev.id, owner.id),
-            toPhone: toE164(owner.phone!),
-            body: dealWonBody(ev.lead.name, ev.lead.phone, ev.actor.name),
-            scheduledFor: nextSendableInstant(new Date(), win),
-            leadId: ev.lead.id,
-            recipientUserId: owner.id,
-          },
-        });
-      } catch {
-        // כבר הותרענו על הסגירה הזו לבעלים הזה.
-      }
+      await enqueueForUser({
+        user: owner,
+        dedupeKey: dealWonDedupeKey(ev.id, owner.id),
+        body: dealWonBody(ev.lead.name, ev.lead.phone, ev.actor.name),
+        scheduledFor: nextSendableInstant(new Date(), win),
+        leadId: ev.lead.id,
+      });
     }
   }
 }
@@ -800,25 +774,18 @@ async function enqueueOverdueAlerts(win: SendWindow): Promise<void> {
     }
 
     for (const owner of owners) {
-      try {
-        await prisma.whatsAppMessage.create({
-          data: {
-            dedupeKey: overdueDedupeKey(lead.id, owner.id, at),
-            toPhone: toE164(owner.phone!),
-            body: overdueBody(
-              lead.name,
-              lead.phone,
-              lead.assignee?.name ?? "—",
-              israelHourMinute(at.getTime()),
-            ),
-            scheduledFor: nextSendableInstant(new Date(), win),
-            leadId: lead.id,
-            recipientUserId: owner.id,
-          },
-        });
-      } catch {
-        // כבר הותרענו על החזרה הזו.
-      }
+      await enqueueForUser({
+        user: owner,
+        dedupeKey: overdueDedupeKey(lead.id, owner.id, at),
+        body: overdueBody(
+          lead.name,
+          lead.phone,
+          lead.assignee?.name ?? "—",
+          israelHourMinute(at.getTime()),
+        ),
+        scheduledFor: nextSendableInstant(new Date(), win),
+        leadId: lead.id,
+      });
     }
   }
 }

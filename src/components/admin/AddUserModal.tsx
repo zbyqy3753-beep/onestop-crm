@@ -76,6 +76,19 @@ export function AddUserModal({
           />
         </Field>
 
+        {/* ⚠️ שדה אחד ולא רשימה דינמית של קלטים: המספרים מודבקים
+            מאנשי קשר או מוואטסאפ, וכל מפריד סביר מתקבל. */}
+        <Field
+          label="טלפונים נוספים"
+          hint="אפשר כמה, מופרדים בפסיק. התראות יוצאות לכל המספרים"
+        >
+          <input
+            name="extraPhones"
+            placeholder="0521234567, 0539876543"
+            className={`${inputClass} ltr-num text-start`}
+          />
+        </Field>
+
         <Field label="חנות/עסק" hint="אופציונלי">
           <input name="store" placeholder="" className={inputClass} />
         </Field>

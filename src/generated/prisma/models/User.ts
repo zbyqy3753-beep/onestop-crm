@@ -57,6 +57,7 @@ export type UserCountAggregateOutputType = {
   name: number
   email: number
   phone: number
+  extraPhones: number
   role: number
   active: number
   store: number
@@ -101,6 +102,7 @@ export type UserCountAggregateInputType = {
   name?: true
   email?: true
   phone?: true
+  extraPhones?: true
   role?: true
   active?: true
   store?: true
@@ -188,6 +190,7 @@ export type UserGroupByOutputType = {
   name: string
   email: string
   phone: string | null
+  extraPhones: string[]
   role: $Enums.Role
   active: boolean
   store: string | null
@@ -223,6 +226,7 @@ export type UserWhereInput = {
   name?: Prisma.StringFilter<"User"> | string
   email?: Prisma.StringFilter<"User"> | string
   phone?: Prisma.StringNullableFilter<"User"> | string | null
+  extraPhones?: Prisma.StringNullableListFilter<"User">
   role?: Prisma.EnumRoleFilter<"User"> | $Enums.Role
   active?: Prisma.BoolFilter<"User"> | boolean
   store?: Prisma.StringNullableFilter<"User"> | string | null
@@ -254,6 +258,7 @@ export type UserOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   email?: Prisma.SortOrder
   phone?: Prisma.SortOrderInput | Prisma.SortOrder
+  extraPhones?: Prisma.SortOrder
   role?: Prisma.SortOrder
   active?: Prisma.SortOrder
   store?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -288,6 +293,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
   name?: Prisma.StringFilter<"User"> | string
   phone?: Prisma.StringNullableFilter<"User"> | string | null
+  extraPhones?: Prisma.StringNullableListFilter<"User">
   role?: Prisma.EnumRoleFilter<"User"> | $Enums.Role
   active?: Prisma.BoolFilter<"User"> | boolean
   store?: Prisma.StringNullableFilter<"User"> | string | null
@@ -319,6 +325,7 @@ export type UserOrderByWithAggregationInput = {
   name?: Prisma.SortOrder
   email?: Prisma.SortOrder
   phone?: Prisma.SortOrderInput | Prisma.SortOrder
+  extraPhones?: Prisma.SortOrder
   role?: Prisma.SortOrder
   active?: Prisma.SortOrder
   store?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -339,6 +346,7 @@ export type UserScalarWhereWithAggregatesInput = {
   name?: Prisma.StringWithAggregatesFilter<"User"> | string
   email?: Prisma.StringWithAggregatesFilter<"User"> | string
   phone?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  extraPhones?: Prisma.StringNullableListFilter<"User">
   role?: Prisma.EnumRoleWithAggregatesFilter<"User"> | $Enums.Role
   active?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
   store?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
@@ -353,6 +361,7 @@ export type UserCreateInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -384,6 +393,7 @@ export type UserUncheckedCreateInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -415,6 +425,7 @@ export type UserUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -446,6 +457,7 @@ export type UserUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -477,6 +489,7 @@ export type UserCreateManyInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -491,6 +504,7 @@ export type UserUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -505,6 +519,7 @@ export type UserUncheckedUpdateManyInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -514,11 +529,20 @@ export type UserUncheckedUpdateManyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type StringNullableListFilter<$PrismaModel = never> = {
+  equals?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel> | null
+  has?: string | Prisma.StringFieldRefInput<$PrismaModel> | null
+  hasEvery?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  hasSome?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  isEmpty?: boolean
+}
+
 export type UserCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   email?: Prisma.SortOrder
   phone?: Prisma.SortOrder
+  extraPhones?: Prisma.SortOrder
   role?: Prisma.SortOrder
   active?: Prisma.SortOrder
   store?: Prisma.SortOrder
@@ -566,12 +590,21 @@ export type UserNullableScalarRelationFilter = {
   isNot?: Prisma.UserWhereInput | null
 }
 
+export type UserCreateextraPhonesInput = {
+  set: string[]
+}
+
 export type StringFieldUpdateOperationsInput = {
   set?: string
 }
 
 export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
+}
+
+export type UserUpdateextraPhonesInput = {
+  set?: string[]
+  push?: string | string[]
 }
 
 export type EnumRoleFieldUpdateOperationsInput = {
@@ -849,6 +882,7 @@ export type UserCreateWithoutSessionsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -879,6 +913,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -914,6 +949,7 @@ export type UserCreateWithoutImpersonatedSessionsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -944,6 +980,7 @@ export type UserUncheckedCreateWithoutImpersonatedSessionsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -990,6 +1027,7 @@ export type UserUpdateWithoutSessionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1020,6 +1058,7 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1061,6 +1100,7 @@ export type UserUpdateWithoutImpersonatedSessionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1091,6 +1131,7 @@ export type UserUncheckedUpdateWithoutImpersonatedSessionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1121,6 +1162,7 @@ export type UserCreateWithoutPasswordResetsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1151,6 +1193,7 @@ export type UserUncheckedCreateWithoutPasswordResetsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1186,6 +1229,7 @@ export type UserCreateWithoutIssuedPasswordResetsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1216,6 +1260,7 @@ export type UserUncheckedCreateWithoutIssuedPasswordResetsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1262,6 +1307,7 @@ export type UserUpdateWithoutPasswordResetsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1292,6 +1338,7 @@ export type UserUncheckedUpdateWithoutPasswordResetsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1333,6 +1380,7 @@ export type UserUpdateWithoutIssuedPasswordResetsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1363,6 +1411,7 @@ export type UserUncheckedUpdateWithoutIssuedPasswordResetsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1393,6 +1442,7 @@ export type UserCreateWithoutAssignedLeadsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1423,6 +1473,7 @@ export type UserUncheckedCreateWithoutAssignedLeadsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1458,6 +1509,7 @@ export type UserCreateWithoutCreatedLeadsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1488,6 +1540,7 @@ export type UserUncheckedCreateWithoutCreatedLeadsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1534,6 +1587,7 @@ export type UserUpdateWithoutAssignedLeadsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1564,6 +1618,7 @@ export type UserUncheckedUpdateWithoutAssignedLeadsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1605,6 +1660,7 @@ export type UserUpdateWithoutCreatedLeadsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1635,6 +1691,7 @@ export type UserUncheckedUpdateWithoutCreatedLeadsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1665,6 +1722,7 @@ export type UserCreateWithoutNotesInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1695,6 +1753,7 @@ export type UserUncheckedCreateWithoutNotesInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1741,6 +1800,7 @@ export type UserUpdateWithoutNotesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1771,6 +1831,7 @@ export type UserUncheckedUpdateWithoutNotesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1801,6 +1862,7 @@ export type UserCreateWithoutLeadActivityInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1831,6 +1893,7 @@ export type UserUncheckedCreateWithoutLeadActivityInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1877,6 +1940,7 @@ export type UserUpdateWithoutLeadActivityInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1907,6 +1971,7 @@ export type UserUncheckedUpdateWithoutLeadActivityInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1937,6 +2002,7 @@ export type UserCreateWithoutStatusEventsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -1967,6 +2033,7 @@ export type UserUncheckedCreateWithoutStatusEventsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2013,6 +2080,7 @@ export type UserUpdateWithoutStatusEventsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2043,6 +2111,7 @@ export type UserUncheckedUpdateWithoutStatusEventsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2073,6 +2142,7 @@ export type UserCreateWithoutDealsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2103,6 +2173,7 @@ export type UserUncheckedCreateWithoutDealsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2149,6 +2220,7 @@ export type UserUpdateWithoutDealsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2179,6 +2251,7 @@ export type UserUncheckedUpdateWithoutDealsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2209,6 +2282,7 @@ export type UserCreateWithoutDealStageEventsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2239,6 +2313,7 @@ export type UserUncheckedCreateWithoutDealStageEventsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2285,6 +2360,7 @@ export type UserUpdateWithoutDealStageEventsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2315,6 +2391,7 @@ export type UserUncheckedUpdateWithoutDealStageEventsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2345,6 +2422,7 @@ export type UserCreateWithoutReferredRegistrationsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2375,6 +2453,7 @@ export type UserUncheckedCreateWithoutReferredRegistrationsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2410,6 +2489,7 @@ export type UserCreateWithoutHandledRegistrationsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2440,6 +2520,7 @@ export type UserUncheckedCreateWithoutHandledRegistrationsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2486,6 +2567,7 @@ export type UserUpdateWithoutReferredRegistrationsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2516,6 +2598,7 @@ export type UserUncheckedUpdateWithoutReferredRegistrationsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2557,6 +2640,7 @@ export type UserUpdateWithoutHandledRegistrationsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2587,6 +2671,7 @@ export type UserUncheckedUpdateWithoutHandledRegistrationsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2617,6 +2702,7 @@ export type UserCreateWithoutWhatsappMessagesInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2647,6 +2733,7 @@ export type UserUncheckedCreateWithoutWhatsappMessagesInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2693,6 +2780,7 @@ export type UserUpdateWithoutWhatsappMessagesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2723,6 +2811,7 @@ export type UserUncheckedUpdateWithoutWhatsappMessagesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2753,6 +2842,7 @@ export type UserCreateWithoutRenewalDocumentsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2783,6 +2873,7 @@ export type UserUncheckedCreateWithoutRenewalDocumentsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2829,6 +2920,7 @@ export type UserUpdateWithoutRenewalDocumentsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2859,6 +2951,7 @@ export type UserUncheckedUpdateWithoutRenewalDocumentsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2889,6 +2982,7 @@ export type UserCreateWithoutEmailCampaignsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2919,6 +3013,7 @@ export type UserUncheckedCreateWithoutEmailCampaignsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -2965,6 +3060,7 @@ export type UserUpdateWithoutEmailCampaignsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2995,6 +3091,7 @@ export type UserUncheckedUpdateWithoutEmailCampaignsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3025,6 +3122,7 @@ export type UserCreateWithoutWaCampaignsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -3055,6 +3153,7 @@ export type UserUncheckedCreateWithoutWaCampaignsInput = {
   name: string
   email: string
   phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
   role?: $Enums.Role
   active?: boolean
   store?: string | null
@@ -3101,6 +3200,7 @@ export type UserUpdateWithoutWaCampaignsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3131,6 +3231,7 @@ export type UserUncheckedUpdateWithoutWaCampaignsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -3336,6 +3437,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   name?: boolean
   email?: boolean
   phone?: boolean
+  extraPhones?: boolean
   role?: boolean
   active?: boolean
   store?: boolean
@@ -3368,6 +3470,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   name?: boolean
   email?: boolean
   phone?: boolean
+  extraPhones?: boolean
   role?: boolean
   active?: boolean
   store?: boolean
@@ -3382,6 +3485,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   name?: boolean
   email?: boolean
   phone?: boolean
+  extraPhones?: boolean
   role?: boolean
   active?: boolean
   store?: boolean
@@ -3396,6 +3500,7 @@ export type UserSelectScalar = {
   name?: boolean
   email?: boolean
   phone?: boolean
+  extraPhones?: boolean
   role?: boolean
   active?: boolean
   store?: boolean
@@ -3405,7 +3510,7 @@ export type UserSelectScalar = {
   updatedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "phone" | "role" | "active" | "store" | "subscriptionEndsAt" | "leadSourceName" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "phone" | "extraPhones" | "role" | "active" | "store" | "subscriptionEndsAt" | "leadSourceName" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   assignedLeads?: boolean | Prisma.User$assignedLeadsArgs<ExtArgs>
   createdLeads?: boolean | Prisma.User$createdLeadsArgs<ExtArgs>
@@ -3454,7 +3559,22 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     id: string
     name: string
     email: string
+    /**
+     * המספר הראשי. ⚠️ הוא לבדו מקבל את קוד איפוס הסיסמה — ראה
+     * `extraPhones`.
+     */
     phone: string | null
+    /**
+     * מספרים נוספים של אותו עובד, מעבר ל-`phone`.
+     * 
+     * ⚠️ **התראות יוצאות לכל המספרים, קוד איפוס סיסמה לא.** התראה
+     * שמגיעה גם לטלפון השני היא בדיוק המטרה; סוד חד-פעמי שמשוכפל
+     * לשלושה מכשירים הוא הרחבה של שטח התקיפה בלי שום תועלת.
+     * 
+     * מערך ולא טבלה נפרדת: אין לרשומה שום תכונה מלבד המספר, ואין
+     * שאילתה שמחפשת עובד לפי מספר משני.
+     */
+    extraPhones: string[]
     role: $Enums.Role
     active: boolean
     /**
@@ -3918,6 +4038,7 @@ export interface UserFieldRefs {
   readonly name: Prisma.FieldRef<"User", 'String'>
   readonly email: Prisma.FieldRef<"User", 'String'>
   readonly phone: Prisma.FieldRef<"User", 'String'>
+  readonly extraPhones: Prisma.FieldRef<"User", 'String[]'>
   readonly role: Prisma.FieldRef<"User", 'Role'>
   readonly active: Prisma.FieldRef<"User", 'Boolean'>
   readonly store: Prisma.FieldRef<"User", 'String'>

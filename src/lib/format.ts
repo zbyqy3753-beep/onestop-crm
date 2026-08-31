@@ -205,3 +205,34 @@ export function waLink(raw: string, message?: string): string {
   const base = `https://wa.me/${toE164(raw)}`;
   return message ? `${base}?text=${encodeURIComponent(message)}` : base;
 }
+
+/**
+ * רשימת טלפונים שהוקלדה בשדה אחד → מספרים מנורמלים.
+ *
+ * מקבלת פסיק, נקודה-פסיק, שורה חדשה או רווח כמפריד: השדה הזה ממולא
+ * בהדבקה מאנשי קשר או מוואטסאפ, ואף אחד לא יזכור באיזה תו להפריד.
+ *
+ * ⚠️ מחזירה גם את מה שנפסל ולא רק את התקין. הודעה "מספר לא תקין"
+ * שאינה אומרת **איזה** מספר, בשדה שמכיל שלושה, היא חידה.
+ *
+ * ⚠️ כפילויות מוסרות: אותו מספר פעמיים היה גורר שתי הודעות זהות על
+ * כל התראה.
+ */
+export function parsePhoneList(raw: string): {
+  phones: string[];
+  invalid: string[];
+} {
+  const phones: string[] = [];
+  const invalid: string[] = [];
+
+  for (const part of raw.split(/[,;\n\r\t ]+/)) {
+    const token = part.trim();
+    if (!token) continue;
+
+    const normalized = normalizeIsraeliPhone(token);
+    if (!normalized) invalid.push(token);
+    else if (!phones.includes(normalized)) phones.push(normalized);
+  }
+
+  return { phones, invalid };
+}

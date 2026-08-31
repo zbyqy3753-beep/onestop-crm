@@ -50,6 +50,7 @@ const users: UserRepository = {
         name: input.name,
         email: input.email,
         phone: input.phone,
+        extraPhones: input.extraPhones ?? [],
         role: input.role,
         store: input.store,
         leadSourceName: input.leadSourceName,

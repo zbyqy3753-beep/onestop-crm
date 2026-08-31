@@ -227,6 +227,7 @@ export interface CreateUserInput {
   name: string;
   email: string;
   phone?: string;
+  extraPhones?: string[];
   role: User["role"];
   store?: string;
   /** רלוונטי ל-`supplier` בלבד — ראה `User.leadSourceName` */
@@ -248,6 +249,8 @@ export interface UpdateUserInput {
    */
   email?: string;
   phone?: string | null;
+  /** רשימה מלאה שדורסת את הקודמת. `[]` מנקה, `undefined` לא נוגע. */
+  extraPhones?: string[];
   role?: User["role"];
   store?: string | null;
   /** רלוונטי ל-`supplier` בלבד — ראה `User.leadSourceName` */

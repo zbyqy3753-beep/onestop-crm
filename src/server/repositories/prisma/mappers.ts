@@ -122,6 +122,7 @@ export function userFromPrisma(row: PUser): User {
     role: row.role,
     email: row.email,
     phone: row.phone ?? undefined,
+    extraPhones: row.extraPhones,
     active: row.active,
     store: row.store ?? undefined,
     leadSourceName: row.leadSourceName ?? undefined,

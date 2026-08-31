@@ -175,6 +175,7 @@ function UserCard({
           {user.phone ? (
             <p className="ltr-num truncate text-xs text-ink-4">
               {formatPhone(user.phone)}
+              <ExtraPhones count={user.extraPhones?.length ?? 0} />
             </p>
           ) : (
             user.active && <MissingPhone />
@@ -240,7 +241,10 @@ function Row({
       {/* יצירת קשר */}
       <td className="px-3 py-2.5 text-xs text-ink-2">
         {user.phone ? (
-          <p className="ltr-num">{formatPhone(user.phone)}</p>
+          <p className="ltr-num">
+            {formatPhone(user.phone)}
+            <ExtraPhones count={user.extraPhones?.length ?? 0} />
+          </p>
         ) : (
           user.active && <MissingPhone />
         )}
@@ -266,6 +270,18 @@ function Row({
         />
       </td>
     </tr>
+  );
+}
+
+/**
+ * ⚠️ מספר בלבד ולא רשימת המספרים. הטבלה היא סקירה — "יש לו עוד שניים"
+ * זה כל מה שצריך כדי לדעת שהוגדרו, והמספרים עצמם נמצאים במסך העריכה
+ * שבו גם משנים אותם.
+ */
+function ExtraPhones({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <span className="ms-1.5 text-ink-4">+{count}</span>
   );
 }
 

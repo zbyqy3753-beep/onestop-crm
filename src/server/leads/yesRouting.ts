@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/server/db/client";
 import { db } from "@/server/repositories";
-import { isIsraeliPhone, toE164 } from "@/lib/format";
+import { enqueueForUser } from "@/server/whatsapp/recipients";
 import { isYesLead, type YesLeadFacts } from "@/lib/domain/yes";
 import { yesLeadBody, yesLeadDedupeKey } from "@/lib/domain/alerts";
 
@@ -34,6 +34,8 @@ export async function yesAssigneeId(): Promise<string | undefined> {
   if (!email) return undefined;
 
   const user = await db.users.getByEmail(email);
+  // ⚠️ כמו בשני הנתיבים האחרים: כתובת שגויה משביתה את הכלל בשקט.
+  if (!user) console.warn(`[yes] יעד השיוך ${email} לא נמצא`);
   return user?.active ? user.id : undefined;
 }
 
@@ -71,7 +73,7 @@ export async function notifyOwnersOfYesLead(lead: {
   try {
     const owners = await prisma.user.findMany({
       where: { role: "owner", active: true, phone: { not: null } },
-      select: { id: true, name: true, phone: true },
+      select: { id: true, name: true, phone: true, extraPhones: true },
     });
     if (owners.length === 0) return;
 
@@ -83,23 +85,13 @@ export async function notifyOwnersOfYesLead(lead: {
     const assigneeName = assignee?.name ?? "טרם שויך";
 
     for (const owner of owners) {
-      const to = toE164(owner.phone ?? "");
-      if (!to || !isIsraeliPhone(owner.phone ?? "")) continue;
-
-      try {
-        await prisma.whatsAppMessage.create({
-          data: {
-            dedupeKey: yesLeadDedupeKey(lead.id, owner.id),
-            toPhone: to,
-            body: yesLeadBody(lead.name, lead.phone, assigneeName),
-            scheduledFor: new Date(),
-            leadId: lead.id,
-            recipientUserId: owner.id,
-          },
-        });
-      } catch {
-        // מפתח כפול = כבר הותרענו לבעלים הזה על הליד הזה. רצוי.
-      }
+      await enqueueForUser({
+        user: owner,
+        dedupeKey: yesLeadDedupeKey(lead.id, owner.id),
+        body: yesLeadBody(lead.name, lead.phone, assigneeName),
+        scheduledFor: new Date(),
+        leadId: lead.id,
+      });
     }
   } catch (error) {
     console.error("[yes] התראת ליד יאס נכשלה:", error);

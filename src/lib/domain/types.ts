@@ -425,6 +425,13 @@ export interface User {
   role: Role;
   email: string;
   phone?: string;
+  /**
+   * מספרים נוספים של אותו עובד.
+   *
+   * ⚠️ התראות יוצאות לכל המספרים; קוד איפוס סיסמה יוצא לראשי בלבד.
+   * ההסבר המלא ב-schema.prisma.
+   */
+  extraPhones?: string[];
   active: boolean;
   /** שם העסק/החנות המשויכת, אם יש. שדה חופשי — אין עדיין ישות Store נפרדת. */
   store?: string;
