@@ -3,7 +3,14 @@
 import { useState, useTransition } from "react";
 import { Badge, Button, Field, inputClass, useNow } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
-import { phone as formatPhone, relative, until } from "@/lib/format";
+import {
+  dateTime,
+  number,
+  phone as formatPhone,
+  relative,
+  until,
+} from "@/lib/format";
+import { explainWaError } from "@/lib/domain/waOutage";
 import { ROLE_CONFIG } from "@/lib/domain/types";
 import {
   WA_RATE_EFFECTIVE,
@@ -60,6 +67,7 @@ export function BotsClient({ overview }: { overview: BotOverview }) {
     recent,
     failures,
     recipients,
+    outage,
   } = overview;
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +91,10 @@ export function BotsClient({ overview }: { overview: BotOverview }) {
           בוט תזכורות הוואטסאפ — מצב, הגדרות ותור השליחה
         </p>
       </header>
+
+      {/* ⚠️ מעל `HealthPanel` ולא בתוכו: כשהשליחה חסומה, הדופק של
+          הבוט הוא לא השאלה. הוא היה ירוק לחלוטין לאורך כל התקלה. */}
+      <OutageBanner outage={outage} />
 
       <HealthPanel health={health} paused={settings.paused} />
 
@@ -188,6 +200,57 @@ const TONE_CLASS: Record<Tone, string> = {
   bad: "border-bad/30 bg-bad-soft text-bad",
   neutral: "border-line bg-surface-2 text-ink-3",
 };
+
+/**
+ * השליחה חסומה — הבאנר שהיה חסר.
+ *
+ * ⚠️⚠️ **הכשל שהוא מכסה הוא שקט, לא רעש.** מטא חסמה את החשבון על חוב
+ * של דולר וחצי, וחמישה ימים אף התראה לא יצאה בזמן שהמסך הראה ירוק:
+ * `HealthPanel` נגזר מהדופק, וה-cron רץ תקין. הכשלים כן נספרו — בטקסט
+ * אפור קטן ובלשונית שצריך ללחוץ עליה.
+ *
+ * ⚠️ אין כאן כפתור סגירה. באנר שאפשר לסגור נסגר, והתקלה שהוא מתאר
+ * נמשכת; הוא נעלם מעצמו ברגע שהודעה אחת עוברת.
+ */
+function OutageBanner({ outage }: { outage: BotOverview["outage"] }) {
+  const now = useNow();
+  if (!outage) return null;
+
+  const hint = explainWaError(outage.error);
+  const since =
+    outage.since === null
+      ? "מעולם לא יצאה הודעה"
+      : `אף הודעה לא יצאה מאז ${dateTime(outage.since)}${
+          // ⚠️ אותו דפוס כמו בכל זמן יחסי במערכת: השעון מגיע מהלקוח
+          // אחרי ההרכבה, אחרת השרת והלקוח מרנדרים טקסט שונה.
+          now === null ? "" : ` (${relative(outage.since, now)})`
+        }`;
+
+  return (
+    <div
+      role="alert"
+      className={`mb-3 rounded-card border px-3 py-3 ${TONE_CLASS.bad}`}
+    >
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <Icon name="whatsapp" size={18} />
+        השליחה חסומה — {number(outage.count)} הודעות נכשלו ברצף
+      </p>
+
+      <p className="mt-1 text-xs opacity-90">{since}</p>
+
+      {/* ⚠️ ההסבר קודם והגולמי אחריו, ולא להפך: מנהל צריך לדעת מה
+          לעשות, והמחרוזת של מטא היא ראיה למי שיבדוק לעומק. שגיאה לא
+          מוכרת מציגה רק את הגולמי — ניחוש כאן שולח לתקן דבר אחר. */}
+      {hint && <p className="mt-2 text-sm font-medium">{hint}</p>}
+
+      {outage.error && (
+        <p className="mt-1 text-xs opacity-70" dir="ltr">
+          {outage.error}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function HealthPanel({
   health,

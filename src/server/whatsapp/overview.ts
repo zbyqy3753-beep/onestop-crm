@@ -6,6 +6,7 @@ import { isIsraeliPhone } from "@/lib/format";
 import { startOfDay, startOfMonth } from "@/lib/tz";
 import { STATUS_CONFIG } from "@/lib/domain/types";
 import { bulkCostUsd } from "@/lib/domain/whatsappCost";
+import { detectOutage, type WaOutage } from "@/lib/domain/waOutage";
 import { readSettings, type BotSettingsView } from "./settings";
 import { plannedSendAt } from "./outbox";
 
@@ -102,6 +103,13 @@ export interface BotOverview {
   recent: MessageRow[];
   failures: MessageRow[];
   recipients: RecipientRow[];
+  /**
+   * השליחה חסומה — כל מה שיצא מאז ההצלחה האחרונה נכשל. `null` = תקין.
+   *
+   * ⚠️ נפרד מ-`health`: זה ציר אחר לגמרי. `health` הוא "האם התהליך
+   * חי", וכאן הוא היה חי לחלוטין — הוא ניסה, ומטא דחתה כל ניסיון.
+   */
+  outage: WaOutage | null;
 }
 
 const SELECT = {
@@ -224,6 +232,7 @@ export async function botOverview(): Promise<BotOverview> {
     failures,
     withFollowUp,
     users,
+    lastSent,
   ] = await Promise.all([
     // ⚠️ `providerMessageId` מפריד בין מה שיצא ב-Cloud API (בתשלום)
     // לבין מה שיצא דרך הבוט במשרד (חינם). ראה `spendFor`.
@@ -313,7 +322,33 @@ export async function botOverview(): Promise<BotOverview> {
         },
       },
     }),
+
+    // ההצלחה האחרונה — נקודת האפס של זיהוי החסימה. ראה `waOutage.ts`.
+    prisma.whatsAppMessage.findFirst({
+      where: { status: "sent", sentAt: { not: null } },
+      orderBy: { sentAt: "desc" },
+      select: { sentAt: true },
+    }),
   ]);
+
+  /*
+   * ⚠️ שאילתה נפרדת ואחרי `Promise.all` **בכוונה** — היא תלויה
+   * בתוצאה של `lastSent` ואי אפשר להריץ אותה במקביל.
+   *
+   * ⚠️ הספירה אינה נגזרת מ-`failures` שנשלף למעלה: הוא חסום ב-30
+   * שורות לצורך התצוגה, ובאנר שמכריז "30 נכשלו" כשנכשלו 133 מקטין
+   * את התקלה בדיוק כשצריך להגדיל אותה.
+   *
+   * ⚠️ `scheduledFor` ולא `sentAt`: בשורה שנכשלה `sentAt` עשוי להישאר
+   * ריק (היא לא יצאה), וסינון לפיו היה מפספס בדיוק את מה שמחפשים.
+   * אותו שדה שבו משתמשת ספירת `failedToday` שלמעלה.
+   */
+  const failedSinceCount = await prisma.whatsAppMessage.count({
+    where: {
+      status: "failed",
+      ...(lastSent?.sentAt ? { scheduledFor: { gt: lastSent.sentAt } } : {}),
+    },
+  });
 
   // חזרות שעדיין לא הפכו להודעה. שורה שכבר קיימת בתור או שנשלחה
   // מוצגת בלשוניות שלה, ולהופיע בשתיהן היה נראה ככפילות.
@@ -365,5 +400,12 @@ export async function botOverview(): Promise<BotOverview> {
       phoneInvalid: !!u.phone && !isIsraeliPhone(u.phone),
       openLeadsWithFollowUp: u._count.assignedLeads,
     })),
+    // `failures` ממוין `scheduledFor desc`, ולכן הראשון הוא האחרון
+    // שנכשל — השגיאה שהכי כדאי להראות היא הטרייה ביותר.
+    outage: detectOutage({
+      lastSentAt: lastSent?.sentAt?.toISOString() ?? null,
+      failedSinceCount,
+      latestError: failures[0]?.lastError ?? null,
+    }),
   };
 }
