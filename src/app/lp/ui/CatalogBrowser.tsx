@@ -31,6 +31,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
   const [sort, setSort] = useState<SortKey>("recommended");
   const [compare, setCompare] = useState<Package[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const isElectric = category === "electricity";
 
@@ -98,14 +99,50 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
           : [...prev, pkg],
     );
 
-  const hasFilters = selectedProviders.length > 0 || selectedTypes.length > 0 || maxPrice != null;
+  const activeFilters =
+    selectedProviders.length + selectedTypes.length + (maxPrice != null ? 1 : 0);
+  const hasFilters = activeFilters > 0;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
       <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
         <Card className="p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-lp-ink">סינון</h2>
+          <div className="flex items-center justify-between gap-2 lg:mb-3">
+            {/*
+              ⚠️ מקופל בנייד, פרוש בדסקטופ.
+
+              בדסקטופ זו עמודה צדדית ליד התוצאות, אבל בנייד ה-grid קורס
+              לעמודה אחת והפאנל נפרס כבלוק מלא **מעל** הקטלוג: רשימת כל
+              החברות, שבבי הסוג ומחוון המחיר: מסך שלם של פקדים לפני שרואים
+              חבילה אחת.
+
+              ⚠️ `useState(false)` ולא `useIsNarrow()`. הספק ש-`useIsNarrow`
+              קורא (`InitialNarrowProvider`) יושב ב-layout של `(app)`, והדף
+              הזה מחוץ לקבוצה: הערך בשרת היה תמיד `false`, כלומר הפאנל היה
+              נפרס בטלפון ונסגר בהידרציה. כאן הסגירה היא מצב התחלתי אמיתי
+              והדסקטופ נפתח דרך CSS בלבד (`max-lg:hidden`), ולכן אין פער
+              בין השרת ללקוח ואין הבהוב.
+            */}
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((v) => !v)}
+              aria-expanded={filtersOpen}
+              aria-controls="lp-filters"
+              className="-my-2 flex min-h-11 items-center gap-2 py-2 text-sm font-semibold text-lp-ink lg:pointer-events-none lg:my-0 lg:min-h-0 lg:py-0"
+            >
+              סינון
+              {hasFilters && (
+                <span className="nums rounded-full bg-lp-brand px-2 py-0.5 text-lp-2xs font-bold text-lp-ink-invert">
+                  {activeFilters}
+                </span>
+              )}
+              <span
+                aria-hidden
+                className={`text-lp-ink-3 transition lg:hidden ${filtersOpen ? "rotate-180" : ""}`}
+              >
+                ▾
+              </span>
+            </button>
             {hasFilters && (
               <button
                 type="button"
@@ -114,99 +151,101 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                   setSelectedTypes([]);
                   setMaxPrice(null);
                 }}
-                className="text-xs text-lp-brand hover:underline"
+                className="-my-2 flex min-h-11 items-center py-2 text-xs text-lp-brand hover:underline lg:my-0 lg:min-h-0 lg:py-0"
               >
                 נקה הכל
               </button>
             )}
           </div>
 
-          <fieldset className="mb-4">
-            <legend className="mb-2 text-xs font-medium text-lp-ink-2">חברה</legend>
-            <div className="space-y-1.5">
-              {providerOptions.map((o) => (
-                <label key={o.slug} className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={selectedProviders.includes(o.slug)}
-                    onChange={() => toggle(selectedProviders, o.slug, setSelectedProviders)}
-                    className="h-4 w-4 accent-lp-brand"
-                  />
-                  <span className="flex-1 text-lp-ink">{o.name}</span>
-                  <span className="nums text-xs text-lp-ink-3">{o.count}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          {typeOptions.length > 1 && (
+          <div id="lp-filters" className={filtersOpen ? "mt-3" : "max-lg:hidden"}>
             <fieldset className="mb-4">
-              <legend className="mb-2 text-xs font-medium text-lp-ink-2">סוג</legend>
-              <div className="flex flex-wrap gap-1.5">
-                {typeOptions.map(([type, count]) => {
-                  const active = selectedTypes.includes(type);
-                  return (
-                    <button
-                      key={type}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => toggle(selectedTypes, type, setSelectedTypes)}
-                      className={`rounded-full border px-2.5 py-1 text-xs transition ${
-                        active
-                          ? "border-lp-brand bg-lp-brand text-lp-ink-invert"
-                          : "border-lp-line bg-lp-surface text-lp-ink-2 hover:border-lp-brand"
-                      }`}
-                    >
-                      {type} <span className="nums opacity-70">{count}</span>
-                    </button>
-                  );
-                })}
+              <legend className="mb-2 text-xs font-medium text-lp-ink-2">חברה</legend>
+              <div className="space-y-1.5">
+                {providerOptions.map((o) => (
+                  <label key={o.slug} className="flex min-h-9 cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedProviders.includes(o.slug)}
+                      onChange={() => toggle(selectedProviders, o.slug, setSelectedProviders)}
+                      className="h-4 w-4 accent-lp-brand"
+                    />
+                    <span className="flex-1 text-lp-ink">{o.name}</span>
+                    <span className="nums text-xs text-lp-ink-3">{o.count}</span>
+                  </label>
+                ))}
               </div>
             </fieldset>
-          )}
 
-          {priceBounds && !isElectric && (
-            <fieldset>
-              <legend className="mb-2 text-xs font-medium text-lp-ink-2">
-                מחיר עד{" "}
-                <span className="nums font-semibold text-lp-ink">
-                  {shekels(maxPrice ?? priceBounds.max)}
-                </span>
-              </legend>
-              <input
-                type="range"
-                min={priceBounds.min}
-                max={priceBounds.max}
-                step={1}
-                value={maxPrice ?? priceBounds.max}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setMaxPrice(v >= priceBounds.max ? null : v);
-                }}
-                className="w-full accent-lp-brand"
-                aria-label="מחיר מקסימלי"
-              />
-              <div className="nums mt-1 flex justify-between text-lp-2xs text-lp-ink-3">
-                <span>{shekels(priceBounds.min)}</span>
-                <span>{shekels(priceBounds.max)}</span>
-              </div>
-            </fieldset>
-          )}
+            {typeOptions.length > 1 && (
+              <fieldset className="mb-4">
+                <legend className="mb-2 text-xs font-medium text-lp-ink-2">סוג</legend>
+                <div className="flex flex-wrap gap-1.5">
+                  {typeOptions.map(([type, count]) => {
+                    const active = selectedTypes.includes(type);
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => toggle(selectedTypes, type, setSelectedTypes)}
+                        className={`inline-flex min-h-9 items-center rounded-full border px-3 py-1 text-xs transition ${
+                          active
+                            ? "border-lp-brand bg-lp-brand text-lp-ink-invert"
+                            : "border-lp-line bg-lp-surface text-lp-ink-2 hover:border-lp-brand"
+                        }`}
+                      >
+                        {type} <span className="nums opacity-70">{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
+
+            {priceBounds && !isElectric && (
+              <fieldset>
+                <legend className="mb-2 text-xs font-medium text-lp-ink-2">
+                  מחיר עד{" "}
+                  <span className="nums font-semibold text-lp-ink">
+                    {shekels(maxPrice ?? priceBounds.max)}
+                  </span>
+                </legend>
+                <input
+                  type="range"
+                  min={priceBounds.min}
+                  max={priceBounds.max}
+                  step={1}
+                  value={maxPrice ?? priceBounds.max}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setMaxPrice(v >= priceBounds.max ? null : v);
+                  }}
+                  className="w-full accent-lp-brand"
+                  aria-label="מחיר מקסימלי"
+                />
+                <div className="nums mt-1 flex justify-between text-lp-2xs text-lp-ink-3">
+                  <span>{shekels(priceBounds.min)}</span>
+                  <span>{shekels(priceBounds.max)}</span>
+                </div>
+              </fieldset>
+            )}
+          </div>
         </Card>
       </aside>
 
-      <div>
+      <div className={`min-w-0 ${compare.length > 0 ? "pb-32 lg:pb-24" : ""}`}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-lp-ink-2">
             <span className="nums font-semibold text-lp-ink">{results.length}</span> חבילות
             {hasFilters && <span className="text-lp-ink-3"> מתוך {packages.length}</span>}
           </p>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex min-w-0 items-center gap-2 text-sm">
             <span className="text-lp-ink-2">מיון</span>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              className="rounded-lg border border-lp-line bg-lp-surface px-2 py-1.5 text-sm transition focus:border-lp-brand"
+              className="max-w-full min-w-0 rounded-lg border border-lp-line bg-lp-surface px-2 py-1.5 text-sm transition focus:border-lp-brand"
             >
               {SORTS.filter((s) => !(isElectric && s.key === "after-asc")).map((s) => (
                 <option key={s.key} value={s.key}>

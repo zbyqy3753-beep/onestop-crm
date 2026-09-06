@@ -24,7 +24,7 @@ export function ProviderLogo({
       className={`object-contain ${className}`}
       // Logos vary wildly in aspect ratio, so pin the height and let the width
       // follow. Setting both via CSS is what triggers Next's aspect warning.
-      style={{ height: size, width: "auto", maxWidth: size * 2.5 }}
+      style={{ height: size, width: "auto", maxWidth: `min(${size * 2.5}px, 100%)` }}
     />
   );
 }

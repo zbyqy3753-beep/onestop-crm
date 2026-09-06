@@ -43,7 +43,7 @@ export function PackageCard({ pkg, compareChecked, onCompareToggle, defaultOpen 
   return (
     <Card as="article" interactive className="flex flex-col overflow-hidden">
       <div className="flex items-start gap-3 border-b border-lp-line p-4">
-        <ProviderLogo logo={pkg.provider.logo} name={pkg.provider.name} size={34} />
+        <ProviderLogo logo={pkg.provider.logo} name={pkg.provider.name} size={34} className="shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap gap-1.5">
             {pkg.recommended && (
@@ -82,9 +82,9 @@ export function PackageCard({ pkg, compareChecked, onCompareToggle, defaultOpen 
 
       <div className="flex flex-1 flex-col p-4">
         {stats.length > 0 && (
-          <ul className="mb-4 grid grid-cols-3 gap-2 text-center">
+          <ul className="mb-4 grid grid-cols-2 gap-2 text-center sm:grid-cols-3">
             {stats.map((s) => (
-              <li key={s.caption} className="rounded-lg bg-lp-surface-2 px-1 py-2">
+              <li key={s.caption} className="min-w-0 rounded-lg bg-lp-surface-2 px-1 py-2">
                 <div className="nums text-sm font-bold text-lp-ink">{s.value}</div>
                 <div className="mt-0.5 text-lp-2xs leading-tight text-lp-ink-3">{s.caption}</div>
               </li>
@@ -126,7 +126,7 @@ export function PackageCard({ pkg, compareChecked, onCompareToggle, defaultOpen 
             type="button"
             onClick={() => setFormOpen((v) => !v)}
             aria-expanded={formOpen}
-            className="w-full rounded-lg bg-lp-brand px-3 py-2.5 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright"
+            className="min-h-11 w-full rounded-lg bg-lp-brand px-3 py-2.5 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright"
           >
             {formOpen ? "סגירה" : "שיחזרו אליי"}
           </button>
@@ -144,7 +144,7 @@ export function PackageCard({ pkg, compareChecked, onCompareToggle, defaultOpen 
               type="button"
               onClick={() => setOpen((v) => !v)}
               aria-expanded={open}
-              className="mt-3 self-start text-xs font-medium text-lp-brand hover:underline"
+              className="-mx-1 mt-3 inline-flex min-h-11 items-center self-start px-1 text-xs font-medium text-lp-brand hover:underline"
             >
               {open ? "פחות פרטים ▴" : "פרטים מלאים ▾"}
             </button>
@@ -155,8 +155,8 @@ export function PackageCard({ pkg, compareChecked, onCompareToggle, defaultOpen 
                   <dl className="grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2">
                     {rows.map((r) => (
                       <div key={r.label} className="flex justify-between gap-2 border-b border-lp-line/60 pb-1">
-                        <dt className="text-lp-ink-3">{r.label}</dt>
-                        <dd className="nums text-end font-medium text-lp-ink">{r.value}</dd>
+                        <dt className="min-w-0 text-lp-ink-3">{r.label}</dt>
+                        <dd className="nums min-w-0 text-end font-medium text-lp-ink">{r.value}</dd>
                       </div>
                     ))}
                   </dl>

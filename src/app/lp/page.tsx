@@ -221,7 +221,7 @@ export default function LandingPage() {
             {lead?.price != null && (
               <a
                 href="#cellular"
-                className="group mt-7 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-b from-lp-brand-bright to-lp-brand px-6 py-4 shadow-lp-pop transition hover:from-lp-brand-glow sm:px-9 sm:py-5"
+                className="group mt-7 inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl bg-gradient-to-b from-lp-brand-bright to-lp-brand px-6 py-4 shadow-lp-pop transition hover:from-lp-brand-glow sm:px-9 sm:py-5"
               >
                 <span className="text-lg font-extrabold text-white sm:text-2xl">סלולר — החל מ־</span>
                 <span dir="ltr" className="nums text-2xl leading-none font-extrabold text-white sm:text-4xl">
@@ -279,7 +279,7 @@ export default function LandingPage() {
               <span aria-hidden className="size-1.5 rounded-full bg-lp-brand-bright shadow-lp-glow" />
               משווקים מורשים
             </span>
-            <ul className="flex flex-1 items-center gap-3 overflow-x-auto">
+            <ul className="flex flex-1 flex-wrap items-center gap-3 sm:flex-nowrap sm:overflow-x-auto">
               {providers(packages).map((p) => (
                 <li key={p.slug} className="shrink-0">
                   <span

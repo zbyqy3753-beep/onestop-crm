@@ -138,11 +138,11 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             )}
           </div>
 
-          <div className="mt-5 flex gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setStep(0)}
-              className="rounded-lg border border-lp-line px-4 py-2.5 text-sm text-lp-ink-2 hover:border-lp-brand"
+              className="inline-flex min-h-11 items-center rounded-lg border border-lp-line px-4 py-2.5 text-sm text-lp-ink-2 hover:border-lp-brand"
             >
               חזרה
             </button>
@@ -150,7 +150,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
               type="button"
               disabled={monthlySpend <= 0}
               onClick={() => setStep(2)}
-              className="flex-1 rounded-lg bg-lp-brand px-4 py-2.5 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright disabled:opacity-40"
+              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-lp-brand px-4 py-2.5 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright disabled:opacity-40"
             >
               חשבו לי את החיסכון
             </button>
@@ -166,7 +166,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 אתם משלמים <span className="nums font-semibold text-lp-ink">{shekels(monthlySpend)}</span> בחודש.
               </p>
               <p className="mt-1 text-sm font-semibold text-lp-ink">אפשר לחסוך עד</p>
-              <p className="nums mt-1 text-4xl font-extrabold leading-none text-lp-save sm:text-5xl">
+              <p className="nums mt-1 text-3xl font-extrabold break-words text-lp-save sm:text-5xl sm:leading-none">
                 {shekels(yearlySaving)}
               </p>
               <p className="mt-1.5 text-sm text-lp-ink-2">
@@ -212,7 +212,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
           <button
             type="button"
             onClick={() => setStep(1)}
-            className="mt-3 text-xs text-lp-ink-3 hover:underline"
+            className="-mx-1 mt-3 inline-flex min-h-11 items-center px-1 text-xs text-lp-ink-3 hover:underline"
           >
             לשנות את הנתונים
           </button>
