@@ -342,13 +342,45 @@ export async function botOverview(): Promise<BotOverview> {
    * ⚠️ `scheduledFor` ולא `sentAt`: בשורה שנכשלה `sentAt` עשוי להישאר
    * ריק (היא לא יצאה), וסינון לפיו היה מפספס בדיוק את מה שמחפשים.
    * אותו שדה שבו משתמשת ספירת `failedToday` שלמעלה.
+   *
+   * ⚠️⚠️ **`queued` עם שגיאה נספר כאן כמו `failed`, ובלי זה הבאנר
+   * משתתק בדיוק על התקלה שהוא נכתב בשבילה.**
+   *
+   * שורה שנדחתה בחסימת חשבון חוזרת לתור ל-24 שעות במקום למות אחרי
+   * שלושה ניסיונות (ראה `shouldRetryBlocked`). כלומר בדיוק חסימת
+   * החיוב של מטא — המקרה שבגללו הבאנר קיים — כבר לא הייתה מייצרת
+   * שורות `failed`, והמנהל היה רואה ירוק בזמן שכלום לא יוצא. זו
+   * הייתה נסיגה לאותו כשל שקט, רק מכיוון אחר.
+   *
+   * ⚠️ הספירה עולה עכשיו **מוקדם יותר** מקודם, לא מאוחר: שורה נספרת
+   * מהדחייה הראשונה ולא אחרי שלושה ניסיונות. הסף של שלוש
+   * (`OUTAGE_MIN_FAILURES`) ממשיך לסנן כשל בודד של מספר פסול.
+   *
+   * ⚠️ `scheduledFor` של שורה חסומה נדחף לעתיד, ולכן היא תמיד גדולה
+   * מ-`lastSent` ותיספר גם אם נדחתה לפני ההצלחה האחרונה. זו הטיה
+   * לכיוון "להתריע", והיא הכיוון הנכון לטעות בו כאן.
    */
-  const failedSinceCount = await prisma.whatsAppMessage.count({
-    where: {
-      status: "failed",
-      ...(lastSent?.sentAt ? { scheduledFor: { gt: lastSent.sentAt } } : {}),
-    },
-  });
+  const failedSince = {
+    OR: [
+      { status: "failed" as const },
+      { status: "queued" as const, lastError: { not: null } },
+    ],
+    ...(lastSent?.sentAt ? { scheduledFor: { gt: lastSent.sentAt } } : {}),
+  };
+
+  const [failedSinceCount, latestFailure] = await Promise.all([
+    prisma.whatsAppMessage.count({ where: failedSince }),
+    /*
+     * הטקסט שהבאנר מציג. ⚠️ לא `failures[0]`: הרשימה ההיא מכילה
+     * `failed` בלבד, וחסימה טרייה שכל שורותיה חזרו לתור הייתה
+     * מדליקה באנר בלי שום הסבר למה.
+     */
+    prisma.whatsAppMessage.findFirst({
+      where: failedSince,
+      orderBy: { scheduledFor: "desc" },
+      select: { lastError: true },
+    }),
+  ]);
 
   // חזרות שעדיין לא הפכו להודעה. שורה שכבר קיימת בתור או שנשלחה
   // מוצגת בלשוניות שלה, ולהופיע בשתיהן היה נראה ככפילות.
@@ -405,7 +437,7 @@ export async function botOverview(): Promise<BotOverview> {
     outage: detectOutage({
       lastSentAt: lastSent?.sentAt?.toISOString() ?? null,
       failedSinceCount,
-      latestError: failures[0]?.lastError ?? null,
+      latestError: latestFailure?.lastError ?? null,
     }),
   };
 }

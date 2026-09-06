@@ -4,6 +4,7 @@ import { prisma } from "@/server/db/client";
 import { STATUS_CONFIG } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
 import { followUpReminder } from "@/lib/domain/whatsapp";
+import { shouldRetryBlocked } from "@/lib/domain/waOutage";
 import {
   dealWonBody,
   dealWonDedupeKey,
@@ -47,6 +48,15 @@ const MAX_ATTEMPTS = 3;
 
 /** המתנה לפני ניסיון חוזר אחרי כישלון שדוּוח. ראה `report`. */
 const RETRY_DELAY_MS = 60_000;
+
+/**
+ * המתנה לפני ניסיון חוזר אחרי **חסימת חשבון** (`isAccountBlock`).
+ *
+ * ⚠️ חצי שעה ולא דקה: חסימת חיוב או טוקן שפג לא נפתרים מעצמם, הם
+ * מחכים לאדם. ניסיון כל דקה רק מייצר רעש בלוג ובמונה הכשלים במסך
+ * הבוטים, בלי שום סיכוי נוסף לעבור.
+ */
+const BLOCK_RETRY_DELAY_MS = 30 * 60_000;
 
 /** מעל חצי שעה בלי דופק = נפילה אמיתית ולא רק פספוס סקר אחד. */
 const RECOVERY_THRESHOLD_MS = 30 * 60_000;
@@ -471,23 +481,25 @@ export async function markUndeliverable(
 ): Promise<void> {
   const row = await prisma.whatsAppMessage.findUnique({
     where: { providerMessageId },
-    select: { id: true, attempts: true },
+    select: { id: true, attempts: true, createdAt: true },
   });
   if (!row) return;
 
-  const giveUp = row.attempts >= MAX_ATTEMPTS;
+  const reason = error.slice(0, 300);
+  const blocked = shouldRetryBlocked(reason, row.createdAt.getTime(), Date.now());
+  const giveUp = !blocked && row.attempts >= MAX_ATTEMPTS;
 
   await prisma.whatsAppMessage.update({
     where: { id: row.id },
     data: giveUp
-      ? { status: "failed", lastError: error.slice(0, 300) }
+      ? { status: "failed", lastError: reason }
       : {
           status: "queued",
           claimedAt: null,
           sentAt: null,
           providerMessageId: null,
-          lastError: error.slice(0, 300),
-          scheduledFor: new Date(Date.now() + RETRY_DELAY_MS),
+          lastError: reason,
+          ...retryPacing(blocked),
         },
   });
 }
@@ -521,6 +533,30 @@ export async function scrubBody(id: string): Promise<void> {
     where: { id },
     data: { body: "[הקוד נמחק אחרי השליחה]" },
   });
+}
+
+/**
+ * קצב הניסיון החוזר, ומי משלם עליו.
+ *
+ * ⚠️⚠️ **`attempts` מוחזר אחורה בחסימת חשבון, וזה כל התיקון.**
+ * `claim` מגדיל את המונה בכל תביעה, ולכן חסימה ברמת החשבון הייתה
+ * שורפת את שלושת הניסיונות של ההודעה תוך שלוש דקות — על משהו שאין
+ * לה שום שליטה עליו. ההחזרה מאפסת את החיוב הזה: ההודעה מקבלת את
+ * שלושת הניסיונות שלה כשבאמת יהיה לה סיכוי לצאת.
+ *
+ * המונה לעולם אינו יורד מתחת לאפס — כל הפחתה כאן מקזזת הגדלה
+ * שקרתה זה עתה ב-`claim`.
+ */
+function retryPacing(blocked: boolean) {
+  if (blocked) {
+    return {
+      attempts: { decrement: 1 },
+      scheduledFor: new Date(Date.now() + BLOCK_RETRY_DELAY_MS),
+    };
+  }
+  // ⚠️ דקה קדימה ולא מיד: ניסיון חוזר מיידי על חיבור שבור היה שורף
+  // את שלושת הניסיונות בשלוש שניות.
+  return { scheduledFor: new Date(Date.now() + RETRY_DELAY_MS) };
 }
 
 /** קולט את תוצאות השליחה מהבוט. */
@@ -562,10 +598,13 @@ export async function report(
      */
     const row = await prisma.whatsAppMessage.findUnique({
       where: { id: r.id },
-      select: { attempts: true },
+      select: { attempts: true, createdAt: true },
     });
-    const giveUp = (row?.attempts ?? MAX_ATTEMPTS) >= MAX_ATTEMPTS;
     const error = r.error?.slice(0, 300) ?? "שגיאה";
+    const blocked =
+      row != null &&
+      shouldRetryBlocked(error, row.createdAt.getTime(), Date.now());
+    const giveUp = !blocked && (row?.attempts ?? MAX_ATTEMPTS) >= MAX_ATTEMPTS;
 
     const { count } = await prisma.whatsAppMessage.updateMany({
       where: { id: r.id, status: "sending" },
@@ -575,9 +614,7 @@ export async function report(
             status: "queued",
             claimedAt: null,
             lastError: error,
-            // ⚠️ דקה קדימה ולא מיד: ניסיון חוזר מיידי על חיבור שבור
-            // היה שורף את שלושת הניסיונות בשלוש שניות
-            scheduledFor: new Date(Date.now() + RETRY_DELAY_MS),
+            ...retryPacing(blocked),
           },
     });
     applied += count;
