@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "./Card";
 import { LeadForm } from "./LeadForm";
 import { shekels } from "../catalog/format";
-import { afterPrice } from "../catalog/catalog";
+import { afterPrice, hasKnownAfterPrice } from "../catalog/catalog";
 import type { CellularSpec, HomeSpec, MonthlyPackage, Package } from "../catalog/types";
 
 type Track = "cellular" | "home";
@@ -26,6 +26,10 @@ function isComparable(p: Package, track: Track): p is MonthlyPackage {
   if (p.category !== track || p.priceModel !== "monthly") return false;
   if (p.price == null || p.price <= 0) return false;
   if (p.editorial?.hidden) return false;
+  // ⚠️ חבילה שהעלייה שלה מוצהרת בטקסט חופשי בלבד אינה בת-השוואה כאן:
+  // המחיר היחיד שאפשר לחשב ממנה הוא מחיר ההטבה, והכותרת מבטיחה את
+  // ההפך. ראה `hasKnownAfterPrice`.
+  if (!hasKnownAfterPrice(p)) return false;
 
   if (track === "cellular") {
     const spec = p.spec as CellularSpec;
@@ -64,6 +68,16 @@ function parseSpend(raw: string): number {
   const ascii = raw.replace(/[٠-٩۰-۹]/g, (d) =>
     String((d.codePointAt(0)! - 0x0660) % 16),
   );
+  /*
+   * ⚠️ תווי זבל **פוסלים** את הקלט, לא מסוננים ממנו.
+   *
+   * הסינון השקט של `[^\d.]` הפך `-500` ל-500 ו-`abc220` ל-220: המסך
+   * הצהיר "אתם משלמים ₪500 בחודש" על סכום שלילי, והנציג קיבל בהערה
+   * סכום שהלקוח מעולם לא הקליד. מותרים רק מפרידי אלפים ורווחים, שהם
+   * דרך לגיטימית לכתוב מספר; כל השאר מחזיר 0, מה שמשבית את הכפתור
+   * ומציג את ההסבר שליד השדה.
+   */
+  if (/[^\d.,\s₪]/.test(ascii)) return 0;
   const cleaned = ascii.replace(/[^\d.]/g, "");
   const [whole, ...rest] = cleaned.split(".");
   const value = Number(rest.length ? `${whole}.${rest.join("")}` : whole);
@@ -99,6 +113,25 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
   const [spend, setSpend] = useState("");
   const [units, setUnits] = useState(1);
 
+  /*
+   * ⚠️ מעבר שלב השאיר את הפוקוס על `&lt;body&gt;`. הכרטיס מחליף את כל תוכנו
+   * בלי לנווט, ולכן קורא-מסך שלחץ "חשבו לי את החיסכון" איבד את מקומו
+   * וקפץ לראש המסמך — ההכרזה "שלב 2 מתוך 3" נשמעה, אבל לא היה לאן
+   * להמשיך ממנה. הפוקוס עובר לכותרת השלב החדש.
+   *
+   * `stepStarted` מונע גניבת פוקוס בטעינה הראשונה: הדף לא אמור לקפוץ
+   * אל המחשבון רק מפני שהוא קיים.
+   */
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const stepStarted = useRef(false);
+  useEffect(() => {
+    if (!stepStarted.current) {
+      stepStarted.current = true;
+      return;
+    }
+    headingRef.current?.focus();
+  }, [step]);
+
   const monthlySpend = parseSpend(spend);
 
   const cheapest = useMemo(() => {
@@ -127,6 +160,18 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
 
   const unitLabel = track === "cellular" ? "קווים" : "בתי אב";
 
+  /*
+   * ⚠️ שתי הסיבות שהכפתור מושבת חייבות להיאמר. כפתור `disabled` יוצא
+   * מסדר המקלדת ונעלם בלי הסבר, והקיטום ל-MAX_SPEND מחליף בשקט את מה
+   * שהמשתמש הקליד — מי שמשלם ₪6,000 חשב שהמקלדת נתקעה.
+   */
+  const spendHint =
+    spend.trim() !== "" && monthlySpend <= 0
+      ? "הזינו סכום חודשי במספרים בלבד."
+      : monthlySpend >= MAX_SPEND
+        ? `הסכום הוגבל ל-${MAX_SPEND.toLocaleString("he-IL")} ₪ — לחשבון גבוה יותר נציג יבדוק אתכם ידנית.`
+        : "";
+
   return (
     <Card className="p-5 sm:p-6">
       {/*
@@ -148,7 +193,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
 
       {step === 0 && (
         <div>
-          <h3 className="text-lg font-bold text-lp-ink">על מה תרצו לחסוך?</h3>
+          <h3 ref={headingRef} tabIndex={-1} className="text-lg font-bold text-lp-ink outline-none">על מה תרצו לחסוך?</h3>
           <p className="mt-1 text-sm text-lp-ink-2">נשווה מול הקטלוג המלא שלנו ונראה לכם כמה אפשר לחסוך.</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {(
@@ -179,7 +224,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
 
       {step === 1 && (
         <div>
-          <h3 className="text-lg font-bold text-lp-ink">כמה אתם משלמים היום?</h3>
+          <h3 ref={headingRef} tabIndex={-1} className="text-lg font-bold text-lp-ink outline-none">כמה אתם משלמים היום?</h3>
           <p className="mt-1 text-sm text-lp-ink-2">הסכום החודשי הכולל שאתם משלמים כרגע.</p>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -190,12 +235,30 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
               <input
                 id="calc-spend"
                 value={spend}
-                onChange={(e) => setSpend(e.target.value)}
+                /*
+                  ⚠️ הקיטום ל-MAX_SPEND חייב לחזור אל השדה עצמו. בלעדיו
+                  מי שהקליד 9000 ראה את 9000 בשדה בזמן שהמסך אמר ₪5,000,
+                  והנציג קיבל בהערה סכום שהלקוח מעולם לא הזין —
+                  `maxLength={6}` מאפשר להגיע לפער הזה בקלות.
+                */
+                onChange={(e) => {
+                  const next = e.target.value;
+                  const parsed = parseSpend(next);
+                  setSpend(parsed >= MAX_SPEND ? String(MAX_SPEND) : next);
+                }}
                 inputMode="decimal"
                 maxLength={6}
                 placeholder="למשל 220"
                 className="nums w-full rounded-lg border border-lp-line px-3 py-2.5 text-lg transition focus:border-lp-brand"
+                aria-describedby={spendHint ? "calc-spend-hint" : undefined}
               />
+              <p
+                id="calc-spend-hint"
+                aria-live="polite"
+                className={`mt-1.5 text-xs text-lp-ink-3 ${spendHint ? "" : "sr-only"}`}
+              >
+                {spendHint}
+              </p>
             </div>
             {track === "cellular" && (
               <div>
@@ -234,9 +297,19 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             </button>
             <button
               type="button"
-              disabled={monthlySpend <= 0}
-              onClick={() => setStep(2)}
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-lp-brand px-4 py-2.5 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright disabled:opacity-40"
+              /*
+                ⚠️ `aria-disabled` ולא `disabled`. כפתור מושבת אמיתי יוצא
+                מסדר המקלדת, כלומר משתמש מקלדת מגיע לסוף הכרטיס בלי לפגוש
+                את ה-CTA ובלי לדעת שחסר סכום. כך הוא נשאר בר-מיקוד,
+                מכריז על עצמו כמושבת, ומצביע להסבר שליד השדה.
+              */
+              aria-disabled={monthlySpend <= 0}
+              aria-describedby={spendHint ? "calc-spend-hint" : undefined}
+              onClick={() => {
+                if (monthlySpend <= 0) return;
+                setStep(2);
+              }}
+              className={`inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-lp-brand px-4 py-2.5 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright ${monthlySpend <= 0 ? "opacity-40" : ""}`}
             >
               חשבו לי את החיסכון
             </button>
@@ -246,6 +319,18 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
 
       {step === 2 && (
         <div>
+          {/*
+            ⚠️ התוצאה עצמה לא הוכרזה. אזור ה-`aria-live` היחיד בכרטיס אמר
+            "שלב 3 מתוך 3", והמספר הגדול ישב בפסקה בלי כותרת ובלי
+            `role="status"` — מי שביקש חישוב שמע שהשלב התחלף ולא מה
+            התשובה. הכותרת הזו היא גם יעד הפוקוס של השלב, ולכן היא נושאת
+            את הסכום עצמו. `sr-only` כדי לא לכפול את הכותרת הוויזואלית.
+          */}
+          <h3 ref={headingRef} tabIndex={-1} className="sr-only outline-none">
+            {worthwhile
+              ? `אפשר לחסוך עד ${shekels(yearlySaving)} בשנה, ${shekels(monthlySaving)} בחודש`
+              : "לפי הסכום שהזנתם לא נמצא חיסכון בתשלום החודשי"}
+          </h3>
           {worthwhile ? (
             <>
               <p className="text-sm text-lp-ink-2">
@@ -257,7 +342,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
               </p>
               <p className="mt-1.5 text-sm text-lp-ink-2">
                 בשנה —{" "}
-                <span className="nums font-semibold text-lp-ink">{shekels(Math.round(monthlySaving))}</span>{" "}
+                <span className="nums font-semibold text-lp-ink">{shekels(monthlySaving)}</span>{" "}
                 כל חודש שנשאר אצלכם.
               </p>
 

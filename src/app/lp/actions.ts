@@ -185,7 +185,32 @@ export async function submitLandingLead(
     { field: "createdAt", direction: "desc" },
     { offset: 0, limit: 1 },
   );
-  if (recent.total > 0) return { status: "sent" };
+  const duplicate = recent.rows[0];
+  if (duplicate) {
+    /*
+     * ⚠️ הליד כפול — ההערה לא. הגולש שהשאיר פרטים על כרטיס חבילה ואז
+     * מילא את המחשבון נופל בדיוק לכאן: הוא רואה "קיבלנו!", והשורה
+     * היחידה שהנציג באמת צריך — "משלם היום ₪220 · 3 קווים · חיסכון
+     * פוטנציאלי ₪1,560 בשנה" — נבלעה יחד עם הליד הכפול. החלון הזה נועד
+     * לחסום לחיצה כפולה על "שליחה", ולחיצה כפולה אינה נושאת מידע חדש;
+     * טופס שכן נושא מידע חדש מצרף אותו לליד הקיים.
+     *
+     * בולעת חריגות: הגולש כבר נחשב "נשלח", ואסור שכשל בהוספת הערה
+     * יציג לו שגיאה על פנייה שנקלטה.
+     */
+    // ⚠️ הערה זהה אינה מידע חדש — היא בדיוק הלחיצה הכפולה שהחלון נועד
+    // לחסום. בלי הבדיקה הזו שליחה כפולה של אותו טופס מכפילה את ההערה.
+    const isNew = message && !duplicate.notes.some((n) => n.body === message);
+    if (isNew) {
+      try {
+        const author = duplicate.assigneeId ?? duplicate.createdById;
+        if (author) await db.leads.addNote(duplicate.id, author, message);
+      } catch (err) {
+        console.warn("[lp] הוספת הערה לליד כפול נכשלה", err);
+      }
+    }
+    return { status: "sent" };
+  }
 
   /*
    * הנמען. ⚠️ עובד מושבת נחשב "לא נמצא": ליד ששויך לחשבון שאינו
