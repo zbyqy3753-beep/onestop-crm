@@ -60,10 +60,55 @@ const USD_TO_ILS = 3.6;
  * בשקט ויוצג כחינם.
  */
 export function costCategoryOf(dedupeKey: string): WaCostCategory {
-  if (dedupeKey.startsWith("renewal:opener:")) return "marketing";
-  if (dedupeKey.startsWith("followup:")) return "utility";
+  for (const { prefix, category } of COST_PREFIXES) {
+    if (dedupeKey.startsWith(prefix)) return category;
+  }
   // כל השאר הן תשובות בתוך חלון 24 השעות
   return "service";
+}
+
+/**
+ * כל תחילית שיוצאת בתבנית, והקטגוריה שמטא מחייבים עליה.
+ *
+ * ⚠️⚠️ **הרשימה הזו חייבת להישאר זהה ל-`templateFor` ב-`drain.ts`.**
+ * שם נקבע אם ההודעה יוצאת כתבנית, וכאן נקבע כמה היא עולה — ותבנית
+ * שקיימת שם וחסרה כאן מחויבת בשקט ומוצגת כחינם. זה בדיוק מה שקרה:
+ * שבע תחיליות נוספו ל-`drain.ts` לאורך הזמן ואף אחת לא נכנסה לכאן,
+ * ולכן כל התראות הצוות הופיעו במסך העלויות כ-0.
+ *
+ * ⚠️ מערך מסודר ולא מפה, כי `renewal:opener:` ו-`renewal:slots:`
+ * חולקות תחילית: הראשונה פנייה יזומה בתשלום מלא, השנייה תשובה בתוך
+ * החלון ולכן חינם. ההתאמה עוצרת בראשונה שמתאימה.
+ */
+const COST_PREFIXES: { prefix: string; category: WaCostCategory }[] = [
+  // ── פניות יזומות: היקרות ביותר ──
+  { prefix: "renewal:opener:", category: "marketing" },
+  { prefix: "broadcast:", category: "marketing" },
+
+  // ── התראות תפעוליות לצוות ולבעלים ──
+  { prefix: "followup:", category: "utility" },
+  { prefix: "overdue:", category: "utility" },
+  { prefix: "dealwon:", category: "utility" },
+  { prefix: "unassigned:", category: "utility" },
+  { prefix: "yeslead:", category: "utility" },
+  { prefix: "hotlead:", category: "utility" },
+  { prefix: "pwnotice:", category: "utility" },
+
+  // ── קוד חד-פעמי ──
+  { prefix: "pwcode:", category: "authentication" },
+];
+
+/**
+ * התחיליות של קטגוריה אחת — למי שסופר במסד ולא בזיכרון.
+ *
+ * ⚠️ קיים כדי ש-`spendFor` ב-`server/whatsapp/overview.ts` יגזור את
+ * השאילתות שלו **מאותה רשימה** במקום לחזור עליה. שתי רשימות שנפרדו
+ * זו מזו הן איך שהפער הזה נוצר מלכתחילה.
+ */
+export function prefixesFor(category: WaCostCategory): string[] {
+  return COST_PREFIXES.filter((p) => p.category === category).map(
+    (p) => p.prefix,
+  );
 }
 
 /** עלות הודעה בודדת בדולר. */

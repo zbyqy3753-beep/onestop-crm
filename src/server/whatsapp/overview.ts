@@ -5,7 +5,7 @@ import { prisma } from "@/server/db/client";
 import { isIsraeliPhone } from "@/lib/format";
 import { startOfDay, startOfMonth } from "@/lib/tz";
 import { STATUS_CONFIG } from "@/lib/domain/types";
-import { bulkCostUsd } from "@/lib/domain/whatsappCost";
+import { bulkCostUsd, prefixesFor } from "@/lib/domain/whatsappCost";
 import { detectOutage, type WaOutage } from "@/lib/domain/waOutage";
 import { readSettings, type BotSettingsView } from "./settings";
 import { plannedSendAt } from "./outbox";
@@ -185,17 +185,25 @@ function blockedReasonFor(lead: {
  * ⚠️ שלוש שאילתות ולא `groupBy`: אין עמודת קטגוריה בסכימה, והחלוקה
  * נגזרת מתחילית `dedupeKey` (ראה `costCategoryOf`). `groupBy` על
  * `dedupeKey` היה מחזיר שורה נפרדת לכל הודעה ומצריך צבירה בקוד.
+ *
+ * ⚠️⚠️ **התחיליות נגזרות מ-`prefixesFor` ולא נכתבות כאן.** קודם הן
+ * היו כתובות בשורה — `renewal:opener:` לשיווק ו-`followup:` לתועלת —
+ * וכל שאר סוגי ההתראות נפלו לשארית שמוצגת כחינם. שבע תבניות חויבו
+ * בשקט במשך חודשים. רשימה אחת, במקום אחד.
  */
 async function spendFor(
   where: Prisma.WhatsAppMessageWhereInput,
 ): Promise<SpendWindow> {
+  const anyOf = (category: "marketing" | "utility") => ({
+    ...where,
+    OR: prefixesFor(category).map((prefix) => ({
+      dedupeKey: { startsWith: prefix },
+    })),
+  });
+
   const [marketing, utility, total] = await Promise.all([
-    prisma.whatsAppMessage.count({
-      where: { ...where, dedupeKey: { startsWith: "renewal:opener:" } },
-    }),
-    prisma.whatsAppMessage.count({
-      where: { ...where, dedupeKey: { startsWith: "followup:" } },
-    }),
+    prisma.whatsAppMessage.count({ where: anyOf("marketing") }),
+    prisma.whatsAppMessage.count({ where: anyOf("utility") }),
     prisma.whatsAppMessage.count({ where }),
   ]);
 
