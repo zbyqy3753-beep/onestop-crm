@@ -4,95 +4,28 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "./Card";
 import { LeadForm } from "./LeadForm";
 import { shekels } from "../catalog/format";
-import { afterPrice, hasKnownAfterPrice } from "../catalog/catalog";
-import type { CellularSpec, HomeSpec, MonthlyPackage, Package } from "../catalog/types";
-
-type Track = "cellular" | "home";
-
-/**
- * חבילה שהמבקר במסלול הזה באמת יכול לעבור אליה.
- *
- * ⚠️ הפילטר הזה הוא מה שמפריד בין "עד כמה אפשר לחסוך" לבין מספר
- * מומצא. בלעדיו הזולה ביותר ב-`home` היא **קו טלפון של בזק ל-50 דקות**
- * (19.9 ₪) — כלומר מי שמשלם 220 ₪ על טריפל קיבל כותרת של ₪2,401
- * חיסכון מול מוצר שאינו אינטרנט ואינו טלוויזיה. באותו אופן 6 מתוך 8
- * החבילות הזולות בסלולר הן כשר או DATA ONLY, שאינן תחליף לקו רגיל.
- *
- * `price > 0` נבדק כאן ולא נשען על `listable()` של הקורא: בקטלוג יש
- * חבילות שמתומחרות לחבילה שלמה (`3 קווים ב99`) ורשומות כ-0, ומחיר 0
- * מייצר "חיסכון" של מלוא החשבון.
- */
-function isComparable(p: Package, track: Track): p is MonthlyPackage {
-  if (p.category !== track || p.priceModel !== "monthly") return false;
-  if (p.price == null || p.price <= 0) return false;
-  if (p.editorial?.hidden) return false;
-  // ⚠️ חבילה שהעלייה שלה מוצהרת בטקסט חופשי בלבד אינה בת-השוואה כאן:
-  // המחיר היחיד שאפשר לחשב ממנה הוא מחיר ההטבה, והכותרת מבטיחה את
-  // ההפך. ראה `hasKnownAfterPrice`.
-  if (!hasKnownAfterPrice(p)) return false;
-
-  if (track === "cellular") {
-    const spec = p.spec as CellularSpec;
-    return !spec.kosher && (spec.unlimitedData || (spec.dataGb ?? 0) > 0) && (spec.minutes ?? 0) >= 1000;
-  }
-  // מסלול הבית הוא חשבון האינטרנט של משק הבית; חבילת TV בלבד או קו
-  // טלפון בלבד אינם ההוצאה שהמבקר הזין.
-  return (p.spec as HomeSpec).hasInternet;
-}
+import { catalog } from "../catalog/catalog";
+import { MAX_SPEND, computeSaving, parseSpend, type Track } from "../catalog/savings";
+import type { Package } from "../catalog/types";
 
 /**
- * המחיר לקו **שנשאר אחרי שההטבה נגמרת**.
- *
- * ⚠️ זה הלב של התיקון. `price` לבדו הוא מחיר ההטבה: HOT Synergy עולה
- * 21.9 ₪ והופך ל-57.9 ₪ בתום שנה — פי 2.64. כותרת שנתית שנבנתה על
- * 21.9 מנפחת את החיסכון פי 3.3, וגרוע מכך היא סותרת את ההבטחה של
- * הדף עצמו ("כולל המחיר אחרי תום ההטבה"). `afterPrice` כבר מחזירה את
- * המחיר הקבוע, וזה המספר היחיד שאפשר לעמוד מאחוריו לשנה שלמה.
- *
- * מדרגות הקווים מתומחרות על בסיס ההטבה, ולכן הן נלקחות בחשבון רק
- * כשהחבילה לא הצהירה על עלייה — אחרת היינו מערבבים מחיר מבצע לקו עם
- * מחיר קבוע ומקבלים סכום שאינו נכון באף נקודת זמן.
+ * ⚠️ החישוב עצמו חי ב-`../catalog/savings` ולא כאן: הוא נבדק ב-
+ * `tools/savings.test.mjs` מול הקטלוג המלא. הקומפוננטה הזו אחראית
+ * למסך בלבד.
  */
-/** התקרה שהמחשבון מוכן להתייחס אליה כחשבון חודשי אמיתי. */
-const MAX_SPEND = 5000;
 
-/**
- * קריאת הסכום שהמבקר הקליד.
- *
- * ⚠️ `\d` בלי הדגל `u` לא תופס ספרות ערביות-הודיות, ומקלדת ערבית בנייד
- * הייתה מרוקנת את המחרוזת ומשאירה את הכפתור מושבת בלי הסבר. לכן
- * הספרות מנורמלות ל-ASCII לפני הניקוי, ורק הנקודה העשרונית הראשונה
- * נשמרת כדי ש-"1.2.3" לא ייפול ל-NaN.
- */
-function parseSpend(raw: string): number {
-  const ascii = raw.replace(/[٠-٩۰-۹]/g, (d) =>
-    String((d.codePointAt(0)! - 0x0660) % 16),
-  );
-  /*
-   * ⚠️ תווי זבל **פוסלים** את הקלט, לא מסוננים ממנו.
-   *
-   * הסינון השקט של `[^\d.]` הפך `-500` ל-500 ו-`abc220` ל-220: המסך
-   * הצהיר "אתם משלמים ₪500 בחודש" על סכום שלילי, והנציג קיבל בהערה
-   * סכום שהלקוח מעולם לא הקליד. מותרים רק מפרידי אלפים ורווחים, שהם
-   * דרך לגיטימית לכתוב מספר; כל השאר מחזיר 0, מה שמשבית את הכפתור
-   * ומציג את ההסבר שליד השדה.
-   */
-  if (/[^\d.,\s₪]/.test(ascii)) return 0;
-  const cleaned = ascii.replace(/[^\d.]/g, "");
-  const [whole, ...rest] = cleaned.split(".");
-  const value = Number(rest.length ? `${whole}.${rest.join("")}` : whole);
-  if (!Number.isFinite(value) || value <= 0) return 0;
-  return Math.min(value, MAX_SPEND);
+/** "3 קווים" אבל "קו אחד" — הנציג קורא את זה, ו-"1 קווים" נראה כמו תקלה. */
+function unitsLabel(track: Track, units: number): string {
+  if (track === "home") return "אינטרנט וטלוויזיה";
+  return units === 1 ? "קו אחד" : `${units} קווים`;
 }
 
-function perLinePrice(p: MonthlyPackage, lines: number): number {
-  const base = afterPrice(p);
-  if (p.priceAfterPromo != null) return base;
-  const tiers = (p.spec as CellularSpec).lineTiers;
-  if (!tiers?.length) return base;
-  const tier = tiers.filter((t) => t.lines <= lines).sort((a, b) => b.lines - a.lines)[0];
-  return tier ? Math.min(tier.price, base) : base;
-}
+/** התאריך שבו נשאב הקטלוג — המספר שנשען עליו לא יכול להיות חסר חותמת. */
+const CATALOG_DATE = new Date(catalog.updatedAt).toLocaleDateString("he-IL", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
 
 /**
  * "What do you pay today?" — the reverse of a filter grid, and the highest
@@ -133,44 +66,40 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
   }, [step]);
 
   const monthlySpend = parseSpend(spend);
-
-  const cheapest = useMemo(() => {
-    const pool = packages.filter((p): p is MonthlyPackage => isComparable(p, track));
-    return pool.reduce<MonthlyPackage | null>(
-      (best, p) => (best == null || perLinePrice(p, units) < perLinePrice(best, units) ? p : best),
-      null,
-    );
-  }, [packages, track, units]);
-
-  const perLine = cheapest ? perLinePrice(cheapest, units) : 0;
-  // Cellular is priced per line; a home package is one household bill.
-  const newMonthly = track === "cellular" ? perLine * units : perLine;
   /*
-   * ⚠️ מעוגל פעם אחת, והשנה נגזרת ממנו.
-   *
-   * חבילה במחיר 29.9 ₪ כפול שלושה קווים מייצרת "חיסכון של ₪1,563.6
-   * בשנה" — והאגורות האלה הן בדיוק מה שגורם למספר להיראות מומצא.
-   * חשוב מזה: עיגול נפרד לחודש ולשנה הציג שני מספרים שסותרים זה את זה
-   * על אותו מסך (₪154 בחודש לצד ₪1,852 בשנה, כשהמכפלה היא 1,848).
-   * לכן מעגלים את החודש ומכפילים — שתי השורות תמיד מסתדרות.
+   * ⚠️ נדלק רק אחרי לחיצה על ה-CTA. שדה ריק בכניסה לשלב אינו שגיאה,
+   * אבל לחיצה על "חשבו לי את החיסכון" בשדה ריק **הייתה** לא עושה כלום
+   * ובלי מילה אחת של הסבר — הכפתור נראה שבור.
    */
-  const monthlySaving = cheapest ? Math.round(monthlySpend - newMonthly) : 0;
-  const yearlySaving = monthlySaving * 12;
-  const worthwhile = monthlySpend > 0 && monthlySaving > 0;
+  const [attempted, setAttempted] = useState(false);
 
-  const unitLabel = track === "cellular" ? "קווים" : "בתי אב";
+  const saving = useMemo(
+    () => computeSaving(packages, track, units, monthlySpend),
+    [packages, track, units, monthlySpend],
+  );
+  const { monthly: monthlySaving, yearly: yearlySaving, worthwhile } = saving;
+  /*
+   * ⚠️ "לא נמצאה חבילה" אינו "לא נמצא חיסכון". הפילטרים ב-`isComparable`
+   * יכולים לרוקן קטגוריה שלמה (למשל אם כל חבילות הבית יצהירו על עלייה
+   * בטקסט חופשי), ואז המסך אמר למי שמשלם ₪400 "אתם כבר משלמים מעט
+   * יחסית" — והנציג קיבל הערה שהמחשבון בדק ולא מצא. שתי האמירות שקריות.
+   */
+  const noMatch = saving.pick == null;
 
   /*
-   * ⚠️ שתי הסיבות שהכפתור מושבת חייבות להיאמר. כפתור `disabled` יוצא
+   * ⚠️ הסיבות שהכפתור מושבת חייבות להיאמר. כפתור `disabled` יוצא
    * מסדר המקלדת ונעלם בלי הסבר, והקיטום ל-MAX_SPEND מחליף בשקט את מה
    * שהמשתמש הקליד — מי שמשלם ₪6,000 חשב שהמקלדת נתקעה.
+   *
+   * ⚠️ הנוסח מדבר גם על `0` ועל `-500`: שניהם מספרים, וההודעה הישנה
+   * ("במספרים בלבד") שלחה את מי שהקליד אותם לחפש תו נסתר.
    */
-  const spendHint =
-    spend.trim() !== "" && monthlySpend <= 0
-      ? "הזינו סכום חודשי במספרים בלבד."
-      : monthlySpend >= MAX_SPEND
-        ? `הסכום הוגבל ל-${MAX_SPEND.toLocaleString("he-IL")} ₪ — לחשבון גבוה יותר נציג יבדוק אתכם ידנית.`
-        : "";
+  const invalidSpend = monthlySpend <= 0 && (spend.trim() !== "" || attempted);
+  const spendHint = invalidSpend
+    ? "הזינו סכום חודשי חיובי — ספרות בלבד, למשל 220."
+    : monthlySpend >= MAX_SPEND
+      ? `הסכום הוגבל ל-${MAX_SPEND.toLocaleString("he-IL")} ₪ — לחשבון גבוה יותר נציג יבדוק אתכם ידנית.`
+      : "";
 
   return (
     <Card className="p-5 sm:p-6">
@@ -250,6 +179,8 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 maxLength={6}
                 placeholder="למשל 220"
                 className="nums w-full rounded-lg border border-lp-line px-3 py-2.5 text-lg transition focus:border-lp-brand"
+                /* קורא מסך שמע את ההודעה אבל לא ידע שהשדה עצמו שגוי. */
+                aria-invalid={invalidSpend || undefined}
                 aria-describedby={spendHint ? "calc-spend-hint" : undefined}
               />
               <p
@@ -263,7 +194,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             {track === "cellular" && (
               <div>
                 <label className="mb-1 block text-xs font-medium text-lp-ink-2" htmlFor="calc-units">
-                  כמה {unitLabel}?
+                  כמה קווים?
                 </label>
                 <select
                   id="calc-units"
@@ -306,6 +237,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
               aria-disabled={monthlySpend <= 0}
               aria-describedby={spendHint ? "calc-spend-hint" : undefined}
               onClick={() => {
+                setAttempted(true);
                 if (monthlySpend <= 0) return;
                 setStep(2);
               }}
@@ -329,7 +261,9 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
           <h3 ref={headingRef} tabIndex={-1} className="sr-only outline-none">
             {worthwhile
               ? `אפשר לחסוך עד ${shekels(yearlySaving)} בשנה, ${shekels(monthlySaving)} בחודש`
-              : "לפי הסכום שהזנתם לא נמצא חיסכון בתשלום החודשי"}
+              : noMatch
+                ? "לא נמצאה בקטלוג חבילה להשוואה אוטומטית — נציג יבדוק ידנית"
+                : "לפי הסכום שהזנתם לא נמצא חיסכון בתשלום החודשי"}
           </h3>
           {worthwhile ? (
             <>
@@ -348,11 +282,19 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
 
               <p className="mt-4 text-xs leading-relaxed text-lp-ink-3">
                 החישוב מבוסס על החבילה המשתלמת ביותר בקטלוג שלנו בקטגוריה הזו
-                {track === "cellular" && units > 1 ? `, לפי ${units} ${unitLabel}` : ""}, ולפי{" "}
+                {track === "cellular" && units > 1 ? `, לפי ${unitsLabel(track, units)}` : ""}, ולפי{" "}
                 <strong className="font-semibold text-lp-ink-2">המחיר שנשאר גם אחרי תום ההטבה</strong> —
                 ולא לפי מחיר מבצע שמסתיים. עלויות חד-פעמיות (מעבר, חיבור, התקנה) אינן נכללות, והסכום
                 המדויק תלוי בזמינות, בתנאי החברה ובמה שכלול היום בחשבון שלכם — נציג יעבור אתכם על
-                החשבון ויגיד לכם בדיוק כמה תחסכו.
+                החשבון ויגיד לכם בדיוק כמה תחסכו. מחירי הקטלוג נכונים ל-{CATALOG_DATE}.
+              </p>
+            </>
+          ) : noMatch ? (
+            <>
+              <p className="text-lg font-bold text-lp-ink">כאן צריך בן אדם</p>
+              <p className="mt-1 text-sm text-lp-ink-2">
+                בקטגוריה הזו אין כרגע חבילה שאפשר להשוות אליה אוטומטית בלי לנחש מה יקרה בתום
+                ההטבה. השאירו פרטים ונציג יעבור על החשבון שלכם ידנית.
               </p>
             </>
           ) : (
@@ -374,13 +316,15 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
               category={track === "cellular" ? "mobile" : "internet"}
               note={[
                 `מהמחשבון: משלם היום ${shekels(monthlySpend)} בחודש`,
-                track === "cellular" ? `${units} ${unitLabel}` : "אינטרנט וטלוויזיה",
+                unitsLabel(track, units),
                 // ⚠️ גם המקרה השלילי נכתב במפורש. בלעדיו הנציג קיבל הערה
                 // שנראית חתוכה ולא ידע אם המחשבון לא מצא חיסכון או שפשוט
                 // לא רץ.
                 worthwhile
                   ? `חיסכון פוטנציאלי ${shekels(yearlySaving)} בשנה`
-                  : "המחשבון לא מצא חיסכון בתשלום החודשי",
+                  : noMatch
+                    ? "המחשבון לא מצא חבילה להשוואה — דורש בדיקה ידנית"
+                    : "המחשבון לא מצא חיסכון בתשלום החודשי",
               ]
                 .filter(Boolean)
                 .join(" · ")}

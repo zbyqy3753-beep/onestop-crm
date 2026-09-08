@@ -154,6 +154,15 @@ export async function submitLandingLead(
   const category = parseCategory(text(formData.get("category")));
   if (!category) return error("נא לבחור מה מעניין אותך");
 
+  /*
+   * ⚠️ ההסכמה נאכפת **בשרת**. הטופס הוא `noValidate` (ראה `LeadForm`),
+   * ולכן ה-`required` של הדפדפן אינו חוסם דבר: עד כאן נוצר ליד חם
+   * ויצאה התראת וואטסאפ לנציג בלי שום רישום שהאדם אישר שיתקשרו אליו.
+   */
+  if (!text(formData.get("consent"))) {
+    return error("יש לאשר יצירת קשר כדי שנוכל לחזור אליכם");
+  }
+
   const currentProvider = parseProvider(text(formData.get("provider")));
   const message = text(formData.get("message")).slice(0, MAX_MESSAGE);
 
@@ -179,108 +188,119 @@ export async function submitLandingLead(
    * לאיש. מה שצריך להיחסם הוא לחיצה כפולה על "שליחה", וזה בדיוק
    * מה שהחלון הזה תופס.
    */
-  const since = new Date(Date.now() - DUPLICATE_WINDOW_MS).toISOString();
-  const recent = await db.leads.list(
-    { query: phone, sourceDetail: source, createdFrom: since },
-    { field: "createdAt", direction: "desc" },
-    { offset: 0, limit: 1 },
-  );
-  const duplicate = recent.rows[0];
-  if (duplicate) {
-    /*
-     * ⚠️ הליד כפול — ההערה לא. הגולש שהשאיר פרטים על כרטיס חבילה ואז
-     * מילא את המחשבון נופל בדיוק לכאן: הוא רואה "קיבלנו!", והשורה
-     * היחידה שהנציג באמת צריך — "משלם היום ₪220 · 3 קווים · חיסכון
-     * פוטנציאלי ₪1,560 בשנה" — נבלעה יחד עם הליד הכפול. החלון הזה נועד
-     * לחסום לחיצה כפולה על "שליחה", ולחיצה כפולה אינה נושאת מידע חדש;
-     * טופס שכן נושא מידע חדש מצרף אותו לליד הקיים.
-     *
-     * בולעת חריגות: הגולש כבר נחשב "נשלח", ואסור שכשל בהוספת הערה
-     * יציג לו שגיאה על פנייה שנקלטה.
-     */
-    // ⚠️ הערה זהה אינה מידע חדש — היא בדיוק הלחיצה הכפולה שהחלון נועד
-    // לחסום. בלי הבדיקה הזו שליחה כפולה של אותו טופס מכפילה את ההערה.
-    const isNew = message && !duplicate.notes.some((n) => n.body === message);
-    if (isNew) {
-      try {
-        const author = duplicate.assigneeId ?? duplicate.createdById;
-        if (author) await db.leads.addNote(duplicate.id, author, message);
-      } catch (err) {
-        console.warn("[lp] הוספת הערה לליד כפול נכשלה", err);
+  /*
+   * ⚠️ מכאן והלאה נוגעים במסד, וכל חריגה כאן **החליפה את כל הדף**
+   * במסך שגיאה של Next: המבקר שסיים חישוב, ראה "אפשר לחסוך ₪1,560"
+   * והקליד טלפון, איבד את המסך ולא ידע אם הפנייה נשלחה. `LandingState`
+   * נבנה בדיוק בשביל הרגע הזה — הטופס נשאר על המסך עם הודעה.
+   */
+  try {
+    const since = new Date(Date.now() - DUPLICATE_WINDOW_MS).toISOString();
+    const recent = await db.leads.list(
+      { query: phone, sourceDetail: source, createdFrom: since },
+      { field: "createdAt", direction: "desc" },
+      { offset: 0, limit: 1 },
+    );
+    const duplicate = recent.rows[0];
+    if (duplicate) {
+      /*
+       * ⚠️ הליד כפול — ההערה לא. הגולש שהשאיר פרטים על כרטיס חבילה ואז
+       * מילא את המחשבון נופל בדיוק לכאן: הוא רואה "קיבלנו!", והשורה
+       * היחידה שהנציג באמת צריך — "משלם היום ₪220 · 3 קווים · חיסכון
+       * פוטנציאלי ₪1,560 בשנה" — נבלעה יחד עם הליד הכפול. החלון הזה נועד
+       * לחסום לחיצה כפולה על "שליחה", ולחיצה כפולה אינה נושאת מידע חדש;
+       * טופס שכן נושא מידע חדש מצרף אותו לליד הקיים.
+       *
+       * בולעת חריגות: הגולש כבר נחשב "נשלח", ואסור שכשל בהוספת הערה
+       * יציג לו שגיאה על פנייה שנקלטה.
+       */
+      // ⚠️ הערה זהה אינה מידע חדש — היא בדיוק הלחיצה הכפולה שהחלון נועד
+      // לחסום. בלי הבדיקה הזו שליחה כפולה של אותו טופס מכפילה את ההערה.
+      const isNew = message && !duplicate.notes.some((n) => n.body === message);
+      if (isNew) {
+        try {
+          const author = duplicate.assigneeId ?? duplicate.createdById;
+          if (author) await db.leads.addNote(duplicate.id, author, message);
+        } catch (err) {
+          console.warn("[lp] הוספת הערה לליד כפול נכשלה", err);
+        }
       }
+      return { status: "sent" };
     }
-    return { status: "sent" };
-  }
 
-  /*
-   * הנמען. ⚠️ עובד מושבת נחשב "לא נמצא": ליד ששויך לחשבון שאינו
-   * פעיל אינו גלוי לאיש — לא לו, כי אינו נכנס, ולא להנהלה, שרואה
-   * את המאגר הלא-משויך. עדיף לידים ללא שיוך על לידים שנעלמו.
-   */
-  const assignee = await db.users.getByEmail(assigneeEmail());
-  // ⚠️ כתובת שהוגדרה ואינה קיימת היא טעות הקלדה, לא מצב תקין. בלי
-  // השורה הזו היא נראית בדיוק כמו "אין יעד מוגדר" — הליד נשמר בלי
-  // שיוך ואיש לא יודע למה.
-  if (!assignee) {
-    console.warn(`[lp] יעד השיוך ${assigneeEmail()} לא נמצא — הליד נשמר ללא שיוך`);
-  }
-  /*
-   * ⚠️ כלל יאס גובר גם על היעד הקבוע של דף הנחיתה. ליד של יאס הולך
-   * לעובד שמטפל ביאס — זה מה שנקבע, וההחרגה של דף הנחיתה הייתה
-   * מייצרת מסלול שקט שבו לידים של יאס נוחתים אצל מישהו אחר.
-   */
-  const yesFacts = { currentProvider, packageName, sourceDetail: source };
-  const assigneeId = await assigneeForIncoming(
-    yesFacts,
-    assignee?.active ? assignee.id : undefined,
-  );
+    /*
+     * הנמען. ⚠️ עובד מושבת נחשב "לא נמצא": ליד ששויך לחשבון שאינו
+     * פעיל אינו גלוי לאיש — לא לו, כי אינו נכנס, ולא להנהלה, שרואה
+     * את המאגר הלא-משויך. עדיף לידים ללא שיוך על לידים שנעלמו.
+     */
+    const assignee = await db.users.getByEmail(assigneeEmail());
+    // ⚠️ כתובת שהוגדרה ואינה קיימת היא טעות הקלדה, לא מצב תקין. בלי
+    // השורה הזו היא נראית בדיוק כמו "אין יעד מוגדר" — הליד נשמר בלי
+    // שיוך ואיש לא יודע למה.
+    if (!assignee) {
+      console.warn(`[lp] יעד השיוך ${assigneeEmail()} לא נמצא — הליד נשמר ללא שיוך`);
+    }
+    /*
+     * ⚠️ כלל יאס גובר גם על היעד הקבוע של דף הנחיתה. ליד של יאס הולך
+     * לעובד שמטפל ביאס — זה מה שנקבע, וההחרגה של דף הנחיתה הייתה
+     * מייצרת מסלול שקט שבו לידים של יאס נוחתים אצל מישהו אחר.
+     */
+    const yesFacts = { currentProvider, packageName, sourceDetail: source };
+    const assigneeId = await assigneeForIncoming(
+      yesFacts,
+      assignee?.active ? assignee.id : undefined,
+    );
 
-  /*
-   * `createdById` הוא מפתח זר חובה. הנמען הוא גם היוצר הטבעי כאן —
-   * זה הדף שלו. כשהוא חסר נופלים לבעלים, בדיוק כמו `api/leads`.
-   */
-  let createdById = assigneeId;
-  if (!createdById) {
-    const users = await db.users.listActive();
-    createdById = (users.find((u) => u.role === "owner") ?? users[0])?.id;
-  }
-  if (!createdById) {
-    return error("שגיאה זמנית בשמירת הפנייה. נסו שוב בעוד רגע.");
-  }
+    /*
+     * `createdById` הוא מפתח זר חובה. הנמען הוא גם היוצר הטבעי כאן —
+     * זה הדף שלו. כשהוא חסר נופלים לבעלים, בדיוק כמו `api/leads`.
+     */
+    let createdById = assigneeId;
+    if (!createdById) {
+      const users = await db.users.listActive();
+      createdById = (users.find((u) => u.role === "owner") ?? users[0])?.id;
+    }
+    if (!createdById) {
+      return error("שגיאה זמנית בשמירת הפנייה. נסו שוב בעוד רגע.");
+    }
 
-  const lead = await db.leads.create({
-    name,
-    phone,
-    // ליד שמילא טופס מרצונו הוא ליד חם, לא רשומת דאטה
-    kind: "hot",
-    priority: "normal",
-    category,
-    currentProvider,
-    // `source` אומר **איך** נקלט (טופס), `sourceDetail` אומר **ממה**
-    source: "form",
-    sourceDetail: source,
-    packageName: packageName || undefined,
-    note: message || undefined,
-    assigneeId,
-    createdById,
-  });
+    const lead = await db.leads.create({
+      name,
+      phone,
+      // ליד שמילא טופס מרצונו הוא ליד חם, לא רשומת דאטה
+      kind: "hot",
+      priority: "normal",
+      category,
+      currentProvider,
+      // `source` אומר **איך** נקלט (טופס), `sourceDetail` אומר **ממה**
+      source: "form",
+      sourceDetail: source,
+      packageName: packageName || undefined,
+      note: message || undefined,
+      assigneeId,
+      createdById,
+    });
 
-  // ⚠️ אחרי היצירה, ובולעת חריגות בעצמה: הגולש שלחץ "שליחה" לא
-  // אמור לראות שגיאה בגלל הודעה פנימית שלא יצאה.
-  if (isYesLead(yesFacts)) {
-    await notifyOwnersOfYesLead({
-      id: lead.id,
-      name: lead.name,
-      phone: lead.phone,
+    // ⚠️ אחרי היצירה, ובולעת חריגות בעצמה: הגולש שלחץ "שליחה" לא
+    // אמור לראות שגיאה בגלל הודעה פנימית שלא יצאה.
+    if (isYesLead(yesFacts)) {
+      await notifyOwnersOfYesLead({
+        id: lead.id,
+        name: lead.name,
+        phone: lead.phone,
+        assigneeId,
+      });
+    }
+
+    await notifyHotLeadAssigned({
+      lead: { id: lead.id, name: lead.name, phone: lead.phone, kind: lead.kind },
       assigneeId,
     });
+
+    revalidatePath("/leads");
+    return { status: "sent" };
+  } catch (err) {
+    console.error("[lp] שמירת הליד נכשלה", err);
+    return error("שגיאה זמנית בשמירת הפנייה. נסו שוב בעוד רגע.");
   }
-
-  await notifyHotLeadAssigned({
-    lead: { id: lead.id, name: lead.name, phone: lead.phone, kind: lead.kind },
-    assigneeId,
-  });
-
-  revalidatePath("/leads");
-  return { status: "sent" };
 }

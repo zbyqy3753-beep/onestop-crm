@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useId } from "react";
 import { useFormStatus } from "react-dom";
 import {
   PROVIDER_CONFIG,
@@ -58,6 +58,13 @@ interface Props {
 
 export function LeadForm({ pkg, compact = false, category, note }: Props) {
   const [state, action] = useActionState(submitLandingLead, INITIAL);
+  /*
+   * ⚠️ `useId` ולא הקבוע `"general"`. שני טפסים ללא `pkg` חיים על אותו
+   * דף — זה של המחשבון וזה שבתחתית העמוד — ומרגע שהמחשבון מגיע לשלב 3
+   * היו בדף שני `id="lp-name-general"`. לחיצה על התווית "שם מלא" בטופס
+   * התחתון הקפיצה את הפוקוס לשדה של המחשבון, בסקשן אחר לגמרי.
+   */
+  const autoId = useId();
 
   if (state.status === "sent") {
     return (
@@ -72,7 +79,7 @@ export function LeadForm({ pkg, compact = false, category, note }: Props) {
 
   // מזהה ייחודי לשדות: כל כרטיס מרנדר טופס משלו, ו-`id` כפול היה מקשר
   // את התווית של כרטיס אחד לשדה של אחר.
-  const uid = pkg ? pkg.id : "general";
+  const uid = pkg ? pkg.id : autoId;
 
   return (
     <form action={action} className="space-y-3" noValidate>
@@ -180,7 +187,18 @@ export function LeadForm({ pkg, compact = false, category, note }: Props) {
       </div>
 
       <label className="flex items-start gap-2 text-xs leading-relaxed text-lp-ink-2">
-        <input type="checkbox" required className="mt-0.5 h-4 w-4 shrink-0 accent-lp-brand" />
+        {/*
+          ⚠️ `name` — בלעדיו השדה כלל לא נשלח, והטופס הוא `noValidate`,
+          כלומר ה-`required` אינו חוסם. ההסכמה נאכפת בשרת ונשמרת ככל
+          שדה אחר; קודם לכן נוצרו לידים חמים בלי שום רישום שהיא ניתנה.
+        */}
+        <input
+          type="checkbox"
+          name="consent"
+          value="1"
+          required
+          className="mt-0.5 h-4 w-4 shrink-0 accent-lp-brand"
+        />
         <span>
           אני מאשר/ת שנציג ONE STOP יצור איתי קשר בטלפון או בוואטסאפ בנוגע לפנייה זו, בהתאם
           למדיניות הפרטיות.
