@@ -5,7 +5,7 @@ import { Card } from "./Card";
 import { LeadForm } from "./LeadForm";
 import { shekels } from "../catalog/format";
 import { catalog } from "../catalog/catalog";
-import { MAX_SPEND, computeSaving, parseSpend, type Track } from "../catalog/savings";
+import { MAX_SPEND, computeSaving, parseSpend, perLinePrice, type Track } from "../catalog/savings";
 import type { Package } from "../catalog/types";
 
 /**
@@ -98,7 +98,11 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
   const spendHint = invalidSpend
     ? "הזינו סכום חודשי חיובי — ספרות בלבד, למשל 220."
     : monthlySpend >= MAX_SPEND
-      ? `הסכום הוגבל ל-${MAX_SPEND.toLocaleString("he-IL")} ₪ — לחשבון גבוה יותר נציג יבדוק אתכם ידנית.`
+      ? // ⚠️ "הסכום הוגבל" נאמר גם למי שהקליד 5,000 במדויק — הקיטום
+        // ב-`onChange` מוחק את הקלט המקורי, ולכן אי אפשר להבחין בין
+        // קיטום לבין סכום תקין. הנוסח מתאר את התקרה במקום להאשים
+        // את המשתמש בקלט שלא בהכרח הקליד.
+        `${MAX_SPEND.toLocaleString("he-IL")} ₪ הוא הסכום הגבוה ביותר שהמחשבון מטפל בו — לחשבון גדול יותר נציג יבדוק אתכם ידנית.`
       : "";
 
   return (
@@ -181,14 +185,14 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 className="nums w-full rounded-lg border border-lp-line px-3 py-2.5 text-lg transition focus:border-lp-brand"
                 /* קורא מסך שמע את ההודעה אבל לא ידע שהשדה עצמו שגוי. */
                 aria-invalid={invalidSpend || undefined}
-                aria-describedby={spendHint ? "calc-spend-hint" : undefined}
+                aria-describedby="calc-spend-hint"
               />
               <p
                 id="calc-spend-hint"
                 aria-live="polite"
                 className={`mt-1.5 text-xs text-lp-ink-3 ${spendHint ? "" : "sr-only"}`}
               >
-                {spendHint}
+                {spendHint || "הזינו את הסכום שאתם משלמים היום בחודש, בשקלים."}
               </p>
             </div>
             {track === "cellular" && (
@@ -235,7 +239,14 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 מכריז על עצמו כמושבת, ומצביע להסבר שליד השדה.
               */
               aria-disabled={monthlySpend <= 0}
-              aria-describedby={spendHint ? "calc-spend-hint" : undefined}
+              /*
+                ⚠️ הקישור קבוע ולא מותנה ב-`spendHint`. בכניסה לשלב
+                הכפתור כבר מכריז על עצמו כמושבת אבל ההסבר עוד לא נכתב,
+                כלומר קורא מסך שמע "לחצן, מושבת" בלי סיבה — בדיוק המצב
+                שההערה למעלה מבטיחה שלא יקרה. הפסקה קיימת תמיד ב-DOM
+                ונושאת נוסח ניטרלי כשאין שגיאה.
+              */
+              aria-describedby="calc-spend-hint"
               onClick={() => {
                 setAttempted(true);
                 if (monthlySpend <= 0) return;
@@ -280,14 +291,6 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 כל חודש שנשאר אצלכם.
               </p>
 
-              <p className="mt-4 text-xs leading-relaxed text-lp-ink-3">
-                החישוב מבוסס על החבילה המשתלמת ביותר בקטלוג שלנו בקטגוריה הזו
-                {track === "cellular" && units > 1 ? `, לפי ${unitsLabel(track, units)}` : ""}, ולפי{" "}
-                <strong className="font-semibold text-lp-ink-2">המחיר שנשאר גם אחרי תום ההטבה</strong> —
-                ולא לפי מחיר מבצע שמסתיים. עלויות חד-פעמיות (מעבר, חיבור, התקנה) אינן נכללות, והסכום
-                המדויק תלוי בזמינות, בתנאי החברה ובמה שכלול היום בחשבון שלכם — נציג יעבור אתכם על
-                החשבון ויגיד לכם בדיוק כמה תחסכו. מחירי הקטלוג נכונים ל-{CATALOG_DATE}.
-              </p>
             </>
           ) : noMatch ? (
             <>
@@ -307,6 +310,37 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             </>
           )}
 
+          {/*
+            ⚠️ ההסתייגות חיה **מחוץ** לשלושת הענפים, ולא רק בענף החיובי.
+            כשהיא ישבה בתוך `worthwhile`, מי שקיבל "אתם כבר משלמים מעט
+            יחסית" שמע פסק דין בלי לדעת מולי מה נמדד, שקו הטלפון שלו לא
+            נכלל בהשוואה, ולאיזה תאריך המחירים נכונים. שלוש האמירות
+            האלה נחוצות דווקא שם.
+
+            ⚠️ משפט קו הטלפון במסלול הבית אינו קישוט. `isComparable`
+            דורשת אינטרנט **וגם** טלוויזיה ובמכוון אינה דורשת טלפון
+            (ראה `savings.ts`), ההערה שם מניחה שההסתייגות נאמרת כאן —
+            והיא לא נאמרה מעולם. 6 מתוך 9 חבילות הבית בבריכה הן ללא קו
+            טלפון, בעוד כפתור המסלול מזמין במפורש בעלי טריפל. בלי
+            המשפט הזה מוצג לבעל טריפל חיסכון מול מוצר שחסר בו שירות.
+          */}
+          <p className="mt-4 text-xs leading-relaxed text-lp-ink-3">
+            {!noMatch && (
+              <>
+                החישוב מבוסס על החבילה המשתלמת ביותר בקטלוג שלנו בקטגוריה הזו
+                {track === "cellular" ? `, לפי ${unitsLabel(track, units)}` : ""}, ולפי{" "}
+                <strong className="font-semibold text-lp-ink-2">המחיר שנשאר גם אחרי תום ההטבה</strong>{" "}
+                — ולא לפי מחיר מבצע שמסתיים.{" "}
+              </>
+            )}
+            {track === "home"
+              ? "ההשוואה נעשית מול חבילה שכוללת אינטרנט וטלוויזיה; קו טלפון אינו נדרש בה ואינו בהכרח כלול — אם יש קו בחשבון שלכם, הנציג יתמחר אותו בנפרד. "
+              : ""}
+            עלויות חד-פעמיות (מעבר, חיבור, התקנה) אינן נכללות, והסכום המדויק תלוי בזמינות, בתנאי
+            החברה ובמה שכלול היום בחשבון שלכם — נציג יעבור אתכם על החשבון ויגיד לכם בדיוק כמה
+            תחסכו. מחירי הקטלוג נכונים ל-{CATALOG_DATE}.
+          </p>
+
           <div className="mt-5 rounded-lp-card bg-lp-surface-2 p-4">
             <p className="mb-3 text-sm font-semibold text-lp-ink">
               רוצים שנבדוק את החשבון שלכם לעומק?
@@ -325,6 +359,16 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   : noMatch
                     ? "המחשבון לא מצא חבילה להשוואה — דורש בדיקה ידנית"
                     : "המחשבון לא מצא חיסכון בתשלום החודשי",
+                /*
+                  ⚠️ החבילה שהמספר נגזר ממנה. על המסך היא במכוון אינה
+                  נקובה בשם (ראה ההערה בראש הקובץ), אבל הנציג שמתקשר
+                  החזיק "חיסכון ₪1,020 בשנה" בלי שום דרך לשחזר מולי מה
+                  הוא נמדד ולפי איזה קטלוג — כלומר מספר שהוא לא יכול
+                  לעמוד מאחוריו בשיחה.
+                */
+                saving.pick
+                  ? `מול ${saving.pick.provider.name} — ${saving.pick.name}, ${shekels(perLinePrice(saving.pick, units))} ${track === "cellular" ? "לקו" : "לחודש"} (קטלוג ${CATALOG_DATE})`
+                  : null,
               ]
                 .filter(Boolean)
                 .join(" · ")}
