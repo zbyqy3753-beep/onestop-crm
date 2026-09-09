@@ -40,6 +40,18 @@ test("קלט: מפרידי אלפים, ספרות ערביות וקיטום לת
   assert.equal(parseSpend("9000"), MAX_SPEND);
 });
 
+test("קלט: פסיק שאינו מפריד אלפים פוסל — `220,5` לא הופך ל-2205", () => {
+  // ⚠️ הרגל אירופאי לכתוב 220.5. הסינון השקט הפך אותו ל-2,205 ₪ בחודש
+  // והציג כותרת של ₪26,100 בשנה על סכום שהלקוח מעולם לא הזין.
+  assert.equal(parseSpend("220,5"), 0);
+  assert.equal(parseSpend("2,20"), 0);
+  assert.equal(parseSpend("1,2,3"), 0);
+  assert.equal(parseSpend("1,,200"), 0);
+  // מפרידי אלפים אמיתיים ממשיכים לעבוד, גם עם ₪ ורווחים.
+  assert.equal(parseSpend("5,000"), MAX_SPEND);
+  assert.equal(parseSpend("₪1,200"), 1200);
+});
+
 test("בריכת ההשוואה אינה ריקה בשני המסלולים", () => {
   assert.ok(pool("cellular").length > 5, `סלולר: ${pool("cellular").length}`);
   assert.ok(pool("home").length > 3, `בית: ${pool("home").length}`);
@@ -89,6 +101,27 @@ test("חבילות שקוברות את העלייה בתיאור נשארות ב
   excluded("Partner Golden 5G");
   // שירות סטרימינג שסומן בטעות `hasInternet` — הזול ביותר בקטגוריה.
   excluded("החבילה המושלמת 79 שח");
+});
+
+test("מחיר שמותנה בכמות קווים אינו נכנס לבריכת ההשוואה", () => {
+  const excluded = (name) => {
+    const p = PACKAGES.find((x) => x.name.includes(name));
+    assert.ok(p, `לא נמצאה בקטלוג: ${name}`);
+    assert.equal(isComparable(p, p.category), false, `${p.name} נכנסה לבריכה`);
+  };
+  // 32 ₪ — המחיר "לכל קו שני" בחבילה של ארבעה, לא מחיר של קו בודד.
+  // אין לה `description` כלל, ולכן השם הוא הראיה היחידה.
+  excluded("4 ב 130 *2*");
+  // "*לרוכשים 2 מנויים ויותר*" — מינימום חוזי של שני קווים.
+  excluded("TOTAL 5G 300GB");
+  // מחיר של חבילה שלמה שיושב בשדה מחיר-לקו.
+  excluded("3 קווים ב 92.70");
+
+  // ⚠️ ההגנה לא נגסה במנצחת: הבריכה עדיין מחזירה מחיר אמיתי בשני
+  // המסלולים, ולא רק "לא נמצאה חבילה".
+  for (const track of ["cellular", "home"]) {
+    assert.ok(computeSaving(PACKAGES, track, 1, 500).pick, `${track}: הבריכה התרוקנה`);
+  }
 });
 
 test("מדרגת קווים שמייקרת נלקחת כפי שהיא, בלי Math.min", () => {

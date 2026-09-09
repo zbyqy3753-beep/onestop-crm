@@ -43,6 +43,30 @@ export function declaresRiseInText(p: Package): boolean {
 }
 
 /**
+ * חבילה שהמחיר שלה מותנה בכמות קווים שהמבקר לא בהכרח קונה.
+ *
+ * ⚠️ המשך ישיר של `price > 0`: אותו דפוס בדיוק, רק שהפעם המחיר נרשם
+ * כמספר אמיתי במקום 0, ולכן חמק. גולן "4 ב 130 *2*" רשומה 32 ₪ — וזה
+ * המחיר **לקו השני בחבילה של ארבעה** ("עלות החבילה לכל קו שני
+ * ₪32.00"), לא מחיר של קו בודד. HOT "TOTAL 5G 300GB" פותחת ב-"*לרוכשים
+ * 2 מנויים ויותר*", כלומר מינימום חוזי.
+ *
+ * היום אף אחת מהן אינה נבחרת (WeCom ב-29.9 ₪ מנצחת בכל כמות), ולכן זו
+ * הגנה על **הרענון הבא** ולא תיקון של מספר שמוצג כרגע: ברגע שהזולה
+ * ביותר תצא מהקטלוג, "32 ₪ לקו שני בחבילת ארבעה" הופך לכותרת של מי
+ * שביקש קו אחד.
+ *
+ * ⚠️ נבדק גם מול `name`, ולא רק מול הטקסט: ל-"4 ב 130 *2*" אין
+ * `description` כלל, והשם הוא הראיה היחידה שקיימת.
+ */
+const REQUIRES_MULTIPLE_LINES =
+  /לרוכשים \d+ מנויים|קו שני|\*\s?[2-9]\s?\*|\d+\s?קווים ב\s?\d/;
+
+export function requiresMultipleLines(p: Package): boolean {
+  return REQUIRES_MULTIPLE_LINES.test(`${p.name} ${p.description ?? ""} ${p.benefits ?? ""}`);
+}
+
+/**
  * חבילה שהמבקר במסלול הזה באמת יכול לעבור אליה.
  *
  * ⚠️ הפילטר הזה הוא מה שמפריד בין "עד כמה אפשר לחסוך" לבין מספר
@@ -64,6 +88,9 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
   // ההפך. ראה `hasKnownAfterPrice` ו-`declaresRiseInText`.
   if (!hasKnownAfterPrice(p)) return false;
   if (p.priceAfterPromo == null && declaresRiseInText(p)) return false;
+  // ⚠️ מחיר שמותנה בכמות קווים אינו מחיר שהמבקר הזה יקבל. ראה
+  // `requiresMultipleLines`.
+  if (requiresMultipleLines(p)) return false;
 
   if (track === "cellular") {
     const spec = p.spec as CellularSpec;
@@ -191,6 +218,19 @@ export function parseSpend(raw: string): number {
    * ₪1.23 בחודש". קלט שאינו מספר צריך להיראות כך, לא להפוך למספר אחר.
    */
   if ((cleaned.match(/\./g)?.length ?? 0) > 1) return 0;
+  /*
+   * ⚠️ אותו כלל בדיוק חל על הפסיק — והוא **נשכח**.
+   *
+   * השומר למעלה נכתב לנקודה בלבד, ולכן `220,5` (הרגל אירופאי לכתוב
+   * 220.5) עבר את הסינון והפך בשקט ל-**2205**: המסך הצהיר "אתם משלמים
+   * ₪2,205 בחודש", הכותרת קפצה ל-₪26,100 בשנה, והנציג קיבל בהערה סכום
+   * שהלקוח מעולם לא הזין. `2,20` — טעות הקלדה של קו אחד — הפך ל-220.
+   *
+   * פסיק לגיטימי רק כמפריד אלפים, כלומר בדיוק שלוש ספרות אחריו ולפני
+   * הנקודה העשרונית. `1,200` ו-`5,000` ממשיכים לעבוד; כל השאר מחזיר 0
+   * ומדליק את ההסבר שליד השדה, כמו כל קלט לא-חוקי אחר.
+   */
+  if (ascii.includes(",") && !/^\s*₪?\s*\d{1,3}(,\d{3})+(\.\d+)?\s*₪?\s*$/.test(ascii)) return 0;
   const value = Number(cleaned);
   if (!Number.isFinite(value) || value <= 0) return 0;
   return Math.min(value, MAX_SPEND);
