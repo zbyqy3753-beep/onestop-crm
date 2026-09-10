@@ -63,9 +63,22 @@ export function byCategory(packages: Package[], category: Category): Package[] {
  * קיים בטיפוס, וקובץ קטלוג שיועתק בעתיד מגרסה שכן נשמרה איתו יכובד
  * מעצמו במקום להציג בשקט חבילה שהוסתרה.
  */
+/**
+ * ⚠️ `typeof === "number"` ולא `!= null`.
+ *
+ * הקטלוג נכנס לקוד דרך `as unknown as Catalog`, כלומר **אין ולידציה
+ * בזמן ריצה** — הטיפוסים נבדקים על הקובץ שקיים היום, לא על הקובץ
+ * שהרענון הבא יכתוב. הנתונים הנוכחיים נקיים (כל 90 המחירים מספריים),
+ * אבל `"39.9" != null` הוא `true` וגם `"39.9" > 0` הוא `true`: מחיר
+ * שיישאב פעם אחת כמחרוזת יעבור את השער הזה, יגיע ל-`shekels()` ול-
+ * `perLinePrice`, ויוצג לגולש כ-`NaN`. השער הוא המקום היחיד שכל
+ * החבילות עוברות בו, ולכן כאן נעצרת רשומה פגומה — בשקט ומראש.
+ */
 export function isListable(p: Package): boolean {
   if (p.editorial?.hidden) return false;
-  return p.category === "electricity" ? p.discountPercent != null : p.price != null && p.price > 0;
+  return p.category === "electricity"
+    ? typeof p.discountPercent === "number" && Number.isFinite(p.discountPercent)
+    : typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0;
 }
 
 export function listable(packages: Package[]): Package[] {

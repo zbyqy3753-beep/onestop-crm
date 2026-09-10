@@ -60,7 +60,9 @@ export function declaresRiseInText(p: Package): boolean {
  * `description` כלל, והשם הוא הראיה היחידה שקיימת.
  */
 const REQUIRES_MULTIPLE_LINES =
-  /לרוכשים \d+ מנויים|קו שני|\*\s?[2-9]\s?\*|\d+\s?קווים ב\s?\d/;
+  // ⚠️ `ב[-־ ]?` ולא `ב\s?`: "3 קווים ב-99" עם מקף הוא אותו תמחור בדיוק
+  // כמו "3 קווים ב99", והגרסה הקודמת תפסה רק את השנייה.
+  /לרוכשים \d+ מנויים|קו שני|\*\s?[2-9]\s?\*|\d+\s?קווים ב[-־\s]?\s?\d/;
 
 export function requiresMultipleLines(p: Package): boolean {
   return REQUIRES_MULTIPLE_LINES.test(`${p.name} ${p.description ?? ""} ${p.benefits ?? ""}`);
@@ -81,7 +83,10 @@ export function requiresMultipleLines(p: Package): boolean {
  */
 export function isComparable(p: Package, track: Track): p is MonthlyPackage {
   if (p.category !== track || p.priceModel !== "monthly") return false;
-  if (p.price == null || p.price <= 0) return false;
+  // ⚠️ `typeof` ולא `== null` — ראה `isListable`: הקטלוג נכנס דרך cast
+  // בלי ולידציה, ומחיר שיישאב פעם אחת כמחרוזת עובר כל השוואה מספרית
+  // ב-JS ומגיע לכותרת כ-NaN.
+  if (typeof p.price !== "number" || !Number.isFinite(p.price) || p.price <= 0) return false;
   if (p.editorial?.hidden) return false;
   // ⚠️ חבילה שהעלייה שלה מוצהרת בטקסט חופשי בלבד אינה בת-השוואה כאן:
   // המחיר היחיד שאפשר לחשב ממנה הוא מחיר ההטבה, והכותרת מבטיחה את
@@ -150,6 +155,36 @@ export function perLinePrice(p: MonthlyPackage, lines: number): number {
   return tier ? tier.price : base;
 }
 
+/**
+ * כמות קווים שהמחיר בה **אינו ידוע**, למרות שיש מחיר רשום.
+ *
+ * ⚠️ ההנחה ש-`price` הוא תמיד המחיר לקו בודד אינה נכונה. גולן "קיץ חם
+ * בדור 5" רשומה 39.9 ₪ — וזה מחיר **שלושה** קווים; התיאור מפרט "קו
+ * בודד – 49.90 ₪, 2 קווים – 44.90 ₪ לקו, 3 קווים ומעלה – 39.90 ₪ לקו",
+ * ו-`lineTiers` מתחיל ב-2. מי שביקש קו אחד קיבל 39.9 (נפילה ל-`base`
+ * בהיעדר מדרגה מתאימה), כלומר כותרת מנופחת ב-₪120 בשנה מול מה שיגבו
+ * ממנו בפועל — אותו סוג טעות ש-`Math.min` יצר לכיוון השני, רק שהפעם
+ * היא נובעת מ**היעדר** מדרגה ולא ממדרגה שגויה.
+ *
+ * הזיהוי אינו פירסור של הטקסט אלא סתירה פנימית בנתונים עצמם: טבלת
+ * מדרגות רק **מוזילה** ככל שמוסיפים קווים, ולכן מחיר בסיס **נמוך**
+ * מהמדרגה בכמות הקטנה ביותר שהוצהרה אינו יכול להיות המחיר בכמות
+ * קטנה עוד יותר. במצב כזה המחיר לכמות המבוקשת פשוט לא נמסר, ו"לא
+ * יודעים — לא מבטיחים" הוא אותו כלל שכבר חל על עליות מחיר.
+ *
+ * Partner Star (39.9 בסיס, מדרגות מ-3 קווים ב-33) וסלקום 5G PRO
+ * (59.9 בסיס, מדרגה 2 ב-59.9) עקביות ולכן נשארות.
+ */
+export function priceUnknownAtLines(p: MonthlyPackage, lines: number): boolean {
+  // מחיר-אחרי-הטבה מדווח גובר על המדרגות בכל כמות. ראה `perLinePrice`.
+  if (p.priceAfterPromo != null) return false;
+  const tiers = (p.spec as CellularSpec).lineTiers;
+  if (!tiers?.length) return false;
+  if (tiers.some((t) => t.lines <= lines)) return false;
+  const smallest = [...tiers].sort((a, b) => a.lines - b.lines)[0];
+  return afterPrice(p) < smallest.price;
+}
+
 export interface Saving {
   /** החבילה שנבחרה, או `null` כשאין בקטגוריה חבילה בת-השוואה. */
   pick: MonthlyPackage | null;
@@ -174,7 +209,10 @@ export function computeSaving(
   units: number,
   monthlySpend: number,
 ): Saving {
-  const pool = packages.filter((p): p is MonthlyPackage => isComparable(p, track));
+  const pool = packages
+    .filter((p): p is MonthlyPackage => isComparable(p, track))
+    // ⚠️ תלוי-כמות, ולכן כאן ולא ב-`isComparable`. ראה `priceUnknownAtLines`.
+    .filter((p) => !priceUnknownAtLines(p, units));
   const pick = pool.reduce<MonthlyPackage | null>(
     (best, p) => (best == null || perLinePrice(p, units) < perLinePrice(best, units) ? p : best),
     null,
@@ -189,49 +227,48 @@ export function computeSaving(
 }
 
 /**
+ * הסכום החודשי הנמוך ביותר שהמחשבון מוכן להתייחס אליו כחשבון אמיתי.
+ *
+ * ⚠️ `> 0` לבדו הכניס את `0.5` למסך: הכפתור נדלק, המחשבון הצהיר "אתם
+ * כבר משלמים מעט יחסית", והנציג קיבל בהערה "משלם היום ₪0.5 בחודש".
+ * החבילה הזולה בקטלוג היא 19.9 ₪, ולכן חשבון חד-ספרתי אינו סכום שנפל
+ * בו קו אחד — הוא קלט שגוי, וצריך להיראות כך.
+ */
+export const MIN_SPEND = 10;
+
+/**
+ * הפורמט **השלם** של סכום שהמחשבון מקבל.
+ *
+ * ⚠️ זה התיקון לשורש של כל משפחת הבאגים הזו: הגרסה הקודמת **ניקתה**
+ * את המחרוזת (`replace(/[^\d.]/g, "")`) ורק אחר כך חיפשה חריגות, ולכן
+ * כל שומר נכתב בנפרד וכל אחד פספס משהו אחר. כאן המחרוזת כולה חייבת
+ * להתאים לתבנית אחת, ומה שלא תואם נפסל — בלי "הצלה" שקטה:
+ *
+ *  • `1.200` — הכתיב האירופאי לאלף ומאתיים. השומר הקודם נכתב לפסיק
+ *    בלבד ("יותר מנקודה אחת"), ולכן נקודה **בודדת** חמקה: הקלט הפך
+ *    בשקט ל-1.2, המסך הצהיר "אתם משלמים ₪1.2 בחודש", והנציג קיבל את
+ *    אותו מספר בהערה. זה בדיוק התרחיש של `220,5`, רק בכיוון ההפוך.
+ *    לכן החלק העשרוני מוגבל לשתי ספרות — לחשבון חודשי אין שלוש.
+ *  • `2 20` — רווח באמצע. `\s` היה ברשימת המותרים ונמחק בניקוי, כלומר
+ *    טעות הקלדה של רווח אחד הכפילה סדר גודל. רווח מותר רק בקצוות.
+ *
+ * `1,200`, `₪ 1,200`, `1,200.50`, `220.5` ו-`0050` ממשיכים לעבוד.
+ */
+const AMOUNT = /^₪?\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?\s*₪?$/;
+
+/**
  * קריאת הסכום שהמבקר הקליד.
  *
  * ⚠️ `\d` בלי הדגל `u` לא תופס ספרות ערביות-הודיות, ומקלדת ערבית בנייד
  * הייתה מרוקנת את המחרוזת ומשאירה את הכפתור מושבת בלי הסבר. לכן
- * הספרות מנורמלות ל-ASCII לפני הניקוי.
+ * הספרות מנורמלות ל-ASCII לפני הבדיקה.
  */
 export function parseSpend(raw: string): number {
-  const ascii = raw.replace(/[٠-٩۰-۹]/g, (d) =>
-    String((d.codePointAt(0)! - 0x0660) % 16),
-  );
-  /*
-   * ⚠️ תווי זבל **פוסלים** את הקלט, לא מסוננים ממנו.
-   *
-   * הסינון השקט של `[^\d.]` הפך `-500` ל-500 ו-`abc220` ל-220: המסך
-   * הצהיר "אתם משלמים ₪500 בחודש" על סכום שלילי, והנציג קיבל בהערה
-   * סכום שהלקוח מעולם לא הקליד. מותרים רק מפרידי אלפים ורווחים, שהם
-   * דרך לגיטימית לכתוב מספר; כל השאר מחזיר 0, מה שמשבית את הכפתור
-   * ומציג את ההסבר שליד השדה.
-   */
-  if (/[^\d.,\s₪]/.test(ascii)) return 0;
-  const cleaned = ascii.replace(/[^\d.]/g, "");
-  /*
-   * ⚠️ יותר מנקודה עשרונית אחת פוסלת את הקלט.
-   *
-   * הניסיון הקודם "להציל" את הקלט חיבר את החלקים — `1.2.3` הפך ל-1.23
-   * **בשקט**: הכפתור נדלק, המסך הראה תוצאה, והנציג קיבל "משלם היום
-   * ₪1.23 בחודש". קלט שאינו מספר צריך להיראות כך, לא להפוך למספר אחר.
-   */
-  if ((cleaned.match(/\./g)?.length ?? 0) > 1) return 0;
-  /*
-   * ⚠️ אותו כלל בדיוק חל על הפסיק — והוא **נשכח**.
-   *
-   * השומר למעלה נכתב לנקודה בלבד, ולכן `220,5` (הרגל אירופאי לכתוב
-   * 220.5) עבר את הסינון והפך בשקט ל-**2205**: המסך הצהיר "אתם משלמים
-   * ₪2,205 בחודש", הכותרת קפצה ל-₪26,100 בשנה, והנציג קיבל בהערה סכום
-   * שהלקוח מעולם לא הזין. `2,20` — טעות הקלדה של קו אחד — הפך ל-220.
-   *
-   * פסיק לגיטימי רק כמפריד אלפים, כלומר בדיוק שלוש ספרות אחריו ולפני
-   * הנקודה העשרונית. `1,200` ו-`5,000` ממשיכים לעבוד; כל השאר מחזיר 0
-   * ומדליק את ההסבר שליד השדה, כמו כל קלט לא-חוקי אחר.
-   */
-  if (ascii.includes(",") && !/^\s*₪?\s*\d{1,3}(,\d{3})+(\.\d+)?\s*₪?\s*$/.test(ascii)) return 0;
-  const value = Number(cleaned);
-  if (!Number.isFinite(value) || value <= 0) return 0;
+  const ascii = raw
+    .replace(/[٠-٩۰-۹]/g, (d) => String((d.codePointAt(0)! - 0x0660) % 16))
+    .trim();
+  if (!AMOUNT.test(ascii)) return 0;
+  const value = Number(ascii.replace(/[^\d.]/g, ""));
+  if (!Number.isFinite(value) || value < MIN_SPEND) return 0;
   return Math.min(value, MAX_SPEND);
 }

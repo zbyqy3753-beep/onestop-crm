@@ -3,10 +3,12 @@ import { test } from "node:test";
 
 import {
   MAX_SPEND,
+  MIN_SPEND,
   computeSaving,
   declaresRiseInText,
   isComparable,
   parseSpend,
+  priceUnknownAtLines,
   perLinePrice,
 } from "../src/app/lp/catalog/savings.ts";
 import { basePackages } from "../src/app/lp/catalog/catalog.ts";
@@ -50,6 +52,34 @@ test("קלט: פסיק שאינו מפריד אלפים פוסל — `220,5` ל�
   // מפרידי אלפים אמיתיים ממשיכים לעבוד, גם עם ₪ ורווחים.
   assert.equal(parseSpend("5,000"), MAX_SPEND);
   assert.equal(parseSpend("₪1,200"), 1200);
+});
+
+test("קלט: נקודה כמפריד אלפים פוסלת — `1.200` לא הופך ל-1.2", () => {
+  // ⚠️ הכיוון ההפוך של `220,5`. השומר הקודם נכתב לפסיק בלבד, ולכן נקודה
+  // בודדת חמקה: המסך הצהיר "אתם משלמים ₪1.2 בחודש" והנציג קיבל את אותו
+  // מספר בהערה. לחשבון חודשי אין שלוש ספרות אחרי הנקודה.
+  assert.equal(parseSpend("1.200"), 0);
+  assert.equal(parseSpend("2.200"), 0);
+  // עשרוני אמיתי (עד שתי ספרות) ממשיך לעבוד.
+  assert.equal(parseSpend("220.50"), 220.5);
+  assert.equal(parseSpend("1,200.50"), 1200.5);
+});
+
+test("קלט: רווח באמצע המספר פוסל — `2 20` לא הופך ל-220", () => {
+  assert.equal(parseSpend("2 20"), 0);
+  assert.equal(parseSpend("1 200"), 0);
+  // רווח בקצוות, ו-₪ משני הצדדים, הם כתיב לגיטימי.
+  assert.equal(parseSpend("  220  "), 220);
+  assert.equal(parseSpend("₪ 1,200"), 1200);
+  assert.equal(parseSpend("1,200 ₪"), 1200);
+});
+
+test("קלט: סכום מתחת לרצפה אינו חשבון חודשי", () => {
+  // ⚠️ `0.5` הפיק מסך תוצאה מלא והערה לנציג. החבילה הזולה בקטלוג היא
+  // 19.9 ₪, ולכן חשבון חד-ספרתי הוא קלט שגוי ולא חשבון נמוך.
+  assert.equal(parseSpend("0.5"), 0);
+  assert.equal(parseSpend("5"), 0);
+  assert.equal(parseSpend(String(MIN_SPEND)), MIN_SPEND);
 });
 
 test("בריכת ההשוואה אינה ריקה בשני המסלולים", () => {
@@ -130,8 +160,33 @@ test("מדרגת קווים שמייקרת נלקחת כפי שהיא, בלי Ma
   // המדרגה: 2 קווים ב-44.90 ₪ לקו, 3 קווים ב-39.90. המחיר המוצג הוא 39.90.
   assert.equal(perLinePrice(golan, 2), 44.9);
   assert.equal(perLinePrice(golan, 3), 39.9);
-  // פחות מהמדרגה הנמוכה ביותר — המחיר המוצג.
-  assert.equal(perLinePrice(golan, 1), 39.9);
+});
+
+test("כמות שמתחת לטבלת המדרגות אינה מתומחרת לפי מחיר הבסיס", () => {
+  // ⚠️ הבדיקה הזו **קיבעה קודם את הבאג**: היא תיעדה `perLinePrice(golan, 1)
+  // === 39.9` כהתנהגות רצויה ("פחות מהמדרגה הנמוכה ביותר — המחיר המוצג").
+  // 39.9 הוא מחיר **שלושה** קווים: התיאור מפרט "קו בודד – 49.90 ₪", כלומר
+  // מי שביקש קו אחד קיבל כותרת מנופחת ב-₪120 בשנה.
+  const golan = PACKAGES.find((p) => p.name.includes("קיץ חם בדור 5"));
+  assert.ok(golan, "החבילה נעלמה מהקטלוג");
+  assert.equal(priceUnknownAtLines(golan, 1), true);
+  assert.equal(priceUnknownAtLines(golan, 2), false);
+  assert.equal(priceUnknownAtLines(golan, 3), false);
+  assert.ok(
+    !computeSaving(PACKAGES, "cellular", 1, 500).pick?.name.includes("קיץ חם בדור 5"),
+    "חבילה בלי מחיר ידוע לקו בודד נבחרה בכל זאת",
+  );
+
+  // בסיס **גבוה** מהמדרגה הנמוכה ביותר הוא טבלת הנחת-כמות עקבית, ונשאר.
+  const partner = PACKAGES.find((p) => p.name.includes("Partner Star"));
+  assert.ok(partner, "החבילה נעלמה מהקטלוג");
+  assert.equal(priceUnknownAtLines(partner, 1), false);
+  assert.equal(perLinePrice(partner, 1), 39.9);
+
+  // ⚠️ ההגנה לא ריקנה את הבריכה באף כמות קווים.
+  for (const units of [1, 2, 3, 5, 10]) {
+    assert.ok(computeSaving(PACKAGES, "cellular", units, 500).pick, `${units} קווים: הבריכה התרוקנה`);
+  }
 });
 
 test("חבילה עם מחיר-אחרי-הטבה מדווח מתומחרת לפיו בכל כמות קווים", () => {
