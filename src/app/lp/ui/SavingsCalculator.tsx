@@ -5,7 +5,7 @@ import { Card } from "./Card";
 import { LeadForm } from "./LeadForm";
 import { shekels } from "../catalog/format";
 import { catalog } from "../catalog/catalog";
-import { MAX_SPEND, computeSaving, parseSpend, perLinePrice, type Track } from "../catalog/savings";
+import { MAX_SPEND, MIN_SPEND, computeSaving, parseSpend, perLinePrice, type Track } from "../catalog/savings";
 import type { Package } from "../catalog/types";
 
 /**
@@ -21,10 +21,18 @@ function unitsLabel(track: Track, units: number): string {
 }
 
 /** התאריך שבו נשאב הקטלוג — המספר שנשען עליו לא יכול להיות חסר חותמת. */
+/*
+ * ⚠️ `timeZone` מפורש. הקומפוננטה היא `"use client"`, כלומר השורה הזו
+ * רצה גם ב-SSR וגם בדפדפן — ובלי אזור זמן קבוע כל צד מפרש את
+ * `2026-08-14T08:29:53.259Z` לפי האזור שלו. גולש ב-UTC-10 היה מקבל
+ * "13 באוגוסט" מהדפדפן מול "14 באוגוסט" מהשרת, כלומר hydration
+ * mismatch בדיוק בהסתייגות שנועדה לתת למספר חותמת אמינה.
+ */
 const CATALOG_DATE = new Date(catalog.updatedAt).toLocaleDateString("he-IL", {
   day: "numeric",
   month: "long",
   year: "numeric",
+  timeZone: "Asia/Jerusalem",
 });
 
 /**
@@ -86,6 +94,13 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
    */
   const noMatch = saving.pick == null;
 
+  /** מעבר לתוצאה — משותף ל-CTA ול-Enter בשדה, כדי ששניהם יתנהגו זהה. */
+  function submitSpend() {
+    setAttempted(true);
+    if (monthlySpend <= 0) return;
+    setStep(2);
+  }
+
   /*
    * ⚠️ הסיבות שהכפתור מושבת חייבות להיאמר. כפתור `disabled` יוצא
    * מסדר המקלדת ונעלם בלי הסבר, והקיטום ל-MAX_SPEND מחליף בשקט את מה
@@ -94,9 +109,22 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
    * ⚠️ הנוסח מדבר גם על `0` ועל `-500`: שניהם מספרים, וההודעה הישנה
    * ("במספרים בלבד") שלחה את מי שהקליד אותם לחפש תו נסתר.
    */
-  const invalidSpend = monthlySpend <= 0 && (spend.trim() !== "" || attempted);
+  /*
+   * ⚠️ נדלק אחרי `blur` או אחרי לחיצה על ה-CTA — לא בכל הקשה.
+   *
+   * הבדיקה הרצה על כל תו הכריזה שגיאה על מצבי הביניים של קלט **תקין**:
+   * מי שהקליד `1,200` עבר דרך `1,` `1,2` `1,20`, שכולם נפסלים, והפסקה
+   * (`aria-live="polite"`) הקריאה לקורא מסך "הזינו סכום חודשי…" שלוש
+   * פעמים בזמן שהוא מקליד סכום לגיטימי לחלוטין.
+   */
+  const [blurred, setBlurred] = useState(false);
+  const invalidSpend = monthlySpend <= 0 && spend.trim() !== "" && (blurred || attempted);
   const spendHint = invalidSpend
-    ? "הזינו סכום חודשי חיובי — ספרות בלבד, למשל 220."
+    ? // ⚠️ הנוסח הקודם ("ספרות בלבד") היה שגוי עובדתית: פסיק, רווח
+      // ו-₪ מתקבלים היטב, ולכן מי שהקליד `2,20` וקרא "ספרות בלבד"
+      // מחק את הפסיק במקום לתקן את מיקומו. ההודעה מתארת עכשיו את
+      // הטווח ואת הפורמטים שמתקבלים בפועל.
+      `הזינו סכום חודשי בין ₪${MIN_SPEND} ל-₪${MAX_SPEND.toLocaleString("he-IL")} — למשל 220, 1,200 או 220.50.`
     : monthlySpend >= MAX_SPEND
       ? // ⚠️ "הסכום הוגבל" נאמר גם למי שהקליד 5,000 במדויק — הקיטום
         // ב-`onChange` מוחק את הקלט המקורי, ולכן אי אפשר להבחין בין
@@ -179,8 +207,27 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   const parsed = parseSpend(next);
                   setSpend(parsed >= MAX_SPEND ? String(MAX_SPEND) : next);
                 }}
+                onBlur={() => setBlurred(true)}
+                /*
+                  ⚠️ Enter בשדה יחיד הוא הפעולה הטבעית ביותר, ולא היה
+                  מחובר לכלום: אין `<form>` עוטף וכל הכפתורים הם
+                  `type="button"`, ולכן implicit submission לא קיים. בנייד
+                  `inputMode="decimal"` מציג מקש "אישור" שלא עשה דבר.
+                */
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  submitSpend();
+                }}
                 inputMode="decimal"
-                maxLength={6}
+                /*
+                  ⚠️ 10 ולא 6. `₪ 1,200` (7 תווים, כפי שהסכום מופיע
+                  בחשבונית) נחתך ל-`₪ 1,20` ונפסל, ו-`1,200.50` נחתך
+                  ל-`1,200.` — שני פורמטים ש-`parseSpend` מקבל בשלמותם
+                  נדחו בגלל התקרה, והמסך האשים את המשתמש בקלט לא-מספרי.
+                  `₪ 5,000.00` הוא הארוך ביותר שהמחשבון מטפל בו.
+                */
+                maxLength={10}
                 placeholder="למשל 220"
                 className="nums w-full rounded-lg border border-lp-line px-3 py-2.5 text-lg transition focus:border-lp-brand"
                 /* קורא מסך שמע את ההודעה אבל לא ידע שהשדה עצמו שגוי. */
@@ -247,11 +294,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 ונושאת נוסח ניטרלי כשאין שגיאה.
               */
               aria-describedby="calc-spend-hint"
-              onClick={() => {
-                setAttempted(true);
-                if (monthlySpend <= 0) return;
-                setStep(2);
-              }}
+              onClick={submitSpend}
               className={`inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-lp-brand px-4 py-2.5 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright ${monthlySpend <= 0 ? "opacity-40" : ""}`}
             >
               חשבו לי את החיסכון
@@ -377,7 +420,15 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
 
           <button
             type="button"
-            onClick={() => setStep(1)}
+            /*
+              ⚠️ איפוס `attempted`/`blurred`. בלעדיו חזרה לעריכה וניקוי
+              השדה הציגה שגיאה מיד — לפני שהמשתמש הספיק להקליד תו אחד.
+            */
+            onClick={() => {
+              setAttempted(false);
+              setBlurred(false);
+              setStep(1);
+            }}
             className="-mx-1 mt-3 inline-flex min-h-11 items-center px-1 text-xs text-lp-ink-3 hover:underline"
           >
             לשנות את הנתונים
