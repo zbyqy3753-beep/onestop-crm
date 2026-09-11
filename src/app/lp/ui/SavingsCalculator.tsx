@@ -60,17 +60,16 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
    * וקפץ לראש המסמך — ההכרזה "שלב 2 מתוך 3" נשמעה, אבל לא היה לאן
    * להמשיך ממנה. הפוקוס עובר לכותרת השלב החדש.
    *
-   * `stepStarted` מונע גניבת פוקוס בטעינה הראשונה: הדף לא אמור לקפוץ
-   * אל המחשבון רק מפני שהוא קיים.
+   * הפוקוס עובר רק כשהשלב **השתנה**, ולא בטעינה: הדף לא אמור לקפוץ
+   * אל המחשבון רק מפני שהוא קיים. ⚠️ ההשוואה היא מול השלב הקודם ולא
+   * דגל "כבר התחלנו" — ב-StrictMode האפקט רץ פעמיים במאונט, הדגל שרד
+   * בין הריצות, והריצה השנייה גנבה את הפוקוס בכל כניסה לדף ב-dev.
    */
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const stepStarted = useRef(false);
+  const prevStep = useRef(step);
   useEffect(() => {
-    if (!stepStarted.current) {
-      stepStarted.current = true;
-      return;
-    }
-    headingRef.current?.focus();
+    if (prevStep.current !== step) headingRef.current?.focus();
+    prevStep.current = step;
   }, [step]);
 
   const monthlySpend = parseSpend(spend);
@@ -118,7 +117,11 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
    * פעמים בזמן שהוא מקליד סכום לגיטימי לחלוטין.
    */
   const [blurred, setBlurred] = useState(false);
-  const invalidSpend = monthlySpend <= 0 && spend.trim() !== "" && (blurred || attempted);
+  // ⚠️ אחרי לחיצה על ה-CTA גם שדה **ריק** הוא שגיאה — זה בדיוק המקרה
+  // ש-`attempted` נועד לו, והתנאי `spend.trim() !== ""` היה מבטל אותו:
+  // לחיצה בשדה ריק חזרה בשקט בלי שההסבר יידלק. `blurred` לבדו עדיין
+  // לא מתלונן על שדה ריק — יציאה מהשדה בלי להקליד אינה טעות.
+  const invalidSpend = monthlySpend <= 0 && (attempted || (blurred && spend.trim() !== ""));
   const spendHint = invalidSpend
     ? // ⚠️ הנוסח הקודם ("ספרות בלבד") היה שגוי עובדתית: פסיק, רווח
       // ו-₪ מתקבלים היטב, ולכן מי שהקליד `2,20` וקרא "ספרות בלבד"
@@ -168,6 +171,10 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 type="button"
                 onClick={() => {
                   setTrack(key);
+                  // כניסה מחדש לשלב הסכום מתחילה נקייה — בלי שגיאה
+                  // מלחיצה קודמת שתופיע לפני שהוקלד תו.
+                  setAttempted(false);
+                  setBlurred(false);
                   setStep(1);
                 }}
                 className="rounded-lp-card border border-lp-line p-4 text-start transition hover:border-lp-brand hover:bg-lp-brand/5"

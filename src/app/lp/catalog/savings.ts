@@ -36,7 +36,12 @@ export const MAX_SPEND = 5000;
  * לא מבטיחים" הוא התשובה היחידה שאפשר לעמוד מאחוריה.
  */
 const RISE_IN_TEXT =
-  /לאחר מכן|מהחודש ה|מחודש \d|החודשים הראשונים|חודשים ראשונים|למשך שנה|מובטח ל[-־]?\s?\d+|לתקופה של \d+|בתום ה?(תקופה|הטבה|המבצע)|לאחר תום|מחיר לאחר|מחיר רגיל/;
+  // ⚠️ "תקף ל 24 חודשים" (גולן Valentine's), "קבוע ל24 חודשים" (פלאפון
+  // 1000GB) ו-"למשך שנתיים" / "למשך 5 שנים" (HOT RUS / ULTRA) הן אותה
+  // הצהרה בדיוק כמו "מובטח ל-12 חודשים" — מחיר שנגמר בתאריך, ואחריו
+  // לא נמסר כלום. הן לא נבחרות היום כי WeCom זולה יותר, אבל ברגע
+  // שהיא תצא מהקטלוג "מחיר קבוע ל-24 חודשים" הופך לכותרת של "לנצח".
+  /לאחר מכן|מהחודש ה|מחודש \d|החודשים הראשונים|חודשים ראשונים|למשך שנה|למשך שנתיים|למשך \d+ שנים|מובטח ל[-־]?\s?\d+|תקף ל[-־]?\s?\d+|קבוע ל[-־]?\s?\d+|לתקופה של \d+|בתום ה?(תקופה|הטבה|המבצע)|לאחר תום|מחיר לאחר|מחיר רגיל/;
 
 export function declaresRiseInText(p: Package): boolean {
   return RISE_IN_TEXT.test(`${p.description ?? ""} ${p.benefits ?? ""}`);
@@ -66,6 +71,27 @@ const REQUIRES_MULTIPLE_LINES =
 
 export function requiresMultipleLines(p: Package): boolean {
   return REQUIRES_MULTIPLE_LINES.test(`${p.name} ${p.description ?? ""} ${p.benefits ?? ""}`);
+}
+
+/**
+ * חבילה שהמחיר שלה הוא מחיר **למנוי במסלול משפחתי** — כלומר משני
+ * קווים ומעלה — בלי שהקטלוג אומר זאת במספרים.
+ *
+ * ⚠️ WeCom מוכרת את אותה חבילה בדיוק פעמיים: "wecomFree 4G" ב-34.9 ₪
+ * ו-"wecomFamily 4G (מסלול משפחתי)" ב-29.9 ₪. אותם 10,000GB, אותן
+ * 5,000 דקות, אותו eSIM; ההבדל היחיד הוא המילה "משפחתי" — ובמחירון
+ * של WeCom "משפחתי" פירושו מנוי מ-2 מנויים. `lineTiers` ריק ואין
+ * `priceAfterPromo`, ולכן שום מסנן לא תפס את זה, ומי שביקש **קו אחד**
+ * קיבל כותרת שנבנתה על 29.9 במקום 34.9 — ₪60 בשנה שלא יראה.
+ *
+ * זו לא פסילה גורפת כמו `requiresMultipleLines`: לשני קווים ומעלה
+ * המחיר המשפחתי הוא בדיוק המחיר שיגבו, ולכן הבדיקה תלוית-כמות ויושבת
+ * ב-`computeSaving` לצד `priceUnknownAtLines`.
+ */
+const FAMILY_ONLY = /מסלול משפחתי|משפחתי/;
+
+export function familyPriceOnly(p: Package): boolean {
+  return FAMILY_ONLY.test(`${p.name} ${p.description ?? ""}`);
 }
 
 /**
@@ -212,7 +238,9 @@ export function computeSaving(
   const pool = packages
     .filter((p): p is MonthlyPackage => isComparable(p, track))
     // ⚠️ תלוי-כמות, ולכן כאן ולא ב-`isComparable`. ראה `priceUnknownAtLines`.
-    .filter((p) => !priceUnknownAtLines(p, units));
+    .filter((p) => !priceUnknownAtLines(p, units))
+    // ⚠️ מחיר "משפחתי" הוא מחיר לשני קווים ומעלה. ראה `familyPriceOnly`.
+    .filter((p) => track !== "cellular" || units >= 2 || !familyPriceOnly(p));
   const pick = pool.reduce<MonthlyPackage | null>(
     (best, p) => (best == null || perLinePrice(p, units) < perLinePrice(best, units) ? p : best),
     null,

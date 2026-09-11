@@ -6,6 +6,7 @@ import {
   MIN_SPEND,
   computeSaving,
   declaresRiseInText,
+  familyPriceOnly,
   isComparable,
   parseSpend,
   priceUnknownAtLines,
@@ -152,6 +153,34 @@ test("מחיר שמותנה בכמות קווים אינו נכנס לבריכת
   for (const track of ["cellular", "home"]) {
     assert.ok(computeSaving(PACKAGES, track, 1, 500).pick, `${track}: הבריכה התרוקנה`);
   }
+});
+
+test("מחיר משפחתי אינו מחיר של קו בודד", () => {
+  const family = PACKAGES.find((x) => x.name === "wecomFamily 4G");
+  const single = PACKAGES.find((x) => x.name === "wecomFree 4G");
+  assert.ok(family && single, "חבילות WeCom לא נמצאו בקטלוג");
+  assert.ok(familyPriceOnly(family));
+  assert.equal(familyPriceOnly(single), false);
+
+  // קו אחד: 29.9 הוא מחיר למנוי במסלול משפחתי, ולכן לא מוצע למי שקונה קו יחיד.
+  const one = computeSaving(PACKAGES, "cellular", 1, 500);
+  assert.ok(one.pick, "הבריכה התרוקנה לקו אחד");
+  assert.notEqual(one.pick.name, "wecomFamily 4G");
+  // הנבחרת לקו אחד לא תומחרה לפי המחיר המשפחתי (29.9). wecom300GB 5G
+  // ב-34 ₪ מנצחת בצדק — היא מחיר למנוי בודד.
+  assert.ok(perLinePrice(one.pick, 1) > family.price, `קו בודד תומחר לפי המחיר המשפחתי ${family.price}`);
+
+  // שני קווים ומעלה: המחיר המשפחתי הוא בדיוק מה שיגבו.
+  const two = computeSaving(PACKAGES, "cellular", 2, 500);
+  assert.equal(two.pick?.name, "wecomFamily 4G");
+});
+
+test("תוקף מוגבל בניסוח חופשי נחשב לעלייה במחיר", () => {
+  const fake = (description) => ({ name: "x", description, benefits: null });
+  for (const text of ["מחיר תקף ל 24 חודשים", "מחיר קבוע ל24 חודשים", "למשך שנתיים", "למשך 5 שנים"]) {
+    assert.ok(declaresRiseInText(fake(text)), `לא זוהה: ${text}`);
+  }
+  assert.equal(declaresRiseInText(fake("גלישה חופשית ללא הגבלה")), false);
 });
 
 test("מדרגת קווים שמייקרת נלקחת כפי שהיא, בלי Math.min", () => {
