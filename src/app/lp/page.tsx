@@ -344,8 +344,12 @@ export default function LandingPage() {
         הזה לתשובה מול הקטלוג האמיתי, והוא גם מציג את החיסכון **לפני**
         שהוא מבקש טלפון: מחשבון שמסתיר מספר שכבר חושב הוא מלכודת.
       */}
-      <section className="border-b border-lp-line bg-lp-surface">
+      <section className="border-b border-lp-line bg-lp-surface" aria-labelledby="lp-calc-heading">
         <div className="mx-auto max-w-3xl px-4 py-12">
+          {/* כותרת לסקשן, כדי שכותרות השלבים (h3) לא ייכנסו תחת "מה אנחנו משווקים". */}
+          <h2 id="lp-calc-heading" className="sr-only">
+            מחשבון חיסכון
+          </h2>
           <SavingsCalculator packages={packages} />
         </div>
       </section>

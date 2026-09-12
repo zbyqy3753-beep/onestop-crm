@@ -5,6 +5,8 @@ import { Card } from "./Card";
 import { LeadForm } from "./LeadForm";
 import { shekels } from "../catalog/format";
 import { catalog } from "../catalog/catalog";
+import { crmCategory } from "../config";
+import { fieldClass } from "./field";
 import { MAX_SPEND, MIN_SPEND, computeSaving, parseSpend, perLinePrice, type Track } from "../catalog/savings";
 import type { Package } from "../catalog/types";
 
@@ -212,7 +214,9 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 onChange={(e) => {
                   const next = e.target.value;
                   const parsed = parseSpend(next);
-                  setSpend(parsed >= MAX_SPEND ? String(MAX_SPEND) : next);
+                  // ⚠️ באותו פורמט שהרמז מתחת מציג ("5,000 ₪") — `parseSpend`
+                  // מקבל מפריד אלפים, והשדה לא סותר את ההסבר שלידו.
+                  setSpend(parsed >= MAX_SPEND ? MAX_SPEND.toLocaleString("he-IL") : next);
                 }}
                 onBlur={() => setBlurred(true)}
                 /*
@@ -236,7 +240,12 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 */
                 maxLength={10}
                 placeholder="למשל 220"
-                className="nums w-full rounded-lg border border-lp-line px-3 py-2.5 text-lg transition focus:border-lp-brand"
+                /*
+                  ⚠️ `fieldClass` כמו כל שדה אחר בדף, ולא מחרוזת מקומית. בלי
+                  `bg-lp-surface text-lp-ink` השדה ירש `color-scheme: dark`
+                  מהמעטפת אצל מי שהטלפון שלו במצב כהה — טקסט בהיר על כרטיס לבן.
+                */
+                className={`nums ${fieldClass.replace("text-sm", "text-lg")}`}
                 /* קורא מסך שמע את ההודעה אבל לא ידע שהשדה עצמו שגוי. */
                 aria-invalid={invalidSpend || undefined}
                 aria-describedby="calc-spend-hint"
@@ -258,7 +267,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   id="calc-units"
                   value={units}
                   onChange={(e) => setUnits(Number(e.target.value))}
-                  className="w-full rounded-lg border border-lp-line px-3 py-3 transition focus:border-lp-brand"
+                  className={fieldClass.replace("py-2.5", "py-3")}
                 >
                   {/*
                     ⚠️ עד 10 ובלי "ומעלה". האפשרות הישנה הוצגה כ-"6 ומעלה"
@@ -383,7 +392,8 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 — ולא לפי מחיר מבצע שמסתיים.{" "}
               </>
             )}
-            {track === "home"
+            {/* ⚠️ גם המשפט הזה בתוך `!noMatch`: אחרי "אין חבילה להשוות אליה" אין מולי מה להשוות. */}
+            {track === "home" && !noMatch
               ? "ההשוואה נעשית מול חבילה שכוללת אינטרנט וטלוויזיה; קו טלפון אינו נדרש בה ואינו בהכרח כלול — אם יש קו בחשבון שלכם, הנציג יתמחר אותו בנפרד. "
               : ""}
             עלויות חד-פעמיות (מעבר, חיבור, התקנה) אינן נכללות, והסכום המדויק תלוי בזמינות, בתנאי
@@ -397,7 +407,12 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             </p>
             <LeadForm
               compact
-              category={track === "cellular" ? "mobile" : "internet"}
+              /*
+                ⚠️ לפי החבילה שנמדדה, ולא "internet" קבוע. ההשוואה הביתית
+                דורשת טלוויזיה, והחבילה שנבחרת היא טריפל — הכרטיס שלה מגיש
+                ליד כ-"tv", והנציג שמסנן לפי טלוויזיה לא ראה לידים מהמחשבון.
+              */
+              category={saving.pick ? crmCategory(saving.pick) : track === "cellular" ? "mobile" : "internet"}
               note={[
                 `מהמחשבון: משלם היום ${shekels(monthlySpend)} בחודש`,
                 unitsLabel(track, units),

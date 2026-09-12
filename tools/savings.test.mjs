@@ -4,9 +4,11 @@ import { test } from "node:test";
 import {
   MAX_SPEND,
   MIN_SPEND,
+  afterPriceDependsOnLines,
   computeSaving,
   declaresRiseInText,
   familyPriceOnly,
+  routerPricedSeparately,
   isComparable,
   parseSpend,
   priceUnknownAtLines,
@@ -181,6 +183,52 @@ test("תוקף מוגבל בניסוח חופשי נחשב לעלייה במחי
     assert.ok(declaresRiseInText(fake(text)), `לא זוהה: ${text}`);
   }
   assert.equal(declaresRiseInText(fake("גלישה חופשית ללא הגבלה")), false);
+});
+
+test("צורות נוספות של עלייה בטקסט חופשי נתפסות", () => {
+  // ⚠️ סריקת הקטלוג מ-12.9.2026: כל אחת מהן הופיעה בחבילה אמיתית
+  // וחמקה מהרגקס. ראה ההערה על `RISE_IN_TEXT`.
+  const fake = (description) => ({ name: "x", description, benefits: null });
+  for (const text of [
+    "12 ערוצי דרמות חינם אח\"כ 49.9",
+    "חודשיים ראשונים 24.90",
+    "לחודשיים ראשונים ב-39",
+    "חודש ראשון חינם",
+    "מחיר לשנה ואז 179 שח",
+    "לאחר שנה 159 ₪ לחודש",
+    "שנה שניה שלישית 229",
+  ]) {
+    assert.ok(declaresRiseInText(fake(text)), `לא זוהה: ${text}`);
+  }
+});
+
+test("מחיר-אחרי-הטבה אחד לחבילה שמתמחרת לפי כמות מנויים אינו בר-השוואה", () => {
+  // סלקום "משפחתי פלוס": priceAfterPromo 59.9, ובטקסט "לאחר שנה … עד 2
+  // מנויים כולל – 64.90 ₪ למנוי". המספר היחיד שנמסר אינו המחיר לקו אחד.
+  const p = PACKAGES.find((x) => x.name.includes("סלקום משפחתי פלוס"));
+  assert.ok(p, "לא נמצאה בקטלוג: סלקום משפחתי פלוס");
+  assert.ok(afterPriceDependsOnLines(p));
+  assert.equal(isComparable(p, "cellular"), false);
+  // בלי מחיר-אחרי-הטבה המדרגות עצמן הן המידע, והכלל לא חל.
+  const pro = PACKAGES.find((x) => x.name.includes("סלקום 5G PRO"));
+  assert.ok(pro, "לא נמצאה בקטלוג: סלקום 5G PRO");
+  assert.equal(afterPriceDependsOnLines(pro), false);
+});
+
+test("בית: נתב שמתומחר מחוץ למחיר פוסל את החבילה", () => {
+  const fake = (description) => ({ name: "x", description, benefits: null });
+  // yes: "עלות נתב אינטרנט 20שח (יש הטבה על הנתב למשך שנה ללא עלות)".
+  const yes = PACKAGES.filter((x) => x.name.startsWith("יס + אולטימייט"));
+  assert.ok(yes.length >= 1, "לא נמצאו בקטלוג חבילות יס + אולטימייט");
+  for (const p of yes) {
+    assert.ok(routerPricedSeparately(p), `${p.name}: הנתב הנפרד לא זוהה`);
+    assert.equal(isComparable(p, "home"), false, `${p.name} נכנסה לבריכה`);
+  }
+  assert.ok(routerPricedSeparately(fake("נתב פייבר בהשכרה בתוספת 25 ₪ לחודש")));
+  // נתב חינם או כלול אינו חיוב נסתר.
+  assert.equal(routerPricedSeparately(fake("עלות נתב 0 ש\"ח")), false);
+  assert.equal(routerPricedSeparately(fake("נתב כלול במחיר")), false);
+  assert.equal(routerPricedSeparately(fake("139 ₪ + 34.9 ₪ נתב סטאר = 173.9 ₪")), false);
 });
 
 test("מדרגת קווים שמייקרת נלקחת כפי שהיא, בלי Math.min", () => {
