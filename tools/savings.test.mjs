@@ -335,3 +335,28 @@ test("החיסכון שמוצג בפועל נשען על מחיר שנמצא ב�
     );
   }
 });
+
+test("כל חבילה ביתית בת-השוואה מגיעה ל-CRM כ-tv, גם בלי המילה בשם", async () => {
+  const { crmCategory } = await import("../src/app/lp/config.ts");
+  // ⚠️ המחשבון הביתי מודד מול אינטרנט+טלוויזיה, ולכן הליד שלו חייב
+  // להגיע לנציג שמסנן לפי טלוויזיה. סטינג "STING פייבר 1000מגה" (type
+  // "סיבים") היא ההוכחה שהשם לבדו לא מספיק.
+  for (const p of pool("home")) {
+    assert.equal(crmCategory(p), "tv", `${p.name}: נשלחה כ-${crmCategory(p)}`);
+  }
+  const sting = PACKAGES.find((p) => p.name === "STING פייבר 1000מגה");
+  assert.ok(sting, "STING פייבר 1000מגה נעלמה מהקטלוג — עדכן את הבדיקה");
+  assert.equal(crmCategory(sting), "tv");
+});
+
+test("עלייה בטקסט נתפסת גם עם שגיאת הקלדה ב'חודשים ראשונים'", () => {
+  const mk = (description) => ({ description, benefits: null });
+  assert.ok(declaresRiseInText(mk('עלות 3 חודשים ראושנים 99 ש"ח')));
+  assert.ok(declaresRiseInText(mk('עלות 3 חודשם ראשונים 129 ש"ח')));
+  assert.ok(declaresRiseInText(mk("3 חודשים ראשונים ב-69")));
+  assert.ok(!declaresRiseInText(mk("אינטרנט סיבים עד 1000/100 כולל נתב")));
+  // ⚠️ הבחירה בבית אינה משתנה בגלל ההקשחה — 72/71 יקרות ממנה ממילא.
+  const before = computeSaving(PACKAGES, "home", 1, 300).pick;
+  assert.ok(before, "אין בחירה במסלול הבית");
+  assert.notEqual(before.name, "1000/100 ללא VOD");
+});

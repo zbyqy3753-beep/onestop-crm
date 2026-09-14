@@ -416,8 +416,13 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 ⚠️ לפי החבילה שנמדדה, ולא "internet" קבוע. ההשוואה הביתית
                 דורשת טלוויזיה, והחבילה שנבחרת היא טריפל — הכרטיס שלה מגיש
                 ליד כ-"tv", והנציג שמסנן לפי טלוויזיה לא ראה לידים מהמחשבון.
+
+                ⚠️ גם בלי חבילה נבחרת המסלול הביתי הוא "tv", לא "internet":
+                המבקר הזין חשבון של "אינטרנט וטלוויזיה", והנציג שמסנן לפי
+                טלוויזיה הוא זה שצריך לראות את הליד — דווקא כשהמחשבון לא
+                מצא לו חבילה והבדיקה חייבת להיות ידנית.
               */
-              category={saving.pick ? crmCategory(saving.pick) : track === "cellular" ? "mobile" : "internet"}
+              category={saving.pick ? crmCategory(saving.pick) : track === "cellular" ? "mobile" : "tv"}
               note={[
                 `מהמחשבון: משלם היום ${shekels(monthlySpend)} בחודש`,
                 unitsLabel(track, units),

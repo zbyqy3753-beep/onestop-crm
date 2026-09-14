@@ -1,5 +1,5 @@
 import type { LeadCategoryKey } from "@/lib/domain/types";
-import type { Package } from "./catalog/types";
+import type { HomeSpec, Package } from "./catalog/types";
 
 /**
  * הגדרות דף הנחיתה הציבורי (`/lp`).
@@ -40,6 +40,19 @@ export function crmCategory(pkg: Package): LeadCategoryKey {
   const text = `${pkg.type ?? ""} ${pkg.name}`;
   if (text.includes("טריפל")) return "tv";
   if (text.includes("טלוויזיה") || text.includes("TV")) return "tv";
+  /*
+   * ⚠️ גם לפי ה-`spec`, ולא רק לפי המילים בשם. סטינג "STING פייבר
+   * 1000מגה" היא טלוויזיה עם ממיר + אינטרנט 1000 ("חבילה מבית יס") —
+   * ב-`spec` היא `hasTv && hasInternet`, אבל אין בשם ולא ב-`type`
+   * ("סיבים") אף אחת מהמילים שלמעלה, ולכן הליד שלה הגיע ל-CRM
+   * כ"אינטרנט" ונעלם מהנציג שמסנן לפי טלוויזיה. המחשבון הביתי בוחר
+   * רק חבילות `hasTv && hasInternet` (ראה `isComparable`), כלומר בלי
+   * השורה הזו כל רענון קטלוג שמעלה חבילה כזו לראש הרשימה שולח את
+   * לידי המחשבון לקטגוריה הלא-נכונה. הבדיקה הטקסטואלית נשארת ראשונה
+   * כי היא מפורשת יותר מדגל שהמחלץ הסיק.
+   */
+  const spec = pkg.category === "home" ? (pkg.spec as HomeSpec) : null;
+  if (spec?.hasTv && spec.hasInternet) return "tv";
   return "internet";
 }
 
