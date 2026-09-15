@@ -81,8 +81,18 @@ export function LeadForm({ pkg, compact = false, category, note }: Props) {
   // את התווית של כרטיס אחד לשדה של אחר.
   const uid = pkg ? pkg.id : autoId;
 
+  /*
+   * ⚠️ מה שהוקלד לפני שגיאת שרת. React 19 מאפס `<form action>` בסיום
+   * הפעולה גם כשהיא נכשלה, ולכן השדות הם לא-מבוקרים עם `defaultValue`
+   * מהתשובה — כך "טלפון לא תקין" מופיע מול הטלפון שהוקלד ולא מול שדה
+   * ריק. ה-`key` על הטופס מרנדר אותו מחדש בכל שגיאה כדי שה-default
+   * החדש ייקלט (לא-מבוקר קורא אותו רק במאונט).
+   */
+  const echoed = state.status === "error" ? state.values : undefined;
+  const formKey = state.status === "error" ? state.message + (echoed?.phone ?? "") : "idle";
+
   return (
-    <form action={action} className="space-y-3" noValidate>
+    <form key={formKey} action={action} className="space-y-3" noValidate>
       {pkg && !compact && (
         <p className="text-sm text-lp-ink-2">
           נציג ONE STOP יחזור אליך לגבי{" "}
@@ -107,6 +117,7 @@ export function LeadForm({ pkg, compact = false, category, note }: Props) {
             className={fieldClass}
             autoComplete="name"
             maxLength={80}
+            defaultValue={echoed?.name}
             required
           />
         </div>
@@ -127,6 +138,7 @@ export function LeadForm({ pkg, compact = false, category, note }: Props) {
             autoComplete="tel"
             placeholder="050-0000000"
             maxLength={20}
+            defaultValue={echoed?.phone}
             required
           />
         </div>
@@ -136,7 +148,7 @@ export function LeadForm({ pkg, compact = false, category, note }: Props) {
         <label className={labelClass} htmlFor={`lp-prov-${uid}`}>
           הספק הנוכחי שלך <span className="text-lp-ink-3">(עוזר להכין הצעה מדויקת)</span>
         </label>
-        <select id={`lp-prov-${uid}`} name="provider" className={fieldClass} defaultValue="">
+        <select id={`lp-prov-${uid}`} name="provider" className={fieldClass} defaultValue={echoed?.provider ?? ""}>
           <option value="">לא רוצה לציין</option>
           {PROVIDER_ORDER.map((key) => (
             <option key={key} value={key}>
@@ -157,6 +169,7 @@ export function LeadForm({ pkg, compact = false, category, note }: Props) {
             rows={3}
             maxLength={500}
             className={fieldClass}
+            defaultValue={echoed?.message}
             placeholder="למשל: כמה קווים, מה אני משלם היום, מתי נוח לחזור אליי"
           />
         </div>
@@ -197,6 +210,7 @@ export function LeadForm({ pkg, compact = false, category, note }: Props) {
           name="consent"
           value="1"
           required
+          defaultChecked={echoed?.consent}
           className="mt-0.5 h-4 w-4 shrink-0 accent-lp-brand"
         />
         <span>

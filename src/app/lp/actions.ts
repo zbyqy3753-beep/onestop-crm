@@ -36,13 +36,39 @@ import {
 
 /* ── תוצאה ────────────────────────────────────────────────────────────── */
 
+/**
+ * מה שהמבקר הקליד, מוחזר אליו יחד עם שגיאה.
+ *
+ * ⚠️ ב-React 19 `<form action>` מאפס את כל השדות בסיום הפעולה — גם
+ * כשהיא נכשלה. בלי ההד הזה "מספר טלפון לא תקין" הופיע מול טופס ריק,
+ * והמבקר (שבמחשבון כבר עבר שלושה שלבים) היה צריך להקליד הכול מחדש.
+ * הטופס מציב את הערכים כ-`defaultValue`, ראה `LeadForm`.
+ */
+export interface EchoedValues {
+  name: string;
+  phone: string;
+  provider: string;
+  message: string;
+  consent: boolean;
+}
+
 export type LandingState =
   | { status: "idle" }
   | { status: "sent" }
-  | { status: "error"; message: string };
+  | { status: "error"; message: string; values?: EchoedValues };
 
-function error(message: string): LandingState {
-  return { status: "error", message };
+function error(message: string, values?: EchoedValues): LandingState {
+  return { status: "error", message, values };
+}
+
+function echo(formData: FormData): EchoedValues {
+  return {
+    name: text(formData.get("name")),
+    phone: text(formData.get("phone")),
+    provider: text(formData.get("provider")),
+    message: text(formData.get("message")),
+    consent: Boolean(text(formData.get("consent"))),
+  };
 }
 
 /* ── הגבלת קצב ────────────────────────────────────────────────────────── */
@@ -144,15 +170,19 @@ export async function submitLandingLead(
    */
   if (text(formData.get("website"))) return { status: "sent" };
 
+  // כל שגיאה מכאן והלאה מחזירה גם את מה שהוקלד — ראה `EchoedValues`.
+  const values = echo(formData);
+  const fail = (message: string) => error(message, values);
+
   const name = text(formData.get("name"));
-  if (name.length < 2) return error("נא למלא שם מלא");
-  if (name.length > MAX_NAME) return error("השם ארוך מדי");
+  if (name.length < 2) return fail("נא למלא שם מלא");
+  if (name.length > MAX_NAME) return fail("השם ארוך מדי");
 
   const phone = normalizePhone(text(formData.get("phone")));
-  if (!phone) return error("מספר טלפון לא תקין — נדרש מספר ישראלי");
+  if (!phone) return fail("מספר טלפון לא תקין — נדרש מספר ישראלי");
 
   const category = parseCategory(text(formData.get("category")));
-  if (!category) return error("נא לבחור מה מעניין אותך");
+  if (!category) return fail("נא לבחור מה מעניין אותך");
 
   /*
    * ⚠️ ההסכמה נאכפת **בשרת**. הטופס הוא `noValidate` (ראה `LeadForm`),
@@ -160,7 +190,7 @@ export async function submitLandingLead(
    * ויצאה התראת וואטסאפ לנציג בלי שום רישום שהאדם אישר שיתקשרו אליו.
    */
   if (!text(formData.get("consent"))) {
-    return error("יש לאשר יצירת קשר כדי שנוכל לחזור אליכם");
+    return fail("יש לאשר יצירת קשר כדי שנוכל לחזור אליכם");
   }
 
   const currentProvider = parseProvider(text(formData.get("provider")));
@@ -174,7 +204,7 @@ export async function submitLandingLead(
   const packageName = text(formData.get("packageName")).slice(0, MAX_PACKAGE);
 
   if (overRateLimit(await clientIp())) {
-    return error("נשלחו יותר מדי פניות מהמכשיר הזה. נסו שוב מאוחר יותר.");
+    return fail("נשלחו יותר מדי פניות מהמכשיר הזה. נסו שוב מאוחר יותר.");
   }
 
   const source = sourceDetail();
@@ -261,7 +291,7 @@ export async function submitLandingLead(
       createdById = (users.find((u) => u.role === "owner") ?? users[0])?.id;
     }
     if (!createdById) {
-      return error("שגיאה זמנית בשמירת הפנייה. נסו שוב בעוד רגע.");
+      return fail("שגיאה זמנית בשמירת הפנייה. נסו שוב בעוד רגע.");
     }
 
     const lead = await db.leads.create({
@@ -301,6 +331,6 @@ export async function submitLandingLead(
     return { status: "sent" };
   } catch (err) {
     console.error("[lp] שמירת הליד נכשלה", err);
-    return error("שגיאה זמנית בשמירת הפנייה. נסו שוב בעוד רגע.");
+    return fail("שגיאה זמנית בשמירת הפנייה. נסו שוב בעוד רגע.");
   }
 }

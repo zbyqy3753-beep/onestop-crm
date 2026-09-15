@@ -127,7 +127,11 @@ export function familyPriceOnly(p: Package): boolean {
  * כשהטקסט אומר שהמחיר משתנה לפי כמות והמספרים לא מפרטים לפי כמות,
  * המחיר לכמות המבוקשת פשוט לא נמסר.
  */
-const PRICED_BY_LINE_COUNT = /מנויים כולל|מנויים ומעלה|קווים ומעלה|בהצטרפות \d+ מנויים|בצירוף \d+ קווים/;
+// ⚠️ "מנוי 1 בתוכנית 39 / מנוי 2 35 / מנוי 3 33 / לאחר שנה 69.90" (פלאפון
+// 500GB TOGETHER) הוא אותו מקרה בניסוח אחר: מדרגה לכל מנוי, ומספר יחיד
+// אחרי ההטבה. הצורה "מנוי N ב…" נתפסת גם עם שגיאת הכתיב ("בתונכית").
+const PRICED_BY_LINE_COUNT =
+  /מנויים כולל|מנויים ומעלה|קווים ומעלה|בהצטרפות \d+ מנויים|בצירוף \d+ קווים|מנוי \d+ ב/;
 
 export function afterPriceDependsOnLines(p: Package): boolean {
   if (p.priceModel !== "monthly" || p.priceAfterPromo == null) return false;

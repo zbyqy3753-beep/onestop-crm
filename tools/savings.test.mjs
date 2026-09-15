@@ -217,6 +217,12 @@ test("מחיר-אחרי-הטבה אחד לחבילה שמתמחרת לפי כמ�
   const pro = PACKAGES.find((x) => x.name.includes("סלקום 5G PRO"));
   assert.ok(pro, "לא נמצאה בקטלוג: סלקום 5G PRO");
   assert.equal(afterPriceDependsOnLines(pro), false);
+  // פלאפון "500GB 5G TOGETHER": "מנוי 1 בתונכית 39 / מנוי 2 35 / מנוי 3 33 /
+  // לאחר שנה 69.90" — אותו מקרה בניסוח אחר (וגם עם שגיאת הכתיב).
+  const together = PACKAGES.find((x) => x.name.includes("500GB 5G TOGETHER"));
+  assert.ok(together, "לא נמצאה בקטלוג: 500GB 5G TOGETHER");
+  assert.ok(afterPriceDependsOnLines(together));
+  assert.equal(isComparable(together, "cellular"), false);
 });
 
 test("בית: נתב שמתומחר מחוץ למחיר פוסל את החבילה", () => {
