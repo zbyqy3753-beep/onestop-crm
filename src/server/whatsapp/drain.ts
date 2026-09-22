@@ -31,6 +31,7 @@ import { BROADCAST_TEMPLATE } from "@/lib/domain/broadcast";
 import {
   DEAL_WON_TEMPLATE,
   FOLLOWUP_OVERDUE_TEMPLATE,
+  LEAD_HOT_BATCH_TEMPLATE,
   LEAD_HOT_TEMPLATE,
   LEAD_UNASSIGNED_TEMPLATE,
   LEAD_YES_TEMPLATE,
@@ -40,6 +41,7 @@ import {
   unassignedParams,
   yesLeadParams,
 } from "@/lib/domain/alerts";
+import { hotBatchParams } from "@/lib/domain/hotLeadBatch";
 
 /**
  * ניקוז התור דרך Cloud API — מחליף את לולאת הסקר של הבוט.
@@ -84,6 +86,7 @@ function templateFor(
   | typeof LEAD_UNASSIGNED_TEMPLATE
   | typeof LEAD_YES_TEMPLATE
   | typeof LEAD_HOT_TEMPLATE
+  | typeof LEAD_HOT_BATCH_TEMPLATE
   | typeof DEAL_WON_TEMPLATE
   | typeof FOLLOWUP_OVERDUE_TEMPLATE
   | typeof BROADCAST_TEMPLATE
@@ -95,6 +98,7 @@ function templateFor(
   if (dedupeKey.startsWith("unassigned:")) return LEAD_UNASSIGNED_TEMPLATE;
   if (dedupeKey.startsWith("yeslead:")) return LEAD_YES_TEMPLATE;
   if (dedupeKey.startsWith("hotlead:")) return LEAD_HOT_TEMPLATE;
+  if (dedupeKey.startsWith("hotbatch:")) return LEAD_HOT_BATCH_TEMPLATE;
   if (dedupeKey.startsWith("dealwon:")) return DEAL_WON_TEMPLATE;
   if (dedupeKey.startsWith("overdue:")) return FOLLOWUP_OVERDUE_TEMPLATE;
   if (dedupeKey.startsWith("broadcast:")) return BROADCAST_TEMPLATE;
@@ -240,6 +244,7 @@ async function deliver(msg: ClaimedMessage): Promise<string> {
     [LEAD_UNASSIGNED_TEMPLATE, unassignedParams],
     [LEAD_YES_TEMPLATE, yesLeadParams],
     [LEAD_HOT_TEMPLATE, hotLeadParams],
+    [LEAD_HOT_BATCH_TEMPLATE, hotBatchParams],
     [DEAL_WON_TEMPLATE, dealWonParams],
     [FOLLOWUP_OVERDUE_TEMPLATE, overdueParams],
   ]);

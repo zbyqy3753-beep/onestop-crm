@@ -180,10 +180,28 @@ export const LEAD_HOT_TEMPLATE = {
 /**
  * ⚠️ ליד + עובד, בלי חותמת זמן: מי שקיבל ליד, החזיר אותו וקיבל שוב
  * לא צריך התראה שנייה על אותו לקוח.
+ *
+ * ⚠️⚠️ **מאז האיחוד השורה הזו אינה נשלחת — היא סמן בלבד.** היא נוצרת
+ * במצב `cancelled`, והתראה עצמה יוצאת במקבץ (`hotbatch:`). הסמן קיים
+ * כדי שאילוץ הייחודיות ימשיך לאכוף את ההבטחה שלמעלה: בלעדיו איחוד
+ * לחלונות היה מוריד אותה מ"פעם אחת לתמיד" ל"פעם אחת לכל חלון".
+ * ראה `notifyHotLeadAssigned`.
  */
 export function hotLeadDedupeKey(leadId: string, userId: string): string {
   return `hotlead:${leadId}:${userId}`;
 }
+
+/**
+ * מקבץ הלידים החמים שיוצא לעובד.
+ *
+ * ⚠️ תבנית נפרדת ולא מיחזור של `LEAD_HOT_TEMPLATE`: מספר הפרמטרים
+ * שונה (מונה ורשימה במקום שם וטלפון), ותבנית במטא היא מבנה קבוע.
+ */
+export const LEAD_HOT_BATCH_TEMPLATE = {
+  name: "lead_hot_batch_he",
+  language: "he",
+  category: "UTILITY",
+} as const;
 
 export function hotLeadBody(leadName: string, leadPhone: string): string {
   return `ליד חם חדש אצלך | לקוח: ${leadName} | טלפון: ${leadPhone}`;

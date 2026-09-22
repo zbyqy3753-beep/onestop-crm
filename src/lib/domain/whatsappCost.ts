@@ -92,6 +92,7 @@ const COST_PREFIXES: { prefix: string; category: WaCostCategory }[] = [
   { prefix: "unassigned:", category: "utility" },
   { prefix: "yeslead:", category: "utility" },
   { prefix: "hotlead:", category: "utility" },
+  { prefix: "hotbatch:", category: "utility" },
   { prefix: "pwnotice:", category: "utility" },
 
   // ── קוד חד-פעמי ──

@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/server/db/client";
 import { isIsraeliPhone, toE164 } from "@/lib/format";
+import { shouldReviveRow } from "@/lib/domain/requeue";
 
 /**
  * ── נמען אחד, כמה מכשירים ─────────────────────────────────────────────
@@ -49,8 +50,11 @@ export function phoneTargets(
 /**
  * מכניסה לתור הודעה אחת לכל מספר של הנמען.
  *
- * מחזירה כמה שורות נוצרו בפועל. ⚠️ הפרת ייחודיות נבלעת בכוונה: היא
- * המצב הרגיל בכל סקר אחרי הראשון — ההתראה כבר בתור — ולא שגיאה.
+ * מחזירה כמה שורות נוצרו או הוחייאו בפועל.
+ *
+ * ⚠️ הפרת ייחודיות אינה שגיאה: היא המצב הרגיל בכל תקתוק אחרי הראשון,
+ * כשההתראה כבר בתור. אבל היא **גם** המצב שבו שורה מתה תופסת את
+ * המפתח לנצח — ולכן היא מובילה ל-`revive` ולא לבליעה שקטה.
  */
 export async function enqueueForUser(input: {
   user: PhoneOwner & { id: string };
@@ -62,10 +66,11 @@ export async function enqueueForUser(input: {
   let created = 0;
 
   for (const target of phoneTargets(input.user)) {
+    const dedupeKey = `${input.dedupeKey}${target.keySuffix}`;
     try {
       await prisma.whatsAppMessage.create({
         data: {
-          dedupeKey: `${input.dedupeKey}${target.keySuffix}`,
+          dedupeKey,
           toPhone: target.toPhone,
           body: input.body,
           scheduledFor: input.scheduledFor,
@@ -74,10 +79,75 @@ export async function enqueueForUser(input: {
         },
       });
       created++;
-    } catch {
-      // כבר בתור עבור המספר הזה.
+    } catch (error) {
+      /*
+       * ⚠️⚠️ **רק הפרת ייחודיות נבלעת.** קודם היה כאן `catch {}` ריק,
+       * ולכן ניתוק מהמסד, גוף ארוך מדי או כל תקלה אחרת נראו בדיוק
+       * כמו "כבר בתור" — והמונה שחוזר מכאן דיווח פחות בלי שאיש ידע.
+       */
+      if (!isUniqueViolation(error)) {
+        console.error(`[wa] הכנסה לתור נכשלה (${dedupeKey}):`, error);
+        continue;
+      }
+      if (await revive(dedupeKey, input)) created++;
     }
   }
 
   return created;
+}
+
+/** קוד הפרת הייחודיות של Prisma. */
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: string }).code === "P2002"
+  );
+}
+
+/**
+ * מחייה שורה מתה שתופסת את המפתח, ומחזירה האם נעשה משהו.
+ *
+ * ⚠️⚠️ **בלי זה תזכורת נעלמת בשקט.** המפתח הוא `@unique` גלובלי ושורות
+ * לא נמחקות, ולכן שורה שבוטלה או נכשלה חוסמת את מועד החזרה שלה
+ * לתמיד. בייצור נמצאו 12 לידים במצב הזה. ראה `lib/domain/requeue.ts`
+ * לשני המסלולים שמגיעים לשם ולמה הגבול של 48 שעות הכרחי.
+ *
+ * ⚠️ העדכון מותנה על אותו סטטוס שנקרא, כדי ששורה שהתעוררה בין
+ * הקריאה לכתיבה לא תידרס. אותו אידיום כמו `claim`.
+ */
+async function revive(
+  dedupeKey: string,
+  input: { body: string; scheduledFor: Date; leadId?: string },
+): Promise<boolean> {
+  const row = await prisma.whatsAppMessage.findUnique({
+    where: { dedupeKey },
+    select: { id: true, status: true },
+  });
+  if (!row) return false;
+
+  if (
+    !shouldReviveRow({
+      status: row.status,
+      scheduledFor: input.scheduledFor.getTime(),
+      now: Date.now(),
+    })
+  ) {
+    return false;
+  }
+
+  const { count } = await prisma.whatsAppMessage.updateMany({
+    where: { id: row.id, status: row.status },
+    data: {
+      status: "queued",
+      body: input.body,
+      scheduledFor: input.scheduledFor,
+      attempts: 0,
+      claimedAt: null,
+      sentAt: null,
+      lastError: null,
+      leadId: input.leadId,
+    },
+  });
+  return count > 0;
 }
