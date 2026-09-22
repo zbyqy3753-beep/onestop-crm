@@ -4,7 +4,7 @@ import { prisma } from "@/server/db/client";
 import { STATUS_CONFIG } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
 import { followUpReminder } from "@/lib/domain/whatsapp";
-import { shouldRetryBlocked } from "@/lib/domain/waOutage";
+import { MAX_ATTEMPTS, retryDecision } from "@/lib/domain/waOutage";
 import {
   dealWonBody,
   dealWonDedupeKey,
@@ -42,9 +42,6 @@ const CLAIM_TIMEOUT_MS = 5 * 60_000;
 
 /** מעל זה ההודעה כבר לא רלוונטית — עדיף כלום מאשר תזכורת מלפני יומיים. */
 const STALE_AFTER_MS = 48 * 3_600_000;
-
-/** מספר הניסיונות לפני ויתור, כדי ששורה תקועה לא תסתובב לנצח. */
-const MAX_ATTEMPTS = 3;
 
 /** המתנה לפני ניסיון חוזר אחרי כישלון שדוּוח. ראה `report`. */
 const RETRY_DELAY_MS = 60_000;
@@ -486,21 +483,45 @@ export async function markUndeliverable(
   if (!row) return;
 
   const reason = error.slice(0, 300);
-  const blocked = shouldRetryBlocked(reason, row.createdAt.getTime(), Date.now());
-  const giveUp = !blocked && row.attempts >= MAX_ATTEMPTS;
+  const decision = retryDecision({
+    error: reason,
+    createdAt: row.createdAt.getTime(),
+    now: Date.now(),
+    attempts: row.attempts,
+  });
 
-  await prisma.whatsAppMessage.update({
-    where: { id: row.id },
-    data: giveUp
-      ? { status: "failed", lastError: reason }
-      : {
-          status: "queued",
-          claimedAt: null,
-          sentAt: null,
-          providerMessageId: null,
-          lastError: reason,
-          ...retryPacing(blocked),
-        },
+  /*
+   * ⚠️⚠️ **מותנה על `status: "sent"`, ולא `update` לפי `id`.**
+   *
+   * זה היה ה-writer היחיד בקובץ שכתב בלי תנאי סטטוס, בזמן שכל השאר
+   * הם `updateMany` מותנים — ומכאן שתי תקלות:
+   *
+   * ⚠️ **שורה שכבר מתה קמה לתחייה.** עדכון `failed` מאוחר ממטא החזיר
+   * לתור שורה שכבר נכשלה סופית, או שורה ש-`cancelSuperseded` ביטלה
+   * כי הליד נסגר. העובד קיבל תזכורת על ליד שטופל לפני יומיים.
+   *
+   * ⚠️ **שליחה כפולה.** ה-webhook יכול להקדים את `report`, שרץ רק
+   * בסוף המקבץ כולו. שורה ב-`sending` הוחזרה ל-`queued`, ואז
+   * `report` — שמותנה על `sending` — לא מצא אותה, השאיר אותה בתור,
+   * והתקתוק הבא שלח אותה שוב.
+   *
+   * `sent` הוא המצב היחיד שממנו עדכון מסירה כושל הגיוני: ההודעה יצאה
+   * ומטא מדווחת מה קרה לה. שורה ב-`sending` שייכת לניקוז שעוד לא
+   * דיווח, ואין לגעת בה.
+   */
+  await prisma.whatsAppMessage.updateMany({
+    where: { id: row.id, status: "sent" },
+    data:
+      decision === "giveUp"
+        ? { status: "failed", lastError: reason }
+        : {
+            status: "queued",
+            claimedAt: null,
+            sentAt: null,
+            providerMessageId: null,
+            lastError: reason,
+            ...retryPacing(decision === "blocked"),
+          },
   });
 }
 
@@ -536,23 +557,23 @@ export async function scrubBody(id: string): Promise<void> {
 }
 
 /**
- * קצב הניסיון החוזר, ומי משלם עליו.
+ * קצב הניסיון החוזר — **רק התזמון**.
  *
- * ⚠️⚠️ **`attempts` מוחזר אחורה בחסימת חשבון, וזה כל התיקון.**
- * `claim` מגדיל את המונה בכל תביעה, ולכן חסימה ברמת החשבון הייתה
- * שורפת את שלושת הניסיונות של ההודעה תוך שלוש דקות — על משהו שאין
- * לה שום שליטה עליו. ההחזרה מאפסת את החיוב הזה: ההודעה מקבלת את
- * שלושת הניסיונות שלה כשבאמת יהיה לה סיכוי לצאת.
+ * ⚠️⚠️ **הפונקציה הזו הפחיתה את `attempts` בחסימת חשבון, וזה היה באג
+ * שנמדד בייצור: התראה אחת נשלחה למטא כ-48 פעמים.**
  *
- * המונה לעולם אינו יורד מתחת לאפס — כל הפחתה כאן מקזזת הגדלה
- * שקרתה זה עתה ב-`claim`.
+ * הכוונה הייתה נכונה — חסימה אינה אשמת ההודעה ואסור שתשרוף את
+ * שלושת הניסיונות שלה — אבל ההפחתה הסתמכה על כך שמיד לפניה קרתה
+ * הגדלה ב-`claim`. זה נכון ב-`report` ו**שגוי** ב-`markUndeliverable`,
+ * שרץ מה-webhook אחרי שליחה שכבר הצליחה. שם המונה פשוט ירד, נתקע
+ * על 0, ולא הגיע לעולם ל-`MAX_ATTEMPTS`.
+ *
+ * הכוונה נשמרת עכשיו ב-`BLOCK_MAX_ATTEMPTS` — תקציב גדול יותר במקום
+ * פטור מהמונה. ראה `retryDecision` ב-`lib/domain/waOutage.ts`.
  */
 function retryPacing(blocked: boolean) {
   if (blocked) {
-    return {
-      attempts: { decrement: 1 },
-      scheduledFor: new Date(Date.now() + BLOCK_RETRY_DELAY_MS),
-    };
+    return { scheduledFor: new Date(Date.now() + BLOCK_RETRY_DELAY_MS) };
   }
   // ⚠️ דקה קדימה ולא מיד: ניסיון חוזר מיידי על חיבור שבור היה שורף
   // את שלושת הניסיונות בשלוש שניות.
@@ -601,21 +622,25 @@ export async function report(
       select: { attempts: true, createdAt: true },
     });
     const error = r.error?.slice(0, 300) ?? "שגיאה";
-    const blocked =
-      row != null &&
-      shouldRetryBlocked(error, row.createdAt.getTime(), Date.now());
-    const giveUp = !blocked && (row?.attempts ?? MAX_ATTEMPTS) >= MAX_ATTEMPTS;
+    // ⚠️ שורה שנעלמה נחשבת כמי שמיצתה את התקציב, כמו קודם.
+    const decision = retryDecision({
+      error,
+      createdAt: row?.createdAt.getTime() ?? 0,
+      now: Date.now(),
+      attempts: row?.attempts ?? MAX_ATTEMPTS,
+    });
 
     const { count } = await prisma.whatsAppMessage.updateMany({
       where: { id: r.id, status: "sending" },
-      data: giveUp
-        ? { status: "failed", lastError: error }
-        : {
-            status: "queued",
-            claimedAt: null,
-            lastError: error,
-            ...retryPacing(blocked),
-          },
+      data:
+        decision === "giveUp"
+          ? { status: "failed", lastError: error }
+          : {
+              status: "queued",
+              claimedAt: null,
+              lastError: error,
+              ...retryPacing(decision === "blocked"),
+            },
     });
     applied += count;
   }
