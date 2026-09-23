@@ -54,9 +54,19 @@ interface Props {
    * את הנתון שהמבקר כבר הזין, ולא מבקשים ממנו לכתוב אותו שוב.
    */
   note?: string;
+  /**
+   * שם החבילה שהליד נוגע בה כשאין `pkg` — המחשבון בוחר חבילה אמיתית
+   * אבל לא מרנדר את הכרטיס שלה.
+   *
+   * ⚠️ העמודה `packageName` היא שדה ייעודי ב-CRM, וגם מה
+   * ש-`isYesLead` קורא כדי לנתב ליד של יאס לנציגה שלו. בלי הפרופ הזה
+   * ליד מהמחשבון הגיע בלי שם חבילה בעמודה — הנציג שמסנן לפי חבילה לא
+   * ראה אותו, וליד יאס לא נותב.
+   */
+  packageName?: string;
 }
 
-export function LeadForm({ pkg, compact = false, category, note }: Props) {
+export function LeadForm({ pkg, compact = false, category, note, packageName }: Props) {
   const [state, action] = useActionState(submitLandingLead, INITIAL);
   /*
    * ⚠️ `useId` ולא הקבוע `"general"`. שני טפסים ללא `pkg` חיים על אותו
@@ -185,13 +195,15 @@ export function LeadForm({ pkg, compact = false, category, note }: Props) {
         name="category"
         value={pkg ? crmCategory(pkg) : (category ?? "general")}
       />
-      {pkg && (
+      {pkg ? (
         <input
           type="hidden"
           name="packageName"
           value={`${pkg.name} · ${pkg.provider.name}`}
         />
-      )}
+      ) : packageName ? (
+        <input type="hidden" name="packageName" value={packageName} />
+      ) : null}
 
       {/* פיתיון — ראה `.lp-honey` ב-lp.css ואת הבדיקה ב-actions.ts */}
       <div className="lp-honey" aria-hidden="true">

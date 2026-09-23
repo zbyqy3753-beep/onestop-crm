@@ -20,8 +20,50 @@ import type { Catalog, Category, HomeSpec, Package, Provider } from "./types";
  */
 export const catalog = catalogJson as unknown as Catalog;
 
+/**
+ * שם חבילה כפי שמציגים אותו לגולש.
+ *
+ * ⚠️ המחלץ משאיר בשם שאריות שלו, והן עולות לייצור כמות שהן: `[line]`
+ * הוא מפריד גולמי שהפך לחלק מהכותרת ("סלקום משפחתי פלוס [line] חבילה
+ * זו מיועדת לבעלי כרטיס אשראי בלבד" — וההמשך שאחריו הוא ממילא השורה
+ * הראשונה של ה-`description`), `*2*` הוא סימון פנימי של גרסה שנייה
+ * לאותה חבילה, ורווח כפול הוא פשוט טקסט שנקטע. כל השאריות האלה נראות
+ * היום בדף החי.
+ *
+ * ⚠️ הניקוי כאן ולא בקובץ ה-JSON: הקובץ נכתב מחדש בכל רענון קטלוג
+ * (ובשני מקומות — ראה ההערה למעלה), ולכן תיקון ידני בו נמחק בפעם
+ * הבאה. `*IBC*` נשמר בסוגריים ולא נמחק כי IBC הוא שם התשתית ומבדיל
+ * בין שתי חבילות סיבים של אותו ספק — רק המספר הוא סימון פנימי.
+ *
+ * ⚠️ נפילה חזרה למקור כשהניקוי מרוקן את השם: כותרת ריקה גרועה
+ * משארית, ושם שכולו סימון פנימי הוא סימן שהנחת היסוד כאן לא מתקיימת.
+ */
+export function displayName(raw: string): string {
+  const cleaned = raw
+    .split("[line]")[0]
+    .replace(/\*(\d+)\*/g, " ")
+    .replace(/\*([^*\s]+)\*/g, " ($1)")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned || raw;
+}
+
+/**
+ * השם שלוגיקה צריכה לקרוא — הגולמי, לפני ניקוי התצוגה.
+ *
+ * ⚠️ כל מי שמחפש ראיה בתוך השם — סימון פנימי, מספר קווים,
+ * מילה שמעידה על קטגוריה — חייב לעבור דרך כאן ולא לקרוא את
+ * `name` ישירות.
+ */
+export function logicName(p: Package): string {
+  return p.rawName ?? p.name;
+}
+
 export function basePackages(): Package[] {
-  return catalog.packages;
+  return catalog.packages.map((p) => {
+    const name = displayName(p.name);
+    return name === p.name ? p : { ...p, name, rawName: p.name };
+  });
 }
 
 /**

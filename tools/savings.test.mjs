@@ -15,7 +15,7 @@ import {
   priceUnknownAtLines,
   perLinePrice,
 } from "../src/app/lp/catalog/savings.ts";
-import { basePackages } from "../src/app/lp/catalog/catalog.ts";
+import { basePackages, logicName } from "../src/app/lp/catalog/catalog.ts";
 
 /*
  * ⚠️ הבדיקות רצות מול **הקטלוג האמיתי** (`packages.json`) ולא מול נתוני
@@ -47,6 +47,16 @@ test("קלט: מפרידי אלפים, ספרות ערביות וקיטום לת
   assert.equal(parseSpend("٢٢٠٫٥"), 220.5);
   assert.equal(parseSpend("١٬٢٠٠"), 1200);
   assert.equal(parseSpend("9000"), MAX_SPEND);
+});
+
+test("קלט: סימן כיווניות בלתי נראה בהדבקה אינו פוסל סכום", () => {
+  // ⚠️ דף עברי ואקסל מעטיפים סכום ב-RLM/LRM. המבקר מדביק
+  // "₪1,200" שנראה בדיוק כמו הדוגמה שבהודעת השגיאה, ונדחה.
+  assert.equal(parseSpend("‏₪1,200‏"), 1200);
+  assert.equal(parseSpend("‎220‎"), 220);
+  assert.equal(parseSpend("⁦220.50⁩"), 220.5);
+  // הניקוי אינו מכשיר קלט שפסול מסיבה אחרת.
+  assert.equal(parseSpend("‏2 20‏"), 0);
 });
 
 test("קלט: פסיק שאינו מפריד אלפים פוסל — `220,5` לא הופך ל-2205", () => {
@@ -91,7 +101,14 @@ test("קלט: סכום מתחת לרצפה אינו חשבון חודשי", () =
 
 test("בריכת ההשוואה אינה ריקה בשני המסלולים", () => {
   assert.ok(pool("cellular").length > 5, `סלולר: ${pool("cellular").length}`);
-  assert.ok(pool("home").length > 3, `בית: ${pool("home").length}`);
+  /*
+    ⚠️ הרצפה הורדה מ-3 ל-2 ב-23.9.2026, במכוון. ארבע חבילות
+    "טריפל פלוס WiFi 6/7" יצאו מהבריכה כש-`routerPricedSeparately`
+    למד את הניסוח "תתווסף עלות על הנתב על סך 4.9 ₪" — הן
+      מחייבות תוספת חודשית שאינה במחיר הרשום. בריכה של שתיים
+    היא דקה, וזה המקום שיצעק אם עוד שומר יצמצם אותה לאפס.
+  */
+  assert.ok(pool("home").length > 1, `בית: ${pool("home").length}`);
 });
 
 test("כל חבילה בת-השוואה יודעת מה תעלה אחרי ההטבה", () => {
@@ -130,7 +147,9 @@ test("בית: אינטרנט **וגם** טלוויזיה, ולא שירות סט
 
 test("חבילות שקוברות את העלייה בתיאור נשארות בחוץ", () => {
   const excluded = (name) => {
-    const p = PACKAGES.find((x) => x.name.includes(name));
+    // ⚠️ `logicName` ולא `name`: הסימון `*2*` נמחק מהכותרת
+    // שמוצגת לגולש, והבדיקה הזו היא על הראיה שהלוגיקה קוראת.
+    const p = PACKAGES.find((x) => logicName(x).includes(name));
     assert.ok(p, `לא נמצאה בקטלוג: ${name}`);
     assert.equal(isComparable(p, p.category), false, `${p.name} נכנסה לבריכה`);
   };
@@ -142,7 +161,9 @@ test("חבילות שקוברות את העלייה בתיאור נשארות ב
 
 test("מחיר שמותנה בכמות קווים אינו נכנס לבריכת ההשוואה", () => {
   const excluded = (name) => {
-    const p = PACKAGES.find((x) => x.name.includes(name));
+    // ⚠️ `logicName` ולא `name`: `*2*` נמחק מהכותרת שמוצגת
+    // לגולש, והבדיקה הזו היא על הראיה שהלוגיקה קוראת.
+    const p = PACKAGES.find((x) => logicName(x).includes(name));
     assert.ok(p, `לא נמצאה בקטלוג: ${name}`);
     assert.equal(isComparable(p, p.category), false, `${p.name} נכנסה לבריכה`);
   };
@@ -365,4 +386,35 @@ test("עלייה בטקסט נתפסת גם עם שגיאת הקלדה ב'חוד
   const before = computeSaving(PACKAGES, "home", 1, 300).pick;
   assert.ok(before, "אין בחירה במסלול הבית");
   assert.notEqual(before.name, "1000/100 ללא VOD");
+});
+
+test("מחיר-אחרי-הטבה שאינו מספר אינו בר-השוואה", () => {
+  /*
+    ⚠️ הקטלוג נכנס לקוד דרך cast בלי ולידציה, והשער בדק עד
+    כה רק את `price`. `"19"` כמחרוזת ניצח את הבחירה, ו-`"69 ₪"`
+    הפיל את שלב 3 של המחשבון במקום להציג מספר שגוי.
+  */
+  const real = PACKAGES.find((p) => p.category === "cellular" && isComparable(p, "cellular"));
+  assert.ok(real, "הבריכה הסלולרית ריקה");
+  assert.equal(isComparable({ ...real, priceAfterPromo: "19" }, "cellular"), false);
+  assert.equal(isComparable({ ...real, priceAfterPromo: "69 ₪" }, "cellular"), false);
+  assert.equal(isComparable({ ...real, priceAfterPromo: 0 }, "cellular"), false);
+  // מדרגת קווים עם מחיר שאינו מספר מגיעה ל-`perLinePrice` בדיוק כמו שהיא.
+  assert.equal(
+    isComparable({ ...real, spec: { ...real.spec, lineTiers: [{ lines: 2, price: "44.9" }] } }, "cellular"),
+    false,
+  );
+});
+
+test("תוספת נתב בניסוח \"תתווסף עלות … על סך\" פוסלת א׳ היא", () => {
+  // ⚠️ אותה הצהרה כמו "בתוספת 25 ₪", בניסוח שלא נתפס.
+  const wifi = PACKAGES.find((p) => p.name.includes("טריפל פלוס WiFi 6 All"));
+  assert.ok(wifi, "לא נמצאה בקטלוג: טריפל פלוס WiFi 6 All");
+  assert.ok(routerPricedSeparately(wifi));
+  assert.equal(isComparable(wifi, "home"), false);
+  // הניסוח ההפוך — נתב שכלול בלי תוספת — אינו נפסל.
+  assert.equal(
+    routerPricedSeparately({ description: "הנתב כלול במחיר החבילה", benefits: null }),
+    false,
+  );
 });

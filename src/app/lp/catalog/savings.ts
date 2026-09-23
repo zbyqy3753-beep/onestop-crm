@@ -1,4 +1,4 @@
-import { afterPrice, hasKnownAfterPrice } from "./catalog";
+import { afterPrice, hasKnownAfterPrice, logicName } from "./catalog";
 import type { CellularSpec, HomeSpec, MonthlyPackage, Package } from "./types";
 
 /**
@@ -87,7 +87,7 @@ const REQUIRES_MULTIPLE_LINES =
   /לרוכשים \d+ מנויים|קו שני|\*\s?[2-9]\s?\*|\d+\s?קווים ב[-־\s]?\s?\d/;
 
 export function requiresMultipleLines(p: Package): boolean {
-  return REQUIRES_MULTIPLE_LINES.test(`${p.name} ${p.description ?? ""} ${p.benefits ?? ""}`);
+  return REQUIRES_MULTIPLE_LINES.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
 }
 
 /**
@@ -108,7 +108,7 @@ export function requiresMultipleLines(p: Package): boolean {
 const FAMILY_ONLY = /מסלול משפחתי|משפחתי/;
 
 export function familyPriceOnly(p: Package): boolean {
-  return FAMILY_ONLY.test(`${p.name} ${p.description ?? ""}`);
+  return FAMILY_ONLY.test(`${logicName(p)} ${p.description ?? ""}`);
 }
 
 /**
@@ -135,7 +135,7 @@ const PRICED_BY_LINE_COUNT =
 
 export function afterPriceDependsOnLines(p: Package): boolean {
   if (p.priceModel !== "monthly" || p.priceAfterPromo == null) return false;
-  return PRICED_BY_LINE_COUNT.test(`${p.name} ${p.description ?? ""} ${p.benefits ?? ""}`);
+  return PRICED_BY_LINE_COUNT.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
 }
 
 /**
@@ -150,8 +150,17 @@ export function afterPriceDependsOnLines(p: Package): boolean {
  * "עלות נתב 0 ש"ח" ו-"נתב כלול במחיר" אינם נתפסים — הספרה חייבת להיות
  * שונה מאפס, ו"כלול" אינו "בתוספת". חבילות שכבר סכמו את הנתב לתוך
  * המחיר ("139 ₪ + 34.9 ₪ נתב = 173.9 ₪") אינן נפסלות בגלל השורה הזו.
+ *
+ * ⚠️ `תתווסף עלות … על סך 4.9 ₪` הוא אותה הצהרה בדיוק, בניסוח
+ * שלא "בתוספת" ולא "עלות נתב": סלקום "טריפל פלוס WiFi 6/7 All"
+ * כותבת "בתוכניות שבהן הנתב כלול במחיר החבילה , תתווסף עלות על
+ * הנתב על סך 4.9 ₪ לחודש בנוסף לעלות התוכנית". היא אינה
+ * הבחירה היום (הזולה בבית היא "טריפל פלוס 149"), אבל ברגע
+ * שזו תצא מהקטלוג הכותרת נבנית על ₪178.9 במקום ₪183.8 —
+ * ניפוח של 14% בחיסכון השנתי.
  */
-const ROUTER_PRICED_SEPARATELY = /הטבה על הנתב|נתב[^.•]{0,25}?בתוספת|עלות נתב\D{0,15}[1-9]\d*\s?(?:₪|שח|ש"ח)/;
+const ROUTER_PRICED_SEPARATELY =
+  /הטבה על הנתב|נתב[^.•]{0,25}?בתוספת|עלות נתב\D{0,15}[1-9]\d*\s?(?:₪|שח|ש"ח)|תתווסף עלות[^.•]{0,30}?נתב[^.•]{0,20}?[1-9]\d*(?:\.\d+)?\s?(?:₪|שח|ש"ח)/;
 
 export function routerPricedSeparately(p: Package): boolean {
   return ROUTER_PRICED_SEPARATELY.test(`${p.description ?? ""} ${p.benefits ?? ""}`);
@@ -192,12 +201,31 @@ export function addonFreeThenPaid(p: Package): boolean {
  * חבילות שמתומחרות לחבילה שלמה (`3 קווים ב99`) ורשומות כ-0, ומחיר 0
  * מייצר "חיסכון" של מלוא החשבון.
  */
+/** מספר שאפשר להציג כמחיר — ולא מחרוזת שנראית כמו אחד. */
+function isMoney(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
 export function isComparable(p: Package, track: Track): p is MonthlyPackage {
   if (p.category !== track || p.priceModel !== "monthly") return false;
   // ⚠️ `typeof` ולא `== null` — ראה `isListable`: הקטלוג נכנס דרך cast
   // בלי ולידציה, ומחיר שיישאב פעם אחת כמחרוזת עובר כל השוואה מספרית
   // ב-JS ומגיע לכותרת כ-NaN.
   if (typeof p.price !== "number" || !Number.isFinite(p.price) || p.price <= 0) return false;
+  /*
+    ⚠️ אותה בדיקה גם על המחירים האחרים שהכותרת נבנית
+    עליהם. השער שמעל בדק רק את `price`, בעוד ש-`perLinePrice`
+    מחזירה בפועל את `priceAfterPromo` או מחיר מדרגה — שניהם עברו
+    בלי שום ולידציה. `"19"` כמחרוזת היה מנצח את הבחירה
+    ומייצר כותרת ממחרוזת, ו-`"69 ₪"` מפיל את שלב 3 עם
+    `value.toFixed is not a function`. הקטלוג היום נקי — זה השער
+    לרענון הבא.
+  */
+  if (p.priceAfterPromo != null && !isMoney(p.priceAfterPromo)) return false;
+  const tiers = (p.spec as CellularSpec).lineTiers;
+  if (tiers?.length && !tiers.every((t) => isMoney(t.price) && Number.isInteger(t.lines))) {
+    return false;
+  }
   if (p.editorial?.hidden) return false;
   // ⚠️ חבילה שהעלייה שלה מוצהרת בטקסט חופשי בלבד אינה בת-השוואה כאן:
   // המחיר היחיד שאפשר לחשב ממנה הוא מחיר ההטבה, והכותרת מבטיחה את
@@ -387,6 +415,16 @@ const AMOUNT = /^₪?\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?\s*₪?$/;
  */
 export function parseSpend(raw: string): number {
   const ascii = raw
+    /*
+      ⚠️ סימני כיווניות ראשונים, לפני כל שאר הנירמול. דף עברי,
+      אקסל וחשבונית של חברת סלולר מעטיפים סכום ב-U+200E/U+200F כדי
+      שהתצוגה תיראה נכון, והם נוסעים עם ההדבקה. `\s` ב-JS אינו תופס
+      אותם, ולכן `₪1,200` שהודבק מדף עברי נפסל — והמבקר קיבל
+      הודעה שמציעה לו בדיוק את מה שכתוב בשדה מולו. זה הניקוי
+      ש-`stripBidi` עושה לכל שדה שמגיע לשרת, רק שכאן הבדיקה רצה בדפדפן
+      לפני שהשרת רואה את הערך (ובלי ייבוא — הקובץ רץ גם מתוך הבדיקה).
+    */
+    .replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "")
     .replace(/[٠-٩۰-۹]/g, (d) => String((d.codePointAt(0)! - 0x0660) % 16))
     // אותה מקלדת מפיקה גם מפריד עשרוני `٫` ומפריד אלפים `٬` — בלי
     // השורה הזו `٢٢٠٫٥` נפסל בעוד שההודעה מציעה "220.50".

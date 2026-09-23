@@ -99,7 +99,11 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     if (s.lineTiers?.length) {
       rows.push({
         label: "מחיר לפי מספר קווים",
-        value: s.lineTiers.map((t) => `${t.lines} קווים ${shekels(t.price)}`).join(" · "),
+        // מדרגה של קו אחד אינה קיימת בקטלוג היום, אבל "1 קווים" הוא
+        // בדיוק הסוג של שגיאה שרענון קטלוג מכניס בלי שאף אחד ישים לב.
+        value: s.lineTiers
+          .map((t) => `${t.lines === 1 ? "קו אחד" : `${t.lines} קווים`} ${shekels(t.price)}`)
+          .join(" · "),
       });
     }
   }

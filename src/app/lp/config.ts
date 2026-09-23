@@ -1,4 +1,5 @@
 import type { LeadCategoryKey } from "@/lib/domain/types";
+import { logicName } from "./catalog/catalog";
 import type { HomeSpec, Package } from "./catalog/types";
 
 /**
@@ -37,7 +38,7 @@ export function crmCategory(pkg: Package): LeadCategoryKey {
   if (pkg.category === "electricity") return "electricity";
   if (pkg.category === "cellular") return "mobile";
 
-  const text = `${pkg.type ?? ""} ${pkg.name}`;
+  const text = `${pkg.type ?? ""} ${logicName(pkg)}`;
   if (text.includes("טריפל")) return "tv";
   if (text.includes("טלוויזיה") || text.includes("TV")) return "tv";
   /*

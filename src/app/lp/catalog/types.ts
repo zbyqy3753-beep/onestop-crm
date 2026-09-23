@@ -79,6 +79,16 @@ interface PackageBase {
   category: Category;
   categoryHe: string;
   name: string;
+  /**
+   * השם כפי שהמחלץ כתב אותו, לפני ניקוי התצוגה.
+   *
+   * ⚠️ קיים כדי שלוגיקה שקוראת את השם כראיה (ראה
+   * `requiresMultipleLines` ב-`savings.ts` — ל-`4 ב 130 *2*` אין
+   * `description` והשם הוא הראיה היחידה שהמחיר הוא של
+   * קו שני בחבילה של ארבעה) תמשיך לראות את הסימון
+   * גם אחרי שהוא נמחק מהכותרת.
+   */
+  rawName?: string;
   type: string | null;
   badges: string[];
   recommended: boolean;

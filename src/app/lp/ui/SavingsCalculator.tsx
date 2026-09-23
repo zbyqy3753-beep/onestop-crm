@@ -172,7 +172,16 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 key={key}
                 type="button"
                 onClick={() => {
+                  /*
+                    ⚠️ גם הסכום וכמות הקווים, ולא רק השגיאה. מי שהקליד
+                    ₪350 על חשבון אינטרנט וטלוויזיה, חזר ובחר סלולר, מצא את
+                    אותו סכום מחכה בשדה — ולחיצה אחת הפיקה כותרת חיסכון
+                    שנמדדה מול חשבון של מוצר אחר, והערה לנציג שחוזרת אותו.
+                    מסלול חדש הוא שאלה חדשה.
+                  */
                   setTrack(key);
+                  setSpend("");
+                  setUnits(1);
                   // כניסה מחדש לשלב הסכום מתחילה נקייה — בלי שגיאה
                   // מלחיצה קודמת שתופיע לפני שהוקלד תו.
                   setAttempted(false);
@@ -428,6 +437,16 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 מצא לו חבילה והבדיקה חייבת להיות ידנית.
               */
               category={saving.pick ? crmCategory(saving.pick) : track === "cellular" ? "mobile" : "tv"}
+              /*
+                ⚠️ גם בעמודה הייעודית, ולא רק בהערה. `actions.ts`
+                מתעד ש-`packageName` היא עמודה משלה — והמחשבון היה היחיד
+                שדחף חבילה אמיתית לתוך ההערה והשאיר את העמודה ריקה.
+                `isYesLead` קורא את העמודה הזו, ולכן ליד שהמחשבון התאים
+                לו חבילת יאס לא נותב לנציגה של יאס.
+              */
+              packageName={
+                saving.pick ? `${saving.pick.name} · ${saving.pick.provider.name}` : undefined
+              }
               note={[
                 `מהמחשבון: משלם היום ${shekels(monthlySpend)} בחודש`,
                 unitsLabel(track, units),
