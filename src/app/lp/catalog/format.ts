@@ -20,10 +20,20 @@ export function dataLabel(spec: CellularSpec): string | null {
   return `${nf.format(spec.dataGb)}GB`;
 }
 
+/*
+ * ⚠️ שתי המהירויות באותה יחידה. ההורדה הומרה ל-Gb בעוד ההעלאה נשארה
+ * ב-Mb **ובלי יחידה כלל**: `{5000, 500}` הוצג כ-"5Gb/500" מתחת לכיתוב
+ * "מהירות גלישה" — הגולש קורא 5 מול 500 ואין לו שום דרך לדעת שמדובר
+ * ב-5000 מול 500. היחידה נקבעת פעם אחת, לפי ההורדה, ושתיהן מוצגות בה.
+ */
 export function speedLabel(spec: HomeSpec): string | null {
   if (spec.downloadMbps == null) return null;
-  const down = spec.downloadMbps >= 1000 ? `${spec.downloadMbps / 1000}Gb` : `${spec.downloadMbps}Mb`;
-  return spec.uploadMbps != null ? `${down}/${spec.uploadMbps}` : down;
+  const asGb = spec.downloadMbps >= 1000;
+  const unit = asGb ? "Gb" : "Mb";
+  const value = (mbps: number) => nf.format(asGb ? mbps / 1000 : mbps);
+  return spec.uploadMbps != null
+    ? `${value(spec.downloadMbps)}/${value(spec.uploadMbps)}${unit}`
+    : `${value(spec.downloadMbps)}${unit}`;
 }
 
 export const CUSTOMER_TYPE_HE: Record<ElectricitySpec["customerType"], string> = {

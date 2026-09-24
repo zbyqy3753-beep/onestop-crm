@@ -10,6 +10,7 @@ import {
   type ProviderKey,
 } from "@/lib/domain/types";
 import { cleanText } from "@/lib/domain/interest";
+import { normalizeIsraeliPhone } from "@/lib/format";
 import { isYesLead } from "@/lib/domain/yes";
 import {
   assigneeForIncoming,
@@ -85,11 +86,29 @@ const RATE_MAX_PER_WINDOW = 8;
 
 const hits = new Map<string, number[]>();
 
+/*
+ * ⚠️ הבדיקה רצה **אחרי** הוולידציה (ראה `submitLanding`), ולכן שליחה
+ * שנדחתה על שם או טלפון אינה נספרת — המגבלה חלה רק על פניות שנוגעות
+ * במסד.
+ */
 function overRateLimit(ip: string): boolean {
   const now = Date.now();
   const recent = (hits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
   recent.push(now);
   hits.set(ip, recent);
+
+  /*
+   * ⚠️ ניקוי מפתחות שפגו. המפה צברה ערך לכל IP שאי פעם שלח, לנצח —
+   * רק המערך הפנימי סונן, והמפתח עצמו נשאר. באינסטנס ארוך-חיים זו
+   * דליפת זיכרון איטית. הניקוי רץ רק כשהמפה גדלה, כדי לא לסרוק
+   * אותה בכל שליחה.
+   */
+  if (hits.size > 500) {
+    for (const [key, times] of hits) {
+      if (times.every((t) => now - t >= RATE_WINDOW_MS)) hits.delete(key);
+    }
+  }
+
   return recent.length > RATE_MAX_PER_WINDOW;
 }
 
@@ -119,11 +138,18 @@ function text(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? cleanText(value) : "";
 }
 
-/** טלפון ישראלי לספרות בלבד, או `null` אם אינו תקין. */
+/**
+ * טלפון ישראלי לספרות בלבד, או `null` אם אינו תקין.
+ *
+ * ⚠️ `normalizeIsraeliPhone` מ-`lib/format` ולא עותק מקומי. הגרסה
+ * שהייתה כאן בדקה `startsWith("972")` בלבד, ולכן `00972501234567` —
+ * הצורה שיוצאת מייצוא אנשי קשר ומוואטסאפ — נשאר 14 ספרות ונדחה
+ * בהודעה "נדרש מספר ישראלי" מול מספר ישראלי לגמרי. היא גם לא ידעה
+ * להשלים אפס מוביל חסר (`501234567`), בניגוד לייבוא ה-CSV. שלוש
+ * דרכי כניסה למאגר חייבות לנרמל טלפון באותה צורה בדיוק.
+ */
 function normalizePhone(raw: string): string | null {
-  let digits = raw.replace(/\D/g, "");
-  if (digits.startsWith("972")) digits = `0${digits.slice(3)}`;
-  return /^0\d{8,9}$/.test(digits) ? digits : null;
+  return normalizeIsraeliPhone(raw);
 }
 
 const ALLOWED_CATEGORIES = new Set<string>(
@@ -229,9 +255,18 @@ export async function submitLandingLead(
     const recent = await db.leads.list(
       { query: phone, sourceDetail: source, createdFrom: since },
       { field: "createdAt", direction: "desc" },
-      { offset: 0, limit: 1 },
+      { offset: 0, limit: 5 },
     );
-    const duplicate = recent.rows[0];
+    /*
+     * ⚠️ השוואה מדויקת, ולא מה ש-`query` החזיר. `query` הוא חיפוש
+     * חופשי שמתורגם ל-`contains` על שם, טלפון, אימייל ועיר — ליד קיים
+     * שהטלפון שלו מכיל את המספר החדש כתת-מחרוזת (שורת ייבוא עם ספרה
+     * עודפת, למשל) היה מסמן פנייה של **אדם אחר** ככפילות, והיא הייתה
+     * נעלמת מול הודעת "קיבלנו!". אין ב-`LeadFilter` מסנן טלפון מדויק,
+     * ולכן הסינון נעשה כאן — ועל כמה שורות, כדי שהתאמה מזויפת לא
+     * תסתיר כפילות אמיתית שמתחתיה.
+     */
+    const duplicate = recent.rows.find((row) => row.phone === phone);
     if (duplicate) {
       /*
        * ⚠️ הליד כפול — ההערה לא. הגולש שהשאיר פרטים על כרטיס חבילה ואז
@@ -244,13 +279,34 @@ export async function submitLandingLead(
        * בולעת חריגות: הגולש כבר נחשב "נשלח", ואסור שכשל בהוספת הערה
        * יציג לו שגיאה על פנייה שנקלטה.
        */
-      // ⚠️ הערה זהה אינה מידע חדש — היא בדיוק הלחיצה הכפולה שהחלון נועד
-      // לחסום. בלי הבדיקה הזו שליחה כפולה של אותו טופס מכפילה את ההערה.
-      const isNew = message && !duplicate.notes.some((n) => n.body === message);
-      if (isNew) {
+      /*
+       * ⚠️ "מידע חדש" אינו `message` בלבד. טופס של כרטיס חבילה אינו
+       * כולל שדה הודעה כלל (`LeadForm` מציג `textarea` רק כשאין חבילה
+       * ואין הערה), ולכן מבקר שמילא את המחשבון ואז לחץ "שיחזרו אליי"
+       * על כרטיס של חבילה אחרת — השדה היחיד שהטופס השני נושא — קיבל
+       * "קיבלנו!" בזמן ששם החבילה שהוא באמת בחר נזרק בלי שום עקבה.
+       * שם חבילה שונה מזה שרשום על הליד הוא בדיוק המידע שהנציג צריך.
+       */
+      const notes: string[] = [];
+      if (message && !duplicate.notes.some((n) => n.body === message)) {
+        notes.push(message);
+      }
+      if (packageName && packageName !== duplicate.packageName) {
+        const line = `התעניין גם ב: ${packageName}`;
+        if (!duplicate.notes.some((n) => n.body === line)) notes.push(line);
+      }
+      if (notes.length > 0) {
+        /*
+         * בולעת חריגות: הגולש כבר נחשב "נשלח", ואסור שכשל בהוספת הערה
+         * יציג לו שגיאה על פנייה שנקלטה.
+         */
         try {
           const author = duplicate.assigneeId ?? duplicate.createdById;
-          if (author) await db.leads.addNote(duplicate.id, author, message);
+          if (author) {
+            for (const body of notes) {
+              await db.leads.addNote(duplicate.id, author, body);
+            }
+          }
         } catch (err) {
           console.warn("[lp] הוספת הערה לליד כפול נכשלה", err);
         }

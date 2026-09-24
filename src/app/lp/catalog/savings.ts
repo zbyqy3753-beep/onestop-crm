@@ -372,7 +372,16 @@ export function computeSaving(
   // Cellular is priced per line; a home package is one household bill.
   const perLine = perLinePrice(pick, units);
   const newMonthly = track === "cellular" ? perLine * units : perLine;
-  const monthly = Math.round(monthlySpend - newMonthly);
+  /*
+   * ⚠️ `Math.floor` ולא `Math.round`. הכותרת אומרת "אפשר לחסוך **עד**",
+   * והעיגול כלפי מעלה מוכפל אחר כך ב-12 — כלומר שגיאת העיגול גדלה פי
+   * 12 לכיוון ההבטחה. מי שהקליד ₪220.50 (בדיוק הדוגמה שבהודעת השדה)
+   * מול חבילה של ₪34 ראה "₪2,244 בשנה" במקום ₪2,238, ומי שהקליד
+   * ₪34.50 ראה "₪12 בשנה" על חיסכון אמיתי של ₪6 — ניפוח של 100%,
+   * ו-`worthwhile` שנדלק בזכות העיגול בלבד. עיגול כלפי מטה לעולם לא
+   * מבטיח יותר ממה שיש, ושומר על `yearly === monthly * 12`.
+   */
+  const monthly = Math.floor(monthlySpend - newMonthly);
   return { pick, monthly, yearly: monthly * 12, worthwhile: monthlySpend > 0 && monthly > 0 };
 }
 
@@ -414,6 +423,20 @@ const AMOUNT = /^₪?\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?\s*₪?$/;
  * הספרות מנורמלות ל-ASCII לפני הבדיקה.
  */
 export function parseSpend(raw: string): number {
+  const value = parseSpendRaw(raw);
+  return value === 0 ? 0 : Math.min(value, MAX_SPEND);
+}
+
+/**
+ * אותה קריאה בדיוק, **בלי** הקיטום ל-`MAX_SPEND`.
+ *
+ * ⚠️ השדה במחשבון היה כותב את הערך המקוטע חזרה לתוך עצמו בכל הקשה,
+ * ולכן מי שמשלם ₪5,200 ראה את השדה נתקע על `5,000` וכל תו נוסף נבלע —
+ * והנציג קיבל בהערה סכום שהלקוח מעולם לא הזין. כדי שהשדה יוכל להציג
+ * את מה שהוקלד ובכל זאת לחשב עד התקרה, הקיטום חייב להיות נפרד
+ * מהקריאה.
+ */
+export function parseSpendRaw(raw: string): number {
   const ascii = raw
     /*
       ⚠️ סימני כיווניות ראשונים, לפני כל שאר הנירמול. דף עברי,
@@ -434,5 +457,5 @@ export function parseSpend(raw: string): number {
   if (!AMOUNT.test(ascii)) return 0;
   const value = Number(ascii.replace(/[^\d.]/g, ""));
   if (!Number.isFinite(value) || value < MIN_SPEND) return 0;
-  return Math.min(value, MAX_SPEND);
+  return value;
 }

@@ -7,7 +7,15 @@ import { shekels } from "../catalog/format";
 import { catalog } from "../catalog/catalog";
 import { crmCategory } from "../config";
 import { fieldClass } from "./field";
-import { MAX_SPEND, MIN_SPEND, computeSaving, parseSpend, perLinePrice, type Track } from "../catalog/savings";
+import {
+  MAX_SPEND,
+  MIN_SPEND,
+  computeSaving,
+  parseSpend,
+  parseSpendRaw,
+  perLinePrice,
+  type Track,
+} from "../catalog/savings";
 import type { Package } from "../catalog/types";
 
 /**
@@ -76,6 +84,14 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
 
   const monthlySpend = parseSpend(spend);
   /*
+   * ⚠️ הסכום **כפי שהוקלד**, בלי הקיטום לתקרה. הוא זה שנשלח לנציג:
+   * מי שמשלם ₪5,200 קיבל בהערה "משלם היום ₪5,000" — סכום שהוא מעולם
+   * לא הזין — וזו בדיוק הטעות שהקיטום בשדה נועד למנוע. החישוב עצמו
+   * עדיין נעצר בתקרה; מה שמדווח לנציג הוא מה שנכתב.
+   */
+  const typedSpend = parseSpendRaw(spend);
+  const overCap = typedSpend > MAX_SPEND;
+  /*
    * ⚠️ נדלק רק אחרי לחיצה על ה-CTA. שדה ריק בכניסה לשלב אינו שגיאה,
    * אבל לחיצה על "חשבו לי את החיסכון" בשדה ריק **הייתה** לא עושה כלום
    * ובלי מילה אחת של הסבר — הכפתור נראה שבור.
@@ -130,12 +146,13 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
       // מחק את הפסיק במקום לתקן את מיקומו. ההודעה מתארת עכשיו את
       // הטווח ואת הפורמטים שמתקבלים בפועל.
       `הזינו סכום חודשי בין ₪${MIN_SPEND} ל-₪${MAX_SPEND.toLocaleString("he-IL")} — למשל 220, 1,200 או 220.50.`
-    : monthlySpend >= MAX_SPEND
-      ? // ⚠️ "הסכום הוגבל" נאמר גם למי שהקליד 5,000 במדויק — הקיטום
-        // ב-`onChange` מוחק את הקלט המקורי, ולכן אי אפשר להבחין בין
-        // קיטום לבין סכום תקין. הנוסח מתאר את התקרה במקום להאשים
-        // את המשתמש בקלט שלא בהכרח הקליד.
-        `${shekels(MAX_SPEND)} הוא הסכום הגבוה ביותר שהמחשבון מטפל בו — לחשבון גדול יותר נציג יבדוק אתכם ידנית.`
+    : overCap
+      ? // ⚠️ רק כשהוקלד **באמת** יותר מהתקרה. קודם הודעת התקרה נדלקה גם
+        // על `5,000` במדויק — סכום שהמחשבון מטפל בו במלואו — כי הקיטום
+        // ב-`onChange` מחק את הקלט המקורי ולא היה אפשר להבחין בין
+        // השניים. עכשיו השדה שומר את מה שהוקלד, ולכן ההודעה מדויקת
+        // ואומרת גם מה יקרה עם הסכום שנכתב.
+        `החישוב מוצג עד ${shekels(MAX_SPEND)}; הזנתם ${shekels(typedSpend)} — הסכום המלא יעבור לנציג שיבדוק את החשבון ידנית.`
       : "";
 
   return (
@@ -179,16 +196,29 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                     שנמדדה מול חשבון של מוצר אחר, והערה לנציג שחוזרת אותו.
                     מסלול חדש הוא שאלה חדשה.
                   */
-                  setTrack(key);
-                  setSpend("");
-                  setUnits(1);
-                  // כניסה מחדש לשלב הסכום מתחילה נקייה — בלי שגיאה
-                  // מלחיצה קודמת שתופיע לפני שהוקלד תו.
-                  setAttempted(false);
-                  setBlurred(false);
+                  /*
+                    ⚠️ רק כש-**השתנה**. הכפתורים לא סימנו מה נבחר, ולכן מי
+                    שחזר משלב הסכום כדי לוודא איזה מסלול הוא בחר לחץ שוב
+                    על אותו מסלול — ומצא את ₪350 שהקליד נמחקים. אישור של
+                    אותה בחירה אינו שאלה חדשה. הסימון שנוסף למטה
+                    (`aria-pressed` + רקע) הוא הצד השני של אותו תיקון.
+                  */
+                  if (key !== track) {
+                    setTrack(key);
+                    setSpend("");
+                    setUnits(1);
+                    // כניסה מחדש לשלב הסכום מתחילה נקייה — בלי שגיאה
+                    // מלחיצה קודמת שתופיע לפני שהוקלד תו.
+                    setAttempted(false);
+                    setBlurred(false);
+                  }
                   setStep(1);
                 }}
-                className="rounded-lp-card border border-lp-line p-4 text-start transition hover:border-lp-brand hover:bg-lp-brand/5"
+                /* המסלול הנבחר נאמר גם לקורא מסך, ולא רק נצבע. */
+                aria-pressed={track === key}
+                className={`rounded-lp-card border p-4 text-start transition hover:border-lp-brand hover:bg-lp-brand/5 ${
+                  track === key ? "border-lp-brand bg-lp-brand/5" : "border-lp-line"
+                }`}
               >
                 <span className="block font-semibold text-lp-ink">{title}</span>
                 <span className="mt-0.5 block text-xs text-lp-ink-3">{sub}</span>
@@ -215,17 +245,19 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 id="calc-spend"
                 value={spend}
                 /*
-                  ⚠️ הקיטום ל-MAX_SPEND חייב לחזור אל השדה עצמו. בלעדיו
-                  מי שהקליד 9000 ראה את 9000 בשדה בזמן שהמסך אמר ₪5,000,
-                  והנציג קיבל בהערה סכום שהלקוח מעולם לא הזין —
-                  `maxLength={6}` מאפשר להגיע לפער הזה בקלות.
+                  ⚠️ השדה שומר את מה שהוקלד, בלי לכתוב לתוכו ערך מקוטע.
+                  הגרסה הקודמת החליפה את הטקסט ב-`5,000` ברגע שהערך חצה
+                  את התקרה, והתוצאה הייתה שדה **תקוע**: מי שמשלם ₪5,200
+                  ראה כל תו נוסף נבלע (כל onChange החזיר את הערך ל-5,000),
+                  הסמן קפץ לסוף בכל תיקון באמצע, ו-`₪ 5,000.00` — פורמט
+                  שההסבר שמתחת מכריז עליו כנתמך — לא היה ניתן להקלדה כלל.
+                  ומעל הכול: זה לא פתר את מה שהוא נועד לפתור, כי הנציג
+                  עדיין קיבל סכום שהלקוח לא הזין. הקיטום נשאר בחישוב
+                  (`parseSpend`), הדיווח לנציג הוא לפי `typedSpend`,
+                  וההודעה מתחת לשדה אומרת את שניהם במפורש.
                 */
                 onChange={(e) => {
-                  const next = e.target.value;
-                  const parsed = parseSpend(next);
-                  // ⚠️ באותו פורמט שהרמז מתחת מציג ("5,000 ₪") — `parseSpend`
-                  // מקבל מפריד אלפים, והשדה לא סותר את ההסבר שלידו.
-                  setSpend(parsed >= MAX_SPEND ? MAX_SPEND.toLocaleString("he-IL") : next);
+                  setSpend(e.target.value);
                   // ⚠️ אותו כלל של `blurred`, רק לדגל השני: אחרי לחיצה על
                   // ה-CTA בשדה ריק `attempted` נשאר דלוק, וכל מצב ביניים
                   // של `1,200` (`1,` `1,2` `1,20`) הכריז שוב "הזינו סכום".
@@ -448,7 +480,15 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 saving.pick ? `${saving.pick.name} · ${saving.pick.provider.name}` : undefined
               }
               note={[
-                `מהמחשבון: משלם היום ${shekels(monthlySpend)} בחודש`,
+                /*
+                  ⚠️ `typedSpend` ולא `monthlySpend`: מה שהלקוח כתב,
+                  ולא הסכום שנחתך לצורך החישוב. כשחרגו מהתקרה נאמר גם
+                  שהחישוב עצמו נעצר — אחרת הנציג משווה כותרת חיסכון
+                  לסכום שאינו הבסיס שלה.
+                */
+                overCap
+                  ? `מהמחשבון: משלם היום ${shekels(typedSpend)} בחודש (מעל תקרת המחשבון — החישוב נעשה לפי ${shekels(MAX_SPEND)})`
+                  : `מהמחשבון: משלם היום ${shekels(monthlySpend)} בחודש`,
                 unitsLabel(track, units),
                 // ⚠️ גם המקרה השלילי נכתב במפורש. בלעדיו הנציג קיבל הערה
                 // שנראית חתוכה ולא ידע אם המחשבון לא מצא חיסכון או שפשוט
