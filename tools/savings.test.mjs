@@ -418,3 +418,49 @@ test("תוספת נתב בניסוח \"תתווסף עלות … על סך\" פ�
     false,
   );
 });
+
+test("הצהרת תמחור לפי כמות בלי שום מספר מאחוריה פוסלת", () => {
+  // גולן 750GB: price 39, בלי `priceAfterPromo` ובלי `lineTiers`, ובתיאור
+  // "קו ראשון 39 , בצירוף 2 קווים ומעלה 35 לקו". אין ממה לחשב מחיר לקו.
+  const p = PACKAGES.find((x) => x.name.includes("750GB") && x.provider.slug === "golan");
+  assert.ok(p, "לא נמצאה בקטלוג: גולן 750GB");
+  assert.equal(p.priceAfterPromo, null);
+  assert.equal(p.spec.lineTiers, null);
+  assert.ok(afterPriceDependsOnLines(p));
+  assert.equal(isComparable(p, "cellular"), false);
+});
+
+test("מדרגות לבדן עדיין מחליפות מחיר-אחרי-הטבה", () => {
+  // סלקום 5G PRO: אין `priceAfterPromo` אבל יש `lineTiers` — הקטלוג
+  // אומר מה המחיר בכל כמות, ולכן `priceUnknownAtLines` מטפלת בזה.
+  const pro = PACKAGES.find((x) => x.name.includes("סלקום 5G PRO"));
+  assert.ok(pro, "לא נמצאה בקטלוג: סלקום 5G PRO");
+  assert.equal(pro.priceAfterPromo, null);
+  assert.ok(pro.spec.lineTiers?.length);
+  assert.equal(afterPriceDependsOnLines(pro), false);
+});
+
+test("מסלול משפחתי מזוהה גם כשהשם באנגלית", () => {
+  // הרשומה שבשבילה המסנן נכתב — `wecomFamily 4G` — נתפסה עד
+  // היום רק בזכות "(מסלול משפחתי)" שבתיאור. השם לבדו מספיק.
+  assert.ok(familyPriceOnly({ name: "wecomFamily 4G", description: null }));
+  assert.ok(familyPriceOnly({ name: "x", description: "מסלול משפחתי" }));
+  assert.equal(familyPriceOnly({ name: "wecomFree 4G", description: null }), false);
+});
+
+test("הצהרת עלייה שיושבת בשם בלבד נקראת גם היא", () => {
+  // חמש חבילות בקטלוג חסרות `description` ו-`benefits` גם יחד;
+  // עבורן השם הוא הטקסט היחיד שיש.
+  assert.ok(declaresRiseInText({ name: "חבילה 79 שח חודש ראשון חינם", description: null, benefits: null }));
+  assert.equal(declaresRiseInText({ name: "חבילה רגילה", description: null, benefits: null }), false);
+});
+
+test("מדרגה עם כמות קווים שאינה חיובית פוסלת את החבילה", () => {
+  const base = PACKAGES.find((x) => x.name.includes("סלקום 5G PRO"));
+  assert.ok(base);
+  const broken = {
+    ...base,
+    spec: { ...base.spec, lineTiers: [{ lines: 0, price: 1 }] },
+  };
+  assert.equal(isComparable(broken, "cellular"), false);
+});

@@ -8,7 +8,7 @@ import type { CellularSpec, HomeSpec, MonthlyPackage, Package } from "./types";
  * הקטלוג האמיתי** ב-`tools/savings.test.mjs`. הכותרת שהמחשבון מפיק
  * ("אפשר לחסוך עד ₪1,560 בשנה") היא הבטחה מספרית שדף השוואת מחירים
  * נותן לגולש, והדרך היחידה לשמור עליה כשהקטלוג מתרענן היא בדיקה
- * שרצה על 109 החבילות ולא עין אנושית על דיף.
+ * שרצה על כל הקטלוג ולא עין אנושית על דיף.
  */
 
 export type Track = "cellular" | "home";
@@ -60,8 +60,12 @@ const RISE_IN_TEXT =
   // עדיין הצהרה.
   /לאחר מכן|לאחר שנה|לאחר \d+ חודשים|אח"כ|אח״כ|אחר כך|ואז \d|מהחודש ה|מחודש \d|החודשים הראשונים|חודש(?:ים|יים|ם)? ר[אוש]{2,3}נים|לחודשיים|חודש ראשון|שנה שניי?ה|שנה שלישית|שנה רביעית|למשך שנה|למשך שנתיים|למשך \d+ שנים|מובטח ל[-־]?\s?\d+|תקף ל[-־]?\s?\d+|קבוע ל[-־]?\s?\d+|לתקופה של \d+|בתום ה?(תקופה|הטבה|המבצע|השנה)|לאחר תום|מחיר לאחר|מחיר רגיל/;
 
+// ⚠️ גם `logicName` — כמו ב-`requiresMultipleLines` ו-`familyPriceOnly`.
+// חמש חבילות בקטלוג חסרות `description` **ו**`benefits` גם יחד, ולכן
+// שלושת המסננים האלה היו עבורן ריקים מראש. שם שנושא מחיר
+// מבצע הוא דפוס קיים בקטלוג הזה, ולכן החור נסגר לפני הרענון הבא.
 export function declaresRiseInText(p: Package): boolean {
-  return RISE_IN_TEXT.test(`${p.description ?? ""} ${p.benefits ?? ""}`);
+  return RISE_IN_TEXT.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
 }
 
 /**
@@ -105,7 +109,12 @@ export function requiresMultipleLines(p: Package): boolean {
  * המחיר המשפחתי הוא בדיוק המחיר שיגבו, ולכן הבדיקה תלוית-כמות ויושבת
  * ב-`computeSaving` לצד `priceUnknownAtLines`.
  */
-const FAMILY_ONLY = /מסלול משפחתי|משפחתי/;
+// ⚠️ גם `family` באנגלית. הרשומה שבשבילה המסנן נכתב שמה
+// `wecomFamily 4G` — באנגלית. מה שתפס אותה בפועל היה רק הסוגריים
+// שבתיאור; אותה רשומה בלי הסוגריים — או אחות שלה בלי תיאור
+// כלל — חוזרת לבריכת הקו הבודד ב-29.9 במקום 34.9, כלומר בדיוק
+// ה-₪60 לשנה שההערה למעלה מתארת כתקלה שתוקנה.
+const FAMILY_ONLY = /מסלול משפחתי|משפחתי|family/i;
 
 export function familyPriceOnly(p: Package): boolean {
   return FAMILY_ONLY.test(`${logicName(p)} ${p.description ?? ""}`);
@@ -133,8 +142,26 @@ export function familyPriceOnly(p: Package): boolean {
 const PRICED_BY_LINE_COUNT =
   /מנויים כולל|מנויים ומעלה|קווים ומעלה|בהצטרפות \d+ מנויים|בצירוף \d+ קווים|מנוי \d+ ב/;
 
+/*
+  ⚠️ התנאי הוא `priceModel` בלבד. היציאה המוקדמת על `priceAfterPromo == null`
+  פתחה חור: גולן 750GB (price 39, בלי `priceAfterPromo` ובלי `lineTiers`)
+  אומרת בתיאור "קו ראשון 39 , בצירוף 2 קווים ומעלה 35 לקו" — ונכנסה
+  לבריכה. הכיוון שלה במקרה הזה שמרני, אבל אותה צורת ניסוח עם ה-`price`
+  ההפוך (המחיר לכמות הגדולה) מייצרת כותרת מנופחת ישירות. הנימוק
+  לפסילה — "מחיר שמותנה בכמות קווים אינו מחיר שהמבקר הזה יקבל" —
+  אינו תלוי בקיומו של מחיר אחרי הטבה. השווה ל-500GB TOGETHER ולסלקום
+  משפחתי פלוס, שנפסלות על אותה הצהרה בדיוק — רק כי יש להן את השדה.
+
+  הוותר על כנו הכלל ההפוך: כשאין מחיר אחרי הטבה אבל **יש** `lineTiers`,
+  המדרגות עצמן הן המידע — הקטלוג אומר מה המחיר בכל כמות, ו-
+  `priceUnknownAtLines` מטפלת בזה תלוית-כמות במקום פסילה גורפת.
+  מה שנסגר כאן הוא המקרה השלישי: הצהרה בטקסט בלי שום מספר — לא
+  `priceAfterPromo` ולא `lineTiers` — שבו אין ממה לחשב את מחיר הקו.
+*/
 export function afterPriceDependsOnLines(p: Package): boolean {
-  if (p.priceModel !== "monthly" || p.priceAfterPromo == null) return false;
+  if (p.priceModel !== "monthly") return false;
+  const tiers = (p.spec as Partial<CellularSpec>).lineTiers;
+  if (p.priceAfterPromo == null && tiers?.length) return false;
   return PRICED_BY_LINE_COUNT.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
 }
 
@@ -163,7 +190,7 @@ const ROUTER_PRICED_SEPARATELY =
   /הטבה על הנתב|נתב[^.•]{0,25}?בתוספת|עלות נתב\D{0,15}[1-9]\d*\s?(?:₪|שח|ש"ח)|תתווסף עלות[^.•]{0,30}?נתב[^.•]{0,20}?[1-9]\d*(?:\.\d+)?\s?(?:₪|שח|ש"ח)/;
 
 export function routerPricedSeparately(p: Package): boolean {
-  return ROUTER_PRICED_SEPARATELY.test(`${p.description ?? ""} ${p.benefits ?? ""}`);
+  return ROUTER_PRICED_SEPARATELY.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
 }
 
 /**
@@ -185,7 +212,7 @@ export function routerPricedSeparately(p: Package): boolean {
 const ADDON_FREE_THEN_PAID = /(?:חינם|ללא עלות|במתנה)\s*ו?אח["״]?כ\s?\d|חודש(?:ים|יים)\s+[^\n\d]{2,30}?\s?אח["״]?כ\s?\d/;
 
 export function addonFreeThenPaid(p: Package): boolean {
-  return ADDON_FREE_THEN_PAID.test(`${p.description ?? ""} ${p.benefits ?? ""}`);
+  return ADDON_FREE_THEN_PAID.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
 }
 
 /**
@@ -223,7 +250,11 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
   */
   if (p.priceAfterPromo != null && !isMoney(p.priceAfterPromo)) return false;
   const tiers = (p.spec as CellularSpec).lineTiers;
-  if (tiers?.length && !tiers.every((t) => isMoney(t.price) && Number.isInteger(t.lines))) {
+  // ⚠️ גם `t.lines >= 1`. מדרגה עם `lines: 0` (או שלילי) עברה כ-
+  // `Number.isInteger`, ואז `priceUnknownAtLines` רואה `t.lines <= lines` כ-true
+  // ומוותרת על הבדיקה, ו-`perLinePrice` עלולה לבחור אותה. הקטלוג נקי
+  // היום — זה השער לרענון הבא, בדיוק כמו השערים שמעליו.
+  if (tiers?.length && !tiers.every((t) => isMoney(t.price) && Number.isInteger(t.lines) && t.lines >= 1)) {
     return false;
   }
   if (p.editorial?.hidden) return false;

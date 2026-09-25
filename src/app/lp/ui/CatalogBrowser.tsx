@@ -49,28 +49,40 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
     (selectedTypes.length === 0 || (p.type != null && selectedTypes.includes(p.type))) &&
     (maxPrice == null || priceOf(p) <= maxPrice);
 
+  /*
+    ⚠️ חברה **מסומנת** נשארת ברשימה גם כשהמונה שלה 0. הרשימה
+    מחושבת אחרי מסנני הסוג והמחיר, ולכן חברה שאין לה תוצאה בצירוף
+    הנוכחי נעלמה מהמסך — אבל ה-slug שלה נשאר ב-`selectedProviders`
+    והמשיך לסנן. הגולש קיבל "0 חבילות", תג סינון שמראה 2,
+    ושום תיבת סימון לבטל — המוצא היחיד היה "נקה הכל", שמוחק
+    גם את מסנן הסוג. מסנן פעיל חייב להיות ניתן לביטול.
+  */
   const providerOptions = useMemo(() => {
     const map = new Map<string, { slug: string; name: string; count: number }>();
     for (const p of packages) {
-      if (!passesExceptProvider(p)) continue;
+      const selected = selectedProviders.includes(p.provider.slug);
+      if (!selected && !passesExceptProvider(p)) continue;
       const entry = map.get(p.provider.slug) ?? { slug: p.provider.slug, name: p.provider.name, count: 0 };
-      entry.count++;
+      if (passesExceptProvider(p)) entry.count++;
       map.set(p.provider.slug, entry);
     }
     return [...map.values()].sort((a, b) => b.count - a.count);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [packages, selectedTypes, maxPrice]);
+  }, [packages, selectedProviders, selectedTypes, maxPrice]);
 
+  /* אותו דבר לשבבי הסוג: סוג מסומן נשאר ברשימה כדי שאפשר לבטל אותו. */
   const typeOptions = useMemo(() => {
     const map = new Map<string, number>();
     for (const p of packages) {
       if (!p.type) continue;
-      if (selectedProviders.length && !selectedProviders.includes(p.provider.slug)) continue;
-      if (maxPrice != null && priceOf(p) > maxPrice) continue;
-      map.set(p.type, (map.get(p.type) ?? 0) + 1);
+      const passes =
+        (selectedProviders.length === 0 || selectedProviders.includes(p.provider.slug)) &&
+        (maxPrice == null || priceOf(p) <= maxPrice);
+      if (!passes && !selectedTypes.includes(p.type)) continue;
+      map.set(p.type, (map.get(p.type) ?? 0) + (passes ? 1 : 0));
     }
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
-  }, [packages, selectedProviders, maxPrice]);
+  }, [packages, selectedProviders, selectedTypes, maxPrice]);
 
   const results = useMemo(() => {
     const filtered = packages.filter(

@@ -222,15 +222,25 @@ interface CompareRow {
   values: string[];
 }
 
-/** The three headline figures, aligned across the compared packages. */
+/**
+ * The headline figures, aligned across the compared packages.
+ *
+ * ⚠️ היישור הוא לפי ה-`caption`, לא לפי מיקום. `cardStats` דוחף רק שדות
+ * שקיימים, ולכן אותו אינדקס מייצג נתון אחר בכל חבילה: השוואה בין חבילה
+ * עם גלישה+דקות+SMS לחבילה כשרה (דקות+SMS בלבד) הציגה את **דקות** השיחה
+ * של הכשרה תחת הכותרת "גלישה בישראל", ובשורת הדקות סימנה לה "—" — כלומר
+ * טענה שאין לה דקות בכלל. טבלה שכל תפקידה להשוות הציגה מספר של נתון אחד
+ * תחת שמו של נתון אחר.
+ */
 function statRows(items: Package[]): CompareRow[] {
-  return [0, 1, 2]
-    .map((i) => {
-      const label = items.map((p) => cardStats(p)[i]?.caption).find(Boolean);
-      if (!label) return null;
-      return { label, values: items.map((p) => cardStats(p)[i]?.value ?? "—") };
-    })
-    .filter((r): r is CompareRow => r !== null);
+  const captions: string[] = [];
+  for (const p of items) {
+    for (const s of cardStats(p)) if (!captions.includes(s.caption)) captions.push(s.caption);
+  }
+  return captions.map((label) => ({
+    label,
+    values: items.map((p) => cardStats(p).find((s) => s.caption === label)?.value ?? "—"),
+  }));
 }
 
 /**
@@ -240,6 +250,12 @@ function statRows(items: Package[]): CompareRow[] {
  * synonymous labels.
  */
 function detailOnlyRows(items: Package[]): CompareRow[] {
+  // ⚠️ ההשוואה היא מול שורות הסטטיסטיקה **בלבד**. קודם כל שורת פירוט
+  // שנכתבה נוספה גם היא ל-`shown`, ולכן שתי שורות פירוט שונות לגמרי
+  // שבמקרה נשאו אותם ערכים הפילו זו את זו: "דמי חיבור" מחקה את
+  // "דמי מעבר" כשלשתיהן היו אותם שני ערכים, והגולש תימחר עלות
+  // חד-פעמית בחסר. המטרה המקורית הייתה לוותר על שם נרדף לנתון
+  // שכבר מופיע למעלה, לא לאחד שני נתונים שונים.
   const shown = new Set(statRows(items).map((r) => r.values.join(" ")));
   const labels = new Set<string>();
   for (const p of items) for (const r of detailRows(p)) labels.add(r.label);
@@ -249,7 +265,6 @@ function detailOnlyRows(items: Package[]): CompareRow[] {
     const values = items.map((p) => detailRows(p).find((r) => r.label === label)?.value ?? "—");
     const key = values.join(" ");
     if (shown.has(key)) continue;
-    shown.add(key);
     rows.push({ label, values });
   }
   return rows;

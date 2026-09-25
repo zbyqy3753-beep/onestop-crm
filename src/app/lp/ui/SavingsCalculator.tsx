@@ -339,7 +339,16 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
           <div className="mt-5 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setStep(0)}
+              onClick={() => {
+                // ⚠️ גם דגלי השגיאה. מי שלחץ על ה-CTA בשדה ריק, חזר,
+                // ואז אישר את **אותו** מסלול — שאינו מאפס במכוון — חזר
+                // לשלב הסכום ומצא שדה ריק שכבר מסומן `aria-invalid`
+                // והודעת שגיאה מוצגת — לפני שהקליד תו. יציאה מהשלב
+                // מבטלת את הניסיון, בדיוק כמו "לשנות את הנתונים".
+                setAttempted(false);
+                setBlurred(false);
+                setStep(0);
+              }}
               className="inline-flex min-h-11 items-center rounded-lg border border-lp-line px-4 py-2.5 text-sm text-lp-ink-2 hover:border-lp-brand"
             >
               חזרה
@@ -381,15 +390,35 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
           */}
           <h3 ref={headingRef} tabIndex={-1} className="sr-only outline-none">
             {worthwhile
-              ? `אפשר לחסוך עד ${shekels(yearlySaving)} בשנה, ${shekels(monthlySaving)} בחודש`
+              ? `אפשר לחסוך עד ${shekels(yearlySaving)} בשנה, ${shekels(monthlySaving)} בחודש${overCap ? ` — לפי תקרת המחשבון ${shekels(MAX_SPEND)}` : ""}`
               : noMatch
                 ? "לא נמצאה בקטלוג חבילה להשוואה אוטומטית — נציג יבדוק ידנית"
                 : "לפי הסכום שהזנתם לא נמצא חיסכון בתשלום החודשי"}
           </h3>
           {worthwhile ? (
             <>
+              {/*
+                ⚠️ הסכום שהוקלד (`typedSpend`), לא הסכום הקטום. מי שהקליד
+                ₪6,000 קיבל כותרת תוצאה שפתחה ב-"אתם משלמים ₪5,000" — סכום
+                שהוא מעולם לא הזין, בלי שום משפט שמסביר שהוא נקטע. הסתייגות
+                התקרה חייתה רק בשלב הסכום ובהערה לנציג, ולא במסך שהגולש
+                קורא בפועל. עכשיו המסך מציג את מה שנכתב ואומר לפי מה חושב.
+              */}
               <p className="text-sm text-lp-ink-2">
-                אתם משלמים <span className="nums font-semibold text-lp-ink">{shekels(monthlySpend)}</span> בחודש.
+                אתם משלמים{" "}
+                <span className="nums font-semibold text-lp-ink">
+                  {shekels(overCap ? typedSpend : monthlySpend)}
+                </span>{" "}
+                בחודש.
+                {overCap && (
+                  <>
+                    {" "}
+                    <span className="text-lp-ink-3">
+                      החישוב למטה נעשה לפי תקרת המחשבון,{" "}
+                      <span className="nums">{shekels(MAX_SPEND)}</span>; נציג יבדוק את החשבון המלא ידנית.
+                    </span>
+                  </>
+                )}
               </p>
               <p className="mt-1 text-sm font-semibold text-lp-ink">אפשר לחסוך עד</p>
               <p className="nums mt-1 text-3xl font-extrabold break-words text-lp-save sm:text-5xl sm:leading-none">
@@ -430,7 +459,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             ⚠️ משפט קו הטלפון במסלול הבית אינו קישוט. `isComparable`
             דורשת אינטרנט **וגם** טלוויזיה ובמכוון אינה דורשת טלפון
             (ראה `savings.ts`), ההערה שם מניחה שההסתייגות נאמרת כאן —
-            והיא לא נאמרה מעולם. 6 מתוך 9 חבילות הבית בבריכה הן ללא קו
+            והיא לא נאמרה מעולם. חבילות בבריכת הבית יכולות להיות ללא קו
             טלפון, בעוד כפתור המסלול מזמין במפורש בעלי טריפל. בלי
             המשפט הזה מוצג לבעל טריפל חיסכון מול מוצר שחסר בו שירות.
           */}
