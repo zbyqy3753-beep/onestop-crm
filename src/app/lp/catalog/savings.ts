@@ -116,8 +116,14 @@ export function requiresMultipleLines(p: Package): boolean {
 // ה-₪60 לשנה שההערה למעלה מתארת כתקלה שתוקנה.
 const FAMILY_ONLY = /מסלול משפחתי|משפחתי|family/i;
 
+// ⚠️ גם `benefits`, כמו בשלושת המסננים האחרים. זו הייתה השמטה
+// ולא החלטה: ההערה שלמעלה מתארת את שלושתם כקבוצה אחת,
+// ו-`declaresRiseInText` / `requiresMultipleLines` / `afterPriceDependsOnLines`
+// כולם קוראים את שלושת השדות. רשומה שבה "(מסלול משפחתי)"
+// יושב ב-`benefits` ולא ב-`description` חזרה לבריכת הקו הבודד —
+// בדיוק ה-₪60 לשנה שההערה למעלה מתארת כתקלה שתוקנה.
 export function familyPriceOnly(p: Package): boolean {
-  return FAMILY_ONLY.test(`${logicName(p)} ${p.description ?? ""}`);
+  return FAMILY_ONLY.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
 }
 
 /**

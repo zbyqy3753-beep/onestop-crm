@@ -148,6 +148,15 @@ export function phone(raw: string): string {
   return raw;
 }
 
+/*
+ * ⚠️ אותן קידומות בדיוק כמו בענף שבלי האפס המוביל. הביטוי הקודם הקל
+ * דווקא על הצורה הנפוצה: `0361234567` (ספרה עודפת בנייח) ו-`0000000000`
+ * נקלטו, בזמן ש-`361234567` — אותו מספר בלי האפס — נדחה. טעות הקלדה של
+ * ספרה אחת עברה, הליד נשמר, והנציג התקשר למספר שאינו קיים: מבחינת
+ * הגולש הפנייה אבדה בלי שקיבל שום סימן לתקן.
+ */
+const WITH_LEADING_ZERO = /^0(?:[57]\d{8}|[23489]\d{7})$/;
+
 /**
  * מספר שהגיע מקובץ → מספר ישראלי תקין, או null אם אי אפשר.
  *
@@ -174,7 +183,7 @@ export function normalizeIsraeliPhone(raw: string): string | null {
     ? `0${digits.replace(/^(?:00)?9720?/, "")}`
     : digits;
 
-  if (/^0\d{8,9}$/.test(local)) return local;
+  if (WITH_LEADING_ZERO.test(local)) return local;
 
   // בלי האפס המוביל: סלולרי/וירטואלי (9 ספרות) או נייח (8 ספרות)
   if (/^[57]\d{8}$/.test(local) || /^[23489]\d{7}$/.test(local)) {
@@ -186,7 +195,7 @@ export function normalizeIsraeliPhone(raw: string): string | null {
 
 /** טלפון ישראלי תקין — אותה בדיקה שהייבוא משתמש בה. */
 export function isIsraeliPhone(raw: string): boolean {
-  return /^0\d{8,9}$/.test(raw.replace(/\D/g, ""));
+  return WITH_LEADING_ZERO.test(raw.replace(/\D/g, ""));
 }
 
 /**

@@ -22,12 +22,20 @@ import type { Package } from "../catalog/types";
 interface Props {
   pkg: Package;
   compareChecked?: boolean;
+  /** מגש ההשוואה מלא — תיבה שאינה מסומנת לא תוכל להוסיף עוד. */
+  compareFull?: boolean;
   onCompareToggle?: (pkg: Package) => void;
   /** Detail pages already show everything, so they render the card expanded. */
   defaultOpen?: boolean;
 }
 
-export function PackageCard({ pkg, compareChecked, onCompareToggle, defaultOpen = false }: Props) {
+export function PackageCard({
+  pkg,
+  compareChecked,
+  compareFull = false,
+  onCompareToggle,
+  defaultOpen = false,
+}: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const [formOpen, setFormOpen] = useState(false);
 
@@ -67,13 +75,27 @@ export function PackageCard({ pkg, compareChecked, onCompareToggle, defaultOpen 
         </div>
 
         {onCompareToggle && (
-          <label className="flex shrink-0 cursor-pointer flex-col items-center gap-1 text-lp-2xs text-lp-ink-3">
+          /*
+            ⚠️ התיבה מושבתת כשהמגש מלא, במקום לבלוע את הלחיצה.
+            `toggleCompare` מחזיר את המצב כמו שהוא מעל ארבע חבילות, והתיבה
+            מבוקרת — כלומר הגולש הקליק, שום דבר לא קרה ואף הודעה לא הופיעה.
+            הפקד נראה שבור. המונה "(4/4)" יושב במגש המרחף בתחתית המסך, לא
+            ליד התיבה שנלחצה.
+          */
+          <label
+            className={`flex shrink-0 flex-col items-center gap-1 text-lp-2xs ${
+              compareFull && !compareChecked ? "cursor-not-allowed text-lp-ink-3 opacity-50" : "cursor-pointer text-lp-ink-3"
+            }`}
+            title={compareFull && !compareChecked ? "ניתן להשוות עד 4 חבילות" : undefined}
+          >
             <input
               type="checkbox"
               checked={!!compareChecked}
+              disabled={compareFull && !compareChecked}
               onChange={() => onCompareToggle(pkg)}
-              className="h-4 w-4 accent-lp-brand"
-              aria-label={`הוסף את ${pkg.name} להשוואה`}
+              className="h-4 w-4 accent-lp-brand disabled:opacity-50"
+              /* קורא מסך שמע "הוסף" גם כשהלחיצה הבאה תסיר — ההפך מהפעולה. */
+              aria-label={`${compareChecked ? "הסר את" : "הוסף את"} ${pkg.name} ${compareChecked ? "מההשוואה" : "להשוואה"}`}
             />
             השוואה
           </label>

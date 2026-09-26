@@ -279,6 +279,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                 key={pkg.id}
                 pkg={pkg}
                 compareChecked={compare.some((p) => p.id === pkg.id)}
+                compareFull={compare.length >= MAX_COMPARE}
                 onCompareToggle={toggleCompare}
               />
             ))}

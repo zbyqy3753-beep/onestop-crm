@@ -98,8 +98,16 @@ export function LeadForm({ pkg, compact = false, category, note, packageName }: 
    * ריק. ה-`key` על הטופס מרנדר אותו מחדש בכל שגיאה כדי שה-default
    * החדש ייקלט (לא-מבוקר קורא אותו רק במאונט).
    */
+  /*
+   * ⚠️ ה-`key` נגזר מ**כל** מה שהוחזר, ולא מההודעה והטלפון בלבד. עם
+   * המפתח הצר, שגיאה שחוזרת עם אותה הודעה ואותו טלפון השאירה את ה-`key`
+   * זהה — הטופס לא רונדר מחדש, והאיפוס של React 19 החזיר את השדות
+   * ל-`defaultValue` ה**ישן**: גולש שהטלפון שלו פסול, תיקן בטעות רק את
+   * השם ושלח שוב, ראה את השם המתוקן נעלם מול עיניו.
+   */
   const echoed = state.status === "error" ? state.values : undefined;
-  const formKey = state.status === "error" ? state.message + (echoed?.phone ?? "") : "idle";
+  const formKey =
+    state.status === "error" ? `${state.message}|${JSON.stringify(state.values ?? {})}` : "idle";
 
   return (
     <form key={formKey} action={action} className="space-y-3" noValidate>

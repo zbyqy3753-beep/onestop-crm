@@ -94,6 +94,18 @@ const hits = new Map<string, number[]>();
 function overRateLimit(ip: string): boolean {
   const now = Date.now();
   const recent = (hits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+
+  /*
+   * ⚠️ חותמת נדחפת רק אם המגבלה **טרם** נחרגה. קודם כל ניסיון נרשם,
+   * כולל ניסיון שנחסם, ולכן גולש חסום שמנסה שוב האריך את החלון בעצמו
+   * ולא יצא ממנו לעולם. ב-NAT משותף (משרד, CGNAT) זה חסם גולשים
+   * שונים לחלוטין על סמך נסיונות של אדם אחר.
+   */
+  if (recent.length >= RATE_MAX_PER_WINDOW) {
+    hits.set(ip, recent);
+    return true;
+  }
+
   recent.push(now);
   hits.set(ip, recent);
 
@@ -109,7 +121,7 @@ function overRateLimit(ip: string): boolean {
     }
   }
 
-  return recent.length > RATE_MAX_PER_WINDOW;
+  return false;
 }
 
 /**
@@ -194,7 +206,20 @@ export async function submitLandingLead(
    * אותו. התשובה היא "נשלח" ולא שגיאה — בוט שמקבל שגיאה מנסה שוב
    * עם וריאציה, ובוט שמקבל הצלחה הולך הלאה.
    */
-  if (text(formData.get("website"))) return { status: "sent" };
+  const honeypot = text(formData.get("website"));
+  if (honeypot) {
+    /*
+     * ⚠️ בלי הלוג הזה פנייה שנזרקה לא השאירה שום עקבה. השדה נקרא
+     * `website` ויש לו `<label>אתר</label>` — מנהל סיסמאות או תוסף
+     * מילוי אוטומטי שממלא אותו (`autoComplete="off"` אינו מחייב אותם)
+     * מוחק ליד אמיתי, והגולש רואה "קיבלנו!". צריך לדעת אם זה קורה.
+     */
+    console.warn("[lp] פיתיון נתפס — הפנייה נזרקה", {
+      name: text(formData.get("name")).slice(0, MAX_NAME),
+      phone: text(formData.get("phone")).slice(0, 20),
+    });
+    return { status: "sent" };
+  }
 
   // כל שגיאה מכאן והלאה מחזירה גם את מה שהוקלד — ראה `EchoedValues`.
   const values = echo(formData);
@@ -214,6 +239,11 @@ export async function submitLandingLead(
    * ⚠️ ההסכמה נאכפת **בשרת**. הטופס הוא `noValidate` (ראה `LeadForm`),
    * ולכן ה-`required` של הדפדפן אינו חוסם דבר: עד כאן נוצר ליד חם
    * ויצאה התראת וואטסאפ לנציג בלי שום רישום שהאדם אישר שיתקשרו אליו.
+   *
+   * ⚠️ אבל היא **נבדקת ואינה נשמרת**: אין ל-`consent` עמודה, הוא אינו
+   * נכנס ל-`note`, ואין לו זכר בהיסטוריה. אם לקוח יטען שלא אישר פנייה
+   * שיווקית — אין רשומה שמוכיחה אחרת. ההערה הזו קיימת כדי שלא יֵיראה
+   * כאילו יש; ההחלטה בין עמודה חדשה לשורת הערה היא של בעל המערכת.
    */
   if (!text(formData.get("consent"))) {
     return fail("יש לאשר יצירת קשר כדי שנוכל לחזור אליכם");
@@ -323,8 +353,18 @@ export async function submitLandingLead(
     // ⚠️ כתובת שהוגדרה ואינה קיימת היא טעות הקלדה, לא מצב תקין. בלי
     // השורה הזו היא נראית בדיוק כמו "אין יעד מוגדר" — הליד נשמר בלי
     // שיוך ואיש לא יודע למה.
-    if (!assignee) {
-      console.warn(`[lp] יעד השיוך ${assigneeEmail()} לא נמצא — הליד נשמר ללא שיוך`);
+    /*
+     * ⚠️ `error` ולא `warn`, והנוסח אומר את המחיר המלא: בלי נמען פעיל
+     * `assigneeId` נשאר `undefined`, ואז `notifyHotLeadAssigned` יוצאת
+     * מיד ב-`if (!input.assigneeId) return` — כלומר אפס וואטסאפ ואפס
+     * מייל, בזמן שהגולש קיבל "קיבלנו! נציג יחזור אליך". הליד עצמו כן
+     * נשמר וגלוי במאגר הלא-משויך, ולכן זו אינה אבדה — אבל אף אחד לא
+     * מקבל דחיפה אליו, וזה חייב לצעוק בלוג.
+     */
+    if (!assignee || !assignee.active) {
+      console.error(
+        `[lp] יעד השיוך ${assigneeEmail()} ${assignee ? "מושבת" : "לא נמצא"} — הליד נשמר ללא שיוך ובלי שאף התראה יוצאת`,
+      );
     }
     /*
      * ⚠️ כלל יאס גובר גם על היעד הקבוע של דף הנחיתה. ליד של יאס הולך

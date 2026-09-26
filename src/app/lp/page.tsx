@@ -228,6 +228,22 @@ export default function LandingPage() {
                   {shekels(lead.price)}
                 </span>
                 <span className="text-lg font-extrabold text-white sm:text-2xl">לחודש</span>
+                {/*
+                  ⚠️ המחיר שאחרי ההטבה נמצא כאן כי הפסקה שלוש שורות מעליו
+                  מבטיחה במפורש "ומציגים גם את המחיר שאחרי תקופת המבצע".
+                  `cheapest` מדרג לפי `price` — מחיר ההטבה — ולכן החבילה
+                  שהפס מצטט היא HOT mobile Synergy 150GB ב-₪21.9, שעולה
+                  ל-₪57.9: פי 2.64. הפס הראשי של הדף פרסם את מלכודת המבצע
+                  הגדולה בקטלוג והכחיש את ההבטחה שמעליו. 13 מ-55 חבילות
+                  הסלולר נושאות עלייה כזו, כלומר זה לא מקרה קצה.
+                */}
+                {(lead.priceAfterPromo != null || lead.priceAfterPromoNote) && (
+                  <span className="basis-full text-center text-xs font-semibold text-white/80 sm:text-sm">
+                    {lead.priceAfterPromo != null
+                      ? `ואחרי ההטבה ${shekels(lead.priceAfterPromo)}`
+                      : `בתום ההטבה: ${lead.priceAfterPromoNote}`}
+                  </span>
+                )}
               </a>
             )}
 

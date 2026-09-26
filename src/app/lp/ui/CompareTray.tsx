@@ -182,14 +182,30 @@ export function CompareTray({
                       </Cell>
                     ))}
                   </Row>
+                  {/*
+                    ⚠️ אחת עשרה חבילות מצהירות על העלייה ב-`priceAfterPromoNote` בלבד,
+                    בלי מספר ב-`priceAfterPromo`. קריאה של השדה המספרי לבדו הכריזה
+                    עליהן "לא דווח שינוי" — בעוד שכרטיס אותה חבילה הציג "בתום ההטבה:
+                    אחרי שנתיים 69.9". הטבלה שכל תפקידה להשוות הכחישה נתון שהדף עצמו
+                    מציג, ודווקא בעמודה שהיא הבטחת המותג.
+                  */}
                   <Row label="אחרי ההטבה">
                     {items.map((p) => (
-                      <Cell key={p.id} tone={p.category !== "electricity" && p.priceAfterPromo ? "rise" : undefined}>
+                      <Cell
+                        key={p.id}
+                        tone={
+                          p.category !== "electricity" && (p.priceAfterPromo || p.priceAfterPromoNote)
+                            ? "rise"
+                            : undefined
+                        }
+                      >
                         {p.category === "electricity"
                           ? "—"
                           : p.priceAfterPromo != null
                             ? shekels(p.priceAfterPromo)
-                            : "לא דווח שינוי"}
+                            : p.priceAfterPromoNote
+                              ? p.priceAfterPromoNote
+                              : "לא דווח שינוי"}
                       </Cell>
                     ))}
                   </Row>
@@ -256,7 +272,15 @@ function detailOnlyRows(items: Package[]): CompareRow[] {
   // "דמי מעבר" כשלשתיהן היו אותם שני ערכים, והגולש תימחר עלות
   // חד-פעמית בחסר. המטרה המקורית הייתה לוותר על שם נרדף לנתון
   // שכבר מופיע למעלה, לא לאחד שני נתונים שונים.
-  const shown = new Set(statRows(items).map((r) => r.values.join(" ")));
+  // ⚠️ גם התווית עצמה נבדקת, לא רק צירוף הערכים. "דקות לחו״ל" הוא גם
+  // `caption` ב-`cardStats` (כשנשאר מקום בשלישייה) וגם `label` ב-`detailRows`,
+  // ולכן שתי שורות באותו שם הוצגו זו מתחת לזו עם ערכים סותרים: שורת
+  // הסטטיסטיקה סימנה "—" לחבילה שלא נשאר לה מקום בשלישייה, ושורת הפירוט
+  // הראתה לה 150 דקות. אותה משפחת באג של יישור לפי `caption`, רק שהיא
+  // נשארה בין שתי קבוצות השורות.
+  const statRowsShown = statRows(items);
+  const shown = new Set(statRowsShown.map((r) => r.values.join(" ")));
+  const shownLabels = new Set(statRowsShown.map((r) => r.label));
   const labels = new Set<string>();
   for (const p of items) for (const r of detailRows(p)) labels.add(r.label);
 
@@ -264,7 +288,7 @@ function detailOnlyRows(items: Package[]): CompareRow[] {
   for (const label of labels) {
     const values = items.map((p) => detailRows(p).find((r) => r.label === label)?.value ?? "—");
     const key = values.join(" ");
-    if (shown.has(key)) continue;
+    if (shownLabels.has(label) || shown.has(key)) continue;
     rows.push({ label, values });
   }
   return rows;
