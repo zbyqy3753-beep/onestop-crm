@@ -192,8 +192,24 @@ export function afterPriceDependsOnLines(p: Package): boolean {
  * שזו תצא מהקטלוג הכותרת נבנית על ₪178.9 במקום ₪183.8 —
  * ניפוח של 14% בחיסכון השנתי.
  */
-const ROUTER_PRICED_SEPARATELY =
-  /הטבה על הנתב|נתב[^.•]{0,25}?בתוספת|עלות נתב\D{0,15}[1-9]\d*\s?(?:₪|שח|ש"ח)|תתווסף עלות[^.•]{0,30}?נתב[^.•]{0,20}?[1-9]\d*(?:\.\d+)?\s?(?:₪|שח|ש"ח)/;
+/*
+ * ⚠️ קיצור השקל נכתב כאן בשתי צורות הגרש, `ש"ח` **וגם** `ש״ח`
+ * (גרשיים, U+05F4). הביטוי המקורי הכיר רק בגרש הישר, ולכן
+ * "עלות נתב 20 ש״ח" חמק מהשער בעוד התאום שלו נתפס. הגרשיים חי
+ * בקטלוג הזה (`חו״ל` בשתי חבילות), והביטוי השכן בשורה 61 כבר
+ * מכיר בשתי הצורות — זו הייתה חוסר עקביות ולא החלטה. השער הזה
+ * מגן מפני ניפוח של 14% בחיסכון השנתי, כלומר טעות לכיוון ההבטחה.
+ * `עלות ה?נתב` מאותה סיבה: "עלות הנתב" היא ניסוח חוקי בעברית.
+ */
+const SHEKEL = String.raw`(?:₪|ש\s?["״]?\s?ח)`;
+const ROUTER_PRICED_SEPARATELY = new RegExp(
+  [
+    `הטבה על הנתב`,
+    `נתב[^.•]{0,25}?בתוספת`,
+    `עלות ה?נתב\\D{0,15}[1-9]\\d*\\s?${SHEKEL}`,
+    `תתווסף עלות[^.•]{0,30}?נתב[^.•]{0,20}?[1-9]\\d*(?:\\.\\d+)?\\s?${SHEKEL}`,
+  ].join("|"),
+);
 
 export function routerPricedSeparately(p: Package): boolean {
   return ROUTER_PRICED_SEPARATELY.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
@@ -408,7 +424,7 @@ export function computeSaving(
 
   // Cellular is priced per line; a home package is one household bill.
   const perLine = perLinePrice(pick, units);
-  const newMonthly = track === "cellular" ? perLine * units : perLine;
+  const unitCount = track === "cellular" ? units : 1;
   /*
    * ⚠️ `Math.floor` ולא `Math.round`. הכותרת אומרת "אפשר לחסוך **עד**",
    * והעיגול כלפי מעלה מוכפל אחר כך ב-12 — כלומר שגיאת העיגול גדלה פי
@@ -417,8 +433,18 @@ export function computeSaving(
    * ₪34.50 ראה "₪12 בשנה" על חיסכון אמיתי של ₪6 — ניפוח של 100%,
    * ו-`worthwhile` שנדלק בזכות העיגול בלבד. עיגול כלפי מטה לעולם לא
    * מבטיח יותר ממה שיש, ושומר על `yearly === monthly * 12`.
+   *
+   * ⚠️ החיסור נעשה **באגורות** ולא בשקלים. `512.8 - 59.8` הוא
+   * `452.99999999999994` ב-IEEE-754, ו-`Math.floor` עליו מחזיר 452
+   * במקום 453 — ₪12 בשנה שנמחקים מהכותרת. השגיאה תמיד לכיוון החִסרון
+   * ולכן היא לא ניפחה הבטחה, אבל היא הופיעה ב-690 סכומים על רשת של
+   * אגורה (למשל ₪512.80–₪571.80 בשני קווים מול 29.9). עיגול כל אחד
+   * מהאגפים לאגורה **לפני** החיסור מסיר גם את הסחף של `perLine * units`
+   * (`29.9 * 10 === 299.00000000000006`).
    */
-  const monthly = Math.floor(monthlySpend - newMonthly);
+  const monthly = Math.floor(
+    (Math.round(monthlySpend * 100) - Math.round(perLine * 100) * unitCount) / 100,
+  );
   return { pick, monthly, yearly: monthly * 12, worthwhile: monthlySpend > 0 && monthly > 0 };
 }
 

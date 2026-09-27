@@ -234,8 +234,11 @@ export default function LandingPage() {
                   `cheapest` מדרג לפי `price` — מחיר ההטבה — ולכן החבילה
                   שהפס מצטט היא HOT mobile Synergy 150GB ב-₪21.9, שעולה
                   ל-₪57.9: פי 2.64. הפס הראשי של הדף פרסם את מלכודת המבצע
-                  הגדולה בקטלוג והכחיש את ההבטחה שמעליו. 13 מ-55 חבילות
-                  הסלולר נושאות עלייה כזו, כלומר זה לא מקרה קצה.
+                  הגדולה בקטלוג והכחיש את ההבטחה שמעליו. 17 מ-55 חבילות
+                  הסלולר נושאות עלייה כזו — 13 עם `priceAfterPromo` מספרי
+                  ועוד 4 שמצהירות עליה בטקסט בלבד — כלומר זה לא מקרה קצה.
+                  שני הענפים למטה קוראים את שתיהן, ולכן הספירה כאן חייבת
+                  לכלול את שתיהן.
                 */}
                 {(lead.priceAfterPromo != null || lead.priceAfterPromoNote) && (
                   <span className="basis-full text-center text-xs font-semibold text-white/80 sm:text-sm">

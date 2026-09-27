@@ -464,3 +464,66 @@ test("מדרגה עם כמות קווים שאינה חיובית פוסלת א�
   };
   assert.equal(isComparable(broken, "cellular"), false);
 });
+
+test("החיסור נעשה באגורות ולא נופל על דיוק בינארי", () => {
+  /*
+   * `512.8 - 59.8` הוא `452.99999999999994` ב-IEEE-754, ולכן
+   * `Math.floor` עליו החזיר 452 במקום 453 — ₪12 בשנה שנמחקו
+   * מהכותרת. השגיאה הייתה תמיד לכיוון החִסרון (הכותרת מעולם לא
+   * ניפחה), אבל היא הופיעה ב-690 סכומים על רשת של אגורה.
+   */
+  const r = computeSaving(PACKAGES, "cellular", 2, 512.8);
+  assert.equal(r.pick.price, 29.9);
+  assert.equal(r.monthly, 453);
+  assert.equal(r.yearly, 5436);
+});
+
+test("yearly נשאר בדיוק monthly כפול 12", () => {
+  for (const track of ["cellular", "home"]) {
+    for (let units = 1; units <= 10; units++) {
+      for (const spend of [512.8, 220.5, 34.5, 2048.7, 1024.6, 99.99]) {
+        const r = computeSaving(PACKAGES, track, units, spend);
+        assert.equal(r.yearly, r.monthly * 12, `${track}/${units}/${spend}`);
+        assert.ok(Number.isInteger(r.monthly), `monthly לא שלם: ${track}/${units}/${spend}`);
+      }
+    }
+  }
+});
+
+test("החיסכון לעולם אינו גדול מהחיסכון האמיתי", () => {
+  // שמירה על כוונת ה-`Math.floor`: עיגול כלפי מטה, לעולם לא הבטחה מנופחת.
+  for (let units = 1; units <= 10; units++) {
+    for (let cents = 1000; cents <= 500000; cents += 137) {
+      const spend = cents / 100;
+      const r = computeSaving(PACKAGES, "cellular", units, spend);
+      if (!r.pick) continue;
+      const exact = (Math.round(spend * 100) - Math.round(perLinePrice(r.pick, units) * 100) * units) / 100;
+      assert.ok(r.monthly <= exact + 1e-9, `ניפוח ב-${spend}/${units}: ${r.monthly} > ${exact}`);
+      assert.ok(r.monthly > exact - 1, `חִסרון גדול מדי ב-${spend}/${units}`);
+    }
+  }
+});
+
+test("עלות נתב נתפסת בשתי צורות הגרש ובשתי צורות הסמיכות", () => {
+  /*
+   * הגרשיים (U+05F4) חי בקטלוג, והשער הזה מגן מפני ניפוח של 14%
+   * בחיסכון השנתי — כלומר טעות לכיוון ההבטחה לגולש.
+   */
+  const d = (description) => ({ name: "x", description, benefits: null });
+  for (const s of ['ש"ח', "ש״ח", "₪", "שח"]) {
+    assert.ok(routerPricedSeparately(d(`עלות נתב 20 ${s} לחודש`)), `עלות נתב + ${s}`);
+    assert.ok(routerPricedSeparately(d(`עלות הנתב 20 ${s} לחודש`)), `עלות הנתב + ${s}`);
+    assert.ok(
+      routerPricedSeparately(d(`תתווסף עלות על הנתב על סך 4.9 ${s} לחודש`)),
+      `תתווסף + ${s}`,
+    );
+  }
+  assert.equal(routerPricedSeparately(d("נתב כלול במחיר")), false);
+});
+
+test("החבילות שנבחרות היום לא נפסלות בטעות בעקבות הרחבת הגרש", () => {
+  // ההרחבה אמורה להיות שקופה לקטלוג הנוכחי: הבחירה בפועל לא משתנה.
+  assert.equal(computeSaving(PACKAGES, "home", 1, 350).pick.name.includes("טריפל פלוס"), true);
+  assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).pick.price, 34);
+  assert.equal(computeSaving(PACKAGES, "cellular", 4, 220).pick.price, 29.9);
+});

@@ -189,7 +189,16 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
               </div>
             </fieldset>
 
-            {typeOptions.length > 1 && (
+            {/*
+              ⚠️ התנאי בודק גם `selectedTypes` ולא רק את מספר האפשרויות.
+              ה-memo למעלה כבר משאיר סוג מסומן ברשימה גם כשהמונה שלו 0,
+              אבל שער של `> 1` בלבד זרק את העבודה הזו: ברגע שמסנן אחר
+              צמצם את התוצאות לסוג יחיד, כל ה-fieldset נעלם מה-DOM יחד
+              עם השבב הפעיל. הגולש ראה תג סינון שמראה 2, תוצאות מסוננות,
+              ושום שבב לבטל — בדיוק התקלה שהערה על מסנן החברה מתארת.
+              מסנן פעיל חייב להיות ניתן לביטול.
+            */}
+            {(typeOptions.length > 1 || selectedTypes.length > 0) && (
               <fieldset className="mb-4">
                 <legend className="mb-2 text-xs font-medium text-lp-ink-2">סוג</legend>
                 <div className="flex flex-wrap gap-1.5">
