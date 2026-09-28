@@ -7,6 +7,7 @@ import {
   listableCounts,
 } from "../src/app/lp/catalog/catalog.ts";
 import { catalog } from "../src/app/lp/catalog/catalog.ts";
+import { cardStats, detailRows, shekels, speedLabel } from "../src/app/lp/catalog/format.ts";
 
 /*
  * ⚠️ הבדיקות רצות מול **הקטלוג האמיתי** (`packages.json`) ולא מול נתוני
@@ -102,4 +103,59 @@ test("קטלוג: המזהים ייחודיים", () => {
   }
 
   assert.deepEqual(dupes, [], `מזהים כפולים: ${dupes.join(", ")}`);
+});
+
+test("תצוגה: יחיד ורבים — אין אריח שאומר \"1 ממירים\"", () => {
+  // ⚠️ בדיוק השגיאה שההערה על `lineTiers` מזהירה מפניה, רק שהיא
+  // הייתה חיה: id 70 הוא ממיר אחד והכרטיס הכריז "1 ממירים".
+  for (const p of PACKAGES.filter((x) => x.category === "home" && isListable(x))) {
+    const tile = cardStats(p).find((s) => s.caption.startsWith("ממיר"));
+    if (!tile) continue;
+    const singular = p.spec.converters === 1;
+    assert.equal(
+      tile.caption,
+      singular ? "ממיר כלול" : "ממירים כלולים",
+      `${p.id}: ${tile.value} ${tile.caption}`,
+    );
+  }
+});
+
+test("תצוגה: שתי המהירויות נשארות שלמות ביחידה שנבחרה", () => {
+  // ⚠️ `{1000, 100}` — 15 מתוך 33 חבילות הבית — הוצג כ-"1/0.1Gb".
+  assert.equal(speedLabel({ downloadMbps: 1000, uploadMbps: 100 }), "1,000/100Mb");
+  assert.equal(speedLabel({ downloadMbps: 1000, uploadMbps: 1000 }), "1/1Gb");
+  assert.equal(speedLabel({ downloadMbps: 500, uploadMbps: 50 }), "500/50Mb");
+  assert.equal(speedLabel({ downloadMbps: 2000, uploadMbps: null }), "2Gb");
+  for (const p of PACKAGES.filter((x) => x.category === "home" && isListable(x))) {
+    const label = speedLabel(p.spec);
+    if (label == null) continue;
+    assert.ok(!/(^|[^\d])0\./.test(label), `${p.id}: מהירות שברית ב-${label}`);
+  }
+});
+
+test("תצוגה: שום כרטיס לא מדפיס אותה עובדה פעמיים", () => {
+  // ⚠️ 43 מתוך 106 הכרטיסים חזרו ואמרו ב"פרטים מלאים" את מה
+  // שהאריח שמעליהם כבר אמר, באותו ניסוח בדיוק.
+  // `מהירות (הורדה/העלאה)` נשארה במודע: רק התווית הזו אומרת מי מהם ההורדה.
+  const offenders = [];
+  for (const p of PACKAGES.filter(isListable)) {
+    const tiles = cardStats(p);
+    for (const r of detailRows(p)) {
+      if (r.label === "מהירות (הורדה/העלאה)") continue;
+      if (tiles.some((t) => t.value === r.value && (t.caption === r.label || r.label.includes(t.caption)))) {
+        offenders.push(`${p.id}: ${r.label}=${r.value}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], `עובדה שהודפסה פעמיים: ${offenders.join(", ")}`);
+});
+
+test("תצוגה: עמלה שאינה מספר מדרדרת לקו מפריד ולא מפילה את הדף", () => {
+  // ⚠️ `isListable` שומר על `price` ו-`discountPercent` בלבד. כל העמלות
+  // מגיעות ל-`shekels` בלי שער, ומחרוזת הפילה שם את רינדור השרת השלם.
+  assert.equal(shekels("49.9"), "—");
+  assert.equal(shekels(NaN), "—");
+  assert.equal(shekels(undefined), "—");
+  assert.equal(shekels(49.9), "₪49.9");
+  assert.equal(shekels(0), "₪0");
 });

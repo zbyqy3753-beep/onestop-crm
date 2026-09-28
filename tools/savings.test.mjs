@@ -527,3 +527,59 @@ test("החבילות שנבחרות היום לא נפסלות בטעות בעק
   assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).pick.price, 34);
   assert.equal(computeSaving(PACKAGES, "cellular", 4, 220).pick.price, 29.9);
 });
+
+test("סעיף חסימת גלישה אינו הצהרת עלייה במחיר", () => {
+  // ⚠️ `לאחר מכן` לבדו תפס בוילרפלייט של שימוש הוגן ופסל
+  // ארבע חבילות סלקום מהבריכה, בעוד אחותן באותו תמחור נשארה בפנים.
+  const fake = (description) => ({ name: "x", description, benefits: null });
+  assert.equal(
+    declaresRiseInText(
+      fake("החיוב יהיה לפי כמות הניצול בפועל. לאחר מכן נהיה רשאיים לחסום את הגלישה."),
+    ),
+    false,
+  );
+  // והצהרה אמיתית עדיין נתפסת — מספר בהמשך המשפט הוא ההבדל.
+  for (const text of [
+    "לאחר מכן 59",
+    "לאחר מכן 20 ₪",
+    "לאחר מכן עולה ל199שח",
+    "לאחר מכן תוספת של 15 ₪",
+  ]) {
+    assert.ok(declaresRiseInText(fake(text)), `לא זוהה: ${text}`);
+  }
+});
+
+test("ה״א הידיעה אינה מבריחה הצהרת תמחור לחודשים הראשונים", () => {
+  // ⚠️ "חודשים ראשונים" נתפס ו-"החודשים הראשונים" נתפס, אבל
+  // הצורה שביניהם נפלה בין שתי החלופות. שמה של id 31 בקטלוג הוא
+  // "BASIC דור 5 בחודשיים הראשונים", והיא נשארה מחוץ לבריכה רק בזכות
+  // התפיסה השגויה של `לאחר מכן` — שני התיקונים תלויים זה בזה.
+  const fake = (description) => ({ name: "x", description, benefits: null });
+  for (const text of [
+    "2 חודשים הראשונים ב-39",
+    "חודשיים הראשונים ב-39",
+    "3 החודשים הראשונים ב-39",
+    "2 חודשים ראשונים ב-39",
+  ]) {
+    assert.ok(declaresRiseInText(fake(text)), `לא זוהה: ${text}`);
+  }
+  const basic = PACKAGES.find((x) => x.id === "31");
+  assert.ok(basic, "לא נמצאה בקטלוג: id 31");
+  assert.ok(declaresRiseInText(basic), `${basic.name}: השם מצהיר תמחור לחודשיים`);
+  assert.equal(isComparable(basic, "cellular"), false);
+});
+
+test("מחיר נתב עשרוני הוא גם הוא חיוב נסתר", () => {
+  // ⚠️ מחיר נתב נכתב כמעט תמיד כ-14.90 / 9.90 / 4.90, והחלופה
+  // הזו הכירה רק במספר שלם, בעוד השכנה לה כן כללה חלק עשרוני.
+  const fake = (description) => ({ name: "x", description, benefits: null });
+  for (const text of [
+    "עלות נתב 14.90 ש\"ח",
+    "עלות הנתב 4.9 ₪ לחודש",
+    "עלות נתב 9.90 ₪",
+    "עלות נתב 20 ש\"ח",
+  ]) {
+    assert.ok(routerPricedSeparately(fake(text)), `לא זוהה: ${text}`);
+  }
+  assert.equal(routerPricedSeparately(fake("עלות נתב 0.00 ₪")), false);
+});

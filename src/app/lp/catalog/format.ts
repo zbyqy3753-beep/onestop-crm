@@ -2,8 +2,21 @@ import type { CellularSpec, ElectricitySpec, HomeSpec, Package } from "./types";
 
 const nf = new Intl.NumberFormat("he-IL");
 
-/** "39" not "39.00"; "39.9" keeps its agora. */
+/*
+ * "39" not "39.00"; "39.9" keeps its agora.
+ *
+ * ⚠️ הבדיקה על `value` אינה מיותרת. `isListable` שומר על `price` ועל
+ * `discountPercent` בלבד, בעוד כל **העמלות** מגיעות לכאן בלי שער:
+ * `simCost`, `connectionFee`, `transferFee`, `installationCost`,
+ * `extraConverterCost`, `extraExtenderCost`, `maxMonthlyBill`,
+ * `lineTiers[].price`. הקטלוג נכנס דרך `as unknown as Catalog`, כלומר
+ * אין ולידציה בזמן ריצה: עמלה שתישאב פעם אחת כמחרוזת הייתה מפילה כאן
+ * `value.toFixed is not a function` — בתוך רינדור שרת, כלומר **כל** דף
+ * `/lp` מחזיר 500 במקום שכרטיס אחד יציג פחות. רשומה פגומה מדרדרת
+ * לקו מפריד, כמו מחיר חסר ב-`PackageCard`.
+ */
 export function shekels(value: number): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
   return `₪${nf.format(Number(value.toFixed(2)))}`;
 }
 
@@ -24,11 +37,17 @@ export function dataLabel(spec: CellularSpec): string | null {
  * ⚠️ שתי המהירויות באותה יחידה. ההורדה הומרה ל-Gb בעוד ההעלאה נשארה
  * ב-Mb **ובלי יחידה כלל**: `{5000, 500}` הוצג כ-"5Gb/500" מתחת לכיתוב
  * "מהירות גלישה" — הגולש קורא 5 מול 500 ואין לו שום דרך לדעת שמדובר
- * ב-5000 מול 500. היחידה נקבעת פעם אחת, לפי ההורדה, ושתיהן מוצגות בה.
+ * ב-5000 מול 500. היחידה נקבעת פעם אחת, ושתיהן מוצגות בה.
+ *
+ * ⚠️ היחידה נקבעת לפי **שתיהן**, לא לפי ההורדה בלבד. `{1000, 100}` —
+ * החבילה הנפוצה ביותר בקטלוג הביתי (15 מתוך 33) — הוצג כ-"1/0.1Gb":
+ * נכון אריתמטית, אבל "0.1" הוא דרך גרועה לומר 100, והמספר הגדול מבין
+ * השניים נקרא כקטן משמעותית. יחידת Gb נבחרת רק כששתי המהירויות
+ * נשארות שלמות בה; אחרת שתיהן ב-Mb.
  */
 export function speedLabel(spec: HomeSpec): string | null {
   if (spec.downloadMbps == null) return null;
-  const asGb = spec.downloadMbps >= 1000;
+  const asGb = spec.downloadMbps >= 1000 && (spec.uploadMbps == null || spec.uploadMbps >= 1000);
   const unit = asGb ? "Gb" : "Mb";
   const value = (mbps: number) => nf.format(asGb ? mbps / 1000 : mbps);
   return spec.uploadMbps != null
@@ -68,10 +87,19 @@ export function cardStats(pkg: Package): Stat[] {
   if (pkg.category === "home") {
     const spec = pkg.spec as HomeSpec;
     const out: Stat[] = [];
-    const speed = spec.downloadMbps != null ? speedLabel(spec) : null;
+    const speed = speedLabel(spec);
     if (speed) out.push({ value: speed, caption: "מהירות גלישה" });
     if (spec.channels) out.push({ value: nf.format(spec.channels), caption: "ערוצים" });
-    if (spec.converters) out.push({ value: String(spec.converters), caption: "ממירים כלולים" });
+    // ⚠️ אותה שגיאה שהערה על `lineTiers` מזהירה מפניה, רק שכאן היא
+    // **חיה**: id 70 הוא ממיר אחד, והכרטיס הכריז "1 ממירים".
+    if (spec.converters) {
+      out.push({
+        value: nf.format(spec.converters),
+        // ⚠️ רק הכיתוב משתנה, לא הערך: טבלת ההשוואה מיישרת לפי ה-`caption`,
+        // ושני ניסוחים לאותה עובדה היו נפרשים לשתי שורות עם "—" הדדי.
+        caption: spec.converters === 1 ? "ממיר כלול" : "ממירים כלולים",
+      });
+    }
     if (out.length < 3 && spec.installationCost != null) {
       out.push({
         value: spec.installationCost === 0 ? "ללא עלות" : shekels(spec.installationCost),
@@ -91,8 +119,20 @@ export function cardStats(pkg: Package): Stat[] {
   return out.slice(0, 3);
 }
 
-/** Extra facts worth surfacing under the fold; nulls are dropped, never guessed. */
+/*
+ * Extra facts worth surfacing under the fold; nulls are dropped, never guessed.
+ *
+ * ⚠️ שורה שכבר עלתה לשלישיית הכותרות **לא נכתבת שוב**. שלושה שדות
+ * נכנסים לשלישייה רק כשנשאר בה מקום (`דקות לחו״ל`, `התקנה`) או תמיד
+ * (`שעות ההנחה` כשההנחה אינה כל היום), וכשהם שם — "פרטים מלאים" חזר
+ * ואמר את אותו הדבר באותו ניסוח: 43 מתוך 106 הכרטיסים הדפיסו עובדה
+ * אחת פעמיים.
+ *
+ * ⚠️ `מהירות (הורדה/העלאה)` **נשארה** למרות שערכה זהה לאריח: האריח
+ * אומר "1000/100" ורק התווית הזו אומרת מי מהם ההורדה.
+ */
 export function detailRows(pkg: Package): { label: string; value: string }[] {
+  const tiled = new Set(cardStats(pkg).map((s) => s.caption));
   const rows: { label: string; value: string }[] = [];
   const fee = (label: string, v: number | null | undefined) => {
     if (v == null) return;
@@ -101,7 +141,9 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
 
   if (pkg.category === "cellular") {
     const s = pkg.spec as CellularSpec;
-    if (s.intlMinutes) rows.push({ label: "דקות לחו״ל", value: nf.format(s.intlMinutes) });
+    if (s.intlMinutes && !tiled.has("דקות לחו״ל")) {
+      rows.push({ label: "דקות לחו״ל", value: nf.format(s.intlMinutes) });
+    }
     fee("עלות SIM", s.simCost);
     fee("דמי חיבור", s.connectionFee);
     fee("דמי מעבר", s.transferFee);
@@ -122,7 +164,7 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     const s = pkg.spec as HomeSpec;
     const speed = speedLabel(s);
     if (speed) rows.push({ label: "מהירות (הורדה/העלאה)", value: speed });
-    fee("עלות התקנה", s.installationCost);
+    if (!tiled.has("התקנה")) fee("עלות התקנה", s.installationCost);
     if (s.routerIncluded === true) rows.push({ label: "נתב", value: "כלול במחיר" });
     if (s.extenderIncluded === true) rows.push({ label: "מגדיל טווח", value: "כלול במחיר" });
     fee("ממיר נוסף", s.extraConverterCost);
@@ -132,7 +174,7 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
 
   if (pkg.category === "electricity") {
     const s = pkg.spec as ElectricitySpec;
-    if (s.hoursText) rows.push({ label: "שעות ההנחה", value: s.hoursText });
+    if (s.hoursText && !tiled.has("שעות ההנחה")) rows.push({ label: "שעות ההנחה", value: s.hoursText });
     if (s.maxMonthlyBill) rows.push({ label: "תקרת חשבונית חודשית", value: shekels(s.maxMonthlyBill) });
     if (s.commitment === false) rows.push({ label: "התחייבות", value: "ללא התחייבות" });
     if (s.smartMeterRequired === true) rows.push({ label: "סוג מונה", value: "מונה חכם בלבד" });

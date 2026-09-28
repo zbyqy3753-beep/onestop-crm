@@ -209,15 +209,8 @@ export function CompareTray({
                       </Cell>
                     ))}
                   </Row>
-                  {statRows(items).map((row) => (
-                    <Row key={`stat-${row.label}`} label={row.label}>
-                      {row.values.map((v, i) => (
-                        <Cell key={items[i].id}>{v}</Cell>
-                      ))}
-                    </Row>
-                  ))}
-                  {detailOnlyRows(items).map((row) => (
-                    <Row key={`detail-${row.label}`} label={row.label}>
+                  {compareRows(items).map((row) => (
+                    <Row key={`fact-${row.label}`} label={row.label}>
                       {row.values.map((v, i) => (
                         <Cell key={items[i].id}>{v}</Cell>
                       ))}
@@ -239,59 +232,60 @@ interface CompareRow {
 }
 
 /**
- * The headline figures, aligned across the compared packages.
- *
- * ⚠️ היישור הוא לפי ה-`caption`, לא לפי מיקום. `cardStats` דוחף רק שדות
- * שקיימים, ולכן אותו אינדקס מייצג נתון אחר בכל חבילה: השוואה בין חבילה
- * עם גלישה+דקות+SMS לחבילה כשרה (דקות+SMS בלבד) הציגה את **דקות** השיחה
- * של הכשרה תחת הכותרת "גלישה בישראל", ובשורת הדקות סימנה לה "—" — כלומר
- * טענה שאין לה דקות בכלל. טבלה שכל תפקידה להשוות הציגה מספר של נתון אחד
- * תחת שמו של נתון אחר.
+ * ⚠️ שתי תוויות לאותה עובדה. `cardStats` ו-`detailRows` מתארים את אותו
+ * נתון בשמות שונים, והטבלה הציגה את שניהם כשתי שורות נפרדות. התווית
+ * הנבחרת היא **המפורטת מביניהן**: "1000/100" בלי לומר מי ההורדה אינו
+ * שווה הרבה.
  */
-function statRows(items: Package[]): CompareRow[] {
-  const captions: string[] = [];
-  for (const p of items) {
-    for (const s of cardStats(p)) if (!captions.includes(s.caption)) captions.push(s.caption);
-  }
-  return captions.map((label) => ({
-    label,
-    values: items.map((p) => cardStats(p).find((s) => s.caption === label)?.value ?? "—"),
-  }));
-}
+const SAME_FACT: Record<string, string> = {
+  "מהירות גלישה": "מהירות (הורדה/העלאה)",
+  התקנה: "עלות התקנה",
+  "ממיר כלול": "ממירים כלולים",
+  נדרש: "סוג מונה",
+  "מתאים ל": "סוג מונה",
+};
 
 /**
- * Detail rows minus anything the stats already say. "מהירות גלישה" and
- * "מהירות (הורדה/העלאה)" are different labels for the same numbers, so we drop
- * the duplicate by comparing rendered values rather than maintaining a list of
- * synonymous labels.
+ * שורות ההשוואה, מיושרות לפי **העובדה** ולא לפי המקור שלה.
+ *
+ * ⚠️ היישור היה לפי ה-`caption` של `cardStats` בלבד. `cardStats` דוחף
+ * רק שדות שקיימים, ולכן אותו אינדקס מייצג נתון אחר בכל חבילה: השוואה
+ * בין חבילה עם גלישה+דקות+SMS לחבילה כשרה (דקות+SMS בלבד) הציגה את
+ * **דקות** השיחה של הכשרה תחת הכותרת "גלישה בישראל". היישור הוא לפי שם.
+ *
+ * ⚠️ ושם אחד אינו מספיק: `דקות לחו״ל` נכנס לשלישיית הכותרות רק כשנשאר
+ * בה מקום, ואחרת הוא יושב ב-`detailRows`. שורת הכותרות סימנה "—"
+ * לחבילה שהשלישייה שלה מלאה, ומחיקת השורה הכפולה לפי תווית הקפיאה את
+ * ה-"—" במקומו: הטבלה הצהירה **שאין** לחבילה דקות לחו״ל, בעוד
+ * "פרטים מלאים" של אותו כרטיס הראה 300. אותו דבר ל-"התקנה" מול
+ * "עלות התקנה", שם שתי התוויות אפילו לא היו זהות ולכן הוצגו שתי שורות
+ * סותרות זו לצד זו — "—" ו-"₪125" לאותה חבילה.
+ *
+ * שתי המקורות ממוזגים לכן למפה אחת לכל חבילה, והכותרות גוברות על
+ * הפירוט (אותו ערך, ניסוח קצר יותר). "—" נשאר רק למי שבאמת חסר הנתון.
+ *
+ * ⚠️ אין כאן יותר מחיקה לפי **צירוף ערכים**. היא נועדה להפיל שם נרדף,
+ * אבל הפילה כל שתי שורות שבמקרה נשאו אותם ערכים: "דמי חיבור" מחקה את
+ * "דמי מעבר". שמות נרדפים מטופלים ב-`SAME_FACT`, במפורש.
  */
-function detailOnlyRows(items: Package[]): CompareRow[] {
-  // ⚠️ ההשוואה היא מול שורות הסטטיסטיקה **בלבד**. קודם כל שורת פירוט
-  // שנכתבה נוספה גם היא ל-`shown`, ולכן שתי שורות פירוט שונות לגמרי
-  // שבמקרה נשאו אותם ערכים הפילו זו את זו: "דמי חיבור" מחקה את
-  // "דמי מעבר" כשלשתיהן היו אותם שני ערכים, והגולש תימחר עלות
-  // חד-פעמית בחסר. המטרה המקורית הייתה לוותר על שם נרדף לנתון
-  // שכבר מופיע למעלה, לא לאחד שני נתונים שונים.
-  // ⚠️ גם התווית עצמה נבדקת, לא רק צירוף הערכים. "דקות לחו״ל" הוא גם
-  // `caption` ב-`cardStats` (כשנשאר מקום בשלישייה) וגם `label` ב-`detailRows`,
-  // ולכן שתי שורות באותו שם הוצגו זו מתחת לזו עם ערכים סותרים: שורת
-  // הסטטיסטיקה סימנה "—" לחבילה שלא נשאר לה מקום בשלישייה, ושורת הפירוט
-  // הראתה לה 150 דקות. אותה משפחת באג של יישור לפי `caption`, רק שהיא
-  // נשארה בין שתי קבוצות השורות.
-  const statRowsShown = statRows(items);
-  const shown = new Set(statRowsShown.map((r) => r.values.join(" ")));
-  const shownLabels = new Set(statRowsShown.map((r) => r.label));
-  const labels = new Set<string>();
-  for (const p of items) for (const r of detailRows(p)) labels.add(r.label);
+function compareRows(items: Package[]): CompareRow[] {
+  const canon = (label: string) => SAME_FACT[label] ?? label;
+  const facts = items.map((p) => {
+    const m = new Map<string, string>();
+    for (const s of cardStats(p)) m.set(canon(s.caption), s.value);
+    for (const r of detailRows(p)) if (!m.has(canon(r.label))) m.set(canon(r.label), r.value);
+    return m;
+  });
 
-  const rows: CompareRow[] = [];
-  for (const label of labels) {
-    const values = items.map((p) => detailRows(p).find((r) => r.label === label)?.value ?? "—");
-    const key = values.join(" ");
-    if (shownLabels.has(label) || shown.has(key)) continue;
-    rows.push({ label, values });
-  }
-  return rows;
+  // הסדר נשמר: כל הכותרות קודם, הפירוט אחריהן.
+  const labels: string[] = [];
+  const add = (label: string) => {
+    if (!labels.includes(label)) labels.push(label);
+  };
+  for (const p of items) for (const s of cardStats(p)) add(canon(s.caption));
+  for (const p of items) for (const r of detailRows(p)) add(canon(r.label));
+
+  return labels.map((label) => ({ label, values: facts.map((m) => m.get(label) ?? "—") }));
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

@@ -1,5 +1,6 @@
 import catalogJson from "./packages.json";
-import type { Catalog, Category, HomeSpec, Package, Provider } from "./types";
+import { isHomeSpec } from "./types";
+import type { Catalog, Category, Package, Provider } from "./types";
 
 /**
  * ── הקטלוג של דף הנחיתה ────────────────────────────────────────────────
@@ -136,7 +137,12 @@ export function listable(packages: Package[]): Package[] {
  * מחיר" ולא "לא ידוע, לסוף הרשימה".
  */
 export function afterPrice(p: Package): number {
-  if (p.category === "electricity") return -(p.discountPercent ?? 0);
+  // ⚠️ `-Infinity` ולא `0`, כדי להסכים עם `byPrice`. שתי הפונקציות
+  // מדרגות את אותו שדה, והשתיקה של `?? 0` הייתה ממקמת רשומה פגומה
+  // כזולה ביותר בעמוד בעוד `byPrice` שולח אותה לסוף. אף אחת מהן אינה
+  // ניתנת להגעה היום (`isListable` פוסל `discountPercent` ריק), אבל
+  // שתי ברירות מחדל הפוכות לאותו שדה הן מלכודת לרענון הבא.
+  if (p.category === "electricity") return -(p.discountPercent ?? -Infinity);
   return p.priceAfterPromo ?? p.price ?? Infinity;
 }
 
@@ -160,13 +166,16 @@ export function listableCounts(packages: Package[]) {
  */
 export function serviceCounts(packages: Package[]) {
   const shown = listable(packages);
-  const home = shown.filter((p) => p.category === "home");
-  const spec = (p: Package) => p.spec as HomeSpec;
+  // ⚠️ `isHomeSpec` ולא `p.category === "home"` עם `as HomeSpec`: ההמרה
+  // הכריזה `HomeSpec` על פרמטר מטיפוס `Package`, כלומר גם על רשומת
+  // חשמל. היא נכונה היום רק מפני שהיא מוחלת על מערך שכבר סונן — שער
+  // שאין לו שום דבר בטיפוסים שמחזיק אותו במקום.
+  const home = shown.filter(isHomeSpec);
   return {
     cellular: shown.filter((p) => p.category === "cellular").length,
-    internet: home.filter((p) => spec(p).hasInternet).length,
-    tv: home.filter((p) => spec(p).hasTv).length,
-    bundle: home.filter((p) => spec(p).hasTv && spec(p).hasInternet).length,
+    internet: home.filter((p) => p.spec.hasInternet).length,
+    tv: home.filter((p) => p.spec.hasTv).length,
+    bundle: home.filter((p) => p.spec.hasTv && p.spec.hasInternet).length,
     electricity: shown.filter((p) => p.category === "electricity").length,
   };
 }
