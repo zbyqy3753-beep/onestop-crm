@@ -84,6 +84,9 @@ export function CompareTray({
 
   if (items.length === 0) return null;
 
+  /* כל פריטי ההשוואה הם מקטגוריה אחת — ראה ההערה על שורת המחיר. */
+  const allElectric = items.every((p) => p.category === "electricity");
+
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-lp-line bg-lp-surface/95 backdrop-blur">
@@ -171,7 +174,15 @@ export function CompareTray({
                   </tr>
                 </thead>
                 <tbody>
-                  <Row label="מחיר לחודש">
+                  {/*
+                    ⚠️ התווית נגזרת מהקטגוריה. מסלול חשמל אינו נמכר במחיר
+                    חודשי אלא באחוז הנחה, והשורה הכריזה "מחיר לחודש: 20%
+                    הנחה" — תווית שסותרת את הערך שמתחתיה בדיוק בשורה
+                    הראשונה של הטבלה. כל פריטי ההשוואה הם מקטגוריה אחת
+                    (`CatalogBrowser` מרונדר מחדש עם `key={category}`),
+                    ולכן התווית אחת לכל הטבלה.
+                  */}
+                  <Row label={allElectric ? "הנחה בחשבון" : "מחיר לחודש"}>
                     {items.map((p) => (
                       <Cell key={p.id}>
                         {p.category === "electricity"
@@ -189,26 +200,34 @@ export function CompareTray({
                     אחרי שנתיים 69.9". הטבלה שכל תפקידה להשוות הכחישה נתון שהדף עצמו
                     מציג, ודווקא בעמודה שהיא הבטחת המותג.
                   */}
-                  <Row label="אחרי ההטבה">
-                    {items.map((p) => (
-                      <Cell
-                        key={p.id}
-                        tone={
-                          p.category !== "electricity" && (p.priceAfterPromo || p.priceAfterPromoNote)
-                            ? "rise"
-                            : undefined
-                        }
-                      >
-                        {p.category === "electricity"
-                          ? "—"
-                          : p.priceAfterPromo != null
-                            ? shekels(p.priceAfterPromo)
-                            : p.priceAfterPromoNote
-                              ? p.priceAfterPromoNote
-                              : "לא דווח שינוי"}
-                      </Cell>
-                    ))}
-                  </Row>
+                  {/*
+                    ⚠️ ובלשונית החשמל השורה כולה יורדת. אין ולו מסלול חשמל
+                    אחד בקטלוג שנושא `priceAfterPromo` או הערה — התא עצמו
+                    כבר מחזיר "—" לחשמל, כלומר הטבלה הוסיפה שורה שלמה של
+                    מקפים מתחת לכותרת שמבטיחה את הנתון המרכזי של הדף.
+                  */}
+                  {!allElectric && (
+                    <Row label="אחרי ההטבה">
+                      {items.map((p) => (
+                        <Cell
+                          key={p.id}
+                          tone={
+                            p.category !== "electricity" && (p.priceAfterPromo || p.priceAfterPromoNote)
+                              ? "rise"
+                              : undefined
+                          }
+                        >
+                          {p.category === "electricity"
+                            ? "—"
+                            : p.priceAfterPromo != null
+                              ? shekels(p.priceAfterPromo)
+                              : p.priceAfterPromoNote
+                                ? p.priceAfterPromoNote
+                                : "לא דווח שינוי"}
+                        </Cell>
+                      ))}
+                    </Row>
+                  )}
                   {compareRows(items).map((row) => (
                     <Row key={`fact-${row.label}`} label={row.label}>
                       {row.values.map((v, i) => (

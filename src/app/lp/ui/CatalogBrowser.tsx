@@ -135,12 +135,20 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
               והדסקטופ נפתח דרך CSS בלבד (`max-lg:hidden`), ולכן אין פער
               בין השרת ללקוח ואין הבהוב.
             */}
+            {/*
+              ⚠️ `lg:hidden` על הכפתור וכותרת נפרדת לדסקטופ, ולא
+              `lg:pointer-events-none` על אותו כפתור. `pointer-events` מנטרל
+              את העכבר בלבד: בדסקטופ הכפתור נשאר בסדר ה-Tab, הכריז על עצמו
+              `aria-expanded="false"` בזמן שהפאנל פרוש ונראה במלואו, ולחיצה
+              ממקלדת הפכה אותו ל-"true" בלי שדבר על המסך ישתנה. פקד שמצהיר
+              על מצב שאינו נכון ואינו עושה דבר גרוע מפקד שאינו קיים.
+            */}
             <button
               type="button"
               onClick={() => setFiltersOpen((v) => !v)}
               aria-expanded={filtersOpen}
               aria-controls="lp-filters"
-              className="-my-2 flex min-h-11 items-center gap-2 py-2 text-sm font-semibold text-lp-ink lg:pointer-events-none lg:my-0 lg:min-h-0 lg:py-0"
+              className="-my-2 flex min-h-11 items-center gap-2 py-2 text-sm font-semibold text-lp-ink lg:hidden"
             >
               סינון
               {hasFilters && (
@@ -150,11 +158,19 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
               )}
               <span
                 aria-hidden
-                className={`text-lp-ink-3 transition lg:hidden ${filtersOpen ? "rotate-180" : ""}`}
+                className={`text-lp-ink-3 transition ${filtersOpen ? "rotate-180" : ""}`}
               >
                 ▾
               </span>
             </button>
+            <span className="hidden items-center gap-2 text-sm font-semibold text-lp-ink lg:flex">
+              סינון
+              {hasFilters && (
+                <span className="nums rounded-full bg-lp-brand px-2 py-0.5 text-lp-2xs font-bold text-lp-ink-invert">
+                  {activeFilters}
+                </span>
+              )}
+            </span>
             {hasFilters && (
               <button
                 type="button"
