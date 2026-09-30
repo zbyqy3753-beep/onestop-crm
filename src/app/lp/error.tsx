@@ -10,13 +10,21 @@ import { btnPrimary } from "./ui/button";
  * השארת פרטים. הפעולה עצמה כבר מחזירה שגיאה מנומסת בתוך הטופס
  * (`actions.ts`); הקובץ הזה הוא רשת הביטחון לכל השאר — כשל ברינדור
  * ה-RSC, בטעינת הקטלוג, או חריגה שלא נתפסה.
+ *
+ * ⚠️ הכפתור קורא ל-`unstable_retry` ולא ל-`reset`. ב-Next 16 שני הפרופים
+ * מועברים לגבול השגיאה, ולכן הגרסה עם `reset` התקמפלה בלי אזהרה
+ * — אבל `reset` רק מנקה את מצב השגיאה ומרנדר מחדש את **אותו**
+ * payload שכבר נכשל, בלי לשלוף אותו שוב. בכשל רשת חולף — בדיוק
+ * המקרה שהכפתור נועד לו — הלחיצה החזירה מיד את אותו מסך,
+ * לנצח. `unstable_retry` עוטף `router.refresh()` ואז מנקה — והוא מה
+ * שהמסמכים מורים לכפתור "לנסות שוב".
  */
 export default function LandingError({
   error,
-  reset,
+  unstable_retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  unstable_retry: () => void;
 }) {
   // ההודעה עצמה לא מוצגת למבקר — היא שלנו, לקונסול.
   console.error("[lp] שגיאה בדף הנחיתה:", error.digest ?? error.message);
@@ -28,7 +36,7 @@ export default function LandingError({
         <p className="mt-2 text-sm text-lp-ink-2">
           נסו שוב — ואם זה חוזר, חייגו אלינו ונשמח לבדוק את החשבון שלכם ידנית.
         </p>
-        <button type="button" onClick={reset} className={`${btnPrimary} mt-4 w-full py-3`}>
+        <button type="button" onClick={unstable_retry} className={`${btnPrimary} mt-4 w-full py-3`}>
           לנסות שוב
         </button>
       </div>

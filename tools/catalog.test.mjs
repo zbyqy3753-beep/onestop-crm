@@ -7,7 +7,7 @@ import {
   listableCounts,
 } from "../src/app/lp/catalog/catalog.ts";
 import { catalog } from "../src/app/lp/catalog/catalog.ts";
-import { cardStats, detailRows, shekels, speedLabel } from "../src/app/lp/catalog/format.ts";
+import { cardStats, compareRows, detailRows, shekels, speedLabel } from "../src/app/lp/catalog/format.ts";
 
 /*
  * ⚠️ הבדיקות רצות מול **הקטלוג האמיתי** (`packages.json`) ולא מול נתוני
@@ -432,4 +432,58 @@ test("קטלוג: זוגות שהגולש אינו יכול להבחין בינ�
   const pairs = [...seen.values()].filter((ids) => ids.length > 1).map((ids) => [...ids].sort().join("/"));
 
   expectFlags(pairs, ["50/51"], "זוגות בלתי-נבדלים");
+});
+
+/*
+ * טבלת ההשוואה לא מכחישה נתון שהכרטיס עצמו מדפיס.
+ *
+ * ⚠️ `cardStats` בוחר תווית לפי הערך: בחשמל `allHours` נותן
+ * "מתי ההנחה חלה" ו-`hoursText` נותן "שעות ההנחה" — שתי תוויות
+ * לאותה עובדה. בלי זוג ב-`SAME_FACT` ההשוואה נפרשה לשתי שורות
+ * עם "—" הדדי, והצהירה על מסלול עם שעות מפורשות שאין לו נתון.
+ * הבדיקה מנוסחת כאינווריאנט ולא על זוג ids, כדי שהיא תתפוס גם את
+ * הזוג הבא שייווצר באותה דרך.
+ */
+test("השוואה: אין שורה שבה שתי חבילות מציגות זו '—' וזו ערך, כשלשתיהן העובדה קיימת", () => {
+  const electricity = PACKAGES.filter((p) => p.category === "electricity");
+  const withAll = electricity.filter((p) => p.spec.allHours === true);
+  const withText = electricity.filter((p) => p.spec.allHours !== true && p.spec.hoursText);
+  assert.ok(withAll.length > 0 && withText.length > 0, "שני הסוגים קיימים בקטלוג");
+
+  const bad = [];
+  for (const a of withAll) {
+    for (const b of withText) {
+      const rows = compareRows([a, b]);
+      // שתי החבילות נושאות עובדה על מתי ההנחה חלה, ולכן אסור
+      // שתופיע שורה שמציגה לאחת מהן "—".
+      const hours = rows.filter((r) => r.label === "שעות ההנחה" || r.label === "מתי ההנחה חלה");
+      if (hours.length !== 1 || hours[0].values.includes("—")) {
+        bad.push(`${a.id}/${b.id}: ${JSON.stringify(hours)}`);
+      }
+    }
+  }
+  assert.deepEqual(bad, [], `זוגות שבהם שעות ההנחה נפרשו או הוכחשו: ${bad.slice(0, 5).join(" | ")}`);
+});
+
+/*
+ * שדה תלת-מצבי שהקטלוג יודע עליו `false` לא נראה כמו שדה חסר.
+ *
+ * ⚠️ `detailRows` דחפה שורה רק במצב החיובי, ולכן "אין נתב" ו-"לא
+ * ידוע אם יש נתב" נראו זהים בטבלה. נתב בתשלום נפרד הוא תוספת
+ * חודשית אמיתית, והדף הזה משווה מחירים.
+ */
+test("פרטים מלאים: `false` מוצג כערך מפורש ולא נבלע", () => {
+  const TRI = [
+    ["routerIncluded", "נתב"],
+    ["extenderIncluded", "מגדיל טווח"],
+    ["vodIncluded", "VOD"],
+  ];
+  const missing = [];
+  for (const p of PACKAGES.filter((x) => x.category === "home")) {
+    const labels = new Set(detailRows(p).map((r) => r.label));
+    for (const [field, label] of TRI) {
+      if (p.spec[field] === false && !labels.has(label)) missing.push(`${p.id}.${field}`);
+    }
+  }
+  assert.deepEqual(missing, [], `שדות שליליים שנבלעו: ${missing.join(", ")}`);
 });

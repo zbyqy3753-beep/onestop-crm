@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useEffect, useId, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import {
   PROVIDER_CONFIG,
@@ -76,9 +76,43 @@ export function LeadForm({ pkg, compact = false, category, note, packageName }: 
    */
   const autoId = useId();
 
+  /*
+   * ⚠️ שתי נקודות שבהן הפוקוס נמחק: האחת בהצלחה (הטופס מוחלף
+   * בפאנל אישור) והשנייה בשגיאה (ה-`key` מפרק ובונה מחדש את
+   * אלמנט ה-`<form>`). בשתיהן הכפתור שנלחץ עליו יוצא מה-DOM,
+   * וגולש מקלדת נזרק לראש הדף בדיוק ברגע שבו הוא צריך לקרוא
+   * מה לתקן.
+   */
+  const sentRef = useRef<HTMLDivElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (state.status === "sent") sentRef.current?.focus();
+  }, [state.status]);
+
+  /*
+   * תלוי ב-`state` עצמו ולא ב-`status` בלבד: שתי שגיאות רצופות נשאות
+   * אותו `status: "error"`, והפוקוס צריך לחזור גם בשנייה.
+   */
+  useEffect(() => {
+    if (state.status === "error") errorRef.current?.focus();
+  }, [state]);
+
   if (state.status === "sent") {
     return (
-      <div className="rounded-lp-card bg-lp-save/10 p-4 text-center">
+      /*
+       * ⚠️ `role="status"` ו-`tabIndex={-1}` עם פוקוס: הפאנל הזה מחליף את
+       * ה-`<form>` כולו, ולכן כפתור השליחה שהיה בפוקוס נמחק מה-DOM
+       * והפוקוס נפל ל-`<body>`. בלי אזור חי גולש קורא-מסך לא שמע
+       * דבר — הוא לא יודע אם הפנייה נשלחה, וה-Tab הבא שלו מתחיל
+       * מראש הדף — והטופס הזה יושב אחרי 106 כרטיסי חבילה.
+       */
+      <div
+        ref={sentRef}
+        tabIndex={-1}
+        role="status"
+        className="rounded-lp-card bg-lp-save/10 p-4 text-center"
+      >
         <p className="font-semibold text-lp-save">קיבלנו! נציג ONE STOP יחזור אליך בהקדם.</p>
         <p className="mt-1 text-sm text-lp-ink-2">
           {pkg ? `לגבי ${pkg.name}` : "לגבי החבילה המשתלמת עבורך"}
@@ -119,7 +153,12 @@ export function LeadForm({ pkg, compact = false, category, note, packageName }: 
       )}
 
       {state.status === "error" && (
-        <p className="rounded-lg bg-lp-rise-soft p-3 text-sm text-lp-rise" role="alert">
+        <p
+          ref={errorRef}
+          tabIndex={-1}
+          className="rounded-lg bg-lp-rise-soft p-3 text-sm text-lp-rise"
+          role="alert"
+        >
           {state.message}
         </p>
       )}
@@ -152,6 +191,15 @@ export function LeadForm({ pkg, compact = false, category, note, packageName }: 
             name="phone"
             type="tel"
             inputMode="numeric"
+            /*
+             * ⚠️ `dir="ltr"` כמו בשדה הטלפון הציבורי השני (`/form/[token]`).
+             * בלעדיו השדה יורש `rtl` מה-`<html>`, וה-`+` המוביל ב-`+972`
+             * — צורה שהאימות בשרות מקבל במפורש — הוא `ON` ללא `EN`
+             * לפניו, מקבל את כיוון הפסקה ונודד לקצה הימני:
+             * `+972-50-1234567` מוצג כ-`972-50-1234567+`. המספר נשמר נכון,
+             * אבל הגולש רואה מספר משובש ומוחק אותו.
+             */
+            dir="ltr"
             className={fieldClass}
             autoComplete="tel"
             placeholder="050-0000000"

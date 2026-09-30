@@ -165,21 +165,105 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     const speed = speedLabel(s);
     if (speed) rows.push({ label: "מהירות (הורדה/העלאה)", value: speed });
     if (!tiled.has("התקנה")) fee("עלות התקנה", s.installationCost);
-    if (s.routerIncluded === true) rows.push({ label: "נתב", value: "כלול במחיר" });
-    if (s.extenderIncluded === true) rows.push({ label: "מגדיל טווח", value: "כלול במחיר" });
+    /*
+     * ⚠️ שלושת השדות האלה הם `boolean | null` — תלת-מצביים — והגרסה
+     * הקודמת דחפה שורה רק במצב החיובי. לכן `false` — שהקטלוג יודע
+     * עליו במפורש — נראה בטבלת ההשוואה בדיוק כמו `null`: "—",
+     * כלומר "אין לנו נתון". בדף השוואת מחירים ההבדל הוא כסףי:
+     * נתב בתשלום נפרד הוא תוספת חודשית אמיתית — `savings.ts` אפילו
+     * מחזיקה `ROUTER_PRICED_SEPARATELY` בשבילה.
+     */
+    const included = (label: string, v: boolean | null | undefined) => {
+      if (v == null) return;
+      rows.push({ label, value: v ? "כלול במחיר" : "אינו כלול במחיר" });
+    };
+    included("נתב", s.routerIncluded);
+    included("מגדיל טווח", s.extenderIncluded);
     fee("ממיר נוסף", s.extraConverterCost);
     fee("מגדיל טווח נוסף", s.extraExtenderCost);
-    if (s.vodIncluded) rows.push({ label: "VOD", value: "כלול במחיר" });
+    included("VOD", s.vodIncluded);
   }
 
   if (pkg.category === "electricity") {
     const s = pkg.spec as ElectricitySpec;
     if (s.hoursText && !tiled.has("שעות ההנחה")) rows.push({ label: "שעות ההנחה", value: s.hoursText });
     if (s.maxMonthlyBill) rows.push({ label: "תקרת חשבונית חודשית", value: shekels(s.maxMonthlyBill) });
+    // אותה תלת-מצביות כמו למעלה, בכיוון ההפוך: רק השלילי נכתב,
+    // ולכן מסלול עם התחייבות מוצהרת נראה כמו מסלול שלא ידוע עליו דבר.
+    // 0 רשומות בקטלוג הנוכחי נושאות `true`, ולכן זו הגנה על הרענון הבא.
     if (s.commitment === false) rows.push({ label: "התחייבות", value: "ללא התחייבות" });
+    if (s.commitment === true) rows.push({ label: "התחייבות", value: "בהתחייבות" });
     if (s.smartMeterRequired === true) rows.push({ label: "סוג מונה", value: "מונה חכם בלבד" });
     if (s.smartMeterRequired === false) rows.push({ label: "סוג מונה", value: "מתאים לכל סוגי המונים" });
   }
 
   return rows;
+}
+
+export interface CompareRow {
+  label: string;
+  values: string[];
+}
+
+/**
+ * ⚠️ שתי תוויות לאותה עובדה. `cardStats` ו-`detailRows` מתארים את אותו
+ * נתון בשמות שונים, והטבלה הציגה את שניהם כשתי שורות נפרדות. התווית
+ * הנבחרת היא **המפורטת מביניהן**: "1000/100" בלי לומר מי ההורדה אינו
+ * שווה הרבה.
+ */
+const SAME_FACT: Record<string, string> = {
+  "מהירות גלישה": "מהירות (הורדה/העלאה)",
+  התקנה: "עלות התקנה",
+  "ממיר כלול": "ממירים כלולים",
+  נדרש: "סוג מונה",
+  "מתאים ל": "סוג מונה",
+  // ⚠️ `cardStats` בוחר בין שתי התוויות האלה לפי `allHours`, ולכן
+  // הן לעולם לא מופיעות יחד באותה חבילה — אבל הן כן מופיעות
+  // זו לצד זו בהשוואה בין שני מסלולי חשמל, ושם הן נפרשו לשתי
+  // שורות עם "—" הדדי: הטבלה הכריזה שלמסלול עם שעות מפורשות
+  // אין נתון על מתי ההנחה חלה, בזמן שהכרטיס שלו מדפיס אותן.
+  "מתי ההנחה חלה": "שעות ההנחה",
+};
+
+/**
+ * שורות ההשוואה, מיושרות לפי **העובדה** ולא לפי המקור שלה.
+ *
+ * ⚠️ היישור היה לפי ה-`caption` של `cardStats` בלבד. `cardStats` דוחף
+ * רק שדות שקיימים, ולכן אותו אינדקס מייצג נתון אחר בכל חבילה: השוואה
+ * בין חבילה עם גלישה+דקות+SMS לחבילה כשרה (דקות+SMS בלבד) הציגה את
+ * **דקות** השיחה של הכשרה תחת הכותרת "גלישה בישראל". היישור הוא לפי שם.
+ *
+ * ⚠️ ושם אחד אינו מספיק: `דקות לחו״ל` נכנס לשלישיית הכותרות רק כשנשאר
+ * בה מקום, ואחרת הוא יושב ב-`detailRows`. שורת הכותרות סימנה "—"
+ * לחבילה שהשלישייה שלה מלאה, ומחיקת השורה הכפולה לפי תווית הקפיאה את
+ * ה-"—" במקומו: הטבלה הצהירה **שאין** לחבילה דקות לחו״ל, בעוד
+ * "פרטים מלאים" של אותו כרטיס הראה 300. אותו דבר ל-"התקנה" מול
+ * "עלות התקנה", שם שתי התוויות אפילו לא היו זהות ולכן הוצגו שתי שורות
+ * סותרות זו לצד זו — "—" ו-"₪125" לאותה חבילה.
+ *
+ * שתי המקורות ממוזגים לכן למפה אחת לכל חבילה, והכותרות גוברות על
+ * הפירוט (אותו ערך, ניסוח קצר יותר). "—" נשאר רק למי שבאמת חסר הנתון.
+ *
+ * ⚠️ אין כאן יותר מחיקה לפי **צירוף ערכים**. היא נועדה להפיל שם נרדף,
+ * אבל הפילה כל שתי שורות שבמקרה נשאו אותם ערכים: "דמי חיבור" מחקה את
+ * "דמי מעבר". שמות נרדפים מטופלים ב-`SAME_FACT`, במפורש.
+ */
+export function compareRows(items: Package[]): CompareRow[] {
+  const canon = (label: string) => SAME_FACT[label] ?? label;
+  const facts = items.map((p) => {
+    const m = new Map<string, string>();
+    for (const s of cardStats(p)) m.set(canon(s.caption), s.value);
+    for (const r of detailRows(p)) if (!m.has(canon(r.label))) m.set(canon(r.label), r.value);
+    return m;
+  });
+
+  // הסדר נשמר: כל הכותרות קודם, הפירוט אחריהן.
+  const labels: string[] = [];
+  const add = (label: string) => {
+    if (!labels.includes(label)) labels.push(label);
+  };
+  for (const p of items) for (const s of cardStats(p)) add(canon(s.caption));
+  for (const p of items) for (const r of detailRows(p)) add(canon(r.label));
+
+  return labels.map((label) => ({ label, values: facts.map((m) => m.get(label) ?? "—") }));
 }

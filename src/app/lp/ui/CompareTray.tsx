@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderLogo } from "./ProviderLogo";
-import { cardStats, detailRows, shekels } from "../catalog/format";
+import { compareRows, shekels } from "../catalog/format";
 import type { Package } from "../catalog/types";
 
 /**
@@ -243,68 +243,6 @@ export function CompareTray({
       )}
     </>
   );
-}
-
-interface CompareRow {
-  label: string;
-  values: string[];
-}
-
-/**
- * ⚠️ שתי תוויות לאותה עובדה. `cardStats` ו-`detailRows` מתארים את אותו
- * נתון בשמות שונים, והטבלה הציגה את שניהם כשתי שורות נפרדות. התווית
- * הנבחרת היא **המפורטת מביניהן**: "1000/100" בלי לומר מי ההורדה אינו
- * שווה הרבה.
- */
-const SAME_FACT: Record<string, string> = {
-  "מהירות גלישה": "מהירות (הורדה/העלאה)",
-  התקנה: "עלות התקנה",
-  "ממיר כלול": "ממירים כלולים",
-  נדרש: "סוג מונה",
-  "מתאים ל": "סוג מונה",
-};
-
-/**
- * שורות ההשוואה, מיושרות לפי **העובדה** ולא לפי המקור שלה.
- *
- * ⚠️ היישור היה לפי ה-`caption` של `cardStats` בלבד. `cardStats` דוחף
- * רק שדות שקיימים, ולכן אותו אינדקס מייצג נתון אחר בכל חבילה: השוואה
- * בין חבילה עם גלישה+דקות+SMS לחבילה כשרה (דקות+SMS בלבד) הציגה את
- * **דקות** השיחה של הכשרה תחת הכותרת "גלישה בישראל". היישור הוא לפי שם.
- *
- * ⚠️ ושם אחד אינו מספיק: `דקות לחו״ל` נכנס לשלישיית הכותרות רק כשנשאר
- * בה מקום, ואחרת הוא יושב ב-`detailRows`. שורת הכותרות סימנה "—"
- * לחבילה שהשלישייה שלה מלאה, ומחיקת השורה הכפולה לפי תווית הקפיאה את
- * ה-"—" במקומו: הטבלה הצהירה **שאין** לחבילה דקות לחו״ל, בעוד
- * "פרטים מלאים" של אותו כרטיס הראה 300. אותו דבר ל-"התקנה" מול
- * "עלות התקנה", שם שתי התוויות אפילו לא היו זהות ולכן הוצגו שתי שורות
- * סותרות זו לצד זו — "—" ו-"₪125" לאותה חבילה.
- *
- * שתי המקורות ממוזגים לכן למפה אחת לכל חבילה, והכותרות גוברות על
- * הפירוט (אותו ערך, ניסוח קצר יותר). "—" נשאר רק למי שבאמת חסר הנתון.
- *
- * ⚠️ אין כאן יותר מחיקה לפי **צירוף ערכים**. היא נועדה להפיל שם נרדף,
- * אבל הפילה כל שתי שורות שבמקרה נשאו אותם ערכים: "דמי חיבור" מחקה את
- * "דמי מעבר". שמות נרדפים מטופלים ב-`SAME_FACT`, במפורש.
- */
-function compareRows(items: Package[]): CompareRow[] {
-  const canon = (label: string) => SAME_FACT[label] ?? label;
-  const facts = items.map((p) => {
-    const m = new Map<string, string>();
-    for (const s of cardStats(p)) m.set(canon(s.caption), s.value);
-    for (const r of detailRows(p)) if (!m.has(canon(r.label))) m.set(canon(r.label), r.value);
-    return m;
-  });
-
-  // הסדר נשמר: כל הכותרות קודם, הפירוט אחריהן.
-  const labels: string[] = [];
-  const add = (label: string) => {
-    if (!labels.includes(label)) labels.push(label);
-  };
-  for (const p of items) for (const s of cardStats(p)) add(canon(s.caption));
-  for (const p of items) for (const r of detailRows(p)) add(canon(r.label));
-
-  return labels.map((label) => ({ label, values: facts.map((m) => m.get(label) ?? "—") }));
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
