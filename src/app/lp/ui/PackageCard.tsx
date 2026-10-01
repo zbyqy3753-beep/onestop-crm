@@ -94,8 +94,22 @@ export function PackageCard({
               disabled={compareFull && !compareChecked}
               onChange={() => onCompareToggle(pkg)}
               className="h-4 w-4 accent-lp-brand disabled:opacity-50"
-              /* קורא מסך שמע "הוסף" גם כשהלחיצה הבאה תסיר — ההפך מהפעולה. */
-              aria-label={`${compareChecked ? "הסר את" : "הוסף את"} ${pkg.name} ${compareChecked ? "מההשוואה" : "להשוואה"}`}
+              /*
+                קורא מסך שמע "הוסף" גם כשהלחיצה הבאה תסיר — ההפך מהפעולה.
+
+                ⚠️ הסיבה להשבתה נאמרת כאן ולא רק ב-`title`. תיבה
+                `disabled` יוצאת מסדר המקלדת לגמרי, ו-`title` על
+                ה-`<label>` אינו נחשף לקורא מסך ואינו נגיש למקלדת —
+                כלומר משתמש מקלדת גילה שכל תיבות ההשוואה פשוט נעלמו
+                מה-Tab בלי שום הסבר. `aria-describedby` לא יעזור מאותה
+                סיבה (אין טקסט נראה לקשר אליו), ולכן ההסבר נכנס לשם
+                הנגיש עצמו.
+              */
+              aria-label={
+                compareFull && !compareChecked
+                  ? `הוסף את ${pkg.name} להשוואה — לא זמין, ניתן להשוות עד 4 חבילות`
+                  : `${compareChecked ? "הסר את" : "הוסף את"} ${pkg.name} ${compareChecked ? "מההשוואה" : "להשוואה"}`
+              }
             />
             השוואה
           </label>

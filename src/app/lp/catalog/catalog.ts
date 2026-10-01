@@ -171,11 +171,23 @@ export function serviceCounts(packages: Package[]) {
   // חשמל. היא נכונה היום רק מפני שהיא מוחלת על מערך שכבר סונן — שער
   // שאין לו שום דבר בטיפוסים שמחזיק אותו במקום.
   const home = shown.filter(isHomeSpec);
+  /*
+   * ⚠️ אותו תיקון בדיוק כמו ב-`isComparable` ב-`savings.ts`, ומאותו
+   * טעם: סטינג "החבילה המושלמת" (id 4) רשומה `hasInternet: true`
+   * למרות שהיא שירות סטרימינג בלבד — המחלץ קרא את המילה "אינטרנט"
+   * בתיאור. המחשבון כבר מסרב להתייחס אליה כאינטרנט, ובלי השורה הזו
+   * אותה שכבה הצהירה שני דברים סותרים על אותה רשומה: הכרטיס
+   * "אינטרנט וסיבים" ספר 30 והמחשבון ספר 29.
+   *
+   * ⚠️ הסינון חל על אינטרנט ועל החבילה המשולבת בלבד. `tv` דווקא
+   * **כן** אמור לספור אותה — היא באמת טלוויזיה.
+   */
+  const realInternet = home.filter((p) => p.spec.hasInternet && p.type !== "TV");
   return {
     cellular: shown.filter((p) => p.category === "cellular").length,
-    internet: home.filter((p) => p.spec.hasInternet).length,
+    internet: realInternet.length,
     tv: home.filter((p) => p.spec.hasTv).length,
-    bundle: home.filter((p) => p.spec.hasTv && p.spec.hasInternet).length,
+    bundle: realInternet.filter((p) => p.spec.hasTv).length,
     electricity: shown.filter((p) => p.category === "electricity").length,
   };
 }

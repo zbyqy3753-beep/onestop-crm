@@ -271,7 +271,12 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
         </Card>
       </aside>
 
-      <div className={`min-w-0 ${compare.length > 0 ? "pb-32 lg:pb-24" : ""}`}>
+      {/*
+        הריפוד שמפנה מקום למגש ההשוואה עבר לשורש הדף (`lp-tray-open`
+        ב-`lp.css`, מסומן ע"י `CompareTray`). כאן הוא כיסה את עמודת
+        התוצאות בלבד והשאיר את הפוטר מתחת לסרגל.
+      */}
+      <div className="min-w-0">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-lp-ink-2">
             <span className="nums font-semibold text-lp-ink">{results.length}</span> חבילות

@@ -82,6 +82,21 @@ export function CompareTray({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, close]);
 
+  /*
+   * ⚠️ מפנה מקום למגש בתחתית **המסמך כולו**, לא רק בעמודת התוצאות.
+   * הכלל עצמו ב-`lp.css`; כאן רק הסימון, כי זה הרכיב היחיד שיודע
+   * מתי המגש באמת על המסך.
+   *
+   * ⚠️ הניקוי ב-cleanup חובה: הרכיב מחזיר `null` כשאין פריטים, אבל
+   * ה-class יושב על `document.body` ולא על ה-DOM שלו — בלי זה הוא
+   * היה שורד את ניקוי ההשוואה ומשאיר חור בתחתית הדף.
+   */
+  useEffect(() => {
+    if (items.length === 0) return;
+    document.body.classList.add("lp-tray-open");
+    return () => document.body.classList.remove("lp-tray-open");
+  }, [items.length]);
+
   if (items.length === 0) return null;
 
   /* כל פריטי ההשוואה הם מקטגוריה אחת — ראה ההערה על שורת המחיר. */

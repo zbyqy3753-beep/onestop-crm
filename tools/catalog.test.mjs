@@ -3,9 +3,12 @@ import { test } from "node:test";
 
 import {
   basePackages,
+  disclosedRiseCount,
   isListable,
   listableCounts,
+  serviceCounts,
 } from "../src/app/lp/catalog/catalog.ts";
+import { isComparable } from "../src/app/lp/catalog/savings.ts";
 import { catalog } from "../src/app/lp/catalog/catalog.ts";
 import { cardStats, compareRows, detailRows, shekels, speedLabel } from "../src/app/lp/catalog/format.ts";
 
@@ -73,6 +76,50 @@ test("קטלוג: הפער בין מה שהקובץ מצהיר למה שהדף �
     KNOWN_UNLISTABLE.size,
     `הקובץ מצהיר ${catalog.counts.total} חבילות והדף מציג ${shown.total}`,
   );
+});
+
+/*
+ * ⚠️ הבדיקה שמעל השוותה **סכומים בלבד**, ולכן רענון שמעביר חבילה
+ * מקטגוריה לקטגוריה עובר אותה בשקט: הסך נשאר 109 וההפרש נשאר 3.
+ * שלושת השדות הפר-קטגוריים של `listableCounts` לא נקראו באף מקום —
+ * חושבו בכל קריאה ונזרקו — ולכן גם לא היה מי שיתפוס את זה.
+ *
+ * ⚠️ וגם: `catalog.counts.total` מול אורך המערך בפועל. הכותרת מגיעה
+ * מהמחלץ ולא נספרת מהקובץ, כלומר היא יכולה להיות פשוט שגויה.
+ */
+test("קטלוג: הכותרת שהקובץ מצהיר תואמת את מה שיש בו בפועל, בכל קטגוריה", () => {
+  assert.equal(catalog.counts.total, PACKAGES.length, "הסך המוצהר אינו אורך המערך");
+
+  for (const category of ["cellular", "home", "electricity"]) {
+    assert.equal(
+      catalog.counts[category],
+      PACKAGES.filter((p) => p.category === category).length,
+      `הסך המוצהר ל-${category} אינו תואם את הרשומות בפועל`,
+    );
+  }
+
+  const shown = listableCounts(PACKAGES);
+  assert.equal(
+    shown.cellular + shown.home + shown.electricity,
+    shown.total,
+    "סכום הקטגוריות הגלויות אינו הסך הגלוי",
+  );
+});
+
+/*
+ * ⚠️ `disclosedRiseCount` מתועדת כ"נתון האמון של הדף" — כמה חבילות
+ * מצהירות על עליית מחיר בטקסט — ולא היה לה **אף קורא** בכל עץ המקור.
+ * כלומר רענון שמחצה אותה היה בלתי נראה. הבדיקה כאן היא הקורא היחיד
+ * שלה, והיא מנוסחת כטווח ולא כמספר מדויק: המטרה היא לתפוס קריסה
+ * (המחלץ הפסיק להביא `description`), לא לנעול את הקטלוג על ערך.
+ */
+test("קטלוג: מונה ההצהרות על עליית מחיר אינו קורס ברענון", () => {
+  const n = disclosedRiseCount(PACKAGES);
+  const shown = listableCounts(PACKAGES).total;
+
+  assert.ok(Number.isInteger(n) && n >= 0, `מונה לא תקין: ${n}`);
+  assert.ok(n <= shown, `${n} הצהרות מתוך ${shown} חבילות גלויות`);
+  assert.ok(n >= 10, `רק ${n} חבילות מצהירות על עלייה — המחלץ כנראה הפסיק להביא תיאורים`);
 });
 
 /*
@@ -414,6 +461,40 @@ test("קטלוג: כל חבילה גלויה נספרת לפחות באריח א
 });
 
 /*
+ * ⚠️ שתי שכבות באותו קוד לא יצהירו שני דברים סותרים על אותה רשומה.
+ *
+ * `isComparable` מתקנת נתון שגוי במקור: סטינג "החבילה המושלמת" (id 4)
+ * רשומה `hasInternet: true` אף שהיא שירות סטרימינג בלבד, ולכן היא
+ * נפסלת ממסלול הבית. `serviceCounts` — שמזין את הכרטיס "אינטרנט
+ * וסיבים" — קראה את אותם שני דגלים בלי התיקון, וספרה 30 בעוד
+ * המחשבון באותו עמוד ספר 29.
+ *
+ * הבדיקה מנוסחת כאינווריאנט בין שתי הפונקציות ולא על id 4, כדי
+ * שתתפוס גם את התיקון הבא שיוחל על אחת מהן בלבד.
+ */
+test("קטלוג: הכרטיס 'אינטרנט' אינו סופר חבילה שהמחשבון מסרב לקרוא לה אינטרנט", () => {
+  const counted = PACKAGES.filter(isListable).filter(
+    (p) => p.category === "home" && p.spec?.hasInternet && p.type !== "TV",
+  );
+
+  assert.equal(serviceCounts(PACKAGES).internet, counted.length);
+
+  // כל חבילה שנספרת כמשולבת חייבת להיות כזו שהמחשבון מוכן להשוות —
+  // או להיפסל מסיבה אחרת שאינה "זו לא באמת אינטרנט".
+  const bundles = counted.filter((p) => p.spec.hasTv);
+  assert.equal(serviceCounts(PACKAGES).bundle, bundles.length);
+
+  const tvTyped = bundles.filter((p) => p.type === "TV");
+  assert.deepEqual(tvTyped, [], "חבילת TV נספרה כמשולבת");
+
+  // והכיוון ההפוך: מה שהמחשבון מקבל חייב להיות בתוך מה שנספר.
+  const accepted = PACKAGES.filter(isListable).filter((p) => isComparable(p, "home"));
+  const countedIds = new Set(bundles.map((p) => p.id));
+  const orphans = accepted.filter((p) => !countedIds.has(p.id)).map((p) => p.id);
+  assert.deepEqual(orphans, [], `המחשבון משווה חבילות שהכרטיס אינו סופר: ${orphans.join(", ")}`);
+});
+
+/*
  * ⚠️ שתי רשומות שהגולש אינו יכול להבחין ביניהן.
  *
  * אחרי `displayName` שתי החבילות נקראות "Valentine's", אותו ספק, אותו
@@ -423,15 +504,23 @@ test("קטלוג: כל חבילה גלויה נספרת לפחות באריח א
  * מאבד אמון מהר יותר מכל מספר שגוי בודד.
  */
 test("קטלוג: זוגות שהגולש אינו יכול להבחין ביניהם — בדיוק החוב הידוע", () => {
+  /*
+   * ⚠️ המחיר **אינו** חלק מהמפתח. כל עוד הוא היה בו, הבדיקה דרשה
+   * ששני הכרטיסים יהיו זהים גם במחיר — ולכן תפסה רק את 50/51 ופספסה
+   * בדיוק את המקרים שהיא מתארת: 23/24 ("כשר" על גולן, ₪25 מול ₪27.90)
+   * ו-28/29 ("4 ב 130" על גולן, ₪34 מול ₪32). שני כרטיסים עם אותו שם
+   * ואותו ספק הם בלתי-נבדלים לגולש **בגלל** שהמחיר שונה: אין בכותרת
+   * שום דבר שמסביר למה.
+   */
   const seen = new Map();
   for (const p of PACKAGES.filter(isListable)) {
-    const k = [p.category, p.provider.slug, p.name, p.price ?? p.discountPercent].join("|");
+    const k = [p.category, p.provider.slug, p.name].join("|");
     if (!seen.has(k)) seen.set(k, []);
     seen.get(k).push(p.id);
   }
   const pairs = [...seen.values()].filter((ids) => ids.length > 1).map((ids) => [...ids].sort().join("/"));
 
-  expectFlags(pairs, ["50/51"], "זוגות בלתי-נבדלים");
+  expectFlags(pairs, ["23/24", "28/29", "50/51"], "זוגות בלתי-נבדלים");
 });
 
 /*
