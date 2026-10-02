@@ -113,7 +113,15 @@ export function cardStats(pkg: Package): Stat[] {
   const out: Stat[] = [];
   if (spec.allHours) out.push({ value: "כל השעות", caption: "מתי ההנחה חלה" });
   else if (spec.hoursText) out.push({ value: spec.hoursText, caption: "שעות ההנחה" });
-  out.push({ value: CUSTOMER_TYPE_HE[spec.customerType], caption: "מיועד ל" });
+  /*
+   * ⚠️ עם שער, מאותה סיבה ש-`shekels` מדרדר ל-"—": הקטלוג נכנס דרך
+   * `as unknown as Catalog` ואין ולידציה בזמן ריצה. ערך רביעי ברענון
+   * (למשל `municipal`) היה מייצר אריח עם כיתוב ובלי ערך, ובטבלת
+   * ההשוואה `undefined` נופל ל-"—" — כלומר הדף מכחיש נתון שהחבילה
+   * כן נושאת. עדיף להשמיט את האריח מאשר להדפיס חור.
+   */
+  const customerType = CUSTOMER_TYPE_HE[spec.customerType];
+  if (customerType) out.push({ value: customerType, caption: "מיועד ל" });
   if (spec.smartMeterRequired === true) out.push({ value: "מונה חכם", caption: "נדרש" });
   else if (spec.smartMeterRequired === false) out.push({ value: "כל המונים", caption: "מתאים ל" });
   return out.slice(0, 3);
@@ -193,8 +201,20 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     // 0 רשומות בקטלוג הנוכחי נושאות `true`, ולכן זו הגנה על הרענון הבא.
     if (s.commitment === false) rows.push({ label: "התחייבות", value: "ללא התחייבות" });
     if (s.commitment === true) rows.push({ label: "התחייבות", value: "בהתחייבות" });
-    if (s.smartMeterRequired === true) rows.push({ label: "סוג מונה", value: "מונה חכם בלבד" });
-    if (s.smartMeterRequired === false) rows.push({ label: "סוג מונה", value: "מתאים לכל סוגי המונים" });
+    /*
+     * ⚠️ אותו שער כמו ב-`שעות ההנחה` שמעל. האריח כבר אמר "מונה חכם /
+     * נדרש" או "כל המונים / מתאים ל", והשורה כאן חזרה על אותה עובדה
+     * בניסוח ארוך יותר — 7 מתוך 18 מסלולי החשמל הדפיסו אותה פעמיים.
+     * הבדיקה הקיימת לא תפסה אותן כי היא משווה מחרוזות, והמחרוזות
+     * באמת שונות; מה שזהה הוא העובדה.
+     */
+    const meterTiled = tiled.has("נדרש") || tiled.has("מתאים ל");
+    if (s.smartMeterRequired === true && !meterTiled) {
+      rows.push({ label: "סוג מונה", value: "מונה חכם בלבד" });
+    }
+    if (s.smartMeterRequired === false && !meterTiled) {
+      rows.push({ label: "סוג מונה", value: "מתאים לכל סוגי המונים" });
+    }
   }
 
   return rows;

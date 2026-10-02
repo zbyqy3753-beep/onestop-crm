@@ -3,22 +3,28 @@
 import { useMemo, useState } from "react";
 import { Card } from "./Card";
 import { PackageCard } from "./PackageCard";
-import { CompareTray } from "./CompareTray";
+import { CompareTray, MAX_COMPARE } from "./CompareTray";
 import { shekels } from "../catalog/format";
 import { afterPrice } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
 type SortKey = "price-asc" | "price-desc" | "after-asc" | "recommended";
 
-const SORTS: { key: SortKey; label: string }[] = [
+/*
+ * ⚠️ בחשמל אין מחיר — `priceOf` ממפה מסלול חשמל ל-`-discountPercent`,
+ * ולכן `price-asc` הוא בפועל "ההנחה הגדולה תחילה". התוויות
+ * ה"מחיריות" הן שקר מול כרטיס שמדפיס אחוז ותו לא: הגולש שבחר
+ * "מהיקר לזול" קיבל בראש הרשימה את ההנחות הקטנות ביותר. הדף כבר
+ * מכיר בזה בשני מקומות אחרים — מחוון המחיר מוסתר בחשמל, וטבלת
+ * ההשוואה מחליפה את תווית השורה — רק תפריט המיון נשאר מאחור.
+ */
+const SORTS: { key: SortKey; label: string; electricLabel?: string }[] = [
   { key: "recommended", label: "מומלצים תחילה" },
-  { key: "price-asc", label: "מחיר: מהזול ליקר" },
-  { key: "price-desc", label: "מחיר: מהיקר לזול" },
+  { key: "price-asc", label: "מחיר: מהזול ליקר", electricLabel: "הנחה: מהגבוהה לנמוכה" },
+  { key: "price-desc", label: "מחיר: מהיקר לזול", electricLabel: "הנחה: מהנמוכה לגבוהה" },
   // No competitor offers this, and it is the honest way to rank a promo market.
   { key: "after-asc", label: "מחיר אחרי ההטבה: מהזול ליקר" },
 ];
-
-const MAX_COMPARE = 4;
 
 function priceOf(p: Package): number {
   return p.category === "electricity" ? -(p.discountPercent ?? 0) : (p.price ?? Infinity);
@@ -291,7 +297,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
             >
               {SORTS.filter((s) => !(isElectric && s.key === "after-asc")).map((s) => (
                 <option key={s.key} value={s.key}>
-                  {s.label}
+                  {isElectric ? (s.electricLabel ?? s.label) : s.label}
                 </option>
               ))}
             </select>

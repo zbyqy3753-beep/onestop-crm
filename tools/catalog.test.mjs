@@ -197,6 +197,32 @@ test("תצוגה: שום כרטיס לא מדפיס אותה עובדה פעמי
   assert.deepEqual(offenders, [], `עובדה שהודפסה פעמיים: ${offenders.join(", ")}`);
 });
 
+test("תצוגה: אותה **עובדה** לא נאמרת פעמיים גם בניסוח שונה", () => {
+  /*
+   * ⚠️ הבדיקה שמעליה משווה מחרוזות, ולכן "מונה חכם" באריח מול
+   * "מונה חכם בלבד" בשורה חמקו ממנה — אותה עובדה בדיוק, בשני
+   * ניסוחים, על 7 מתוך 18 מסלולי החשמל. הבדיקה הזו ממפה נושאים
+   * ולא טקסט: אם האריח כבר דיבר על הנושא, השורה לא נכתבת.
+   */
+  const SUBJECTS = [
+    { row: "סוג מונה", tiles: ["נדרש", "מתאים ל"] },
+    { row: "שעות ההנחה", tiles: ["שעות ההנחה", "מתי ההנחה חלה"] },
+    { row: "עלות התקנה", tiles: ["התקנה"] },
+    { row: "דקות לחו״ל", tiles: ["דקות לחו״ל"] },
+  ];
+  const offenders = [];
+  for (const p of PACKAGES.filter(isListable)) {
+    const captions = new Set(cardStats(p).map((t) => t.caption));
+    for (const r of detailRows(p)) {
+      const subject = SUBJECTS.find((x) => x.row === r.label);
+      if (subject && subject.tiles.some((c) => captions.has(c))) {
+        offenders.push(`${p.id}: ${r.label}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], `נושא שנאמר פעמיים: ${offenders.join(", ")}`);
+});
+
 test("תצוגה: עמלה שאינה מספר מדרדרת לקו מפריד ולא מפילה את הדף", () => {
   // ⚠️ `isListable` שומר על `price` ו-`discountPercent` בלבד. כל העמלות
   // מגיעות ל-`shekels` בלי שער, ומחרוזת הפילה שם את רינדור השרת השלם.

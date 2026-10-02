@@ -9,6 +9,7 @@ import {
   computeSaving,
   declaresRiseInText,
   familyPriceOnly,
+  isBlankSpend,
   routerPricedSeparately,
   isComparable,
   parseSpend,
@@ -582,4 +583,23 @@ test("מחיר נתב עשרוני הוא גם הוא חיוב נסתר", () => 
     assert.ok(routerPricedSeparately(fake(text)), `לא זוהה: ${text}`);
   }
   assert.equal(routerPricedSeparately(fake("עלות נתב 0.00 ₪")), false);
+});
+
+test("קלט: שדה שמכיל רק סימני כיווניות נחשב ריק", () => {
+  /*
+   * ⚠️ `parseSpendRaw` מנקה סימני כיווניות לפני הפרסור, אבל בדיקת
+   * ה"ריקנות" במחשבון השתמשה ב-`trim()` שאינו מסיר אותם. הדבקה של
+   * תא ריק מאקסל עברי נראתה כ"הוקלד משהו", ולכן יציאה מהשדה הדליקה
+   * הודעת שגיאה מתחת לשדה שנראה ריק לחלוטין.
+   */
+  assert.equal(isBlankSpend(""), true);
+  assert.equal(isBlankSpend("   "), true);
+  assert.equal(isBlankSpend("‏"), true);
+  assert.equal(isBlankSpend("‎‏"), true);
+  assert.equal(isBlankSpend("‏ "), true);
+  assert.equal(isBlankSpend("⁦⁩"), true);
+  // ומה שבאמת הוקלד נשאר "לא ריק" — גם קלט פסול.
+  assert.equal(isBlankSpend("0"), false);
+  assert.equal(isBlankSpend("‏1,200‏"), false);
+  assert.equal(isBlankSpend("abc"), false);
 });

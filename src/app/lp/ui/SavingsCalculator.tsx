@@ -12,6 +12,7 @@ import {
   MIN_SPEND,
   computeSaving,
   parseSpend,
+  isBlankSpend,
   parseSpendRaw,
   perLinePrice,
   type Track,
@@ -139,7 +140,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
   // ש-`attempted` נועד לו, והתנאי `spend.trim() !== ""` היה מבטל אותו:
   // לחיצה בשדה ריק חזרה בשקט בלי שההסבר יידלק. `blurred` לבדו עדיין
   // לא מתלונן על שדה ריק — יציאה מהשדה בלי להקליד אינה טעות.
-  const invalidSpend = monthlySpend <= 0 && (attempted || (blurred && spend.trim() !== ""));
+  const invalidSpend = monthlySpend <= 0 && (attempted || (blurred && !isBlankSpend(spend)));
   /*
    * ⚠️ אותו גידור בדיוק כמו ב-`invalidSpend`, ומאותה סיבה — הפסקה
    * שמציגה את שתי ההודעות היא אחת ו-`aria-live="polite"`.

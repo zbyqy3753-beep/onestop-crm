@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card } from "./Card";
 import { ProviderLogo } from "./ProviderLogo";
 import { LeadForm } from "./LeadForm";
+import { MAX_COMPARE } from "./CompareTray";
 import { cardStats, detailRows, shekels } from "../catalog/format";
 import type { Package } from "../catalog/types";
 
@@ -27,6 +28,12 @@ interface Props {
   onCompareToggle?: (pkg: Package) => void;
   /** Detail pages already show everything, so they render the card expanded. */
   defaultOpen?: boolean;
+  /**
+   * תקרת ההשוואה. המגש מדפיס `(n/max)` מהקבוע; התיבה כאן הכריזה "4"
+   * כמחרוזת, וזה הטקסט היחיד שמסביר למשתמש מקלדת למה כל התיבות יצאו
+   * מסדר ה-Tab — שני המספרים חייבים לבוא מאותו מקור.
+   */
+  compareMax?: number;
 }
 
 export function PackageCard({
@@ -35,6 +42,7 @@ export function PackageCard({
   compareFull = false,
   onCompareToggle,
   defaultOpen = false,
+  compareMax = MAX_COMPARE,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const [formOpen, setFormOpen] = useState(false);
@@ -49,7 +57,14 @@ export function PackageCard({
   const riseNote = !isElectric ? pkg.priceAfterPromoNote : null;
 
   return (
-    <Card as="article" interactive className="flex flex-col overflow-hidden">
+    /*
+     * ⚠️ בלי `interactive`. `Card` מגדיר את הדגל כתשובה לשאלה אחת —
+     * "האם לחיצה על הדבר הזה מובילה לאנשהו?" — והתשובה כאן הפכה ל"לא"
+     * ברגע שה-`<Link href={`/p/${pkg.slug}`}>` הוסר (ראה ההערה למעלה).
+     * הכרטיס המשיך להתרומם בריחוף, כלומר הבטיח ניווט שאינו קיים:
+     * לחיצה על כל שטח הכרטיס מלבד שלושת הפקדים אינה עושה דבר.
+     */
+    <Card as="article" className="flex flex-col overflow-hidden">
       <div className="flex items-start gap-3 border-b border-lp-line p-4">
         <ProviderLogo logo={pkg.provider.logo} name={pkg.provider.name} size={34} className="shrink-0" />
         <div className="min-w-0 flex-1">
@@ -86,7 +101,7 @@ export function PackageCard({
             className={`flex shrink-0 flex-col items-center gap-1 text-lp-2xs ${
               compareFull && !compareChecked ? "cursor-not-allowed text-lp-ink-3 opacity-50" : "cursor-pointer text-lp-ink-3"
             }`}
-            title={compareFull && !compareChecked ? "ניתן להשוות עד 4 חבילות" : undefined}
+            title={compareFull && !compareChecked ? `ניתן להשוות עד ${compareMax} חבילות` : undefined}
           >
             <input
               type="checkbox"
@@ -107,7 +122,7 @@ export function PackageCard({
               */
               aria-label={
                 compareFull && !compareChecked
-                  ? `הוסף את ${pkg.name} להשוואה — לא זמין, ניתן להשוות עד 4 חבילות`
+                  ? `הוסף את ${pkg.name} להשוואה — לא זמין, ניתן להשוות עד ${compareMax} חבילות`
                   : `${compareChecked ? "הסר את" : "הוסף את"} ${pkg.name} ${compareChecked ? "מההשוואה" : "להשוואה"}`
               }
             />

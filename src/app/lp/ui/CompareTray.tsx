@@ -6,6 +6,13 @@ import { compareRows, shekels } from "../catalog/format";
 import type { Package } from "../catalog/types";
 
 /**
+ * תקרת ההשוואה. יושבת כאן ולא ב-`CatalogBrowser` כי גם `PackageCard`
+ * מכריז אותה לקורא מסך, ו-`CatalogBrowser` מייבא את שניהם — ייבוא
+ * ממנו היה מעגלי.
+ */
+export const MAX_COMPARE = 4;
+
+/**
  * A sticky tray that fills as you tick packages, then opens a side-by-side
  * sheet. Comparison only becomes useful at two items, so the button stays
  * disabled until then rather than opening an empty table.
@@ -153,14 +160,23 @@ export function CompareTray({
           role="dialog"
           aria-modal="true"
           aria-label="השוואת חבילות"
-          onClick={close}
+          /*
+           * ⚠️ `onClick` על האוברליי סגר את החלון גם כשהלחיצה התחילה
+           * *בתוך* הפאנל: אירוע `click` נורה על האב המשותף של ה-mousedown
+           * וה-mouseup, ולכן סימון טקסט בטבלה (היא `overflow-x-auto`)
+           * ששוחרר מעט מחוץ לפאנל נחת על האוברליי — ו-`stopPropagation`
+           * של הפאנל כלל לא עמד בדרך. הבדיקה על `currentTarget` סוגרת
+           * רק כשהלחיצה עצמה הייתה על הרקע.
+           */
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) close();
+          }}
         >
           <div
             ref={panelRef}
             /* יעד הפוקוס בפתיחה — הכותרת נקראת, ומכאן Tab מתחיל בתוך החלון. */
             tabIndex={-1}
             className="animate-lp-rise max-h-[90dvh] w-full max-w-4xl overflow-auto rounded-t-lp-card bg-lp-surface p-5 shadow-lp-pop sm:rounded-lp-card"
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-lp-ink">השוואת חבילות</h2>
