@@ -28,8 +28,19 @@ body:has(.lp-root) {
    * ⚠️ גם אופקית, ולא רק למטה. `viewportFit: "cover"` ב-`app/layout.tsx`
    * מותח את הדף אל מתחת לפינות המעוגלות ולמגרעת — ובלנדסקייפ על אייפון
    * זה בולע את הקצה של הטקסט. הריפוד הוא אפס בכל מכשיר בלי מגרעת.
+   *
+   * ⚠️ `padding-left`/`padding-right` ולא `padding-inline`, וזה לא עניין
+   * של טעם. `padding-inline: A B` הוא קיצור ל-`inline-start: A` ו-
+   * `inline-end: B`, והמסמך הזה הוא `dir="rtl"` (ראה `app/layout.tsx`) —
+   * כלומר inline-start הוא הקצה ה**ימני**. התוצאה הייתה ש-
+   * `env(safe-area-inset-left)` הוחל על צד ימין ו-`...-right` על צד
+   * שמאל. בפורטרט זה לא נראה (שני הערכים זהים), אבל בלנדסקייפ על
+   * אייפון המגרעת יושבת בצד אחד בלבד: הריפוד נפתח בצד שאין בו מגרעת
+   * והקצה שכן נחתך נשאר בלי ריפוד — בדיוק הבאג שהשורה נועדה למנוע.
+   * `env()` מחזיר מרחק פיזי, ולכן מי שקורא אותו חייב לכתוב פיזי.
    */
-  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /*

@@ -6,6 +6,7 @@ import {
   disclosedRiseCount,
   isListable,
   listableCounts,
+  logicName,
   serviceCounts,
 } from "../src/app/lp/catalog/catalog.ts";
 import { isComparable } from "../src/app/lp/catalog/savings.ts";
@@ -173,6 +174,16 @@ test("תצוגה: שתי המהירויות נשארות שלמות ביחידה
   assert.equal(speedLabel({ downloadMbps: 1000, uploadMbps: 1000 }), "1/1Gb");
   assert.equal(speedLabel({ downloadMbps: 500, uploadMbps: 50 }), "500/50Mb");
   assert.equal(speedLabel({ downloadMbps: 2000, uploadMbps: null }), "2Gb");
+  assert.equal(speedLabel({ downloadMbps: 3000, uploadMbps: 2000 }), "3/2Gb");
+  /*
+   * ⚠️ "שלמות" היא חלוקה ב-1000, לא `>= 1000`. `{1500, 1000}` עבר את
+   * התנאי הקודם והוצג כ-"1.5/1Gb" — המספר הגדול כשבר, אותה קריאה
+   * שגויה שהבדיקה הזו נכתבה כדי למנוע. ו-`{1000.5, …}` הוא אובדן דיוק
+   * ממש: `nf` מעגל לשלוש ספרות ולכן החלוקה הדפיסה 1.001 במקום 1000.5.
+   */
+  assert.equal(speedLabel({ downloadMbps: 1500, uploadMbps: 1000 }), "1,500/1,000Mb");
+  assert.equal(speedLabel({ downloadMbps: 1500, uploadMbps: null }), "1,500Mb");
+  assert.equal(speedLabel({ downloadMbps: 1000.5, uploadMbps: 1000.5 }), "1,000.5/1,000.5Mb");
   for (const p of PACKAGES.filter((x) => x.category === "home" && isListable(x))) {
     const label = speedLabel(p.spec);
     if (label == null) continue;
@@ -223,6 +234,48 @@ test("תצוגה: אותה **עובדה** לא נאמרת פעמיים גם בנ
   assert.deepEqual(offenders, [], `נושא שנאמר פעמיים: ${offenders.join(", ")}`);
 });
 
+/*
+ * ⚠️ אותו כלל, על רשומה **שאינה בקטלוג**.
+ *
+ * הבדיקה שמעליה רצה על הקטלוג האמיתי, ובו אין אף מסלול חשמל שנושא
+ * `allHours: true` **וגם** `hoursText` — ולכן היא עברה בזמן ש-`detailRows`
+ * הכיר בשער רק בתווית "שעות ההנחה" ולא ב-"מתי ההנחה חלה". רשומה כזו
+ * קיבלה אריח "כל השעות" ומתחתיו שורה "שעות ההנחה: 23:00-07:00": אותה
+ * עובדה פעמיים, ובשתי תשובות שסותרות זו את זו. `smartMeterRequired`
+ * כבר נבדק מול שתי התוויות; זו הייתה חוסר עקביות ולא החלטה.
+ */
+test("תצוגה: 'כל השעות' באריח מונע את שורת שעות ההנחה גם בניסוח האחר", () => {
+  const elec = (spec) => ({
+    id: "synthetic",
+    category: "electricity",
+    priceModel: "discount",
+    price: null,
+    discountPercent: 10,
+    spec: {
+      discountPercent: 10,
+      allHours: false,
+      hoursText: null,
+      customerType: "private",
+      commitment: null,
+      smartMeterRequired: null,
+      maxMonthlyBill: null,
+      ...spec,
+    },
+  });
+
+  const both = elec({ allHours: true, hoursText: "23:00-07:00" });
+  assert.deepEqual(
+    cardStats(both).map((s) => [s.caption, s.value]),
+    [["מתי ההנחה חלה", "כל השעות"], ["מיועד ל", "לקוח פרטי"]],
+  );
+  assert.deepEqual(detailRows(both).filter((r) => r.label === "שעות ההנחה"), []);
+
+  // ובלי `allHours` השורה **כן** נדרשת — היא פשוט עולה לאריח.
+  const hoursOnly = elec({ hoursText: "23:00-07:00" });
+  assert.equal(cardStats(hoursOnly)[0].caption, "שעות ההנחה");
+  assert.deepEqual(detailRows(hoursOnly).filter((r) => r.label === "שעות ההנחה"), []);
+});
+
 test("תצוגה: עמלה שאינה מספר מדרדרת לקו מפריד ולא מפילה את הדף", () => {
   // ⚠️ `isListable` שומר על `price` ו-`discountPercent` בלבד. כל העמלות
   // מגיעות ל-`shekels` בלי שער, ומחרוזת הפילה שם את רינדור השרת השלם.
@@ -250,8 +303,22 @@ test("תצוגה: עמלה שאינה מספר מדרדרת לקו מפריד ו
  * ⚠️ כל רשימות החוב הן מחרוזות. `id` בקטלוג הוא מחרוזת ולא מספר.
  */
 
+/*
+ * ⚠️ `logicName` ולא `p.name`. `PACKAGES` הוא `basePackages()`, כלומר
+ * השמות שם **מנוקים** — ו-`displayName` זורק בדיוק את מה שהבדיקות כאן
+ * מחפשות: `*2*` נמחק (id 18 "*2* 3 קווים ב99", id 22, id 29, id 51),
+ * וכל מה שאחרי `[line]` נקטע (id 36). כלומר כל רשימת חוב כאן חושבה מול
+ * טקסט שהקוד עצמו לא קורא — כל המסננים ב-`savings.ts` עוברים דרך
+ * `logicName`, שמחזיר את `rawName` הגולמי. שם שנושא מחיר מבצע או מספר
+ * קווים הוא דפוס קיים בקטלוג הזה, ולכן הבדיקה חייבת לראות את אותו
+ * טקסט שהקוד רואה.
+ *
+ * ⚠️ היום שתי הגרסאות מניבות **אותן** חמש רשימות חוב בדיוק (הטקסט
+ * שהניקוי זורק אינו נושא מספרים רלוונטיים), ולכן התיקון אינו משנה אף
+ * ציפייה כאן — הוא סוגר את הפער לרענון הבא.
+ */
 const norm = (s) => String(s ?? "").replace(/\s+/g, " ");
-const proseOf = (p) => norm([p.name, p.description ?? "", p.benefits ?? ""].join(" "));
+const proseOf = (p) => norm([logicName(p), p.description ?? "", p.benefits ?? ""].join(" "));
 const nums = (re, txt) => [...new Set([...txt.matchAll(re)].map((m) => Number(m[1].replace(/,/g, ""))))];
 
 /**
@@ -375,6 +442,29 @@ test("קטלוג: rawPriceField אינו אחוז ההנחה — הוכחת הנ
  * לומר על אילו שעות — בדף השוואת מחירים זו בדיוק ההשמטה שגורמת לגולש
  * להשוות מסלול לילה מול מסלול כל-היממה כאילו הם אותו דבר.
  */
+/*
+ * ⚠️ הבדיקות שמתחת קוראות את הפרוזה של הרשומה כראיה נגד המספר שלצידה,
+ * ולכן הן חייבות לקרוא **את אותו טקסט שהקוד קורא**. `PACKAGES` מנוקה,
+ * ו-`displayName` זורק גם `*2*` וגם כל מה שאחרי `[line]` — כלומר גרסה
+ * שקוראת `p.name` מחשבת רשימות חוב מול טקסט שאף מסנן ב-`savings.ts`
+ * לא רואה. הבדיקה הזו היא הנעילה: אם `proseOf` יחזור ל-`p.name`, היא
+ * תיפול בשם במקום שחמש רשימות החוב ישתקו.
+ */
+test("בדיקות: הפרוזה שהבדיקות קוראות היא הגולמית, כמו בקוד", () => {
+  const marked = PACKAGES.filter((p) => p.rawName);
+  assert.ok(marked.length > 0, "אין רשומה שהניקוי שינה — הנעילה הזו חדלה מלבדוק");
+  for (const p of marked) {
+    assert.ok(
+      proseOf(p).startsWith(norm(p.rawName)),
+      `${p.id}: הפרוזה פותחת ב-${JSON.stringify(proseOf(p).slice(0, 40))} ולא בשם הגולמי`,
+    );
+  }
+  // `*2*` ו-`[line]` הם בדיוק מה שהניקוי מוחק, והראיה היחידה של ids 18/22/29.
+  const byId = new Map(PACKAGES.map((p) => [p.id, p]));
+  assert.match(proseOf(byId.get("29")), /\*\s?2\s?\*/);
+  assert.match(proseOf(byId.get("36")), /\[line\]/);
+});
+
 test("קטלוג: מסלול חשמל בלי שעות הנחה — בדיוק החוב הידוע", () => {
   expectFlags(
     PACKAGES.filter((p) => p.category === "electricity" && !p.spec.allHours && !p.spec.hoursText).map((p) => p.id),

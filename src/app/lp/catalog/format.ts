@@ -45,9 +45,19 @@ export function dataLabel(spec: CellularSpec): string | null {
  * השניים נקרא כקטן משמעותית. יחידת Gb נבחרת רק כששתי המהירויות
  * נשארות שלמות בה; אחרת שתיהן ב-Mb.
  */
+/*
+ * ⚠️ "נשארות שלמות" נבדק כחלוקה ב-1000 ולא כ-`>= 1000`. התנאי הקודם
+ * עצר את `{1000, 100}` אבל לא את `{1500, 1000}`, שהוצג כ-"1.5/1Gb" —
+ * בדיוק הניסוח שההערה שמעל פוסלת, רק מהצד השני: המספר הגדול נכתב
+ * כשבר. וגרוע מכך, `nf` מוגבל לשלוש ספרות אחרי הנקודה בברירת מחדל,
+ * ולכן `{1000.5, 1000.5}` הודפס כ-"1.001/1.001Gb" — **אובדן דיוק**
+ * בעקבות חלוקה, על מספר שהקטלוג מסר במדויק. יחידה שאינה מחלקת את שתי
+ * המהירויות בשלמות נשארת Mb, שם שום חלוקה לא מתבצעת.
+ */
 export function speedLabel(spec: HomeSpec): string | null {
   if (spec.downloadMbps == null) return null;
-  const asGb = spec.downloadMbps >= 1000 && (spec.uploadMbps == null || spec.uploadMbps >= 1000);
+  const whole = (mbps: number) => mbps >= 1000 && mbps % 1000 === 0;
+  const asGb = whole(spec.downloadMbps) && (spec.uploadMbps == null || whole(spec.uploadMbps));
   const unit = asGb ? "Gb" : "Mb";
   const value = (mbps: number) => nf.format(asGb ? mbps / 1000 : mbps);
   return spec.uploadMbps != null
@@ -194,7 +204,17 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
 
   if (pkg.category === "electricity") {
     const s = pkg.spec as ElectricitySpec;
-    if (s.hoursText && !tiled.has("שעות ההנחה")) rows.push({ label: "שעות ההנחה", value: s.hoursText });
+    /*
+     * ⚠️ השער בודק את **שתי** התוויות, כמו `meterTiled` שמתחת. `cardStats`
+     * בוחר בין "שעות ההנחה" (כשיש `hoursText`) ל-"מתי ההנחה חלה"
+     * (כש-`allHours` דלוק), והשער הקודם הכיר רק בראשונה. רשומה שנושאת
+     * `allHours: true` **וגם** `hoursText` קיבלה אריח "כל השעות" ומתחתיו
+     * שורה "שעות ההנחה: 23:00-07:00" — אותה עובדה פעמיים, ובשתי תשובות
+     * שסותרות זו את זו, בדיוק מה שה-`SUBJECTS` בבדיקה כבר אוסר. אין
+     * רשומה כזו בקטלוג של היום; זה שער לרענון הבא.
+     */
+    const hoursTiled = tiled.has("שעות ההנחה") || tiled.has("מתי ההנחה חלה");
+    if (s.hoursText && !hoursTiled) rows.push({ label: "שעות ההנחה", value: s.hoursText });
     if (s.maxMonthlyBill) rows.push({ label: "תקרת חשבונית חודשית", value: shekels(s.maxMonthlyBill) });
     // אותה תלת-מצביות כמו למעלה, בכיוון ההפוך: רק השלילי נכתב,
     // ולכן מסלול עם התחייבות מוצהרת נראה כמו מסלול שלא ידוע עליו דבר.

@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { revalidateLeadSurfaces } from "@/app/(app)/_revalidate";
 import { db } from "@/server/repositories";
 import {
   isLeadCategory,
@@ -336,6 +336,13 @@ export async function submitLandingLead(
             for (const body of notes) {
               await db.leads.addNote(duplicate.id, author, body);
             }
+            /*
+             * ⚠️ גם הענף הזה מרענן. הוא **כן** מוטציה — הערה נוספה לליד
+             * קיים — והיא לא הופיעה בכרטיס הליד עד טעינה מחדש של המסך.
+             * זו בדיוק השורה שהנציג צריך ("משלם היום ₪220 · 3 קווים"),
+             * כלומר הענף שבו ריענון חסר מסתיר את המידע היחיד שהתווסף.
+             */
+            revalidateLeadSurfaces();
           }
         } catch (err) {
           console.warn("[lp] הוספת הערה לליד כפול נכשלה", err);
@@ -423,7 +430,14 @@ export async function submitLandingLead(
       assigneeId,
     });
 
-    revalidatePath("/leads");
+    /*
+     * ⚠️ כל מסך שמציג לידים, ולא `/leads` לבדו: הדשבורד (`/`) סופר
+     * לידים לפי סטטוס וסוג, ו-`/deals` נשען על עלויות הלידים. ליד
+     * שנכנס מדף הנחיתה לא הופיע במספרים של הדשבורד עד טעינה מחדש.
+     * זו אותה פונקציה שכל מוטציה אחרת במערכת קוראת — ראה
+     * `app/(app)/_revalidate.ts`.
+     */
+    revalidateLeadSurfaces();
     return { status: "sent" };
   } catch (err) {
     console.error("[lp] שמירת הליד נכשלה", err);
