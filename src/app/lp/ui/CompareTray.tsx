@@ -43,6 +43,33 @@ export function CompareTray({
   const panelRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
 
+  /*
+   * ⚠️ אותו חוזה בדיוק גם על הסרת שבב, ולא רק על סגירת החלון.
+   *
+   * ה-✕ של שבב מוסר את השבב, כלומר **מפרק את הכפתור שנלחץ** — והפוקוס
+   * נפל ל-`<body>`, מה שמחזיר את משתמש המקלדת לראש הדף אחרי כל
+   * הקטלוג, בדיוק מה שההערה למעלה פוסלת. אחרי ההסרה הפוקוס עובר
+   * לשבב שתפס את המקום (או לאחרון, אם הוסר האחרון), ואם לא נשאר שבב
+   * אחד — לכפתור "נקה", הפקד הסמוך שנשאר במגש.
+   *
+   * ⚠️ הסרת השבב האחרון מפרקת את המגש כולו (`items.length === 0`
+   * מחזיר `null`), ואז אין במגש פקד למקד. זה המצב היחיד שבו הפוקוס
+   * יורד ל-`<body>`, והוא בלתי נמנע מכאן: תיבת הסימון שהוסרה יושבת
+   * ב-`PackageCard`, מחוץ לרכיב הזה.
+   */
+  const listRef = useRef<HTMLUListElement>(null);
+  const clearRef = useRef<HTMLButtonElement>(null);
+  const focusAfterRemove = useRef<number | null>(null);
+
+  useEffect(() => {
+    const index = focusAfterRemove.current;
+    if (index == null) return;
+    focusAfterRemove.current = null;
+    const buttons = listRef.current?.querySelectorAll<HTMLElement>("[data-lp-chip-remove]");
+    const next = buttons?.length ? buttons[Math.min(index, buttons.length - 1)] : undefined;
+    (next ?? clearRef.current)?.focus();
+  }, [items]);
+
   const close = useCallback(() => {
     setOpen(false);
     openerRef.current?.focus();
@@ -122,13 +149,20 @@ export function CompareTray({
           <span className="flex-1 text-sm font-medium text-lp-ink sm:flex-none">
             להשוואה ({items.length}/{max})
           </span>
-          <ul className="order-last flex w-full flex-nowrap gap-2 overflow-x-auto sm:order-none sm:w-auto sm:flex-1 sm:flex-wrap sm:overflow-visible">
-            {items.map((p) => (
+          <ul
+            ref={listRef}
+            className="order-last flex w-full flex-nowrap gap-2 overflow-x-auto sm:order-none sm:w-auto sm:flex-1 sm:flex-wrap sm:overflow-visible"
+          >
+            {items.map((p, i) => (
               <li key={p.id} className="flex shrink-0 items-center gap-1 rounded-full bg-lp-surface-2 px-3 py-1 text-xs">
                 <span className="max-w-[10rem] truncate text-lp-ink">{p.name}</span>
                 <button
                   type="button"
-                  onClick={() => onRemove(p)}
+                  data-lp-chip-remove
+                  onClick={() => {
+                    focusAfterRemove.current = i;
+                    onRemove(p);
+                  }}
                   aria-label={`הסר את ${p.name} מההשוואה`}
                   className="-my-1 inline-flex min-h-9 min-w-9 items-center justify-center text-lp-ink-3 hover:text-lp-rise"
                 >
@@ -137,7 +171,12 @@ export function CompareTray({
               </li>
             ))}
           </ul>
-          <button type="button" onClick={onClear} className="-mx-2 inline-flex min-h-11 items-center px-2 text-xs text-lp-ink-3 hover:underline">
+          <button
+            ref={clearRef}
+            type="button"
+            onClick={onClear}
+            className="-mx-2 inline-flex min-h-11 items-center px-2 text-xs text-lp-ink-3 hover:underline"
+          >
             נקה
           </button>
           <button

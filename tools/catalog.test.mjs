@@ -7,6 +7,7 @@ import {
   isListable,
   listableCounts,
   logicName,
+  providers,
   serviceCounts,
 } from "../src/app/lp/catalog/catalog.ts";
 import { isComparable } from "../src/app/lp/catalog/savings.ts";
@@ -691,4 +692,89 @@ test("פרטים מלאים: `false` מוצג כערך מפורש ולא נבל�
     }
   }
   assert.deepEqual(missing, [], `שדות שליליים שנבלעו: ${missing.join(", ")}`);
+});
+
+/*
+ * אחוז הנחה 0 אינו מסלול הנחה.
+ *
+ * ⚠️ `isListable` דרש `price > 0` בענף החודשי אבל רק "מספר סופי" בענף
+ * החשמל, ולכן `discountPercent: 0` עבר את השער ועלה לדף כמסלול אמיתי
+ * עם הכותרת "0% הנחה". גרוע מזה: `afterPrice` ו-`byPrice` מדרגות חשמל
+ * כ-`-discountPercent`, ולכן 0% (או אחוז שלילי, שגם הוא עבר) מדורג
+ * כ**זול ביותר** בקטגוריה — ראש `highlights` ו-`cheapest`. הקטלוג של
+ * היום נקי, וזה שער לרענון הבא.
+ */
+test("חשמל: אחוז הנחה 0 או שלילי אינו חבילה שמוצגת", () => {
+  const elec = PACKAGES.find((p) => p.category === "electricity" && isListable(p));
+  assert.ok(elec, "לא נמצאה חבילת חשמל שמוצגת");
+  for (const discountPercent of [0, -0, -5, -0.1]) {
+    assert.equal(
+      isListable({ ...elec, discountPercent }),
+      false,
+      `${discountPercent}% עבר את השער`,
+    );
+  }
+  // ואחוז אמיתי ממשיך לעבור, כולל שבר.
+  for (const discountPercent of [0.5, 7, 100]) {
+    assert.equal(isListable({ ...elec, discountPercent }), true, `${discountPercent}% נפסל`);
+  }
+  // שני הענפים אומרים את אותו הדבר על אפס.
+  const monthly = PACKAGES.find((p) => p.category === "cellular" && isListable(p));
+  assert.equal(isListable({ ...monthly, price: 0 }), false);
+  assert.equal(isListable({ ...elec, discountPercent: 0 }), false);
+  // והקטלוג של היום אינו מאבד אף רשומה בגלל השער הזה.
+  const zeros = PACKAGES.filter(
+    (p) => p.category === "electricity" && typeof p.discountPercent === "number" && p.discountPercent <= 0,
+  ).map((p) => p.id);
+  assert.deepEqual(zeros, [], `רשומות חשמל עם אחוז הנחה שאינו חיובי: ${zeros.join(", ")}`);
+});
+
+/*
+ * `providers` סופרת **את המערך שנמסר לה**, ולא את רשימת הספקים של הקטלוג.
+ *
+ * ⚠️ הפונקציה קיבלה חבילות, ספרה מהן — ואז הרכיבה את הרשימה
+ * מ-`catalog.providers`. ספק שיש לו חבילה במערך שנמסר אך אינו רשום שם
+ * נעלם מהרצועה בשקט. היום 12 מתוך 12 מופיעים בשני המקומות ולכן הבאג
+ * רדום, אבל `providers` היא המספר שהדף מצהיר עליו ("אנחנו עובדים עם N
+ * חברות"), ורענון שיוסיף ספק חדש לחבילות בלי להוסיף אותו ל-`providers`
+ * של הקטלוג היה מוריד את המספר במקום להעלות אותו.
+ */
+test("ספקים: הרשימה נבנית מהחבילות שנמסרו, גם כשהספק חסר בקטלוג", () => {
+  // מערך ריק → רצועה ריקה (הארגומנט נשלט).
+  assert.equal(providers([]).length, 0);
+
+  // תת-קבוצה של ספק אחד → רק הוא, עם המונה שלו.
+  const slug = PACKAGES.find(isListable).provider.slug;
+  const subset = PACKAGES.filter((p) => p.provider.slug === slug);
+  const only = providers(subset);
+  assert.deepEqual(only.map((p) => p.slug), [slug]);
+  assert.equal(only[0].count, subset.filter(isListable).length);
+
+  // ספק שאינו ב-`catalog.providers` — הראיה שהארגומנט אכן נשלט.
+  const known = new Set(catalog.providers.map((p) => p.slug));
+  assert.ok(!known.has("ghost-isp"));
+  const tpl = PACKAGES.find((p) => p.category === "cellular" && isListable(p));
+  const ghost = {
+    ...tpl,
+    id: "test-ghost",
+    provider: { ...tpl.provider, slug: "ghost-isp", name: "ספק רפאים", logo: "" },
+  };
+  const withGhost = providers([...PACKAGES, ghost]);
+  const row = withGhost.find((p) => p.slug === "ghost-isp");
+  assert.ok(row, "ספק שיש לו חבילה נעלם מהרצועה");
+  assert.equal(row.count, 1);
+  assert.equal(row.name, "ספק רפאים");
+  assert.deepEqual(row.categories, ["cellular"]);
+
+  // והסדר נשמר: מיון לפי מונה יורד, והספקים המוכרים ללא שינוי.
+  const base = providers(PACKAGES);
+  assert.deepEqual(
+    withGhost.filter((p) => p.slug !== "ghost-isp").map((p) => `${p.slug}:${p.count}`),
+    base.map((p) => `${p.slug}:${p.count}`),
+  );
+  for (let i = 1; i < base.length; i += 1) assert.ok(base[i - 1].count >= base[i].count);
+  // כל ספק ברצועה הוא ספק שיש מאחוריו חבילה שמוצגת.
+  const shownSlugs = new Set(PACKAGES.filter(isListable).map((p) => p.provider.slug));
+  for (const p of base) assert.ok(shownSlugs.has(p.slug), `${p.slug} ברצועה בלי חבילה`);
+  assert.equal(base.length, shownSlugs.size);
 });

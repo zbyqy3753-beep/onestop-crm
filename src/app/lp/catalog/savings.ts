@@ -181,8 +181,8 @@ const PRICED_BY_LINE_COUNT =
 */
 export function afterPriceDependsOnLines(p: Package): boolean {
   if (p.priceModel !== "monthly") return false;
-  const tiers = (p.spec as Partial<CellularSpec>).lineTiers;
-  if (p.priceAfterPromo == null && tiers?.length) return false;
+  const tiers = tierTable(p.spec as Partial<CellularSpec>);
+  if (p.priceAfterPromo == null && tiers) return false;
   return PRICED_BY_LINE_COUNT.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
 }
 
@@ -274,6 +274,25 @@ function isMoney(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
+/**
+ * טבלת מדרגות שאפשר **לעבור עליה**, ולא רק משהו שיש לו `length`.
+ *
+ * ⚠️ שלושת הקוראים של `lineTiers` בדקו `tiers?.length` ומיד אחר כך
+ * קראו ל-`every` / `some` / `filter`. `length` הוא אמת גם על מחרוזת
+ * וגם על `{ length: 2 }`, והקטלוג נכנס דרך `as unknown as Catalog`
+ * בלי ולידציה — כלומר רענון שיכתוב `"lineTiers": "2"` (או שיישאב את
+ * השדה כמחרוזת JSON, כפי שקרה ל-`price`) מפיל את **רינדור השרת** של
+ * הדף כולו ב-`TypeError: tiers.every is not a function`, ולא מפיל
+ * חבילה אחת בשקט כמו שכל שאר השערים בקובץ הזה עושים.
+ *
+ * `Array.isArray` ולא `typeof === "object"`: `Set` ו-`Map` גם הם
+ * אובייקטים עם `size`, ואין להם `every`.
+ */
+function tierTable(spec: Partial<CellularSpec>): { lines: number; price: number }[] | null {
+  const tiers = spec.lineTiers;
+  return Array.isArray(tiers) && tiers.length > 0 ? tiers : null;
+}
+
 export function isComparable(p: Package, track: Track): p is MonthlyPackage {
   if (p.category !== track || p.priceModel !== "monthly") return false;
   // ⚠️ `typeof` ולא `== null` — ראה `isListable`: הקטלוג נכנס דרך cast
@@ -290,12 +309,20 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
     לרענון הבא.
   */
   if (p.priceAfterPromo != null && !isMoney(p.priceAfterPromo)) return false;
-  const tiers = (p.spec as CellularSpec).lineTiers;
+  // ⚠️ `lineTiers` שאינו מערך הוא רשומה פגומה ולא "בלי מדרגות": ראה
+  // `tierTable`. שדה כזה נפל כאן ב-`TypeError` והפיל את רינדור השרת של
+  // כל הדף, במקום להפיל חבילה אחת בשקט כמו כל שער אחר בקובץ הזה.
+  const rawTiers = (p.spec as Partial<CellularSpec>).lineTiers;
+  if (rawTiers != null && !Array.isArray(rawTiers)) return false;
+  const tiers = tierTable(p.spec as Partial<CellularSpec>);
   // ⚠️ גם `t.lines >= 1`. מדרגה עם `lines: 0` (או שלילי) עברה כ-
   // `Number.isInteger`, ואז `priceUnknownAtLines` רואה `t.lines <= lines` כ-true
   // ומוותרת על הבדיקה, ו-`perLinePrice` עלולה לבחור אותה. הקטלוג נקי
   // היום — זה השער לרענון הבא, בדיוק כמו השערים שמעליו.
-  if (tiers?.length && !tiers.every((t) => isMoney(t.price) && Number.isInteger(t.lines) && t.lines >= 1)) {
+  //
+  // ⚠️ `t != null` לפני `t.price`: מדרגה שהיא `null` בתוך מערך תקין
+  // הפילה את אותו `TypeError` ברמה אחת פנימה.
+  if (tiers && !tiers.every((t) => t != null && isMoney(t.price) && Number.isInteger(t.lines) && t.lines >= 1)) {
     return false;
   }
   if (p.editorial?.hidden) return false;
@@ -361,9 +388,10 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
 export function perLinePrice(p: MonthlyPackage, lines: number): number {
   const base = afterPrice(p);
   if (p.priceAfterPromo != null) return base;
-  const tiers = (p.spec as CellularSpec).lineTiers;
-  if (!tiers?.length) return base;
-  const tier = tiers.filter((t) => t.lines <= lines).sort((a, b) => b.lines - a.lines)[0];
+  // ⚠️ `tierTable` ולא `tiers?.length`. ראה `tierTable`.
+  const tiers = tierTable(p.spec as Partial<CellularSpec>);
+  if (!tiers) return base;
+  const tier = tiers.filter((t) => t != null && t.lines <= lines).sort((a, b) => b.lines - a.lines)[0];
   /*
    * ⚠️ `tier.price` כפי שהוא, ובלי `Math.min` מול המחיר הבסיסי.
    *
@@ -398,10 +426,12 @@ export function perLinePrice(p: MonthlyPackage, lines: number): number {
 export function priceUnknownAtLines(p: MonthlyPackage, lines: number): boolean {
   // מחיר-אחרי-הטבה מדווח גובר על המדרגות בכל כמות. ראה `perLinePrice`.
   if (p.priceAfterPromo != null) return false;
-  const tiers = (p.spec as CellularSpec).lineTiers;
-  if (!tiers?.length) return false;
-  if (tiers.some((t) => t.lines <= lines)) return false;
-  const smallest = [...tiers].sort((a, b) => a.lines - b.lines)[0];
+  // ⚠️ `tierTable` ולא `tiers?.length`. ראה `tierTable`.
+  const tiers = tierTable(p.spec as Partial<CellularSpec>);
+  if (!tiers) return false;
+  if (tiers.some((t) => t != null && t.lines <= lines)) return false;
+  const smallest = tiers.filter((t) => t != null).sort((a, b) => a.lines - b.lines)[0];
+  if (smallest == null) return false;
   return afterPrice(p) < smallest.price;
 }
 

@@ -140,6 +140,11 @@ export interface Catalog {
 }
 
 export const isElectricity = (p: Package): p is ElectricityPackage => p.category === "electricity";
-export const isCellularSpec = (p: Package): p is MonthlyPackage & { spec: CellularSpec } =>
-  p.category === "cellular";
+/*
+ * ⚠️ אין כאן `isCellularSpec`. הוא היה קיים לצד `isHomeSpec` מטעמי
+ * סימטריה ולא נקרא מאף מקום; הקוראים של `CellularSpec` עוברים דרך
+ * `isComparable(p, "cellular")` ב-`savings.ts`, שהוא שער הרבה חזק
+ * יותר מהשוואת קטגוריה. נמחק כדי שלא יהיה שער שנראה בטוח ואינו
+ * בודק את `spec` בפועל.
+ */
 export const isHomeSpec = (p: Package): p is MonthlyPackage & { spec: HomeSpec } => p.category === "home";

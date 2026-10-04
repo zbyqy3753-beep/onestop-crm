@@ -603,3 +603,84 @@ test("קלט: שדה שמכיל רק סימני כיווניות נחשב ריק
   assert.equal(isBlankSpend("‏1,200‏"), false);
   assert.equal(isBlankSpend("abc"), false);
 });
+
+/*
+ * `lineTiers` שאינו מערך מפיל חבילה אחת, לא את רינדור השרת.
+ *
+ * ⚠️ שלושת הקוראים של `lineTiers` בדקו `tiers?.length` ומיד קראו
+ * ל-`every` / `some` / `filter`. `length` הוא אמת גם על מחרוזת, והקטלוג
+ * נכנס דרך `as unknown as Catalog` בלי ולידציה — כלומר רענון שיכתוב
+ * `"lineTiers": "2"` (או שיישאב את השדה כמחרוזת JSON, בדיוק כפי
+ * שקרה ל-`price`) היה מפיל את **כל הדף** ב-`TypeError:
+ * tiers.every is not a function` בזמן רינדור השרת, במקום להפיל
+ * רשומה אחת בשקט כמו כל שער אחר בקובץ.
+ */
+test("מדרגות: `lineTiers` שאינו מערך נפסל בשקט ולא מפיל את הדף", () => {
+  // ⚠️ תבנית שה-`priceAfterPromo` שלה ריק: רק אז המדרגות הן המספר
+  // שנקרא בפועל (`perLinePrice` מתעלמת מהן ברגע שיש מחיר-אחרי-הטבה).
+  const tpl = PACKAGES.find((p) => isComparable(p, "cellular") && p.priceAfterPromo == null);
+  assert.ok(tpl, "לא נמצאה חבילת סלולר בת-השוואה בלי מחיר-אחרי-הטבה");
+  const withTiers = (lineTiers) => ({
+    ...tpl,
+    id: "test-tiers",
+    price: 29.9,
+    priceAfterPromo: null,
+    spec: { ...tpl.spec, lineTiers },
+  });
+
+  // צורות שאינן מערך: לא זורקות, ולא מתקבלות.
+  for (const junk of ["2", '[{"lines":1,"price":5}]', "", 0, 7, true, {}, { length: 2 }, new Set(), new Map()]) {
+    const p = withTiers(junk);
+    assert.doesNotThrow(() => isComparable(p, "cellular"), `זרק על ${JSON.stringify(junk)}`);
+    assert.equal(isComparable(p, "cellular"), false, `התקבל למרות ${JSON.stringify(junk)}`);
+    assert.doesNotThrow(() => priceUnknownAtLines(p, 1), `priceUnknownAtLines זרק על ${JSON.stringify(junk)}`);
+    assert.doesNotThrow(() => perLinePrice(p, 1), `perLinePrice זרק על ${JSON.stringify(junk)}`);
+    assert.doesNotThrow(() => computeSaving([p, ...PACKAGES], "cellular", 1, 250));
+  }
+
+  // מדרגה שהיא `null` בתוך מערך תקין — אותו `TypeError` ברמה אחת פנימה.
+  for (const junk of [[null], [undefined], [{ lines: 1 }], [{ price: 5 }], [null, { lines: 1, price: 5 }]]) {
+    const p = withTiers(junk);
+    assert.doesNotThrow(() => isComparable(p, "cellular"), `זרק על ${JSON.stringify(junk)}`);
+    assert.equal(isComparable(p, "cellular"), false, `התקבל למרות ${JSON.stringify(junk)}`);
+    assert.doesNotThrow(() => priceUnknownAtLines(p, 1));
+    assert.doesNotThrow(() => perLinePrice(p, 1));
+  }
+
+  // ⚠️ `lineTiers: null` ומערך ריק הם "בלי מדרגות" ולא רשומה פגומה —
+  // זהו המצב של רוב הקטלוג, והשער אינו רשאי לפסול אותם.
+  assert.equal(isComparable(withTiers(null), "cellular"), true);
+  assert.equal(isComparable(withTiers([]), "cellular"), true);
+  // ומדרגה תקינה ממשיכה לעבוד.
+  const good = withTiers([{ lines: 2, price: 24.9 }]);
+  assert.equal(isComparable(good, "cellular"), true);
+  assert.equal(perLinePrice(good, 2), 24.9);
+  assert.equal(perLinePrice(good, 1), 29.9);
+});
+
+/*
+ * הכותרת עצמה אינה זזה בגלל רשומה פגומה.
+ *
+ * ⚠️ המשמעות המעשית של השער למעלה: החיסכון שמוצג הוא אותו מספר בדיוק
+ * עם הרשומה הפגומה ובלעדיה — לא `NaN`, ולא מספר שנבנה על מדרגה
+ * שאיש לא יכול לקרוא.
+ */
+test("מדרגות: רשומה פגומה לא משנה את החיסכון המוצג ולא מייצרת NaN", () => {
+  const tpl = PACKAGES.find((p) => isComparable(p, "cellular") && p.priceAfterPromo == null);
+  for (const junk of ["2", { length: 3 }, [null], [{ lines: 0, price: 1 }], [{ lines: 1, price: "1" }]]) {
+    const bad = {
+      ...tpl,
+      id: "test-tiers-2",
+      price: 1,
+      priceAfterPromo: null,
+      spec: { ...tpl.spec, lineTiers: junk },
+    };
+    for (const units of [1, 2, 5, 10]) {
+      const clean = computeSaving(PACKAGES, "cellular", units, 250);
+      const dirty = computeSaving([bad, ...PACKAGES], "cellular", units, 250);
+      assert.ok(Number.isFinite(dirty.monthly), `NaN על ${JSON.stringify(junk)}`);
+      assert.equal(dirty.monthly, clean.monthly, `הכותרת זזה בגלל ${JSON.stringify(junk)}`);
+      assert.equal(dirty.yearly, dirty.monthly * 12);
+    }
+  }
+});

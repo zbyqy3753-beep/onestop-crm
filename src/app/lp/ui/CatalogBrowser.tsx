@@ -5,7 +5,7 @@ import { Card } from "./Card";
 import { PackageCard } from "./PackageCard";
 import { CompareTray, MAX_COMPARE } from "./CompareTray";
 import { shekels } from "../catalog/format";
-import { afterPrice } from "../catalog/catalog";
+import { afterPrice, hasKnownAfterPrice } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
 type SortKey = "price-asc" | "price-desc" | "after-asc" | "recommended";
@@ -30,6 +30,27 @@ function priceOf(p: Package): number {
   return p.category === "electricity" ? -(p.discountPercent ?? 0) : (p.price ?? Infinity);
 }
 
+/*
+ * ⚠️ המיון "מחיר אחרי ההטבה" אינו יכול לדרג חבילה שלא ידוע מה יעלה
+ * אחרי ההטבה. `afterPrice` נופלת ל-`price` כשאין `priceAfterPromo`,
+ * ולכן 11 החבילות שמצהירות על העלייה **בטקסט חופשי בלבד** דורגו לפי
+ * מחיר ההטבה תחת תווית שמבטיחה את ההפוך: id 23 ("כשר") עמד ראשון
+ * ב-₪25 בזמן שהכרטיס שלו מדפיס "לאחר מכן 59 ₪". זה בדיוק הפגם שתוקן
+ * כבר בטבלת ההשוואה (`priceAfterPromoNote` נקרא שם לצד השדה המספרי)
+ * ושנותר כאן.
+ *
+ * ⚠️ לא מנחשים את המספר מההערה — הנוסח חופשי לגמרי ("+ 10 ₪ נתב",
+ * "מ-100 ₪"), וזו הסיבה ש-`hasKnownAfterPrice` קיימת ולא פרסר. חבילה
+ * כזו יורדת לסוף הרשימה, שם היא מדורגת לפי המחיר של היום; הכרטיס
+ * עצמו ממילא מדפיס את ההערה, ולכן הקורא רואה למה.
+ */
+function byAfterPrice(a: Package, b: Package): number {
+  const ka = hasKnownAfterPrice(a);
+  const kb = hasKnownAfterPrice(b);
+  if (ka !== kb) return ka ? -1 : 1;
+  return ka ? afterPrice(a) - afterPrice(b) : priceOf(a) - priceOf(b);
+}
+
 
 export function CatalogBrowser({ packages, category }: { packages: Package[]; category: string }) {
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
@@ -44,7 +65,17 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
   const priceBounds = useMemo(() => {
     const values = packages.map(priceOf).filter((v) => Number.isFinite(v));
     if (!values.length) return null;
-    return { min: Math.floor(Math.min(...values)), max: Math.ceil(Math.max(...values)) };
+    /*
+     * ⚠️ `Math.ceil` על הקצה התחתון, לא `Math.floor`.
+     *
+     * המסנן הוא `price <= maxPrice` וה-`step` הוא 1, ולכן הקצה התחתון
+     * חייב להיות מחיר שחבילה אחת לפחות **עומדת בו**. החבילה הזולה
+     * בסלולר היא 21.9 ובביתי 19.9: עיגול למטה נתן 21 ו-19, ושני הקצאות
+     * האלה החזירו "אין חבילות שמתאימות לסינון" — כלומר המחוון נגמר
+     * במקום שבו הדף ריק תמיד. עיגול למעלה מגיע ל-22 ול-20, שם
+     * החבילה הזולה באמת נמצאת.
+     */
+    return { min: Math.ceil(Math.min(...values)), max: Math.ceil(Math.max(...values)) };
   }, [packages]);
 
   /**
@@ -100,7 +131,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
     const sorted = [...filtered];
     if (sort === "price-asc") sorted.sort((a, b) => priceOf(a) - priceOf(b));
     else if (sort === "price-desc") sorted.sort((a, b) => priceOf(b) - priceOf(a));
-    else if (sort === "after-asc") sorted.sort((a, b) => afterPrice(a) - afterPrice(b));
+    else if (sort === "after-asc") sorted.sort(byAfterPrice);
     else sorted.sort((a, b) => Number(b.recommended) - Number(a.recommended) || priceOf(a) - priceOf(b));
     return sorted;
   }, [packages, selectedProviders, selectedTypes, maxPrice, sort]);

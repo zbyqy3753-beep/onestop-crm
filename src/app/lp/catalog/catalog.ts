@@ -117,10 +117,22 @@ export function byCategory(packages: Package[], category: Category): Package[] {
  * `perLinePrice`, ויוצג לגולש כ-`NaN`. השער הוא המקום היחיד שכל
  * החבילות עוברות בו, ולכן כאן נעצרת רשומה פגומה — בשקט ומראש.
  */
+/*
+ * ⚠️ `> 0` **בשני** הענפים.
+ *
+ * הענף החודשי דרש מחיר חיובי ("מחיר 0 מייצר חיסכון של מלוא החשבון"),
+ * ואילו ענף החשמל הסתפק במספר סופי — כלומר `discountPercent: 0` עבר
+ * את השער ועלה לדף כמסלול הנחה אמיתי, עם הכותרת "0% הנחה". גרוע
+ * מזה: `afterPrice` ו-`byPrice` מדרגות חשמל כ-`-discountPercent`,
+ * ולכן מסלול של 0% (או שלילי, שגם הוא עבר) מדורג כ**זול ביותר**
+ * בקטגוריה ונכנס ל-`highlights` ול-`cheapest`. הקטלוג של היום נקי —
+ * אין אף רשומה עם `discountPercent <= 0` — ולכן זה שער לרענון הבא,
+ * בדיוק מאותו טעם שהענף החודשי נכתב כך.
+ */
 export function isListable(p: Package): boolean {
   if (p.editorial?.hidden) return false;
   return p.category === "electricity"
-    ? typeof p.discountPercent === "number" && Number.isFinite(p.discountPercent)
+    ? typeof p.discountPercent === "number" && Number.isFinite(p.discountPercent) && p.discountPercent > 0
     : typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0;
 }
 
@@ -233,16 +245,45 @@ export function highlights(packages: Package[], category: Category, limit = 3): 
  * ספק שכל חבילותיו נפלו ב-`isListable` חייב להיעלם מהרצועה, ולא
  * להישאר כלוגו שאין מאחוריו כלום.
  */
+/*
+ * ⚠️ הרשימה נבנית מ-`packages` ולא מ-`catalog.providers` לבדו.
+ *
+ * הפונקציה קיבלה מערך חבילות, ספרה ממנו — ואז הרכיבה את הרשימה
+ * מ-`catalog.providers`, כלומר ספק שיש לו חבילה **במערך שנמסר** אך
+ * אינו רשום ברשימת הספקים של הקטלוג נעלם מהרצועה בשקט. היום 12 מתוך
+ * 12 הספקים מופיעים בשני המקומות ולכן הבאג רדום, אבל `providers` היא
+ * המספר שהדף מצהיר עליו ("אנחנו עובדים עם N חברות"), ורענון שיוסיף
+ * חבילה של ספק חדש בלי להוסיף אותו ל-`providers` של הקטלוג מוריד את
+ * המספר במקום להעלות אותו. `catalog.providers` נשאר **מקור המטא-דאטה
+ * והסדר** (לוגו, שם, קטגוריות); מי שחסר שם נבנה מה-`ProviderRef`
+ * שעל החבילה עצמה.
+ */
 export function providers(packages: Package[]): Provider[] {
+  const shown = listable(packages);
   const counts = new Map<string, number>();
-  for (const p of listable(packages)) {
+  const refs = new Map<string, Package[]>();
+  for (const p of shown) {
     counts.set(p.provider.slug, (counts.get(p.provider.slug) ?? 0) + 1);
+    const bucket = refs.get(p.provider.slug);
+    if (bucket) bucket.push(p);
+    else refs.set(p.provider.slug, [p]);
   }
 
-  return catalog.providers
+  const known = new Set(catalog.providers.map((p) => p.slug));
+  const fromCatalog: Provider[] = catalog.providers
     .filter((p) => (counts.get(p.slug) ?? 0) > 0)
-    .map((p) => ({ ...p, count: counts.get(p.slug)! }))
-    .sort((a, b) => b.count - a.count);
+    .map((p) => ({ ...p, count: counts.get(p.slug)! }));
+  const fromPackages: Provider[] = [...refs.entries()]
+    .filter(([slug]) => !known.has(slug))
+    .map(([slug, own]) => ({
+      slug,
+      name: own[0].provider.name,
+      logo: own[0].provider.logo,
+      categories: [...new Set(own.map((p) => p.category))],
+      count: own.length,
+    }));
+
+  return [...fromCatalog, ...fromPackages].sort((a, b) => b.count - a.count);
 }
 
 /** כמה חבילות מגלות את המחיר שאחרי ההטבה — נתון האמון של הדף. */

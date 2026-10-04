@@ -11,6 +11,28 @@
  * בוצעה נראית בדיוק כמו חזרה שבוצעה — שתיהן פשוט שורה בטבלה.
  */
 
+/**
+ * ניקוי ערך שנכנס לגוף המופרד ב-`|`.
+ *
+ * ⚠️⚠️ **שתי סיבות, ושתיהן נבדקו על ההתראות עצמן.**
+ *
+ * `|` הוא המפריד, ושם שמכיל אותו מזיז כל ערך אחריו. `yesLeadBody`
+ * עם השם `"דני | כהן"` הפיק פרמטרים `["דני", "—", "0501234567"]`:
+ * הטלפון נעלם, והשדה "שויך ל" הציג את מספר הטלפון. השם מגיע מטופס
+ * `/lp` הציבורי שמאמת אורך בלבד, כלומר כל אחד יכול לייצר את זה.
+ *
+ * ירידת שורה, טאב וארבעה רווחים רצופים **נדחים על ידי מטא** בפרמטר
+ * תבנית, וההתראה נכשלת בשקט. בייצור יש שמות עם רווחים כפולים,
+ * וייבוא מאקסל מביא ירידות שורה בתוך תא.
+ *
+ * אותה פונקציה בדיוק כמו `clean` ב-`hotLeadBatch.ts` ו-
+ * `normalizeBroadcastText` ב-`broadcast.ts` — שלושת הנתיבים שמזרימים
+ * טקסט של משתמש לפרמטר תבנית.
+ */
+function cleanParam(value: string): string {
+  return value.replace(/\|/g, " ").replace(/\s+/g, " ").trim();
+}
+
 export const DEAL_WON_TEMPLATE = {
   name: "deal_won_he",
   language: "he",
@@ -45,7 +67,7 @@ export function dealWonBody(
   leadPhone: string,
   agentName: string,
 ): string {
-  return `נסגרה עסקה | לקוח: ${leadName} | טלפון: ${leadPhone} | סגר: ${agentName}`;
+  return `נסגרה עסקה | לקוח: ${cleanParam(leadName)} | טלפון: ${cleanParam(leadPhone)} | סגר: ${cleanParam(agentName)}`;
 }
 
 export function overdueBody(
@@ -54,7 +76,7 @@ export function overdueBody(
   assignee: string,
   due: string,
 ): string {
-  return `חזרה שלא בוצעה | לקוח: ${leadName} | טלפון: ${leadPhone} | אחראי: ${assignee} | מועד: ${due}`;
+  return `חזרה שלא בוצעה | לקוח: ${cleanParam(leadName)} | טלפון: ${cleanParam(leadPhone)} | אחראי: ${cleanParam(assignee)} | מועד: ${cleanParam(due)}`;
 }
 
 /**
@@ -63,7 +85,9 @@ export function overdueBody(
  * השליחה אין בידינו את הליד, רק את מה שנשמר.
  */
 function fields(body: string): string[] {
-  return body.split("|").map((p) => p.split(":").slice(1).join(":").trim());
+  return body
+    .split("|")
+    .map((p) => cleanParam(p.split(":").slice(1).join(":")));
 }
 
 export function dealWonParams(body: string): string[] {
@@ -109,17 +133,31 @@ export function unassignedDedupeKey(
 
 /** הפרמטרים של התבנית — שם הבעלים, שם הלקוח, הטלפון שלו. */
 export function unassignedParams(body: string): string[] {
-  const m = /^שלום\s+(.+?),\s*נקבעה חזרה ללקוח\s+(.+?)\s+\((.+?)\)/.exec(body);
-  return m ? [m[1]!, m[2]!, m[3]!] : ["מנהל", "לקוח", "—"];
+  const m = /^שלום\s+(.+?),\s*נקבעה חזרה ללקוח\s+(.+?)\s+\((.+?)\)/.exec(
+    cleanParam(body),
+  );
+  return m
+    ? [cleanParam(m[1]!) || "מנהל", cleanParam(m[2]!) || "לקוח", cleanParam(m[3]!) || "—"]
+    : ["מנהל", "לקוח", "—"];
 }
 
-/** הגוף שנשמר בתור, ושממנו `unassignedParams` מחלץ בחזרה. */
+/**
+ * הגוף שנשמר בתור, ושממנו `unassignedParams` מחלץ בחזרה.
+ *
+ * ⚠️ הסוגריים כאן הם המפריד, ולכן השם מנוקה מהם: שם כמו
+ * `"דני (הבית)"` הפיק פרמטרים `["אלירן", "דני", "הבית"]` — המנהל קיבל
+ * "הבית" במקום הטלפון. ירידת שורה בשם הייתה גרועה יותר: הביטוי הרגולרי
+ * כלל לא התאים, וההתראה יצאה כ-`["מנהל", "לקוח", "—"]`, בלי שום מידע.
+ */
 export function unassignedBody(
   ownerName: string,
   leadName: string,
   leadPhone: string,
 ): string {
-  return `שלום ${ownerName}, נקבעה חזרה ללקוח ${leadName} (${leadPhone}) אך הליד אינו משויך לאף עובד.`;
+  const owner = cleanParam(ownerName).replace(/[()]/g, "");
+  const name = cleanParam(leadName).replace(/[()]/g, "");
+  const phone = cleanParam(leadPhone).replace(/[()]/g, "");
+  return `שלום ${owner}, נקבעה חזרה ללקוח ${name} (${phone}) אך הליד אינו משויך לאף עובד.`;
 }
 
 /* ── ליד חדש של יאס ───────────────────────────────────────────────────── */
@@ -152,7 +190,7 @@ export function yesLeadBody(
   leadPhone: string,
   assigneeName: string,
 ): string {
-  return `ליד חדש מיאס | לקוח: ${leadName} | טלפון: ${leadPhone} | שויך ל: ${assigneeName}`;
+  return `ליד חדש מיאס | לקוח: ${cleanParam(leadName)} | טלפון: ${cleanParam(leadPhone)} | שויך ל: ${cleanParam(assigneeName)}`;
 }
 
 /** אותו דפוס חילוץ כמו `dealWonParams` — הגוף הוא ה-snapshot. */
@@ -204,7 +242,7 @@ export const LEAD_HOT_BATCH_TEMPLATE = {
 } as const;
 
 export function hotLeadBody(leadName: string, leadPhone: string): string {
-  return `ליד חם חדש אצלך | לקוח: ${leadName} | טלפון: ${leadPhone}`;
+  return `ליד חם חדש אצלך | לקוח: ${cleanParam(leadName)} | טלפון: ${cleanParam(leadPhone)}`;
 }
 
 export function hotLeadParams(body: string): string[] {

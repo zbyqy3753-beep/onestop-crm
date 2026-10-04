@@ -20,11 +20,22 @@ export function shekels(value: number): string {
   return `₪${nf.format(Number(value.toFixed(2)))}`;
 }
 
-export function siteDate(iso: string): string {
-  return new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" }).format(
-    new Date(iso),
-  );
-}
+/*
+ * ⚠️ כיתובי הכמות נכתבים **בשתי צורות**, יחיד ורבים, בדיוק כמו
+ * `ממיר כלול` / `ממירים כלולים` שמתחת. "1 ערוצים" הוא הסוג של שגיאה
+ * שרענון קטלוג מכניס בלי שאף אחד ישים לב — אין היום אף רשומה עם 1
+ * באחד מהשדות האלה, ולכן אלה שערים לרענון הבא ולא תיקון של מסך חי.
+ *
+ * ⚠️ רק הכיתוב משתנה, לא הערך — ומכאן גם החובה הנגררת: טבלת ההשוואה
+ * מיישרת שורות לפי ה-`caption`, ולכן כל צורת יחיד **חייבת** להופיע
+ * ב-`SAME_FACT` מתחת וממופה לצורת הרבים. בלי זה השוואה בין חבילה עם
+ * ערוץ אחד לחבילה עם 40 הייתה נפרשת לשתי שורות עם "—" הדדי, כלומר
+ * הטבלה מכחישה נתון שהכרטיס עצמו מדפיס.
+ */
+export const MINUTES_CAPTION = (n: number) => (n === 1 ? "דקת שיחה" : "דקות שיחה");
+export const SMS_CAPTION = (n: number) => (n === 1 ? "הודעת SMS" : "הודעות SMS");
+export const INTL_MINUTES_CAPTION = (n: number) => (n === 1 ? "דקה לחו״ל" : "דקות לחו״ל");
+export const CHANNELS_CAPTION = (n: number) => (n === 1 ? "ערוץ" : "ערוצים");
 
 /** Big buckets are sold as "unlimited" — say so instead of printing 10000GB. */
 export function dataLabel(spec: CellularSpec): string | null {
@@ -86,10 +97,10 @@ export function cardStats(pkg: Package): Stat[] {
     const out: Stat[] = [];
     const data = dataLabel(spec);
     if (data) out.push({ value: data, caption: "גלישה בישראל" });
-    if (spec.minutes) out.push({ value: nf.format(spec.minutes), caption: "דקות שיחה" });
-    if (spec.sms) out.push({ value: nf.format(spec.sms), caption: "הודעות SMS" });
+    if (spec.minutes) out.push({ value: nf.format(spec.minutes), caption: MINUTES_CAPTION(spec.minutes) });
+    if (spec.sms) out.push({ value: nf.format(spec.sms), caption: SMS_CAPTION(spec.sms) });
     if (out.length < 3 && spec.intlMinutes) {
-      out.push({ value: nf.format(spec.intlMinutes), caption: "דקות לחו״ל" });
+      out.push({ value: nf.format(spec.intlMinutes), caption: INTL_MINUTES_CAPTION(spec.intlMinutes) });
     }
     return out.slice(0, 3);
   }
@@ -99,7 +110,7 @@ export function cardStats(pkg: Package): Stat[] {
     const out: Stat[] = [];
     const speed = speedLabel(spec);
     if (speed) out.push({ value: speed, caption: "מהירות גלישה" });
-    if (spec.channels) out.push({ value: nf.format(spec.channels), caption: "ערוצים" });
+    if (spec.channels) out.push({ value: nf.format(spec.channels), caption: CHANNELS_CAPTION(spec.channels) });
     // ⚠️ אותה שגיאה שהערה על `lineTiers` מזהירה מפניה, רק שכאן היא
     // **חיה**: id 70 הוא ממיר אחד, והכרטיס הכריז "1 ממירים".
     if (spec.converters) {
@@ -159,8 +170,13 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
 
   if (pkg.category === "cellular") {
     const s = pkg.spec as CellularSpec;
-    if (s.intlMinutes && !tiled.has("דקות לחו״ל")) {
-      rows.push({ label: "דקות לחו״ל", value: nf.format(s.intlMinutes) });
+    /*
+     * ⚠️ גם השער וגם התווית נגזרים מאותה פונקציה שהאריח השתמש בה.
+     * שער שקורא תווית קבועה ("דקות לחו״ל") היה מפספס את האריח של
+     * חבילה עם דקה אחת, ואותה עובדה הייתה מודפסת פעמיים.
+     */
+    if (s.intlMinutes && !tiled.has(INTL_MINUTES_CAPTION(s.intlMinutes))) {
+      rows.push({ label: INTL_MINUTES_CAPTION(s.intlMinutes), value: nf.format(s.intlMinutes) });
     }
     fee("עלות SIM", s.simCost);
     fee("דמי חיבור", s.connectionFee);
@@ -255,6 +271,11 @@ const SAME_FACT: Record<string, string> = {
   "מהירות גלישה": "מהירות (הורדה/העלאה)",
   התקנה: "עלות התקנה",
   "ממיר כלול": "ממירים כלולים",
+  // צורות היחיד של כיתובי הכמות — ראה ההערה על `MINUTES_CAPTION` למעלה.
+  "דקת שיחה": "דקות שיחה",
+  "הודעת SMS": "הודעות SMS",
+  "דקה לחו״ל": "דקות לחו״ל",
+  ערוץ: "ערוצים",
   נדרש: "סוג מונה",
   "מתאים ל": "סוג מונה",
   // ⚠️ `cardStats` בוחר בין שתי התוויות האלה לפי `allHours`, ולכן
