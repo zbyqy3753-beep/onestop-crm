@@ -1,6 +1,6 @@
 "use client";
 
-import { Heebo } from "next/font/google";
+import { Amatic_SC, Heebo } from "next/font/google";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { StudioPackage } from "@/lib/posts/catalog";
 import {
@@ -14,11 +14,13 @@ import {
   type TemplateId,
 } from "@/lib/posts/templates";
 import { Button, Field, inputClass } from "@/components/ui/primitives";
-import { drawSlide } from "./renderSlide";
+import { drawSlide, loadLogos } from "./renderSlide";
 import { RequestPanel, type RequestView } from "./RequestPanel";
 
-/** הגופן של המותג. נטען כאן ולא ב-layout: רק המסך הזה מצייר בו. */
-const heebo = Heebo({ subsets: ["hebrew", "latin"], weight: ["500", "700", "800", "900"] });
+/** גופני המותג. נטענים כאן ולא ב-layout: רק המסך הזה מצייר בהם. */
+const heebo = Heebo({ subsets: ["hebrew", "latin"], weight: ["600", "700", "800", "900"] });
+/** כתב היד של "שירות אישי ומקצועי". */
+const amatic = Amatic_SC({ subsets: ["hebrew", "latin"], weight: ["700"] });
 
 const MAX_PICK = 4;
 
@@ -273,16 +275,21 @@ function Preview({
   const [overflow, setOverflow] = useState<number[]>([]);
   const [ready, setReady] = useState(false);
   const family = heebo.style.fontFamily;
+  const script = amatic.style.fontFamily;
 
   useEffect(() => {
     let alive = true;
     // בלי זה השקף הראשון מצויר בגופן מערכת, כי הגופן עוד לא ירד
-    Promise.all([500, 700, 800, 900].map((w) => document.fonts.load(`${w} 40px ${family}`))).then(() => {
+    Promise.all([
+      loadLogos(),
+      ...[600, 700, 800, 900].map((w) => document.fonts.load(`${w} 40px ${family}`)),
+      document.fonts.load(`700 48px ${script}`),
+    ]).then(([imgs]) => {
       if (!alive) return;
       const bad: number[] = [];
       post.slides.forEach((s, i) => {
         const c = canvases.current[i];
-        if (c && !drawSlide(c, s, i, post.slides.length, family)) bad.push(i + 1);
+        if (c && !drawSlide(c, s, i, post.slides.length, { sans: family, script }, imgs)) bad.push(i + 1);
       });
       setOverflow(bad);
       setReady(true);
@@ -290,7 +297,7 @@ function Preview({
     return () => {
       alive = false;
     };
-  }, [post, family]);
+  }, [post, family, script]);
 
   function blobs(): Promise<File[]> {
     return Promise.all(
