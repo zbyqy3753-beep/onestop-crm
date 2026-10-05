@@ -37,6 +37,16 @@ export const SMS_CAPTION = (n: number) => (n === 1 ? "הודעת SMS" : "הוד�
 export const INTL_MINUTES_CAPTION = (n: number) => (n === 1 ? "דקה לחו״ל" : "דקות לחו״ל");
 export const CHANNELS_CAPTION = (n: number) => (n === 1 ? "ערוץ" : "ערוצים");
 
+/*
+ * ⚠️ אותו כלל גם למונים שמספרים **חבילות**, ולא רק למפרט שבתוך כרטיס.
+ * שורת התוצאות בקטלוג (`CatalogBrowser`) ומוני רצועת השירותים
+ * (`page.tsx`) כתבו "חבילות"/"מסלולים" בכל מצב, וזה באג **חי**: הסוג
+ * "בסיס" בסלולר נושא חבילה אחת בלבד (וכך גם "קו ביתי" בביתי), ולכן
+ * לחיצה אחת על השבב הזה הציגה "1 חבילות מתוך 55" מעל כרטיס בודד.
+ */
+export const PACKAGES_CAPTION = (n: number) => (n === 1 ? "חבילה" : "חבילות");
+export const PLANS_CAPTION = (n: number) => (n === 1 ? "מסלול" : "מסלולים");
+
 /** Big buckets are sold as "unlimited" — say so instead of printing 10000GB. */
 export function dataLabel(spec: CellularSpec): string | null {
   if (spec.unlimitedData) return "גלישה חופשית";

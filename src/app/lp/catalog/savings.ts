@@ -73,14 +73,42 @@ const RISE_IN_TEXT =
   // id 31 הוא "BASIC דור 5 בחודשיים הראשונים" ב-49.9 ₪, והיא נשארה בחוץ
   // **רק** בזכות התפיסה השגויה שלמעלה. שני התיקונים חייבים לנחות
   // יחד: תיקון `לאחר מכן` לבדו היה מכניס אותה לבריכה כמחיר "לנצח".
-  /לאחר מכן[^.•\n]{0,20}\d|לאחר שנה|לאחר \d+ חודשים|אח"כ|אח״כ|אחר כך|ואז \d|מהחודש ה|מחודש \d|החודשים הראשונים|חודש(?:ים|יים|ם)? ה?ר[אוש]{2,3}נים|לחודשיים|חודש ראשון|שנה שניי?ה|שנה שלישית|שנה רביעית|למשך שנה|למשך שנתיים|למשך \d+ שנים|מובטח ל[-־]?\s?\d+|תקף ל[-־]?\s?\d+|קבוע ל[-־]?\s?\d+|לתקופה של \d+|בתום ה?(תקופה|הטבה|המבצע|השנה)|לאחר תום|מחיר לאחר|מחיר רגיל/;
+  //
+  // ⚠️ `שנה ה?שניי?ה` / `שנה ה?שלישית` / `שנה ה?רביעית` — ה"א הידיעה
+  // **אופציונלית**, בדיוק כמו ב-`ה?ר[אוש]{2,3}נים` שלמעלה ומאותה סיבה.
+  // הצורה שבקטלוג היום היא "שנה שניה שלישית 229" (id 158, בלי ה"א) והיא
+  // נתפסה, אבל הניסוח הנפוץ בעברית הוא "בשנה השנייה 229 ₪" — ושם
+  // הה"א שבין "שנה" ל-"שנייה" הפילה את ההתאמה לגמרי. התיקון ל-"ראשונים"
+  // נעשה בדיוק מול אותה מלכודת ולא הוחל על אחיותיו.
+  /לאחר מכן[^.•\n]{0,20}\d|לאחר שנה|לאחר \d+ חודשים|אח"כ|אח״כ|אחר כך|ואז \d|מהחודש ה|מחודש \d|החודשים הראשונים|חודש(?:ים|יים|ם)? ה?ר[אוש]{2,3}נים|לחודשיים|חודש ראשון|שנה ה?שניי?ה|שנה ה?שלישית|שנה ה?רביעית|למשך שנה|למשך שנתיים|למשך \d+ שנים|מובטח ל[-־]?\s?\d+|תקף ל[-־]?\s?\d+|קבוע ל[-־]?\s?\d+|לתקופה של \d+|בתום ה?(תקופה|הטבה|המבצע|השנה)|לאחר תום|מחיר לאחר|מחיר רגיל/;
+
+/**
+ * הטקסט שכל שערי הנוסח בקובץ הזה קוראים.
+ *
+ * ⚠️ פונקציה אחת ולא תבנית שמועתקת חמש פעמים: ההיסטוריה של הקובץ היא
+ * שבכל פעם שנוסף שדה מישהו שכח אחד מהקוראים — `logicName` נוסף
+ * לשלושה מסננים ולא לכולם, ו-`benefits` נשכח ב-`familyPriceOnly`
+ * ("זו הייתה השמטה ולא החלטה").
+ *
+ * ⚠️ `priceAfterPromoNote` הוא השדה **הרביעי**, והוא נשכח בכל חמשת
+ * השערים — דווקא השדה שקיים כדי להחזיק את המשפט של המפעיל על מה
+ * שקורה כשההטבה נגמרת. עבור `declaresRiseInText` החור רדום (חבילה עם
+ * הערה ובלי מספר נפסלת ממילא ב-`hasKnownAfterPrice`), אבל
+ * `priceAfterPromoCorrected` בטיפוס מתעד בדיוק את התצורה שמחיה אותו:
+ * מספר שהוזן **ידנית** לצד ההערה המקורית. id 109 הוא המקרה — ההערה
+ * שלו היא "לאחר שנה 159 ₪ לחודש + 34.9 ₪ נתב", כלומר חיוב נתב חודשי
+ * נפרד שהצהיר על עצמו בשדה שאף שער לא קרא.
+ */
+function gateText(p: Package): string {
+  return `${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""} ${p.priceAfterPromoNote ?? ""}`;
+}
 
 // ⚠️ גם `logicName` — כמו ב-`requiresMultipleLines` ו-`familyPriceOnly`.
 // חמש חבילות בקטלוג חסרות `description` **ו**`benefits` גם יחד, ולכן
 // שלושת המסננים האלה היו עבורן ריקים מראש. שם שנושא מחיר
 // מבצע הוא דפוס קיים בקטלוג הזה, ולכן החור נסגר לפני הרענון הבא.
 export function declaresRiseInText(p: Package): boolean {
-  return RISE_IN_TEXT.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
+  return RISE_IN_TEXT.test(gateText(p));
 }
 
 /**
@@ -106,7 +134,7 @@ const REQUIRES_MULTIPLE_LINES =
   /לרוכשים \d+ מנויים|קו שני|\*\s?[2-9]\s?\*|\d+\s?קווים ב[-־\s]?\s?\d/;
 
 export function requiresMultipleLines(p: Package): boolean {
-  return REQUIRES_MULTIPLE_LINES.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
+  return REQUIRES_MULTIPLE_LINES.test(gateText(p));
 }
 
 /**
@@ -138,7 +166,7 @@ const FAMILY_ONLY = /מסלול משפחתי|משפחתי|family/i;
 // יושב ב-`benefits` ולא ב-`description` חזרה לבריכת הקו הבודד —
 // בדיוק ה-₪60 לשנה שההערה למעלה מתארת כתקלה שתוקנה.
 export function familyPriceOnly(p: Package): boolean {
-  return FAMILY_ONLY.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
+  return FAMILY_ONLY.test(gateText(p));
 }
 
 /**
@@ -183,7 +211,7 @@ export function afterPriceDependsOnLines(p: Package): boolean {
   if (p.priceModel !== "monthly") return false;
   const tiers = tierTable(p.spec as Partial<CellularSpec>);
   if (p.priceAfterPromo == null && tiers) return false;
-  return PRICED_BY_LINE_COUNT.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
+  return PRICED_BY_LINE_COUNT.test(gateText(p));
 }
 
 /**
@@ -231,7 +259,7 @@ const ROUTER_PRICED_SEPARATELY = new RegExp(
 );
 
 export function routerPricedSeparately(p: Package): boolean {
-  return ROUTER_PRICED_SEPARATELY.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
+  return ROUTER_PRICED_SEPARATELY.test(gateText(p));
 }
 
 /**
@@ -249,11 +277,42 @@ export function routerPricedSeparately(p: Package): boolean {
  *
  * הנוסח מכוון: "חינם אח"כ N" / "ללא עלות ואח"כ N". "חודשיים ב-59 אח"כ
  * 119" (המחיר עצמו עולה) אינו נתפס — לזה יש `priceAfterPromo`.
+ *
+ * ⚠️ `אח"כ` אינו הנוסח אלא **קיצור** שלו. `RISE_IN_TEXT` מכירה כבר
+ * ב-`לאחר מכן` וב-`אחר כך` כאותה הצהרה בדיוק, והקטלוג כותב את התוספת
+ * בצורה המלאה: id 123 — "מגדיל טווח לנחושת – 4 חודשים חינם, לאחר מכן
+ * תוספת של 15 ₪", id 83 — "200 דקות – 3 חודשים חינם, לאחר מכן 20 ₪".
+ * שתיהן נפסלות היום מסיבה אחרת (אין בהן טלוויזיה), אבל אותו משפט על
+ * חבילה שיש לה `priceAfterPromo` מספרי עבר את כל השערים:
+ * `declaresRiseInText` מדולגת בגלל המספר, ו-`addonFreeThenPaid` לא
+ * זיהתה את הניסוח — בדיוק החור שהפונקציה הזו נכתבה לסגור.
+ *
+ * ⚠️ וגם: הדרישה הקודמת הייתה שהמספר יבוא **מיד** אחרי המילה, ולכן
+ * "4 חודשים חינם אח"כ תוספת של 15 ₪" — אותה הצהרה עם שתי מילים
+ * באמצע — חמק אף הוא. החלון שאחרי המילה הוא אותו חלון שבו
+ * `RISE_IN_TEXT` משתמשת ל-`לאחר מכן`, והפסיק שבין "חינם" ל-"לאחר מכן"
+ * נכנס לחלון שלפניה. בשני החלונות אין ספרה, ולכן "חודשיים ב-59 אח"כ
+ * 119" ממשיך להיות עליית מחיר ולא תוספת.
  */
-const ADDON_FREE_THEN_PAID = /(?:חינם|ללא עלות|במתנה)\s*ו?אח["״]?כ\s?\d|חודש(?:ים|יים)\s+[^\n\d]{2,30}?\s?אח["״]?כ\s?\d/;
+/*
+ * ⚠️ הניסוח המלא (`לאחר מכן` / `אחר כך`) מורחב **רק** לחלופה הראשונה,
+ * זו שדורשת "חינם" / "ללא עלות" / "במתנה". שם המשמעות חד-משמעית: משהו
+ * נכנס בלי עלות ומתחיל להיות מחויב. החלופה השנייה (`חודשים … אח"כ N`)
+ * מסתמכת על סמיכות בלבד, ולכן הרחבה שלה הייתה מסמנת גם עליית מחיר
+ * רגילה — "מחיר מוזל של 39.90 לחודשיים ראשונים ולאחר מכן 49.90"
+ * (id 58) — כתוספת. 58 נפסלת ממילא כעלייה במחיר, אבל שער אינו אמור
+ * לומר על חבילה דבר שאינו נכון עליה.
+ */
+const THEN_CHARGED = String.raw`[^.•\n]{0,20}\d`;
+const ADDON_FREE_THEN_PAID = new RegExp(
+  [
+    String.raw`(?:חינם|ללא עלות|במתנה)[^.•\n\d]{0,12}?(?:אח["״]?כ|לאחר מכן|אחר כך)${THEN_CHARGED}`,
+    String.raw`חודש(?:ים|יים)\s+[^\n\d]{2,30}?\s?אח["״]?כ${THEN_CHARGED}`,
+  ].join("|"),
+);
 
 export function addonFreeThenPaid(p: Package): boolean {
-  return ADDON_FREE_THEN_PAID.test(`${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""}`);
+  return ADDON_FREE_THEN_PAID.test(gateText(p));
 }
 
 /**

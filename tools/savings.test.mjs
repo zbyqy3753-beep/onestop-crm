@@ -15,6 +15,7 @@ import {
   parseSpend,
   priceUnknownAtLines,
   perLinePrice,
+  requiresMultipleLines,
 } from "../src/app/lp/catalog/savings.ts";
 import { basePackages, logicName } from "../src/app/lp/catalog/catalog.ts";
 
@@ -682,5 +683,142 @@ test("מדרגות: רשומה פגומה לא משנה את החיסכון המ
       assert.equal(dirty.monthly, clean.monthly, `הכותרת זזה בגלל ${JSON.stringify(junk)}`);
       assert.equal(dirty.yearly, dirty.monthly * 12);
     }
+  }
+});
+
+/*
+ * תוספת חינם שהופכת לבתשלום — גם בניסוח המלא.
+ *
+ * ⚠️ `ADDON_FREE_THEN_PAID` הכירה רק בקיצור `אח"כ`, בעוד `RISE_IN_TEXT`
+ * מכירה כבר ב-`לאחר מכן` וב-`אחר כך` כאותה הצהרה בדיוק — והקטלוג כותב
+ * דווקא את הצורה המלאה: id 123 "4 חודשים חינם, לאחר מכן תוספת של 15 ₪"
+ * ו-id 83 "3 חודשים חינם, לאחר מכן 20 ₪". בנוסף נדרש שהמספר יבוא **מיד**
+ * אחרי המילה, ולכן גם `חינם אח"כ תוספת של 15 ₪` חמק. על חבילה שיש לה
+ * `priceAfterPromo` מספרי שני החורים האלה מרכיבים כותרת שנבנית על
+ * המחיר בלי התוספת.
+ */
+test("תוספת חינם שהופכת לבתשלום נתפסת גם בניסוח המלא 'לאחר מכן'", () => {
+  const fake = (description) => ({ name: "x", description, benefits: null });
+  for (const text of [
+    // הנוסח המדויק של id 123, שה-`priceAfterPromo` שלה הוא 169.
+    "מגדיל טווח לנחושת – 4 חודשים חינם, לאחר מכן תוספת של 15 ₪",
+    // הנוסח המדויק של id 83.
+    "200 דקות – 3 חודשים חינם, לאחר מכן 20 ₪",
+    // אותה הצהרה בקיצור, אבל עם מילים בין המילה למספר.
+    'ערוצי דרמות 4 חודשים חינם אח"כ תוספת של 15 ₪',
+    "ערוצי ספורט במתנה ואחר כך 29.9 ₪",
+    "מגדיל טווח ללא עלות, לאחר מכן 14.90 ₪ לחודש",
+  ]) {
+    assert.ok(addonFreeThenPaid(fake(text)), `לא זוהה: ${text}`);
+  }
+  // הניסוחים שנתפסו עד היום ממשיכים להיתפס.
+  assert.ok(addonFreeThenPaid(fake('12 ערוצי דרמות חינם אח"כ 49.9')));
+  assert.ok(addonFreeThenPaid(fake("ערוצי ספורט ללא עלות ואח״כ 29.9")));
+  assert.ok(addonFreeThenPaid(fake('2חודשים HBO אח"כ 25שח')));
+  // ⚠️ והגבול לא זז: עליית **המחיר עצמו** אינה תוספת — לזה יש
+  // `priceAfterPromo`. ספרה בתוך החלון היא מה שמבדיל.
+  assert.equal(addonFreeThenPaid(fake('חודשיים ב-59 ש"ח אח"כ 119 ש"ח')), false);
+  assert.equal(addonFreeThenPaid(fake("מחיר מוזל של 39.90 שח לחודשיים ראשונים ולאחר מכן 49.90 לחודש")), false);
+  assert.equal(addonFreeThenPaid(fake("נתב כלול במחיר")), false);
+  assert.equal(addonFreeThenPaid(fake("התקנה ללא עלות")), false);
+
+  // חבילה ביתית אמיתית מהבריכה + המשפט של id 123 = מחוץ לבריכה.
+  const sting = PACKAGES.find((p) => p.id === "3");
+  assert.ok(sting, "לא נמצאה בקטלוג: id 3");
+  assert.equal(isComparable(sting, "home"), true, "id 3 אינה בבריכה — עדכן את הבדיקה");
+  assert.equal(sting.priceAfterPromo, 229);
+  const withAddon = {
+    ...sting,
+    description: `${sting.description}\n\nמגדיל טווח לנחושת – 4 חודשים חינם, לאחר מכן תוספת של 15 ₪`,
+  };
+  assert.equal(isComparable(withAddon, "home"), false, "תוספת חודשית נסתרת נכנסה לבריכה");
+
+  // ⚠️ ההקשחה לא נגעה בבחירה של היום.
+  assert.equal(computeSaving(PACKAGES, "home", 1, 350).pick?.id, "157");
+  assert.ok(pool("home").length > 1, `בית: ${pool("home").length}`);
+});
+
+/*
+ * ה״א הידיעה אינה מבריחה הצהרת מחיר לשנה השנייה.
+ *
+ * ⚠️ אותה מלכודת בדיוק שתוקנה ב-`ה?ר[אוש]{2,3}נים`, ולא הוחלה על
+ * אחיותיה: `שנה שניי?ה` תפס את "שנה שניה שלישית 229" שבקטלוג (id 158)
+ * אבל לא את "בשנה השנייה 229 ₪" — הניסוח הנפוץ יותר בעברית. חבילה
+ * שתכתוב כך את העלייה שלה הייתה נכנסת לבריכה כמחיר "לנצח".
+ */
+test("ה״א הידיעה אינה מבריחה הצהרת מחיר לשנה השנייה", () => {
+  const fake = (description) => ({ name: "x", description, benefits: null });
+  for (const text of [
+    "בשנה השנייה 229 ₪",
+    "שנה השניה 229",
+    "בשנה השלישית 229",
+    "בשנה הרביעית 329",
+    // הצורות שנתפסו עד היום, כולל זו שבקטלוג.
+    "שנה שניה שלישית 229",
+    "שנה שלישית 229",
+    "שנה רביעית329",
+  ]) {
+    assert.ok(declaresRiseInText(fake(text)), `לא זוהה: ${text}`);
+  }
+  // "שנה ראשונה" לבדה אינה הצהרת עלייה.
+  assert.equal(declaresRiseInText(fake("גלישה ללא הגבלה בשנה הראשונה")), false);
+  // ⚠️ הבריכה לא התרוקנה ולא זזה.
+  assert.equal(pool("cellular").length, 24, `סלולר: ${pool("cellular").length}`);
+  assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).pick?.price, 34);
+});
+
+/*
+ * `priceAfterPromoNote` הוא השדה הרביעי שהשערים קוראים.
+ *
+ * ⚠️ חמשת שערי הנוסח קראו `rawName` + `description` + `benefits` ודילגו
+ * דווקא על השדה שקיים כדי להחזיק את המשפט של המפעיל על מה שקורה
+ * כשההטבה נגמרת. זו אותה השמטה בדיוק שתוקנה כבר פעמיים (`logicName`
+ * שנוסף לשלושה מתוך חמישה, `benefits` שנשכח ב-`familyPriceOnly`).
+ *
+ * החור רדום עבור `declaresRiseInText` — הערה בלי מספר נפסלת ממילא
+ * ב-`hasKnownAfterPrice` — אבל `priceAfterPromoCorrected` בטיפוס מתעד
+ * את התצורה שמחיה אותו: מספר שהוזן **ידנית** לצד ההערה המקורית. אז
+ * ההערה היא הטקסט היחיד שמתאר את החשבון, ואף שער לא קרא אותה.
+ */
+test("שערי הנוסח קוראים גם את `priceAfterPromoNote`", () => {
+  const note = (priceAfterPromoNote) => ({
+    name: "x",
+    description: null,
+    benefits: null,
+    priceAfterPromoNote,
+  });
+  // הנוסח המדויק של ההערה על id 83.
+  assert.ok(addonFreeThenPaid(note("*- 200 דקות – 3 חודשים חינם, לאחר מכן 20 ₪")));
+  // הנוסח המדויק של השם של id 110 / התיאור של "4 ב 130".
+  assert.ok(requiresMultipleLines(note("עלות החבילה לכל קו שני ₪32.00")));
+  assert.ok(routerPricedSeparately(note('לאחר שנה 159 ₪ לחודש, עלות נתב 34.9 ש"ח')));
+  assert.ok(familyPriceOnly(note("המחיר הוא למסלול משפחתי")));
+  assert.ok(afterPriceDependsOnLines({ ...note("עד 2 מנויים כולל – 64.90 ₪ למנוי"), priceModel: "monthly", spec: {} }));
+  assert.ok(declaresRiseInText(note("פקיעה אחרי שנה וחצי, מחיר לאחר פקיעה 44.9 ש״ח")));
+  // הערה שאינה אומרת כלום על חיוב נוסף אינה פוסלת.
+  assert.equal(addonFreeThenPaid(note("המחיר כולל הכול")), false);
+  assert.equal(routerPricedSeparately(note("הנתב כלול במחיר")), false);
+  assert.equal(requiresMultipleLines(note("מחיר לקו בודד")), false);
+
+  // חבילה אמיתית מהבריכה שההערה שלה תוקנה ידנית — התוספת החודשית
+  // שבהערה פוסלת אותה, בדיוק כאילו הייתה בתיאור.
+  const sting = PACKAGES.find((p) => p.id === "3");
+  assert.ok(sting, "לא נמצאה בקטלוג: id 3");
+  const corrected = {
+    ...sting,
+    priceAfterPromo: 229,
+    priceAfterPromoCorrected: true,
+    priceAfterPromoNote: "*- 200 דקות – 3 חודשים חינם, לאחר מכן 20 ₪",
+  };
+  assert.equal(isComparable(corrected, "home"), false, "הערה עם חיוב חודשי נוסף נכנסה לבריכה");
+
+  // ⚠️ אף חבילה בקטלוג של היום לא זזה בגלל קריאת השדה: כל 11 ההערות
+  // יושבות על חבילות שאין להן `priceAfterPromo` מספרי, ולכן
+  // `hasKnownAfterPrice` פוסל אותן ממילא.
+  assert.equal(pool("cellular").length, 24);
+  assert.equal(pool("home").length, 2);
+  for (const p of PACKAGES) {
+    if (p.priceAfterPromoNote == null) continue;
+    assert.equal(isComparable(p, p.category), false, `${p.name}: הערה בלי מספר נכנסה לבריכה`);
   }
 });

@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  afterPrice,
   basePackages,
+  byPrice,
   disclosedRiseCount,
+  hasKnownAfterPrice,
   isListable,
   listableCounts,
   logicName,
@@ -777,4 +780,154 @@ test("ספקים: הרשימה נבנית מהחבילות שנמסרו, גם כ
   const shownSlugs = new Set(PACKAGES.filter(isListable).map((p) => p.provider.slug));
   for (const p of base) assert.ok(shownSlugs.has(p.slug), `${p.slug} ברצועה בלי חבילה`);
   assert.equal(base.length, shownSlugs.size);
+});
+
+/* ── שערי הדירוג: מחיר-אחרי-הטבה ───────────────────────────────────────
+ *
+ * ⚠️ `isListable` שומר על `price` ועל `discountPercent` — שני השדות
+ * שהוא מדרג לפיהם — ו**לא** על `priceAfterPromo`, שהוא השדה שהמיון
+ * "מחיר אחרי ההטבה: מהזול ליקר" ממש מדרג לפיו. `0` הוא בדיוק הצורה
+ * שהמחלץ מייצר כשהוא לא קרא מספר (ids 18/22 מוכיחים את זה על `price`
+ * באותו קובץ), ולכן זה שער לרענון הבא ולא תרגיל תיאורטי.
+ */
+test("קטלוג: מחיר-אחרי-הטבה פגום אינו מדורג כזול ביותר", () => {
+  const tpl = PACKAGES.find(
+    (p) => p.category === "cellular" && isListable(p) && typeof p.priceAfterPromo === "number",
+  );
+  assert.ok(tpl, "לא נמצאה חבילת סלולר עם מחיר אחרי ההטבה — עדכן את הבדיקה");
+
+  // המספר האמיתי ממשיך לדרג, וזו ההתנהגות שאין לשבור.
+  assert.equal(hasKnownAfterPrice(tpl), true);
+  assert.equal(afterPrice(tpl), tpl.priceAfterPromo);
+
+  for (const priceAfterPromo of [0, -0, -5, "59.9", NaN, "0"]) {
+    const broken = { ...tpl, priceAfterPromo };
+    assert.equal(
+      hasKnownAfterPrice(broken),
+      false,
+      `priceAfterPromo=${String(priceAfterPromo)} נחשב מחיר ידוע`,
+    );
+    /*
+     * ⚠️ נופל ל-`price` ולא ל-`0`/`NaN`/מחרוזת. לפני התיקון
+     * `afterPrice` החזירה את הערך הפגום עצמו: `0` מיקם את החבילה
+     * **בראש** המיון "מהזול ליקר", ומחרוזת יצאה מפונקציה שמוצהרת
+     * `number` והמשיכה לחישובים.
+     */
+    assert.equal(afterPrice(broken), tpl.price, `priceAfterPromo=${String(priceAfterPromo)}`);
+    assert.equal(typeof afterPrice(broken), "number");
+  }
+
+  // והקטלוג של היום נקי: אין רשומה שמצהירה מחיר-אחרי-הטבה שאינו מספר חיובי.
+  expectFlags(
+    PACKAGES.filter(
+      (p) =>
+        isListable(p) &&
+        p.priceAfterPromo != null &&
+        !(typeof p.priceAfterPromo === "number" && Number.isFinite(p.priceAfterPromo) && p.priceAfterPromo > 0),
+    ).map((p) => p.id),
+    [],
+    "רשומות עם priceAfterPromo שאינו מספר חיובי",
+  );
+});
+
+/*
+ * ⚠️ `afterPrice` ו-`byPrice` מדרגות את אותם שדות, ושתי ברירות מחדל
+ * הפוכות לאותו שדה פגום הן מלכודת: אחת ממקמת את הרשומה בראש העמוד
+ * בזמן שהשנייה שולחת אותה לסוף. שלוש רשומות החוב הידוע הן המקרה
+ * האמיתי שבו זה נבדק.
+ */
+test("קטלוג: שני שערי הדירוג שולחים רשומה פגומה לאותו קצה", () => {
+  for (const id of KNOWN_UNLISTABLE) {
+    const p = PACKAGES.find((x) => x.id === id);
+    assert.ok(p, `${id} נעלם מהקטלוג — עדכן את KNOWN_UNLISTABLE`);
+    assert.equal(afterPrice(p), Infinity, `${id}: afterPrice אינו שולח לסוף`);
+
+    const healthy = PACKAGES.find((x) => x.category === p.category && isListable(x));
+    assert.ok(byPrice(p, healthy) > 0, `${id}: byPrice מדרג אותו כזול מחבילה תקינה`);
+    assert.ok(afterPrice(p) > afterPrice(healthy), `${id}: afterPrice מדרג אותו כזול`);
+  }
+
+  // ואותו שער גם על חשמל עם אחוז הנחה אפס או שלילי.
+  const elec = PACKAGES.find((p) => p.category === "electricity" && isListable(p));
+  for (const discountPercent of [0, -0, -5, "20"]) {
+    const broken = { ...elec, discountPercent };
+    assert.equal(afterPrice(broken), Infinity, `${String(discountPercent)}%`);
+    assert.ok(byPrice(broken, elec) > 0, `${String(discountPercent)}% דורג כהנחה גדולה`);
+  }
+});
+
+/*
+ * ⚠️ "נתון האמון" של הדף — כמה חבילות מגלות מה יקרה אחרי ההטבה — אינו
+ * יכול להיות מנופח על ידי רשומות שלא גילו כלום. `priceAfterPromo: 0`
+ * הוא שדה שלא נקרא, לא הצהרה.
+ */
+test("קטלוג: מונה ההצהרות על עליית מחיר אינו סופר שדה שלא נקרא", () => {
+  const base = disclosedRiseCount(PACKAGES);
+
+  const silent = PACKAGES.find(
+    (p) => p.category === "cellular" && isListable(p) && p.priceAfterPromo == null && p.priceAfterPromoNote == null,
+  );
+  assert.ok(silent, "לא נמצאה חבילה שאינה מצהירה כלום — עדכן את הבדיקה");
+  assert.equal(disclosedRiseCount([...PACKAGES, { ...silent, id: "test-zero", priceAfterPromo: 0 }]), base);
+  assert.equal(disclosedRiseCount([...PACKAGES, { ...silent, id: "test-str", priceAfterPromo: "44.9" }]), base);
+
+  // ומספר אמיתי כן נספר — אחרת השער הזה מוריד את המונה לאפס בשקט.
+  assert.equal(
+    disclosedRiseCount([...PACKAGES, { ...silent, id: "test-real", priceAfterPromo: 44.9 }]),
+    base + 1,
+  );
+});
+
+/* ── קטגוריית הליד שנרשמת מהכרטיס ──────────────────────────────────────
+ *
+ * ⚠️ `crmCategory` היא מה שנכתב בעמודת הקטגוריה של כל ליד מהדף, והערך
+ * נשלח מהדפדפן בשדה מוסתר. `actions.ts` מאמת אותו מול `LANDING_CATEGORIES`
+ * ומחזיר "נא לבחור מה מעניין אותך" על כל מה שאינו שם — כלומר קטגוריה
+ * שהפונקציה תחזיר ואינה ברשימה הופכת את הכרטיס שלה לטופס שלא ניתן
+ * לשלוח, בלי שום שגיאה בקוד.
+ */
+test("קטגוריית ליד: כל חבילה בקטלוג מגיעה לקטגוריה שהשרת מקבל", async () => {
+  const { crmCategory, LANDING_CATEGORIES } = await import("../src/app/lp/config.ts");
+  const allowed = new Set(LANDING_CATEGORIES.map((c) => c.key));
+  const rejected = PACKAGES.filter(isListable)
+    .filter((p) => !allowed.has(crmCategory(p)))
+    .map((p) => `${p.id}:${crmCategory(p)}`);
+
+  assert.deepEqual(rejected, [], `קטגוריות שהשרת ידחה: ${rejected.join(", ")}`);
+});
+
+test("קטגוריית ליד: קו טלפון ביתי אינו נרשם כאינטרנט", async () => {
+  const { crmCategory } = await import("../src/app/lp/config.ts");
+  /*
+   * ⚠️ זה הבאג. id 83 ("בזק טלפון - מדברים 50 דקות") הוא `hasPhone`
+   * בלבד — לא אינטרנט ולא טלוויזיה — ונפל לברירת המחדל "internet":
+   * הנציג שמסנן לפי אינטרנט התקשר לאדם שביקש קו טלפון, והליד נספר
+   * בעלויות של אינטרנט.
+   */
+  const phoneOnly = PACKAGES.filter(isListable).filter(
+    (p) => p.category === "home" && !p.spec.hasInternet && !p.spec.hasTv,
+  );
+  expectFlags(phoneOnly.map((p) => p.id), ["83"], "חבילות בית בלי אינטרנט ובלי טלוויזיה");
+  for (const p of phoneOnly) {
+    assert.equal(crmCategory(p), "general", `${p.id} (${p.name}) נשלח כ-${crmCategory(p)}`);
+  }
+});
+
+test("קטגוריית ליד: חבילת טלוויזיה בלי אינטרנט אינה נרשמת כאינטרנט", async () => {
+  const { crmCategory } = await import("../src/app/lp/config.ts");
+  /*
+   * ⚠️ התנאי היה `hasTv && hasInternet` — נכתב בשביל סטינג, והשאיר
+   * פתוח את הכיוון ההפוך. שלוש חבילות הטלוויזיה של היום נתפסות על
+   * `type: "TV"`, ולכן זה שער לרענון הבא: אותה חבילה בדיוק עם `type`
+   * "סיבים" ובלי מילה מזהה בשם נרשמה כ"אינטרנט".
+   */
+  const tvOnly = PACKAGES.filter(isListable).filter(
+    (p) => p.category === "home" && p.spec.hasTv && !p.spec.hasInternet,
+  );
+  assert.ok(tvOnly.length > 0, "אין חבילת טלוויזיה בלבד — עדכן את הבדיקה");
+  for (const p of tvOnly) {
+    assert.equal(crmCategory(p), "tv");
+    // והראיה שזה ה-`spec` ולא המילה: גם בלי `type` ובלי שם מזהה.
+    assert.equal(crmCategory({ ...p, type: "סיבים", name: "חבילה", rawName: "חבילה" }), "tv");
+  }
 });

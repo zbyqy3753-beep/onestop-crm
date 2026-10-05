@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Card } from "./Card";
 import { PackageCard } from "./PackageCard";
 import { CompareTray, MAX_COMPARE } from "./CompareTray";
-import { shekels } from "../catalog/format";
+import { PACKAGES_CAPTION, shekels } from "../catalog/format";
 import { afterPrice, hasKnownAfterPrice } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
@@ -315,9 +315,21 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
       */}
       <div className="min-w-0">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-lp-ink-2">
-            <span className="nums font-semibold text-lp-ink">{results.length}</span> חבילות
-            {hasFilters && <span className="text-lp-ink-3"> מתוך {packages.length}</span>}
+          {/*
+            ⚠️ `aria-live` על המונה. סימון תיבת חברה או שבב סוג משאיר את
+            הפוקוס על הפקד ומחליף את הרשת שמתחתיו בלי מילה אחת: גולש
+            קורא-מסך שסימן "גולן" לא שמע ש-55 הפכו ל-18, כלומר אין שום
+            אישור שהמסנן בכלל נקלט. מיון אינו משנה את הטקסט ולכן אינו
+            מכריז דבר.
+
+            ⚠️ והכיתוב ביחיד וברבים — ראה `PACKAGES_CAPTION`.
+          */}
+          <p className="text-sm text-lp-ink-2" aria-live="polite">
+            <span className="nums font-semibold text-lp-ink">{results.length}</span>{" "}
+            {PACKAGES_CAPTION(results.length)}
+            {hasFilters && (
+              <span className="nums text-lp-ink-3"> מתוך {packages.length}</span>
+            )}
           </p>
           <label className="flex min-w-0 items-center gap-2 text-sm">
             <span className="text-lp-ink-2">מיון</span>

@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { cardStats, compareRows, detailRows } from "../src/app/lp/catalog/format.ts";
+import {
+  PACKAGES_CAPTION,
+  PLANS_CAPTION,
+  cardStats,
+  compareRows,
+  detailRows,
+} from "../src/app/lp/catalog/format.ts";
 
 /*
  * ⚠️ הבדיקות כאן רצות על רשומות **מסונתזות** ולא על `packages.json`, בשונה
@@ -163,4 +169,21 @@ test("ההשוואה מיישרת יחיד ורבים לשורה אחת", () => 
   ]).filter((r) => r.label.includes("שיחה"));
   assert.equal(minuteRows.length, 1);
   assert.deepEqual(minuteRows[0].values, ["1", "500"]);
+});
+
+/*
+ * ⚠️ אותו כלל גם למונים שמספרים חבילות. בניגוד לכיתובי המפרט שמעל, כאן
+ * זה באג **חי**: הסוג "בסיס" בסלולר נושא חבילה אחת בלבד (וכך גם
+ * "קו ביתי" בביתי), ולכן לחיצה אחת על השבב הציגה "1 חבילות מתוך 55".
+ */
+test("מונה החבילות ביחיד וברבים", () => {
+  assert.equal(PACKAGES_CAPTION(1), "חבילה");
+  assert.equal(PACKAGES_CAPTION(0), "חבילות");
+  assert.equal(PACKAGES_CAPTION(55), "חבילות");
+});
+
+test("מונה מסלולי החשמל ביחיד וברבים", () => {
+  assert.equal(PLANS_CAPTION(1), "מסלול");
+  assert.equal(PLANS_CAPTION(0), "מסלולים");
+  assert.equal(PLANS_CAPTION(18), "מסלולים");
 });

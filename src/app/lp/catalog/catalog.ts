@@ -99,6 +99,20 @@ export function byCategory(packages: Package[], category: Category): Package[] {
 }
 
 /**
+ * מספר שאפשר להציג כמחיר (או כאחוז הנחה) — ולא מחרוזת שנראית כמו אחד,
+ * לא `0` ולא ערך שלילי.
+ *
+ * ⚠️ אותה פונקציה בדיוק כמו `isMoney` ב-`savings.ts`, ומאותו טעם:
+ * הקטלוג נכנס דרך `as unknown as Catalog`, כלומר אין ולידציה בזמן ריצה.
+ * כאן היא מרוכזת כדי ששלושת השערים שמתחתיה (`isListable`, `afterPrice`
+ * ו-`byPrice`) יקראו את אותה הגדרה של "מספר שמותר לדרג לפיו" — שתי
+ * הגדרות שונות לאותו שדה הן בדיוק המלכודת שההערות כאן מתריעות עליה.
+ */
+function isMoney(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+/**
  * חבילה שאפשר להציג. חבילת חשמל נמדדת באחוז הנחה ולא במחיר, ולכן
  * לשתיהן תנאי משלהן.
  *
@@ -132,8 +146,8 @@ export function byCategory(packages: Package[], category: Category): Package[] {
 export function isListable(p: Package): boolean {
   if (p.editorial?.hidden) return false;
   return p.category === "electricity"
-    ? typeof p.discountPercent === "number" && Number.isFinite(p.discountPercent) && p.discountPercent > 0
-    : typeof p.price === "number" && Number.isFinite(p.price) && p.price > 0;
+    ? isMoney(p.discountPercent)
+    : isMoney(p.price);
 }
 
 export function listable(packages: Package[]): Package[] {
@@ -154,8 +168,14 @@ export function afterPrice(p: Package): number {
   // כזולה ביותר בעמוד בעוד `byPrice` שולח אותה לסוף. אף אחת מהן אינה
   // ניתנת להגעה היום (`isListable` פוסל `discountPercent` ריק), אבל
   // שתי ברירות מחדל הפוכות לאותו שדה הן מלכודת לרענון הבא.
-  if (p.category === "electricity") return -(p.discountPercent ?? -Infinity);
-  return p.priceAfterPromo ?? p.price ?? Infinity;
+  if (p.category === "electricity") {
+    return isMoney(p.discountPercent) ? -p.discountPercent : Infinity;
+  }
+  return isMoney(p.priceAfterPromo)
+    ? p.priceAfterPromo
+    : isMoney(p.price)
+      ? p.price
+      : Infinity;
 }
 
 /** כמה חבילות מציג הדף בפועל, לפי קטגוריה. */
@@ -212,9 +232,18 @@ export function serviceCounts(packages: Package[]) {
  * לסנן לקטגוריה קודם.
  */
 export function byPrice(a: Package, b: Package): number {
-  const av = a.category === "electricity" ? -(a.discountPercent ?? -Infinity) : (a.price ?? Infinity);
-  const bv = b.category === "electricity" ? -(b.discountPercent ?? -Infinity) : (b.price ?? Infinity);
-  return av - bv;
+  // ⚠️ אותם שערים בדיוק כמו ב-`afterPrice`, ולא `?? Infinity` לבדו:
+  // `price: 0` (הצורה שהמחלץ מייצר כשהוא לא קרא מחיר — ראה ids 18/22)
+  // דורג כזול ביותר בעמוד בזמן ש-`afterPrice` שלחה אותו לסוף.
+  const value = (p: Package) =>
+    p.category === "electricity"
+      ? isMoney(p.discountPercent)
+        ? -p.discountPercent
+        : Infinity
+      : isMoney(p.price)
+        ? p.price
+        : Infinity;
+  return value(a) - value(b);
 }
 
 /** הזולה ביותר לפי המחיר שמוצג היום. */
@@ -291,7 +320,10 @@ export function disclosedRiseCount(packages: Package[]): number {
   return listable(packages).filter(
     (p) =>
       p.category !== "electricity" &&
-      (p.priceAfterPromo != null || p.priceAfterPromoNote != null),
+      // ⚠️ `isMoney` ולא `!= null`: `priceAfterPromo: 0` אינו הצהרה על
+      // עליית מחיר אלא שדה שלא נקרא, ו"נתון האמון" של הדף אינו יכול
+      // להיות מנופח על ידי בדיוק הרשומות שלא דיווחו כלום.
+      (isMoney(p.priceAfterPromo) || p.priceAfterPromoNote != null),
   ).length;
 }
 
@@ -314,6 +346,19 @@ export function disclosedRiseCount(packages: Package[]): number {
  * שהוא רצפה ולא מחיר), וניחוש שגוי היה מחזיר אותנו בדיוק לכותרת
  * המומצאת שהמחשבון נבנה כדי למנוע.
  */
+/*
+ * ⚠️ גם שדה מספרי **פגום** הוא "לא יודעים", ולא רק שדה ריק עם הערה.
+ *
+ * הבדיקה המקורית שאלה רק `priceAfterPromo == null`, כלומר `0` (או
+ * מחרוזת, או מספר שלילי) נחשב מחיר-אחרי-הטבה ידוע לגמרי. זו בדיוק
+ * הצורה שהמחלץ מייצר כשהוא לא הצליח לקרוא מספר — `price: 0` בשתי
+ * רשומות קיימות הוא אותו פגם באותו קובץ — והתוצאה חמורה פעמיים:
+ * המיון "מחיר אחרי ההטבה: מהזול ליקר" שם את הרשומה הזו **בראש**
+ * הרשימה (`afterPrice` החזירה 0), והכרטיס מדפיס "אחרי ההטבה ₪0" על
+ * חבילה שמחירה 39.9. `isComparable` ב-`savings.ts` כבר פוסל אותה
+ * דרך `isMoney`; כאן השער היה חסר.
+ */
 export function hasKnownAfterPrice(p: Package): boolean {
+  if (p.priceAfterPromo != null && !isMoney(p.priceAfterPromo)) return false;
   return !(p.priceAfterPromoNote && p.priceAfterPromo == null);
 }

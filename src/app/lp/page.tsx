@@ -17,7 +17,7 @@ import {
   providers,
   serviceCounts,
 } from "./catalog/catalog";
-import { shekels } from "./catalog/format";
+import { PACKAGES_CAPTION, PLANS_CAPTION, shekels } from "./catalog/format";
 import "./lp.css";
 
 /**
@@ -103,7 +103,7 @@ const SERVICES: {
         <path d="M10.5 5.5h3M12 18.5h.01" />
       </Glyph>
     ),
-    count: (c) => `${c.cellular} חבילות`,
+    count: (c) => `${c.cellular} ${PACKAGES_CAPTION(c.cellular)}`,
   },
   {
     title: "אינטרנט וסיבים",
@@ -114,7 +114,7 @@ const SERVICES: {
         <path d="M2.5 8.5a14 14 0 0 1 19 0M5.5 12a10 10 0 0 1 13 0M8.5 15.5a6 6 0 0 1 7 0M12 19h.01" />
       </Glyph>
     ),
-    count: (c) => `${c.internet} חבילות`,
+    count: (c) => `${c.internet} ${PACKAGES_CAPTION(c.internet)}`,
   },
   {
     title: "חבילות טלוויזיה",
@@ -126,7 +126,7 @@ const SERVICES: {
         <path d="M8.5 21.5h7M10 10.5l4 2.5-4 2.5z" />
       </Glyph>
     ),
-    count: (c) => `${c.tv} חבילות`,
+    count: (c) => `${c.tv} ${PACKAGES_CAPTION(c.tv)}`,
   },
   {
     title: "טלוויזיה + אינטרנט",
@@ -138,7 +138,7 @@ const SERVICES: {
         <path d="M8.5 21.5h7M8.5 13.5a5 5 0 0 1 7 0M10.5 10.8a8.5 8.5 0 0 1 3 0M12 15.8h.01" />
       </Glyph>
     ),
-    count: (c) => `${c.bundle} חבילות`,
+    count: (c) => `${c.bundle} ${PACKAGES_CAPTION(c.bundle)}`,
   },
   {
     title: "הנחה בחשמל",
@@ -149,7 +149,7 @@ const SERVICES: {
         <path d="M13.5 2.5 5 13.5h6l-.5 8L19 10.5h-6z" />
       </Glyph>
     ),
-    count: (c) => `${c.electricity} מסלולים`,
+    count: (c) => `${c.electricity} ${PLANS_CAPTION(c.electricity)}`,
   },
 ];
 

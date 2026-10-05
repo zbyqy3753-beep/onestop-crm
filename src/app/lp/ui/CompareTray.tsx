@@ -179,14 +179,27 @@ export function CompareTray({
           >
             נקה
           </button>
+          {/*
+            ⚠️ `aria-disabled` ולא `disabled`, בדיוק כמו ב-CTA של המחשבון
+            ומאותו טעם — ורק שכאן זה חמור יותר: הכיתוב **עצמו** הוא
+            ההסבר. כפתור `disabled` יוצא מסדר ה-Tab, ולכן משתמש מקלדת
+            שסימן חבילה אחת עבר מ-"נקה" ישר אל הקטלוג ולא פגש אף פעם את
+            המילים "בחרו עוד חבילה" — המגש נפתח, הכריז "להשוואה (1/4)",
+            ושום דבר במסלול המקלדת לא אמר למה אי אפשר להשוות. הכפתור
+            נשאר בר-מיקוד, מכריז על עצמו כמושבת, והלחיצה אינה פותחת
+            טבלה של פריט אחד.
+          */}
           <button
             type="button"
             onClick={(e) => {
+              if (items.length < 2) return;
               openerRef.current = e.currentTarget;
               setOpen(true);
             }}
-            disabled={items.length < 2}
-            className="inline-flex min-h-11 items-center rounded-lg bg-lp-brand px-4 py-2 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright disabled:opacity-40"
+            aria-disabled={items.length < 2}
+            className={`inline-flex min-h-11 items-center rounded-lg bg-lp-brand px-4 py-2 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright ${
+              items.length < 2 ? "opacity-40" : ""
+            }`}
           >
             {items.length < 2 ? "בחרו עוד חבילה" : "השוו"}
           </button>
