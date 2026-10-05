@@ -220,3 +220,12 @@ export const WaCampaignStatus = {
 } as const
 
 export type WaCampaignStatus = (typeof WaCampaignStatus)[keyof typeof WaCampaignStatus]
+
+
+export const PostRequestStatus = {
+  pending: 'pending',
+  done: 'done',
+  failed: 'failed'
+} as const
+
+export type PostRequestStatus = (typeof PostRequestStatus)[keyof typeof PostRequestStatus]

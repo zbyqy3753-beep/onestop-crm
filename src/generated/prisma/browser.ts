@@ -238,3 +238,8 @@ export type MailerSettings = Prisma.MailerSettingsModel
  * הנמענים מגיעים מהדבקה או מקובץ ולא מהלידים, ולכן אין קשר ל-`Lead`.
  */
 export type WaCampaign = Prisma.WaCampaignModel
+/**
+ * Model PostRequest
+ * 
+ */
+export type PostRequest = Prisma.PostRequestModel

@@ -43,7 +43,8 @@ export type IconName =
   | "upload"
   | "whatsapp"
   | "mail"
-  | "feedback";
+  | "feedback"
+  | "star";
 
 export interface NavGroup {
   title: string;
@@ -165,6 +166,13 @@ export const NAV: NavGroup[] = [
   {
     title: "אחר",
     items: [
+      {
+        href: "/posts",
+        label: "סטודיו פוסטים",
+        shortLabel: "פוסטים",
+        hint: "פוסטים לאינסטגרם מהקטלוג, או בקשה מ-Claude",
+        icon: "star",
+      },
       {
         href: "/feedback",
         label: "משוב",

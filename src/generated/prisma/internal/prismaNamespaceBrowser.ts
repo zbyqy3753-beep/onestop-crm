@@ -76,7 +76,8 @@ export const ModelName = {
   EmailMessage: 'EmailMessage',
   EmailOptOut: 'EmailOptOut',
   MailerSettings: 'MailerSettings',
-  WaCampaign: 'WaCampaign'
+  WaCampaign: 'WaCampaign',
+  PostRequest: 'PostRequest'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -481,6 +482,21 @@ export const WaCampaignScalarFieldEnum = {
 } as const
 
 export type WaCampaignScalarFieldEnum = (typeof WaCampaignScalarFieldEnum)[keyof typeof WaCampaignScalarFieldEnum]
+
+
+export const PostRequestScalarFieldEnum = {
+  id: 'id',
+  topic: 'topic',
+  notes: 'notes',
+  status: 'status',
+  resultUrl: 'resultUrl',
+  resultNote: 'resultNote',
+  createdById: 'createdById',
+  createdAt: 'createdAt',
+  handledAt: 'handledAt'
+} as const
+
+export type PostRequestScalarFieldEnum = (typeof PostRequestScalarFieldEnum)[keyof typeof PostRequestScalarFieldEnum]
 
 
 export const SortOrder = {

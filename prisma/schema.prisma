@@ -103,6 +103,7 @@ model User {
   issuedPasswordResets  PasswordReset[]   @relation("PasswordResetIssuer")
   emailCampaigns        EmailCampaign[]   @relation("EmailCampaignCreator")
   waCampaigns           WaCampaign[]      @relation("WaCampaignCreator")
+  postRequests          PostRequest[]     @relation("PostRequestCreator")
 
   @@index([role, active])
 }
@@ -1045,6 +1046,41 @@ model WaCampaign {
   createdAt DateTime @default(now())
 
   messages WhatsAppMessage[]
+
+  @@index([status, createdAt])
+}
+
+/**
+ * ── בקשות לפוסט אינסטגרם ─────────────────────────────────────────────
+ * תור שאלירן ממלא מסטודיו הפוסטים (`/posts`) ומשימה מתוזמנת של Claude
+ * מרוקנת דרך `/api/posts/requests`. המשימה רצה על מחשב ולא בשרת: היא
+ * מעצבת, מעלה לאינסטגרם דרך הדפדפן ומסמנת את הבקשה כטופלה.
+ */
+
+enum PostRequestStatus {
+  pending
+  done
+  failed
+}
+
+model PostRequest {
+  id String @id @default(cuid())
+
+  /// על מה הפוסט. טקסט חופשי, כפי שהמבקש כתב אותו.
+  topic String
+  notes String?
+
+  status PostRequestStatus @default(pending)
+
+  /// קישור לפוסט שפורסם, או הסבר למה לא. ממלאת המשימה המתוזמנת.
+  resultUrl  String?
+  resultNote String?
+
+  createdById String?
+  createdBy   User?   @relation("PostRequestCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime  @default(now())
+  handledAt DateTime?
 
   @@index([status, createdAt])
 }

@@ -409,7 +409,8 @@ export const ModelName = {
   EmailMessage: 'EmailMessage',
   EmailOptOut: 'EmailOptOut',
   MailerSettings: 'MailerSettings',
-  WaCampaign: 'WaCampaign'
+  WaCampaign: 'WaCampaign',
+  PostRequest: 'PostRequest'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -425,7 +426,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "session" | "passwordReset" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "renewalContact" | "renewalOptOut" | "whatsAppInbound" | "botSettings" | "loginAttempt" | "emailCampaign" | "emailMessage" | "emailOptOut" | "mailerSettings" | "waCampaign"
+    modelProps: "user" | "session" | "passwordReset" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "renewalContact" | "renewalOptOut" | "whatsAppInbound" | "botSettings" | "loginAttempt" | "emailCampaign" | "emailMessage" | "emailOptOut" | "mailerSettings" | "waCampaign" | "postRequest"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2353,6 +2354,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PostRequest: {
+      payload: Prisma.$PostRequestPayload<ExtArgs>
+      fields: Prisma.PostRequestFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PostRequestFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PostRequestPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PostRequestFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PostRequestPayload>
+        }
+        findFirst: {
+          args: Prisma.PostRequestFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PostRequestPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PostRequestFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PostRequestPayload>
+        }
+        findMany: {
+          args: Prisma.PostRequestFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PostRequestPayload>[]
+        }
+        create: {
+          args: Prisma.PostRequestCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PostRequestPayload>
+        }
+        createMany: {
+          args: Prisma.PostRequestCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PostRequestCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PostRequestPayload>[]
+        }
+        delete: {
+          args: Prisma.PostRequestDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PostRequestPayload>
+        }
+        update: {
+          args: Prisma.PostRequestUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PostRequestPayload>
+        }
+        deleteMany: {
+          args: Prisma.PostRequestDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PostRequestUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PostRequestUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PostRequestPayload>[]
+        }
+        upsert: {
+          args: Prisma.PostRequestUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PostRequestPayload>
+        }
+        aggregate: {
+          args: Prisma.PostRequestAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePostRequest>
+        }
+        groupBy: {
+          args: Prisma.PostRequestGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PostRequestGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PostRequestCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PostRequestCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2780,6 +2855,21 @@ export const WaCampaignScalarFieldEnum = {
 export type WaCampaignScalarFieldEnum = (typeof WaCampaignScalarFieldEnum)[keyof typeof WaCampaignScalarFieldEnum]
 
 
+export const PostRequestScalarFieldEnum = {
+  id: 'id',
+  topic: 'topic',
+  notes: 'notes',
+  status: 'status',
+  resultUrl: 'resultUrl',
+  resultNote: 'resultNote',
+  createdById: 'createdById',
+  createdAt: 'createdAt',
+  handledAt: 'handledAt'
+} as const
+
+export type PostRequestScalarFieldEnum = (typeof PostRequestScalarFieldEnum)[keyof typeof PostRequestScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -3142,6 +3232,20 @@ export type ListEnumWaCampaignStatusFieldRefInput<$PrismaModel> = FieldRefInputT
 
 
 /**
+ * Reference to a field of type 'PostRequestStatus'
+ */
+export type EnumPostRequestStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PostRequestStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'PostRequestStatus[]'
+ */
+export type ListEnumPostRequestStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PostRequestStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -3290,6 +3394,7 @@ export type GlobalOmitConfig = {
   emailOptOut?: Prisma.EmailOptOutOmit
   mailerSettings?: Prisma.MailerSettingsOmit
   waCampaign?: Prisma.WaCampaignOmit
+  postRequest?: Prisma.PostRequestOmit
 }
 
 /* Types for Logging */
