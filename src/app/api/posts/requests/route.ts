@@ -7,14 +7,20 @@ import { prisma } from "@/server/db/client";
  * GET   — הבקשות שממתינות, מהישנה לחדשה.
  * PATCH — סימון בקשה כטופלה (`done`) או כנכשלה (`failed`), עם קישור או הסבר.
  *
- * ⚠️ `/api` פתוח ב-proxy, ולכן האימות כאן. אותו `CRON_SECRET` כמו
- * שאר נקודות הקצה של המכונה: סוד אחד לסובב, לא שניים.
+ * ⚠️ `/api` פתוח ב-proxy, ולכן האימות כאן.
+ *
+ * ⚠️ מפתח ייעודי, `POSTS_API_KEY`, ולא רק `CRON_SECRET`. המשימה רצה על
+ * מחשב, וה-`CRON_SECRET` של הייצור לא שמור שם (ה-`.env` המקומי מחזיק ערך
+ * אחר). מסירת סוד הקרון של הייצור למחשב הייתה פותחת לו גם את תורי
+ * הדיוור והוואטסאפ; המפתח הזה פותח רק את התור הזה.
  */
 
 function authorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return false;
-  return request.headers.get("authorization") === `Bearer ${secret}`;
+  const header = request.headers.get("authorization");
+  return [process.env.POSTS_API_KEY, process.env.CRON_SECRET].some((s) => {
+    const secret = s?.trim();
+    return !!secret && header === `Bearer ${secret}`;
+  });
 }
 
 const unauthorized = () =>
