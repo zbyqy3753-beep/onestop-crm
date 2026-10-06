@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { Button, EmptyState } from "@/components/ui/primitives";
 
 /**
@@ -23,7 +25,16 @@ export default function LeadsError({
   unstable_retry: () => void;
 }) {
   // הודעת השגיאה עצמה לא מוצגת למשתמש — רק נרשמת לקונסול לצורך דיבוג.
-  console.error("שגיאה בטעינת מסך הלידים:", error.digest ?? error.message);
+  /*
+   * ⚠️ ב-`useEffect` ולא בגוף הרינדור, כמו בדוגמה ב-`error.md` של
+   * Next 16: בגוף זו תופעת לוואי ברינדור, וכל רינדור מחדש של הגבול
+   * הדפיס שוב — ב-StrictMode פעמיים לכל שגיאה, ועוד שורה לכל
+   * "לנסות שוב" שנכשל. `error.digest` הוא החוט היחיד שמקשר את המסך
+   * הזה ללוג בייצור, ושורות כפולות הופכות אותו לאות רועש.
+   */
+  useEffect(() => {
+    console.error("שגיאה בטעינת מסך הלידים:", error.digest ?? error.message);
+  }, [error]);
 
   return (
     <div className="mx-auto flex max-w-[1600px] items-center justify-center px-4 py-16 sm:px-6">

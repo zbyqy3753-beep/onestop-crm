@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { btnPrimary } from "./ui/button";
 
 /**
@@ -27,7 +29,16 @@ export default function LandingError({
   unstable_retry: () => void;
 }) {
   // ההודעה עצמה לא מוצגת למבקר — היא שלנו, לקונסול.
-  console.error("[lp] שגיאה בדף הנחיתה:", error.digest ?? error.message);
+  /*
+   * ⚠️ ב-`useEffect` ולא בגוף הרינדור, כמו בדוגמה ב-`error.md` של
+   * Next 16: בגוף זו תופעת לוואי ברינדור, וכל רינדור מחדש של הגבול
+   * הדפיס שוב — ב-StrictMode פעמיים לכל שגיאה, ועוד שורה לכל
+   * "לנסות שוב" שנכשל. `error.digest` הוא החוט היחיד שמקשר את המסך
+   * הזה ללוג בייצור, ושורות כפולות הופכות אותו לאות רועש.
+   */
+  useEffect(() => {
+    console.error("[lp] שגיאה בדף הנחיתה:", error.digest ?? error.message);
+  }, [error]);
 
   return (
     <main className="flex min-h-dvh items-center justify-center px-4">

@@ -15,7 +15,14 @@ import {
 } from "../src/app/lp/catalog/catalog.ts";
 import { isComparable } from "../src/app/lp/catalog/savings.ts";
 import { catalog } from "../src/app/lp/catalog/catalog.ts";
-import { cardStats, compareRows, detailRows, shekels, speedLabel } from "../src/app/lp/catalog/format.ts";
+import {
+  cardStats,
+  compareRows,
+  detailRows,
+  discountIsCapped,
+  shekels,
+  speedLabel,
+} from "../src/app/lp/catalog/format.ts";
 
 /*
  * ⚠️ הבדיקות רצות מול **הקטלוג האמיתי** (`packages.json`) ולא מול נתוני
@@ -177,7 +184,12 @@ test("תצוגה: שתי המהירויות נשארות שלמות ביחידה
   assert.equal(speedLabel({ downloadMbps: 1000, uploadMbps: 100 }), "1,000/100Mb");
   assert.equal(speedLabel({ downloadMbps: 1000, uploadMbps: 1000 }), "1/1Gb");
   assert.equal(speedLabel({ downloadMbps: 500, uploadMbps: 50 }), "500/50Mb");
-  assert.equal(speedLabel({ downloadMbps: 2000, uploadMbps: null }), "2Gb");
+  /*
+   * ⚠️ מהירות בודדת נשארת ב-Mb. היחידה נבחרה לכל חבילה בנפרד, ולכן
+   * id 92 (`{1000, null}`) הודפס "1Gb" בשורה שמעל id 73 (`{1000, 100}`)
+   * שהודפס "1,000/100Mb" — אותה מהירות הורדה, כ-1 מול 1,000.
+   */
+  assert.equal(speedLabel({ downloadMbps: 2000, uploadMbps: null }), "2,000Mb");
   assert.equal(speedLabel({ downloadMbps: 3000, uploadMbps: 2000 }), "3/2Gb");
   /*
    * ⚠️ "שלמות" היא חלוקה ב-1000, לא `>= 1000`. `{1500, 1000}` עבר את
@@ -930,4 +942,86 @@ test("קטגוריית ליד: חבילת טלוויזיה בלי אינטרנט
     // והראיה שזה ה-`spec` ולא המילה: גם בלי `type` ובלי שם מזהה.
     assert.equal(crmCategory({ ...p, type: "סיבים", name: "חבילה", rawName: "חבילה" }), "tv");
   }
+});
+
+/*
+ * ⚠️ `byPrice` הוא השער ששולח רשומה בלי מחיר שמיש לסוף. כששתי רשומות
+ * כאלה נפגשות שתיהן מקבלות `Infinity`, וחיסור ביניהן החזיר `NaN` —
+ * קומפרטור שמחזיר NaN נותן סדר שתלוי בסדר הקלט.
+ */
+test("קטלוג: `byPrice` הוא סדר מלא גם על שתי רשומות שאין להן מחיר", () => {
+  const broken = PACKAGES.filter((p) => !isListable(p) && p.category !== "electricity");
+  assert.ok(broken.length >= 2, "אין שתי רשומות בלי מחיר לבדוק בהן");
+  const [a, b] = broken;
+  assert.equal(byPrice(a, b), 0, `byPrice החזיר ${byPrice(a, b)}`);
+  assert.equal(byPrice(b, a), 0);
+  // שתיהן נשלחות לסוף, ולא נבלעות אל תוך המיון בגלל השוואה לא מוגדרת.
+  const healthy = PACKAGES.find((p) => isListable(p) && p.category !== "electricity");
+  for (const order of [[a, b, healthy], [healthy, a, b], [b, healthy, a]]) {
+    assert.equal(order.slice().sort(byPrice)[0].id, healthy.id);
+  }
+});
+
+/*
+ * ⚠️ יחידה אחת לכל הדף, ולא לכל חבילה. שתי חבילות עם אותה מהירות
+ * הורדה הודפסו כ-"1Gb" ו-"1,000/100Mb" בשתי שורות צמודות.
+ */
+test("תצוגה: כל מהירויות הבית מוצגות באותה יחידה", () => {
+  const units = new Set();
+  for (const p of PACKAGES.filter((x) => x.category === "home" && isListable(x))) {
+    const label = speedLabel(p.spec);
+    if (label) units.add(label.endsWith("Gb") ? "Gb" : "Mb");
+  }
+  assert.ok(units.size <= 1, `שתי יחידות באותו דף: ${[...units].join(", ")}`);
+  assert.equal(
+    speedLabel({ downloadMbps: 1000, uploadMbps: null }),
+    `${speedLabel({ downloadMbps: 1000, uploadMbps: 100 }).split("/")[0]}Mb`,
+  );
+});
+
+/*
+ * ⚠️ תווית שמבטיחה זוג מודפסת רק כשהזוג נמסר. על ids 3/81/92/104
+ * היא ישבה על מספר אחד, והשורה הפכה לשכפול מדויק של האריח שמעליה.
+ */
+test("תצוגה: תווית 'הורדה/העלאה' מופיעה רק כששתי המהירויות נמסרו", () => {
+  for (const p of PACKAGES.filter((x) => x.category === "home" && isListable(x))) {
+    const row = detailRows(p).find((r) => r.label === "מהירות (הורדה/העלאה)");
+    if (!row) continue;
+    assert.ok(p.spec.uploadMbps != null, `${p.id}: תווית זוג על ערך בודד`);
+    assert.ok(row.value.includes("/"), `${p.id}: ${row.value}`);
+  }
+});
+
+/*
+ * ⚠️ הנחה מדורגת אינה מוצגת כשיעור קבוע. ראה `discountIsCapped`.
+ * הרשימה מקובעת כדי שרענון שמוסיף "עד N%" לרשומה נוספת ייראה כאן.
+ */
+test("חשמל: 'עד N%' מזוהה בדיוק ברשומות שמצהירות תקרה", () => {
+  const capped = PACKAGES.filter(
+    (p) => p.category === "electricity" && isListable(p) && discountIsCapped(p),
+  ).map((p) => p.id);
+  expectFlags(capped, ["135", "142"], "רשומות שההנחה בהן היא תקרה");
+});
+
+/*
+ * ⚠️ הכותרת על הכרטיס מול מה שהכרטיס מדפיס מתחתיה — שני פגמי נתונים
+ * מקובעים: id 140 (`תעוז 7%` מול 6%) ו-id 159 (`סיבים 250/2000` מול
+ * אריח `2,000/250Mb`, הסדר ההפוך מ-7 החבילות האחרות שכותבות זוג בשם).
+ */
+test("תצוגה: הכותרת על הכרטיס אינה סותרת את מה שהכרטיס מדפיס", () => {
+  const pct = PACKAGES.filter((p) => p.category === "electricity" && isListable(p))
+    .filter((p) => {
+      const m = /(\d+(?:\.\d+)?)\s*%/.exec(p.name);
+      return m && Number(m[1]) !== p.discountPercent;
+    })
+    .map((p) => p.id);
+  expectFlags(pct, ["140"], "אחוז בשם סותר את discountPercent");
+
+  const spd = PACKAGES.filter((p) => p.category === "home" && isListable(p))
+    .filter((p) => {
+      const m = /(\d{2,5})\s*\/\s*(\d{1,4})/.exec(p.name);
+      return m && !(Number(m[1]) === p.spec.downloadMbps && Number(m[2]) === p.spec.uploadMbps);
+    })
+    .map((p) => p.id);
+  expectFlags(spd, ["159"], "סדר המהירויות בשם הפוך מה-spec");
 });

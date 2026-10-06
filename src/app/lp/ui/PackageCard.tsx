@@ -5,7 +5,7 @@ import { Card } from "./Card";
 import { ProviderLogo } from "./ProviderLogo";
 import { LeadForm } from "./LeadForm";
 import { MAX_COMPARE } from "./CompareTray";
-import { cardStats, detailRows, shekels } from "../catalog/format";
+import { cardStats, detailRows, discountIsCapped, shekels } from "../catalog/format";
 import type { Package } from "../catalog/types";
 
 /*
@@ -147,6 +147,8 @@ export function PackageCard({
           <div className="flex items-end justify-between gap-2">
             {isElectric ? (
               <div>
+                {/* ⚠️ "עד" כשההנחה מדורגת — ראה `discountIsCapped`. */}
+                {discountIsCapped(pkg) && <span className="me-1 text-sm text-lp-ink-2">עד</span>}
                 <span className="nums text-3xl font-extrabold text-lp-ink">{pkg.discountPercent}%</span>
                 <span className="ms-1 text-sm text-lp-ink-2">הנחה</span>
               </div>

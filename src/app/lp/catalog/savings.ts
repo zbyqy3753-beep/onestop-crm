@@ -518,21 +518,33 @@ export function computeSaving(
   units: number,
   monthlySpend: number,
 ): Saving {
+  /*
+   * ⚠️ כמות הקווים מגודרת כאן, כמו שהסכום מגודר ב-`parseSpend`.
+   *
+   * `units` הוא `number` ולא "מספר קווים", והוא נכנס לחישוב גם כמכפיל
+   * של העלות (`unitCount`). `0` מאפס את העלות לגמרי, ואז הכותרת הכריזה
+   * על חיסכון בגובה **כל** החשבון (₪1,000 בחודש מול חבילה של ₪34),
+   * ו-`-2` החזיר חיסכון **גדול** מהחשבון (₪1,068 מול ₪1,000) עם
+   * `worthwhile: true` — הפרה של האינווריאנט היחיד שהקובץ הזה נבנה
+   * סביבו. הסלקטור מגיש 1..10 ולכן זה שער לקורא הבא (ולמעבר מסלול,
+   * שאינו מאפס את הבחירה) ולא באג מוצג.
+   */
+  const lines = Number.isInteger(units) && units >= 1 ? units : 1;
   const pool = packages
     .filter((p): p is MonthlyPackage => isComparable(p, track))
     // ⚠️ תלוי-כמות, ולכן כאן ולא ב-`isComparable`. ראה `priceUnknownAtLines`.
-    .filter((p) => !priceUnknownAtLines(p, units))
+    .filter((p) => !priceUnknownAtLines(p, lines))
     // ⚠️ מחיר "משפחתי" הוא מחיר לשני קווים ומעלה. ראה `familyPriceOnly`.
-    .filter((p) => track !== "cellular" || units >= 2 || !familyPriceOnly(p));
+    .filter((p) => track !== "cellular" || lines >= 2 || !familyPriceOnly(p));
   const pick = pool.reduce<MonthlyPackage | null>(
-    (best, p) => (best == null || perLinePrice(p, units) < perLinePrice(best, units) ? p : best),
+    (best, p) => (best == null || perLinePrice(p, lines) < perLinePrice(best, lines) ? p : best),
     null,
   );
   if (!pick) return { pick: null, monthly: 0, yearly: 0, worthwhile: false };
 
   // Cellular is priced per line; a home package is one household bill.
-  const perLine = perLinePrice(pick, units);
-  const unitCount = track === "cellular" ? units : 1;
+  const perLine = perLinePrice(pick, lines);
+  const unitCount = track === "cellular" ? lines : 1;
   /*
    * ⚠️ `Math.floor` ולא `Math.round`. הכותרת אומרת "אפשר לחסוך **עד**",
    * והעיגול כלפי מעלה מוכפל אחר כך ב-12 — כלומר שגיאת העיגול גדלה פי

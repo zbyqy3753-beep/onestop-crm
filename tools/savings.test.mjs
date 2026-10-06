@@ -822,3 +822,19 @@ test("שערי הנוסח קוראים גם את `priceAfterPromoNote`", () => {
     assert.equal(isComparable(p, p.category), false, `${p.name}: הערה בלי מספר נכנסה לבריכה`);
   }
 });
+
+/*
+ * ⚠️ הכותרת מבטיחה "אפשר לחסוך עד X" — ולכן X חייב להיות קטן מהחשבון
+ * שהוקלד, בכל כמות קווים שתימסר למנוע. `units: 0` איפס את מכפיל העלות
+ * והחיסכון יצא בגובה כל החשבון; `units: -2` יצא גדול ממנו.
+ */
+test("מחשבון: החיסכון קטן מהחשבון בכל כמות קווים שתימסר", () => {
+  for (const units of [0, -2, 0.4, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 1, 2, 10]) {
+    for (const track of ["cellular", "home"]) {
+      const r = computeSaving(PACKAGES, track, units, 1000);
+      assert.ok(Number.isFinite(r.monthly), `${track}/${units}: monthly=${r.monthly}`);
+      assert.ok(r.monthly < 1000, `${track}/${units}: חיסכון ${r.monthly} מתוך חשבון של 1000`);
+      assert.equal(r.yearly, r.monthly * 12);
+    }
+  }
+});

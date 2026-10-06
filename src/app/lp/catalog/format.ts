@@ -78,12 +78,44 @@ export function dataLabel(spec: CellularSpec): string | null {
 export function speedLabel(spec: HomeSpec): string | null {
   if (spec.downloadMbps == null) return null;
   const whole = (mbps: number) => mbps >= 1000 && mbps % 1000 === 0;
-  const asGb = whole(spec.downloadMbps) && (spec.uploadMbps == null || whole(spec.uploadMbps));
+  /*
+   * ⚠️ יחידת Gb רק כששתי המהירויות נמסרו, ולא על מהירות בודדת.
+   *
+   * היחידה נבחרה לכל חבילה בנפרד, והכרטיסים יושבים זה ליד זה: ברצועת
+   * ההיילייטס של הבית id 92 (`{1000, null}`) הודפס "1Gb" **בשורה
+   * שמעל** id 73 (`{1000, 100}`) שהודפס "1,000/100Mb" — אותה מהירות
+   * הורדה, אותו מחיר ₪109, ושני מספרים שנראים כמו 1 מול 1,000. זו
+   * בדיוק הקריאה השגויה שההערות שמעל פוסלות, רק שהיא עברה מתוך ערך
+   * בודד אל הפער בין שני ערכים.
+   */
+  const asGb = spec.uploadMbps != null && whole(spec.downloadMbps) && whole(spec.uploadMbps);
   const unit = asGb ? "Gb" : "Mb";
   const value = (mbps: number) => nf.format(asGb ? mbps / 1000 : mbps);
   return spec.uploadMbps != null
     ? `${value(spec.downloadMbps)}/${value(spec.uploadMbps)}${unit}`
     : `${value(spec.downloadMbps)}${unit}`;
+}
+
+/**
+ * האם אחוז ההנחה שהרשומה מצהירה עליו הוא **תקרה** ולא שיעור קבוע.
+ *
+ * ⚠️ הכרטיס הדפיס "10% הנחה" במספר הגדול ביותר שלו על ids 135 ו-142,
+ * שתיהן הנחה מדורגת לפי גובה החשבון (10% עד ₪149, ואז 8%/7%/6%/5%) —
+ * כלומר לקוח בצריכה של ₪300 ומעלה מקבל חצי ממה שהכרטיס הכריז. ב-135
+ * הכותרת שעל אותו כרטיס אומרת "עד 10% הנחה", כך ששתי אמירות סותרות
+ * ישבו זו מעל זו. "לא יודעים — לא מבטיחים" הוא אותו כלל שחל בענף
+ * החודשי על המחיר שאחרי ההטבה; לענף החשמל לא היה לו מקביל.
+ *
+ * ⚠️ נדרשת התאמה **לאותו מספר** שהרשומה מצהירה עליו, ולא עצם הימצאות
+ * המילה "עד" בפרוזה: רק כך השער מצמצם הבטחה ולא מרחיב אותה.
+ */
+export function discountIsCapped(p: Package): boolean {
+  if (p.category !== "electricity" || typeof p.discountPercent !== "number") return false;
+  const prose = [p.name, p.description, p.benefits].filter(Boolean).join(" ");
+  for (const m of prose.matchAll(/עד\s*(\d+(?:[.,]\d+)?)\s*%/g)) {
+    if (Number(String(m[1]).replace(",", ".")) === p.discountPercent) return true;
+  }
+  return false;
 }
 
 export const CUSTOMER_TYPE_HE: Record<ElectricitySpec["customerType"], string> = {
@@ -207,7 +239,15 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
   if (pkg.category === "home") {
     const s = pkg.spec as HomeSpec;
     const speed = speedLabel(s);
-    if (speed) rows.push({ label: "מהירות (הורדה/העלאה)", value: speed });
+    /*
+     * ⚠️ רק כששתי המהירויות נמסרו. ההחרגה של התווית הזו מבדיקת "אותה
+     * עובדה פעמיים" נשענת על כך שהיא אומרת מי מהן ההורדה; על ערך בודד
+     * (ids 3, 81, 92, 104) היא לא אומרת דבר — השורה הופכת לשכפול
+     * מדויק של האריח שמעליה, ומבטיחה זוג שהנתון לא מסר.
+     */
+    if (speed && s.uploadMbps != null) {
+      rows.push({ label: "מהירות (הורדה/העלאה)", value: speed });
+    }
     if (!tiled.has("התקנה")) fee("עלות התקנה", s.installationCost);
     /*
      * ⚠️ שלושת השדות האלה הם `boolean | null` — תלת-מצביים — והגרסה

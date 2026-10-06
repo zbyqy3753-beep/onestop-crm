@@ -243,7 +243,13 @@ export function byPrice(a: Package, b: Package): number {
       : isMoney(p.price)
         ? p.price
         : Infinity;
-  return value(a) - value(b);
+  // ⚠️ השוואה ולא חיסור. שתי רשומות בלי מחיר שמיש מקבלות שתיהן
+  // `Infinity` (ids 18 ו-22 בקטלוג של היום), ו-`Infinity - Infinity`
+  // הוא `NaN` — קומפרטור שמחזיר NaN נותן סדר שתלוי בסדר הקלט, דווקא
+  // בשער שכל תפקידו לשלוח רשומה פגומה לסוף.
+  const va = value(a);
+  const vb = value(b);
+  return va === vb ? 0 : va < vb ? -1 : 1;
 }
 
 /** הזולה ביותר לפי המחיר שמוצג היום. */

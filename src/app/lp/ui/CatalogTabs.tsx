@@ -60,6 +60,30 @@ export function CatalogTabs({ packages }: { packages: Package[] }) {
   useEffect(() => {
     window.addEventListener("hashchange", applyHash);
     /*
+     * ⚠️ תופסים גם את הלחיצה עצמה, ולא רק את ה-`hashchange` שאחריה.
+     *
+     * ניווט פרגמנט דוחף רשומת היסטוריה, וה-`replaceState` שלמעלה רק
+     * דורס את ה-URL שלה — הרשומה נשארת. מבקר שלחץ שלושה כרטיסי שירות
+     * צבר שלוש רשומות שכולן `/lp`, ואז שלוש לחיצות "אחורה" שלא מזיזות
+     * דבר: לא הקטגוריה (שני ה-hash ריקים, אין `hashchange`), לא הגלילה
+     * ולא הכתובת. בנייד "אחורה" הוא דרך היציאה העיקרית מקישור
+     * שהגיע בוואטסאפ, ולכן הדף נראה תקוע. ה-`href` נשאר כפי שהוא —
+     * הוא עובד בלי JS, והוא מה שהופך את הכרטיס לקישור נגיש.
+     */
+    const onAnchorClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+        return;
+      }
+      const anchor = (e.target as Element | null)?.closest?.("a[href^='#']");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      const next = categoryFromHash(anchor.hash);
+      if (!next) return;
+      e.preventDefault();
+      setCategory(next);
+      document.getElementById("catalog")?.scrollIntoView({ behavior: "instant", block: "start" });
+    };
+    document.addEventListener("click", onAnchorClick);
+    /*
      * ⚠️ הקריאה הראשונה נדחית לפריים הבא, ולא נעשית כאן בגוף האפקט.
      *
      * שתי סיבות שמצביעות לאותו כיוון: `scrollIntoView` לפני הציור
@@ -71,6 +95,7 @@ export function CatalogTabs({ packages }: { packages: Package[] }) {
     const frame = requestAnimationFrame(applyHash);
     return () => {
       cancelAnimationFrame(frame);
+      document.removeEventListener("click", onAnchorClick);
       window.removeEventListener("hashchange", applyHash);
     };
   }, [applyHash]);

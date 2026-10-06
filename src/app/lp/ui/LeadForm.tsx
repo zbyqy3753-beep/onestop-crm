@@ -32,10 +32,32 @@ function Submit({ label }: { label: string }) {
   // ⚠️ קומפוננטה נפרדת: `useFormStatus` קורא את ה-`<form>` שמעליו, ומחזיר
   // תמיד `false` אם הוא נקרא באותה קומפוננטה שמרנדרת את הטופס.
   const { pending } = useFormStatus();
+  /*
+   * ⚠️ `aria-disabled` ולא `disabled`, כמו ב-`CompareTray` וב-CTA של
+   * המחשבון. הדפדפן מסיר את הפוקוס מאלמנט שהושבת: גולש מקלדת שלחץ
+   * Enter על הכפתור הוחזר ל-`<body>` לכל אורך השליחה — כלומר לראש
+   * הדף, אחרי 106 כרטיסים — בזמן שהחלפת הכיתוב ל-"שולח…" אינה באזור
+   * חי ולכן לא מוכרזת, כך שלא היה שום אישור שהלחיצה נקלטה. חלון
+   * ה-pending כאן הוא הארוך ביותר בדף (בדיקת כפילות, כתיבה למסד, ואז
+   * שתי התראות). הלחיצה השנייה נחסמת בקוד, ו-`actions.ts` חוסם
+   * כפילות אמיתית בחלון 24 שעות בכל מקרה.
+   */
   return (
-    <button type="submit" disabled={pending} className={`${btnPrimary} w-full py-3`}>
-      {pending ? "שולח…" : label}
-    </button>
+    <>
+      <button
+        type="submit"
+        aria-disabled={pending}
+        onClick={(e) => {
+          if (pending) e.preventDefault();
+        }}
+        className={`${btnPrimary} w-full py-3 ${pending ? "cursor-not-allowed opacity-40" : ""}`}
+      >
+        {pending ? "שולח…" : label}
+      </button>
+      <span role="status" className="sr-only">
+        {pending ? "שולח את הפנייה" : ""}
+      </span>
+    </>
   );
 }
 
