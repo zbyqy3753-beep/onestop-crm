@@ -11,11 +11,6 @@ import {
 } from "@/lib/domain/types";
 import { cleanText } from "@/lib/domain/interest";
 import { normalizeIsraeliPhone } from "@/lib/format";
-import { isYesLead } from "@/lib/domain/yes";
-import {
-  assigneeForIncoming,
-  notifyOwnersOfYesLead,
-} from "@/server/leads/yesRouting";
 import { notifyHotLeadAssigned } from "@/server/leads/hotLeadAlert";
 import {
   DEFAULT_ASSIGNEE_EMAIL,
@@ -373,16 +368,7 @@ export async function submitLandingLead(
         `[lp] יעד השיוך ${assigneeEmail()} ${assignee ? "מושבת" : "לא נמצא"} — הליד נשמר ללא שיוך ובלי שאף התראה יוצאת`,
       );
     }
-    /*
-     * ⚠️ כלל יאס גובר גם על היעד הקבוע של דף הנחיתה. ליד של יאס הולך
-     * לעובד שמטפל ביאס — זה מה שנקבע, וההחרגה של דף הנחיתה הייתה
-     * מייצרת מסלול שקט שבו לידים של יאס נוחתים אצל מישהו אחר.
-     */
-    const yesFacts = { currentProvider, packageName, sourceDetail: source };
-    const assigneeId = await assigneeForIncoming(
-      yesFacts,
-      assignee?.active ? assignee.id : undefined,
-    );
+    const assigneeId = assignee?.active ? assignee.id : undefined;
 
     /*
      * `createdById` הוא מפתח זר חובה. הנמען הוא גם היוצר הטבעי כאן —
@@ -413,17 +399,6 @@ export async function submitLandingLead(
       assigneeId,
       createdById,
     });
-
-    // ⚠️ אחרי היצירה, ובולעת חריגות בעצמה: הגולש שלחץ "שליחה" לא
-    // אמור לראות שגיאה בגלל הודעה פנימית שלא יצאה.
-    if (isYesLead(yesFacts)) {
-      await notifyOwnersOfYesLead({
-        id: lead.id,
-        name: lead.name,
-        phone: lead.phone,
-        assigneeId,
-      });
-    }
 
     await notifyHotLeadAssigned({
       lead: { id: lead.id, name: lead.name, phone: lead.phone, kind: lead.kind },

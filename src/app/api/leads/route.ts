@@ -10,16 +10,11 @@ import {
 } from "@/server/auth/apiKeys";
 import type { LeadCategoryKey, ProviderKey, Role } from "@/lib/domain/types";
 import { matchLeadCategory } from "@/lib/domain/types";
-import { isYesLead } from "@/lib/domain/yes";
 import {
   cleanText,
   matchProvider,
   parseInterest,
 } from "@/lib/domain/interest";
-import {
-  assigneeForIncoming,
-  notifyOwnersOfYesLead,
-} from "@/server/leads/yesRouting";
 import { notifyHotLeadAssigned } from "@/server/leads/hotLeadAlert";
 
 /**
@@ -414,16 +409,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     Boolean(fromSource.category ?? fromSource.packageName) && !explicitPackage;
   const sourceDetail = consumedSource ? partner.name : rawSource || partner.name;
 
-  /*
-   * ⚠️ כלל יאס גובר על כל חלוקה אחרת — גם על יעד קבוע לשותף וגם על
-   * החלוקה האוטומטית. ליד של יאס הולך לעובד שמטפל ביאס, לא משנה מי
-   * הביא אותו; זו בדיוק הנקודה של הכלל. ראה server/leads/yesRouting.
-   */
-  const yesFacts = { currentProvider, packageName, sourceDetail };
-  const assigneeId = await assigneeForIncoming(
-    yesFacts,
-    await nextAssignee(partner),
-  );
+  const assigneeId = await nextAssignee(partner);
 
   const lead = await db.leads.create({
     name,
@@ -443,22 +429,6 @@ export async function POST(request: NextRequest): Promise<Response> {
     assigneeId,
     createdById,
   });
-
-  /*
-   * ⚠️ **אחרי היצירה ובלי `await` על הכישלון.** ההתראה לא יכולה
-   * להיכשל לתוך התשובה לשותף: 500 בגלל הודעת וואטסאפ היה גורם לו
-   * לשלוח את אותו ליד שוב. `notifyOwnersOfYesLead` בולעת חריגות
-   * בעצמה, וההמתנה כאן היא רק כדי שהשורה תיכתב לפני שהתהליך נגמר —
-   * ב-serverless עבודה שלא הומתנה עלולה להיקטע.
-   */
-  if (isYesLead(yesFacts)) {
-    await notifyOwnersOfYesLead({
-      id: lead.id,
-      name: lead.name,
-      phone: lead.phone,
-      assigneeId,
-    });
-  }
 
   // כל ליד שנכנס מה-API הוא "חם" (ראה למעלה), ולכן העובד שקיבל אותו
   // מקבל הודעה. אין כאן `actorId` — לא אדם ביצע את השיוך.

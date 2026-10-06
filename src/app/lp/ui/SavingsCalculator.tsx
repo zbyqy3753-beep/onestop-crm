@@ -543,8 +543,6 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 ⚠️ גם בעמודה הייעודית, ולא רק בהערה. `actions.ts`
                 מתעד ש-`packageName` היא עמודה משלה — והמחשבון היה היחיד
                 שדחף חבילה אמיתית לתוך ההערה והשאיר את העמודה ריקה.
-                `isYesLead` קורא את העמודה הזו, ולכן ליד שהמחשבון התאים
-                לו חבילת יאס לא נותב לנציגה של יאס.
               */
               packageName={
                 saving.pick ? `${saving.pick.name} · ${saving.pick.provider.name}` : undefined
