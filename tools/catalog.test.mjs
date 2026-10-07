@@ -110,11 +110,34 @@ test("קטלוג: הכותרת שהקובץ מצהיר תואמת את מה שי
     );
   }
 
+  /*
+   * ⚠️ והחצי הפר-קטגוריאלי חייב להשוות מספר **גלוי** למשהו שאינו זז
+   * יחד איתו. הגרסה הקודמת השוותה `counts[category]` לרשומות שאותו
+   * רענון כתב — שני אגפים שזזים יחד — ואחריה אסרציה שהיא טאוטולוגיה
+   * לכל קטלוג שבו `category` הוא אחד משלושת הערכים המוצהרים. אומת:
+   * העברת id 40 מ-`cellular` ל-`home` עם `counts` מעודכן עברה את
+   * שלושתן, בעוד הסלולר הגלוי צנח 55 → 54 בשקט. העוגן היחיד שאינו
+   * נגזר מהקטלוג הוא **החוב הידוע**, ולכן ההפרש נמדד מולו בכל קטגוריה
+   * בנפרד — וכך גם רשומה שעוברת קטגוריה מפילה את הבדיקה.
+   */
   const shown = listableCounts(PACKAGES);
+  const debtIn = (category) =>
+    [...KNOWN_UNLISTABLE].filter(
+      (id) => PACKAGES.find((p) => p.id === id)?.category === category,
+    ).length;
+
+  for (const category of ["cellular", "home", "electricity"]) {
+    assert.equal(
+      catalog.counts[category] - shown[category],
+      debtIn(category),
+      `ההפרש בין המוצהר לגלוי ב-${category} (${catalog.counts[category]} → ${shown[category]}) אינו החוב הידוע בקטגוריה`,
+    );
+  }
+
   assert.equal(
-    shown.cellular + shown.home + shown.electricity,
-    shown.total,
-    "סכום הקטגוריות הגלויות אינו הסך הגלוי",
+    debtIn("cellular") + debtIn("home") + debtIn("electricity"),
+    KNOWN_UNLISTABLE.size,
+    "רשומה מרשימת החוב הידוע נעלמה מהקטלוג או שינתה קטגוריה",
   );
 });
 

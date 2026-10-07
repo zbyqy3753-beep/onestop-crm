@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  MAX_LINES,
   MAX_SPEND,
   MIN_SPEND,
   addonFreeThenPaid,
@@ -829,12 +830,74 @@ test("שערי הנוסח קוראים גם את `priceAfterPromoNote`", () => {
  * והחיסכון יצא בגובה כל החשבון; `units: -2` יצא גדול ממנו.
  */
 test("מחשבון: החיסכון קטן מהחשבון בכל כמות קווים שתימסר", () => {
-  for (const units of [0, -2, 0.4, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 1, 2, 10]) {
+  for (const units of [0, -2, 0.4, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 1, 2, 10, 11, 1000, 1e6]) {
     for (const track of ["cellular", "home"]) {
       const r = computeSaving(PACKAGES, track, units, 1000);
       assert.ok(Number.isFinite(r.monthly), `${track}/${units}: monthly=${r.monthly}`);
       assert.ok(r.monthly < 1000, `${track}/${units}: חיסכון ${r.monthly} מתוך חשבון של 1000`);
       assert.equal(r.yearly, r.monthly * 12);
+    }
+  }
+});
+
+/*
+ * ⚠️ הגידור חייב להיות משני הצדדים. הוא נכתב מלמטה בלבד, מהנימוק
+ * ש"הסלקטור מגיש 1..10 ולכן זה שער לקורא הבא" — נימוק שחל במדויק על
+ * הצד הגבוה ולא יושם: `units: 1e6` החזיר `monthly` של 29,899,000-
+ * ו-`yearly` של 358,788,000-. `worthwhile` היה `false` ולכן זה לא
+ * הגיע למסך, אבל זה מספר חסר-פשר שיוצא מהמנוע.
+ */
+test("מחשבון: כמות קווים אבסורדית נחתכת לתקרה ולא מייצרת מספר חסר-פשר", () => {
+  for (const track of ["cellular", "home"]) {
+    const top = computeSaving(PACKAGES, track, MAX_LINES, 1000);
+    for (const units of [MAX_LINES + 1, 50, 1000, 1e6]) {
+      const r = computeSaving(PACKAGES, track, units, 1000);
+      assert.equal(r.lines, MAX_LINES, `${track}/${units}: lines=${r.lines}`);
+      assert.equal(r.monthly, top.monthly, `${track}/${units}: monthly זז מעל התקרה`);
+      assert.ok(r.monthly > -1000, `${track}/${units}: monthly=${r.monthly}`);
+    }
+  }
+});
+
+/*
+ * ⚠️ המספר שה-`Saving` מבטיח הוא המספר שהצרכן מציג.
+ *
+ * הגידור של `units` נעשה בתוך `computeSaving`, והתוצאה שלו לא נחשפה:
+ * הצרכן היחיד גזר את המחיר-לקו מחדש מה-`units` הלא מגודר, ולכן
+ * המספר שהנציג קיבל בהערה יכול היה לסתור את המספר שהכותרת נבנתה עליו.
+ * אומת על חבילה שמדרגתה הזולה מוצהרת ב-`lines: 1` (צורה שהקטלוג כבר
+ * משתמש בה): ב-`units: 0` המנוע חייב 20 בעוד הגזירה החזירה 12.
+ */
+test("מחשבון: המחיר-לקו שה-Saving חושף הוא זה שהחישוב נעשה בו", () => {
+  const tiered = {
+    id: "tiered-probe",
+    name: "בדיקה מדרגות",
+    category: "cellular",
+    type: "base",
+    price: 12,
+    lineTiers: [
+      { lines: 1, price: 20 },
+      { lines: 3, price: 15 },
+    ],
+    provider: { id: "probe", name: "Probe" },
+    spec: { dataGb: 100, minutes: 1000, sms: 1000 },
+  };
+
+  for (const units of [0, -2, 0.5, Number.NaN, 1, 2, 3, 10, 1e6]) {
+    for (const track of ["cellular", "home"]) {
+      const r = computeSaving([tiered, ...PACKAGES], track, units, 1000);
+      if (!r.pick) continue;
+      assert.equal(
+        r.perLine,
+        perLinePrice(r.pick, r.lines),
+        `${track}/${units}: perLine=${r.perLine} אינו המחיר ב-lines=${r.lines}`,
+      );
+      const unitCount = track === "cellular" ? r.lines : 1;
+      assert.equal(
+        r.monthly,
+        Math.floor((Math.round(1000 * 100) - Math.round(r.perLine * 100) * unitCount) / 100),
+        `${track}/${units}: monthly אינו נגזר מה-perLine שנחשף`,
+      );
     }
   }
 });

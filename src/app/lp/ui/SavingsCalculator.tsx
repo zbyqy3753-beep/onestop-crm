@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "./Card";
 import { LeadForm } from "./LeadForm";
-import { shekels } from "../catalog/format";
+import { shekels, typedShekels } from "../catalog/format";
 import { catalog } from "../catalog/catalog";
 import { crmCategory } from "../config";
 import { fieldClass } from "./field";
@@ -14,7 +14,6 @@ import {
   parseSpend,
   isBlankSpend,
   parseSpendRaw,
-  perLinePrice,
   type Track,
 } from "../catalog/savings";
 import type { Package } from "../catalog/types";
@@ -168,7 +167,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
         // ב-`onChange` מחק את הקלט המקורי ולא היה אפשר להבחין בין
         // השניים. עכשיו השדה שומר את מה שהוקלד, ולכן ההודעה מדויקת
         // ואומרת גם מה יקרה עם הסכום שנכתב.
-        `החישוב מוצג עד ${shekels(MAX_SPEND)}; הזנתם ${shekels(typedSpend)} — הסכום המלא יעבור לנציג שיבדוק את החשבון ידנית.`
+        `החישוב מוצג עד ${shekels(MAX_SPEND)}; הזנתם ${typedShekels(typedSpend)} — הסכום המלא יעבור לנציג שיבדוק את החשבון ידנית.`
       : "";
 
   return (
@@ -345,7 +344,17 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
               <p
                 id="calc-spend-hint"
                 aria-live="polite"
-                className={`mt-1.5 text-xs text-lp-ink-3 ${spendHint ? "" : "sr-only"}`}
+                /*
+                  ⚠️ צבע שגיאה כשהשדה שגוי. אותה פסקה מחזיקה גם את ההסבר
+                  הנייטרלי וגם את הודעת השגיאה, ובשני המצבים היא נצבעה
+                  `text-lp-ink-3` — כלומר כל מה שגולש ראה אחרי הקלדת
+                  `abc` הוא טקסט אפור שהופיע במקום שהיה ריק, באותו גודל
+                  ובאותו צבע של רמז. ל-`aria-invalid` לא היה שום מקביל
+                  חזותי, ו-#7d8b99 על לבן הוא 3.49:1 ב-12px — מתחת
+                  ל-4.5:1 של WCAG AA. `text-lp-rise` הוא 5.44:1, ואותו
+                  צבע שגיאה שכבר משמש ב-`fieldErrorClass` וב-`LeadForm`.
+                */
+                className={`mt-1.5 text-xs ${invalidSpend ? "font-medium text-lp-rise" : "text-lp-ink-3"} ${spendHint ? "" : "sr-only"}`}
               >
                 {spendHint || "הזינו את הסכום שאתם משלמים היום בחודש, בשקלים."}
               </p>
@@ -436,31 +445,39 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 ? "לא נמצאה בקטלוג חבילה להשוואה אוטומטית — נציג יבדוק ידנית"
                 : "לפי הסכום שהזנתם לא נמצא חיסכון בתשלום החודשי"}
           </h3>
+          {/*
+            ⚠️ הסכום שהוקלד (`typedSpend`), לא הסכום הקטום. מי שהקליד
+            ₪6,000 קיבל כותרת תוצאה שפתחה ב-"אתם משלמים ₪5,000" — סכום
+            שהוא מעולם לא הזין, בלי שום משפט שמסביר שהוא נקטע. הסתייגות
+            התקרה חייתה רק בשלב הסכום ובהערה לנציג, ולא במסך שהגולש
+            קורא בפועל. עכשיו המסך מציג את מה שנכתב ואומר לפי מה חושב.
+
+            ⚠️ ו**מחוץ** לשלושת הענפים, כמו ההסתייגויות שמתחת. כשהשורה
+            ישבה בתוך `worthwhile`, מי שהקליד ₪30 וקיבל "אתם כבר משלמים
+            מעט יחסית" לא ראה אף פעם את הסכום שעליו פסק הדין נבנה —
+            ומי שהתכוון ל-₪300 לא יכול היה לזהות את הטעות מהמסך. באותה
+            מידה הסתייגות התקרה נעלמה בדיוק למי שהקליד ₪8,000 ונותר בלי
+            חבילה להשוואה: הוא קיבל "כאן צריך בן אדם" בלי לדעת שהמספר
+            שלו נקטם. `typedShekels` ולא `shekels` — ראה שם.
+          */}
+          <p className="text-sm text-lp-ink-2">
+            אתם משלמים{" "}
+            <span className="nums font-semibold text-lp-ink">
+              {typedShekels(overCap ? typedSpend : monthlySpend)}
+            </span>{" "}
+            בחודש.
+            {overCap && (
+              <>
+                {" "}
+                <span className="text-lp-ink-3">
+                  החישוב {worthwhile ? "למטה " : ""}נעשה לפי תקרת המחשבון,{" "}
+                  <span className="nums">{shekels(MAX_SPEND)}</span>; נציג יבדוק את החשבון המלא ידנית.
+                </span>
+              </>
+            )}
+          </p>
           {worthwhile ? (
             <>
-              {/*
-                ⚠️ הסכום שהוקלד (`typedSpend`), לא הסכום הקטום. מי שהקליד
-                ₪6,000 קיבל כותרת תוצאה שפתחה ב-"אתם משלמים ₪5,000" — סכום
-                שהוא מעולם לא הזין, בלי שום משפט שמסביר שהוא נקטע. הסתייגות
-                התקרה חייתה רק בשלב הסכום ובהערה לנציג, ולא במסך שהגולש
-                קורא בפועל. עכשיו המסך מציג את מה שנכתב ואומר לפי מה חושב.
-              */}
-              <p className="text-sm text-lp-ink-2">
-                אתם משלמים{" "}
-                <span className="nums font-semibold text-lp-ink">
-                  {shekels(overCap ? typedSpend : monthlySpend)}
-                </span>{" "}
-                בחודש.
-                {overCap && (
-                  <>
-                    {" "}
-                    <span className="text-lp-ink-3">
-                      החישוב למטה נעשה לפי תקרת המחשבון,{" "}
-                      <span className="nums">{shekels(MAX_SPEND)}</span>; נציג יבדוק את החשבון המלא ידנית.
-                    </span>
-                  </>
-                )}
-              </p>
               <p className="mt-1 text-sm font-semibold text-lp-ink">אפשר לחסוך עד</p>
               <p className="nums mt-1 text-3xl font-extrabold break-words text-lp-save sm:text-5xl sm:leading-none">
                 {shekels(yearlySaving)}
@@ -470,11 +487,10 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 <span className="nums font-semibold text-lp-ink">{shekels(monthlySaving)}</span>{" "}
                 כל חודש שנשאר אצלכם.
               </p>
-
             </>
           ) : noMatch ? (
             <>
-              <p className="text-lg font-bold text-lp-ink">כאן צריך בן אדם</p>
+              <p className="mt-1 text-lg font-bold text-lp-ink">כאן צריך בן אדם</p>
               <p className="mt-1 text-sm text-lp-ink-2">
                 בקטגוריה הזו אין כרגע חבילה שאפשר להשוות אליה אוטומטית בלי לנחש מה יקרה בתום
                 ההטבה. השאירו פרטים ונציג יעבור על החשבון שלכם ידנית.
@@ -482,7 +498,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             </>
           ) : (
             <>
-              <p className="text-lg font-bold text-lp-ink">אתם כבר משלמים מעט יחסית</p>
+              <p className="mt-1 text-lg font-bold text-lp-ink">אתם כבר משלמים מעט יחסית</p>
               <p className="mt-1 text-sm text-lp-ink-2">
                 לפי הסכום שהזנתם לא נוכל להבטיח חיסכון בתשלום החודשי. עדיין שווה בדיקה — לפעמים
                 ההבדל הוא במה שכלול, או במחיר שיקפוץ בתום ההטבה הנוכחית שלכם.
@@ -555,8 +571,8 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   לסכום שאינו הבסיס שלה.
                 */
                 overCap
-                  ? `מהמחשבון: משלם היום ${shekels(typedSpend)} בחודש (מעל תקרת המחשבון — החישוב נעשה לפי ${shekels(MAX_SPEND)})`
-                  : `מהמחשבון: משלם היום ${shekels(monthlySpend)} בחודש`,
+                  ? `מהמחשבון: משלם היום ${typedShekels(typedSpend)} בחודש (מעל תקרת המחשבון — החישוב נעשה לפי ${shekels(MAX_SPEND)})`
+                  : `מהמחשבון: משלם היום ${typedShekels(monthlySpend)} בחודש`,
                 unitsLabel(track, units),
                 // ⚠️ גם המקרה השלילי נכתב במפורש. בלעדיו הנציג קיבל הערה
                 // שנראית חתוכה ולא ידע אם המחשבון לא מצא חיסכון או שפשוט
@@ -574,7 +590,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   לעמוד מאחוריו בשיחה.
                 */
                 saving.pick
-                  ? `מול ${saving.pick.provider.name} — ${saving.pick.name}, ${shekels(perLinePrice(saving.pick, units))} ${track === "cellular" ? "לקו" : "לחודש"} (קטלוג ${CATALOG_DATE})`
+                  ? `מול ${saving.pick.provider.name} — ${saving.pick.name}, ${shekels(saving.perLine)} ${track === "cellular" ? "לקו" : "לחודש"} (קטלוג ${CATALOG_DATE})`
                   : null,
               ]
                 .filter(Boolean)

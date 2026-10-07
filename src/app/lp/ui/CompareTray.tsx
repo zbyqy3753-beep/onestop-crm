@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderLogo } from "./ProviderLogo";
-import { compareRows, shekels } from "../catalog/format";
+import { compareRows, discountIsCapped, shekels } from "../catalog/format";
 import type { Package } from "../catalog/types";
 
 /**
@@ -268,8 +268,15 @@ export function CompareTray({
                   <Row label={allElectric ? "הנחה בחשבון" : "מחיר לחודש"}>
                     {items.map((p) => (
                       <Cell key={p.id}>
+                        {/*
+                          ⚠️ "עד" גם כאן. השער הזה נוסף לכרטיס בלבד, והטבלה
+                          — שכל תפקידה להשוות — מחקה בדיוק את ההסתייגות
+                          שהכרטיס שמעליה הוסיף: מסלול מדורג (ids 135, 142)
+                          הודפס "10% הנחה" מול "עד 10% הנחה" בכרטיס, כלומר
+                          הבטחה של כפול מהשיעור הממשי בצריכה בינונית.
+                        */}
                         {p.category === "electricity"
-                          ? `${p.discountPercent}% הנחה`
+                          ? `${discountIsCapped(p) ? "עד " : ""}${p.discountPercent}% הנחה`
                           : p.price != null
                             ? shekels(p.price)
                             : "—"}

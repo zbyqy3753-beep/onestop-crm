@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Card } from "./Card";
 import { PackageCard } from "./PackageCard";
 import { CompareTray, MAX_COMPARE } from "./CompareTray";
-import { PACKAGES_CAPTION, shekels } from "../catalog/format";
+import { PACKAGES_CAPTION, PLANS_CAPTION, shekels } from "../catalog/format";
 import { afterPrice, hasKnownAfterPrice } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
@@ -323,10 +323,14 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
             מכריז דבר.
 
             ⚠️ והכיתוב ביחיד וברבים — ראה `PACKAGES_CAPTION`.
+
+            ⚠️ ובחשמל אלה **מסלולים**. רצועת השירותים ב-`page.tsx` קוראת
+            לאותן 18 רשומות `PLANS_CAPTION`, והשורה הזו קראה להן "חבילות"
+            — שתי תצוגות של אותו נתון, בשני שמות, באותו מסך.
           */}
           <p className="text-sm text-lp-ink-2" aria-live="polite">
             <span className="nums font-semibold text-lp-ink">{results.length}</span>{" "}
-            {PACKAGES_CAPTION(results.length)}
+            {(isElectric ? PLANS_CAPTION : PACKAGES_CAPTION)(results.length)}
             {hasFilters && (
               <span className="nums text-lp-ink-3"> מתוך {packages.length}</span>
             )}
@@ -349,7 +353,8 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
 
         {results.length === 0 ? (
           <p className="rounded-lp-card border border-lp-line bg-lp-surface p-8 text-center text-sm text-lp-ink-2">
-            אין חבילות שמתאימות לסינון. נסו להסיר חלק מהמסננים.
+            {isElectric ? "אין מסלולים שמתאימים לסינון." : "אין חבילות שמתאימות לסינון."} נסו
+            להסיר חלק מהמסננים.
           </p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

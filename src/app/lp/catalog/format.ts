@@ -1,3 +1,4 @@
+import { logicName } from "./catalog";
 import type { CellularSpec, ElectricitySpec, HomeSpec, Package } from "./types";
 
 const nf = new Intl.NumberFormat("he-IL");
@@ -18,6 +19,23 @@ const nf = new Intl.NumberFormat("he-IL");
 export function shekels(value: number): string {
   if (typeof value !== "number" || !Number.isFinite(value)) return "—";
   return `₪${nf.format(Number(value.toFixed(2)))}`;
+}
+
+/**
+ * סכום ש**המשתמש הקליד**, ולא מחיר מהקטלוג.
+ *
+ * ⚠️ `shekels` נבנה לקטלוג ("39 ולא 39.00") ולכן הוא מוריד אפס עשרוני
+ * נגרר — נכון למחיר חבילה, שגוי למה שהוקלד: הרמז מתחת לשדה מפרסם
+ * במפורש `220.50` כפורמט נתמך, ומי שהקליד אותו ראה "אתם משלמים
+ * ₪220.5 בחודש" וגם שלח לנציג "משלם היום ₪220.5". האגורה שהוקלדה
+ * נשמרת, ולסכום עגול לא נוספות עשרוניות שלא נכתבו.
+ */
+export function typedShekels(value: number): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  const rounded = Number(value.toFixed(2));
+  return Number.isInteger(rounded)
+    ? `₪${nf.format(rounded)}`
+    : `₪${nf.format(Math.trunc(rounded))}.${String(Math.round(Math.abs(rounded % 1) * 100)).padStart(2, "0")}`;
 }
 
 /*
@@ -111,8 +129,19 @@ export function speedLabel(spec: HomeSpec): string | null {
  */
 export function discountIsCapped(p: Package): boolean {
   if (p.category !== "electricity" || typeof p.discountPercent !== "number") return false;
-  const prose = [p.name, p.description, p.benefits].filter(Boolean).join(" ");
-  for (const m of prose.matchAll(/עד\s*(\d+(?:[.,]\d+)?)\s*%/g)) {
+  /*
+   * ⚠️ `logicName` ולא `p.name`. זו לוגיקה שמחפשת ראיה בתוך השם, ולכן
+   * היא כפופה לאינווריאנט ב-`catalog.ts:51-58`. `displayName` **קוטעת
+   * כל מה שאחרי `[line]`** (קורה בפועל ב-id 36), ולכן רשומת חשמל
+   * שמשפט התקרה שלה נופל אחרי הסימן הייתה מפסיקה להיזהות כתקרה
+   * והכרטיס היה מבטיח שיעור קבוע במקום "עד".
+   */
+  const prose = [logicName(p), p.description, p.benefits].filter(Boolean).join(" ");
+  /*
+   * ⚠️ `עד` כמילה ולא כתת-מחרוזת: שתיים מ-19 רשומות החשמל הן מסלולי
+   * **ועד בית** (142, 145), ו-"ועד 10%" אינו הצהרת תקרה.
+   */
+  for (const m of prose.matchAll(/(?<![א-ת])עד\s*(\d+(?:[.,]\d+)?)\s*%/g)) {
     if (Number(String(m[1]).replace(",", ".")) === p.discountPercent) return true;
   }
   return false;
@@ -137,11 +166,19 @@ export function cardStats(pkg: Package): Stat[] {
   if (pkg.category === "cellular") {
     const spec = pkg.spec as CellularSpec;
     const out: Stat[] = [];
+  /*
+   * ⚠️ `typeof === "number"` ולא טרות'יניס. `0` מפורש הוא **נתון**, ולא
+   * היעדר נתון: רשומה שאומרת "0 SMS" או "0 ממירים" לא ייצרה אריח, ואז
+   * `compareRows` הדפיסה עליה "—" — כלומר הטבלה הצהירה שאין נתון בזמן
+   * שהקטלוג יודע שהתשובה היא אפס. זו אותה מחלקת פגם שכבר תוקנה בשדות
+   * התלת-מצביים (`included()`), ואותה אמת-מידה שבנתה את שערי
+   * `isListable`. אין היום אף `0` באף אחד מהשדות האלה — זה שער לרענון.
+   */
     const data = dataLabel(spec);
     if (data) out.push({ value: data, caption: "גלישה בישראל" });
-    if (spec.minutes) out.push({ value: nf.format(spec.minutes), caption: MINUTES_CAPTION(spec.minutes) });
-    if (spec.sms) out.push({ value: nf.format(spec.sms), caption: SMS_CAPTION(spec.sms) });
-    if (out.length < 3 && spec.intlMinutes) {
+    if (typeof spec.minutes === "number") out.push({ value: nf.format(spec.minutes), caption: MINUTES_CAPTION(spec.minutes) });
+    if (typeof spec.sms === "number") out.push({ value: nf.format(spec.sms), caption: SMS_CAPTION(spec.sms) });
+    if (out.length < 3 && typeof spec.intlMinutes === "number") {
       out.push({ value: nf.format(spec.intlMinutes), caption: INTL_MINUTES_CAPTION(spec.intlMinutes) });
     }
     return out.slice(0, 3);
@@ -152,10 +189,10 @@ export function cardStats(pkg: Package): Stat[] {
     const out: Stat[] = [];
     const speed = speedLabel(spec);
     if (speed) out.push({ value: speed, caption: "מהירות גלישה" });
-    if (spec.channels) out.push({ value: nf.format(spec.channels), caption: CHANNELS_CAPTION(spec.channels) });
+    if (typeof spec.channels === "number") out.push({ value: nf.format(spec.channels), caption: CHANNELS_CAPTION(spec.channels) });
     // ⚠️ אותה שגיאה שהערה על `lineTiers` מזהירה מפניה, רק שכאן היא
     // **חיה**: id 70 הוא ממיר אחד, והכרטיס הכריז "1 ממירים".
-    if (spec.converters) {
+    if (typeof spec.converters === "number") {
       out.push({
         value: nf.format(spec.converters),
         // ⚠️ רק הכיתוב משתנה, לא הערך: טבלת ההשוואה מיישרת לפי ה-`caption`,
@@ -217,7 +254,7 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
      * שער שקורא תווית קבועה ("דקות לחו״ל") היה מפספס את האריח של
      * חבילה עם דקה אחת, ואותה עובדה הייתה מודפסת פעמיים.
      */
-    if (s.intlMinutes && !tiled.has(INTL_MINUTES_CAPTION(s.intlMinutes))) {
+    if (typeof s.intlMinutes === "number" && !tiled.has(INTL_MINUTES_CAPTION(s.intlMinutes))) {
       rows.push({ label: INTL_MINUTES_CAPTION(s.intlMinutes), value: nf.format(s.intlMinutes) });
     }
     fee("עלות SIM", s.simCost);
@@ -281,7 +318,7 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
      */
     const hoursTiled = tiled.has("שעות ההנחה") || tiled.has("מתי ההנחה חלה");
     if (s.hoursText && !hoursTiled) rows.push({ label: "שעות ההנחה", value: s.hoursText });
-    if (s.maxMonthlyBill) rows.push({ label: "תקרת חשבונית חודשית", value: shekels(s.maxMonthlyBill) });
+    if (typeof s.maxMonthlyBill === "number") rows.push({ label: "תקרת חשבונית חודשית", value: shekels(s.maxMonthlyBill) });
     // אותה תלת-מצביות כמו למעלה, בכיוון ההפוך: רק השלילי נכתב,
     // ולכן מסלול עם התחייבות מוצהרת נראה כמו מסלול שלא ידוע עליו דבר.
     // 0 רשומות בקטלוג הנוכחי נושאות `true`, ולכן זו הגנה על הרענון הבא.
@@ -317,8 +354,21 @@ export interface CompareRow {
  * הנבחרת היא **המפורטת מביניהן**: "1000/100" בלי לומר מי ההורדה אינו
  * שווה הרבה.
  */
+/**
+ * ⚠️ תווית המהירות **אינה** כאן, כי היא תלויה בנתון ולא רק בשם.
+ *
+ * `detailRows` מדפיסה "מהירות (הורדה/העלאה)" רק כששתי המהירויות
+ * נמסרו (ראה ההערה בשורה 248) — ומיפוי קבוע של כיתוב האריח
+ * "מהירות גלישה" לאותה תווית ביטל בדיוק את השער הזה דווקא בטבלה:
+ * `compareRows([104, 92])` הדפיס `מהירות (הורדה/העלאה) | 1,000Mb || 1,000Mb`
+ * — שורה שלמה שמבטיחה זוג שלאף אחת מהשתיים אין (ids 3, 81, 92, 104
+ * נושאות `uploadMbps: null`). מחיקת הערך לבדה הייתה פורשת שוב שתי
+ * שורות עם "—" הדדי, ולכן השם נבחר ב-`speedFactLabel` לפי הנתון.
+ */
+export const SPEED_TILE_CAPTION = "מהירות גלישה";
+export const SPEED_PAIR_LABEL = "מהירות (הורדה/העלאה)";
+
 const SAME_FACT: Record<string, string> = {
-  "מהירות גלישה": "מהירות (הורדה/העלאה)",
   התקנה: "עלות התקנה",
   "ממיר כלול": "ממירים כלולים",
   // צורות היחיד של כיתובי הכמות — ראה ההערה על `MINUTES_CAPTION` למעלה.
@@ -360,7 +410,21 @@ const SAME_FACT: Record<string, string> = {
  * "דמי מעבר". שמות נרדפים מטופלים ב-`SAME_FACT`, במפורש.
  */
 export function compareRows(items: Package[]): CompareRow[] {
-  const canon = (label: string) => SAME_FACT[label] ?? label;
+  /*
+   * ⚠️ שתי התוויות של המהירות מתאחדות לשורה אחת, והשם נבחר לפי הנתון:
+   * התווית הזוגית רק אם **כל** מי שמסר מהירות מסר גם העלאה. כך השורה
+   * נשארת אחת (אותה עובדה, בלי "—" הדדי) ולעולם אינה מבטיחה זוג שהנתון
+   * לא מסר. ראה `SPEED_TILE_CAPTION`.
+   */
+  const speedFactLabel = items.every(
+    (p) => p.category !== "home" || (p.spec as HomeSpec).uploadMbps != null,
+  )
+    ? SPEED_PAIR_LABEL
+    : SPEED_TILE_CAPTION;
+  const canon = (label: string) =>
+    label === SPEED_TILE_CAPTION || label === SPEED_PAIR_LABEL
+      ? speedFactLabel
+      : (SAME_FACT[label] ?? label);
   const facts = items.map((p) => {
     const m = new Map<string, string>();
     for (const s of cardStats(p)) m.set(canon(s.caption), s.value);

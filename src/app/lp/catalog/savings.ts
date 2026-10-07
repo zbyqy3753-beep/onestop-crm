@@ -501,6 +501,19 @@ export interface Saving {
   yearly: number;
   /** יש חבילה, והיא באמת זולה מהחשבון הנוכחי. */
   worthwhile: boolean;
+  /**
+   * מספר הקווים **המגודר** שהחישוב נעשה בו — לא ה-`units` שנמסר.
+   *
+   * ⚠️ והמחיר לקו שנגזר ממנו. שניהם כבר חושבו כאן, ולא נחשפו: הצרכן
+   * היחיד גזר את המחיר מחדש ב-`perLinePrice(saving.pick, units)` עם
+   * ה-`units` ה**לא מגודר**, ולכן שני מספרים על אותו מסך יכלו לסתור
+   * זה את זה. נמדד על חבילה שמדרגתה מוצהרת ב-`lines: 1` (צורה שהקטלוג
+   * משתמש בה) עם `units: 0`: המנוע חייב 20 בעוד הגזירה החזירה 12.
+   * הגידור נעשה "כשער לקורא הבא" — ולכן התוצאה שלו היא מה שנחשף.
+   */
+  lines: number;
+  /** המחיר לקו של `pick` ב-`lines` — המספר שעליו `monthly` נבנה. */
+  perLine: number;
 }
 
 /**
@@ -512,6 +525,17 @@ export interface Saving {
  * על אותו מסך (₪154 בחודש לצד ₪1,852 בשנה, כשהמכפלה היא 1,848).
  * לכן מעגלים את החודש ומכפילים — שתי השורות תמיד מסתדרות.
  */
+/**
+ * מספר הקווים הגבוה ביותר שהמחשבון מחשב עליו.
+ *
+ * ⚠️ הגידור היה מלמטה בלבד. הנימוק שגידר את הצד הנמוך — "הסלקטור מגיש
+ * 1..10 ולכן זה שער לקורא הבא" — חל במדויק על הצד הגבוה, ולא יושם:
+ * `computeSaving(PACKAGES, "cellular", 1e6, 1000)` החזיר `monthly`
+ * של 29,899,000- ו-`yearly` של 358,788,000-. `worthwhile` הוא `false`
+ * ולכן הכותרת לא הציגה את זה, אבל זה מספר חסר-פשר שיוצא מהמנוע.
+ */
+export const MAX_LINES = 10;
+
 export function computeSaving(
   packages: Package[],
   track: Track,
@@ -529,7 +553,7 @@ export function computeSaving(
    * סביבו. הסלקטור מגיש 1..10 ולכן זה שער לקורא הבא (ולמעבר מסלול,
    * שאינו מאפס את הבחירה) ולא באג מוצג.
    */
-  const lines = Number.isInteger(units) && units >= 1 ? units : 1;
+  const lines = Number.isInteger(units) && units >= 1 ? Math.min(units, MAX_LINES) : 1;
   const pool = packages
     .filter((p): p is MonthlyPackage => isComparable(p, track))
     // ⚠️ תלוי-כמות, ולכן כאן ולא ב-`isComparable`. ראה `priceUnknownAtLines`.
@@ -540,7 +564,7 @@ export function computeSaving(
     (best, p) => (best == null || perLinePrice(p, lines) < perLinePrice(best, lines) ? p : best),
     null,
   );
-  if (!pick) return { pick: null, monthly: 0, yearly: 0, worthwhile: false };
+  if (!pick) return { pick: null, monthly: 0, yearly: 0, worthwhile: false, lines, perLine: 0 };
 
   // Cellular is priced per line; a home package is one household bill.
   const perLine = perLinePrice(pick, lines);
@@ -565,7 +589,14 @@ export function computeSaving(
   const monthly = Math.floor(
     (Math.round(monthlySpend * 100) - Math.round(perLine * 100) * unitCount) / 100,
   );
-  return { pick, monthly, yearly: monthly * 12, worthwhile: monthlySpend > 0 && monthly > 0 };
+  return {
+    pick,
+    monthly,
+    yearly: monthly * 12,
+    worthwhile: monthlySpend > 0 && monthly > 0,
+    lines,
+    perLine,
+  };
 }
 
 /**
