@@ -5,13 +5,13 @@ import { Card } from "./Card";
 import { PackageCard } from "./PackageCard";
 import { CompareTray, MAX_COMPARE } from "./CompareTray";
 import { PACKAGES_CAPTION, PLANS_CAPTION, shekels } from "../catalog/format";
-import { afterPrice, hasKnownAfterPrice } from "../catalog/catalog";
+import { afterPrice, byPrice, hasKnownAfterPrice } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
 type SortKey = "price-asc" | "price-desc" | "after-asc" | "recommended";
 
 /*
- * ⚠️ בחשמל אין מחיר — `priceOf` ממפה מסלול חשמל ל-`-discountPercent`,
+ * ⚠️ בחשמל אין מחיר — `byPrice` ממפה מסלול חשמל ל-`electricityRank`,
  * ולכן `price-asc` הוא בפועל "ההנחה הגדולה תחילה". התוויות
  * ה"מחיריות" הן שקר מול כרטיס שמדפיס אחוז ותו לא: הגולש שבחר
  * "מהיקר לזול" קיבל בראש הרשימה את ההנחות הקטנות ביותר. הדף כבר
@@ -26,8 +26,20 @@ const SORTS: { key: SortKey; label: string; electricLabel?: string }[] = [
   { key: "after-asc", label: "מחיר אחרי ההטבה: מהזול ליקר" },
 ];
 
-function priceOf(p: Package): number {
-  return p.category === "electricity" ? -(p.discountPercent ?? 0) : (p.price ?? Infinity);
+/*
+ * ⚠️ ציר ה**סינון** של מחוון המחיר בלבד — המיון עובר ב-`byPrice`.
+ * הגרסה הקודמת שירתה את שניהם ושחזרה ביד את מה ש-`byPrice` עושה,
+ * עם שתי ברירות המחדל שהקובץ ההוא תיקן במפורש: `?? 0` מדרג רשומת
+ * חשמל פגומה כבעלת ההנחה הגדולה (כלומר ראשונה בעמוד) בזמן ש-`byPrice`
+ * שולח אותה לסוף, ומיון בחיסור מחזיר `NaN` על שתי רשומות ללא מחיר
+ * (`Infinity - Infinity`). שתי מחלקות הפגם האלה אינן ניתנות להגעה
+ * היום (`page.tsx` מעביר `listable(...)`), ולכן זו הסרת כפילות
+ * ושער לרענון הבא — לא תיקון פגם מוצג.
+ *
+ * ⚠️ המחוון מוסתר בחשמל, ולכן כאן אין ענף חשמל כלל: הציר הזה הוא כסף.
+ */
+function sliderPrice(p: Package): number {
+  return p.price ?? Infinity;
 }
 
 /*
@@ -48,7 +60,13 @@ function byAfterPrice(a: Package, b: Package): number {
   const ka = hasKnownAfterPrice(a);
   const kb = hasKnownAfterPrice(b);
   if (ka !== kb) return ka ? -1 : 1;
-  return ka ? afterPrice(a) - afterPrice(b) : priceOf(a) - priceOf(b);
+  // ⚠️ השוואה ולא חיסור, מאותו טעם שכתוב ב-`byPrice`: `afterPrice`
+  // מחזירה `Infinity` לרשומה בלי מחיר שמיש, ו-`Infinity - Infinity`
+  // הוא `NaN` — קומפרטור שמחזיר NaN נותן סדר שתלוי בסדר הקלט.
+  if (!ka) return byPrice(a, b);
+  const va = afterPrice(a);
+  const vb = afterPrice(b);
+  return va === vb ? 0 : va < vb ? -1 : 1;
 }
 
 
@@ -63,7 +81,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
   const isElectric = category === "electricity";
 
   const priceBounds = useMemo(() => {
-    const values = packages.map(priceOf).filter((v) => Number.isFinite(v));
+    const values = packages.map(sliderPrice).filter((v) => Number.isFinite(v));
     if (!values.length) return null;
     /*
      * ⚠️ `Math.ceil` על הקצה התחתון, לא `Math.floor`.
@@ -84,7 +102,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
    */
   const passesExceptProvider = (p: Package) =>
     (selectedTypes.length === 0 || (p.type != null && selectedTypes.includes(p.type))) &&
-    (maxPrice == null || priceOf(p) <= maxPrice);
+    (maxPrice == null || sliderPrice(p) <= maxPrice);
 
   /*
     ⚠️ חברה **מסומנת** נשארת ברשימה גם כשהמונה שלה 0. הרשימה
@@ -114,7 +132,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
       if (!p.type) continue;
       const passes =
         (selectedProviders.length === 0 || selectedProviders.includes(p.provider.slug)) &&
-        (maxPrice == null || priceOf(p) <= maxPrice);
+        (maxPrice == null || sliderPrice(p) <= maxPrice);
       if (!passes && !selectedTypes.includes(p.type)) continue;
       map.set(p.type, (map.get(p.type) ?? 0) + (passes ? 1 : 0));
     }
@@ -126,13 +144,13 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
       (p) =>
         (selectedProviders.length === 0 || selectedProviders.includes(p.provider.slug)) &&
         (selectedTypes.length === 0 || (p.type != null && selectedTypes.includes(p.type))) &&
-        (maxPrice == null || priceOf(p) <= maxPrice),
+        (maxPrice == null || sliderPrice(p) <= maxPrice),
     );
     const sorted = [...filtered];
-    if (sort === "price-asc") sorted.sort((a, b) => priceOf(a) - priceOf(b));
-    else if (sort === "price-desc") sorted.sort((a, b) => priceOf(b) - priceOf(a));
+    if (sort === "price-asc") sorted.sort(byPrice);
+    else if (sort === "price-desc") sorted.sort((a, b) => byPrice(b, a));
     else if (sort === "after-asc") sorted.sort(byAfterPrice);
-    else sorted.sort((a, b) => Number(b.recommended) - Number(a.recommended) || priceOf(a) - priceOf(b));
+    else sorted.sort((a, b) => Number(b.recommended) - Number(a.recommended) || byPrice(a, b));
     return sorted;
   }, [packages, selectedProviders, selectedTypes, maxPrice, sort]);
 

@@ -302,7 +302,16 @@ export function CompareTray({
                         <Cell
                           key={p.id}
                           tone={
-                            p.category !== "electricity" && (p.priceAfterPromo || p.priceAfterPromoNote)
+                            /*
+                              ⚠️ `!= null` ולא טרות'יניס. `priceAfterPromo: 0`
+                              היה נופל מהתנאי, והטבלה הייתה מדפיסה "₪0" בדיו
+                              רגיל בזמן שהכרטיס מדפיס את אותו מספר בבאנר
+                              האדום (`PackageCard` בודק `rise != null`). אין
+                              היום רשומה כזו בקטלוג — זה שער לרענון הבא,
+                              מאותה מחלקה שתוקנה כאן בכל מקום אחר.
+                            */
+                            p.category !== "electricity" &&
+                            (p.priceAfterPromo != null || p.priceAfterPromoNote != null)
                               ? "rise"
                               : undefined
                           }

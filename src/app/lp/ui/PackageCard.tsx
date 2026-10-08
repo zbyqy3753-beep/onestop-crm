@@ -106,19 +106,31 @@ export function PackageCard({
             <input
               type="checkbox"
               checked={!!compareChecked}
-              disabled={compareFull && !compareChecked}
-              onChange={() => onCompareToggle(pkg)}
-              className="h-4 w-4 accent-lp-brand disabled:opacity-50"
+              /*
+                ⚠️ `aria-disabled` ולא `disabled`. ההערה שמתחת כבר קבעה
+                שההסבר חייב להיכנס ל-`aria-label` מפני שתיבה `disabled`
+                יוצאת מסדר המקלדת — אבל `aria-label` על פקד שיצא מסדר
+                המקלדת אף פעם לא נשמע, כי אין לאן למקד. כלומר התיקון
+                הקודם כתב את ההסבר הנכון למקום שלא ניתן להגיע אליו, ושתי
+                תיבות ההשוואה האחרות של אותו פיצ'ר כבר עשו את זה אחרת
+                ומתעדות למה: `CompareTray` ("השוו") ו-`SavingsCalculator`
+                (ה-CTA) שתיהן `aria-disabled`. הפקד נשאר בר-מיקוד,
+                מכריז "לא זמין" ואת הסיבה, וה-`onChange` מגודר בעצמו —
+                שער ולא עיטור, כי `aria-disabled` אינו חוסם כלום.
+              */
+              aria-disabled={compareFull && !compareChecked}
+              onChange={() => {
+                if (compareFull && !compareChecked) return;
+                onCompareToggle(pkg);
+              }}
+              className="h-4 w-4 accent-lp-brand aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
               /*
                 קורא מסך שמע "הוסף" גם כשהלחיצה הבאה תסיר — ההפך מהפעולה.
 
-                ⚠️ הסיבה להשבתה נאמרת כאן ולא רק ב-`title`. תיבה
-                `disabled` יוצאת מסדר המקלדת לגמרי, ו-`title` על
-                ה-`<label>` אינו נחשף לקורא מסך ואינו נגיש למקלדת —
-                כלומר משתמש מקלדת גילה שכל תיבות ההשוואה פשוט נעלמו
-                מה-Tab בלי שום הסבר. `aria-describedby` לא יעזור מאותה
-                סיבה (אין טקסט נראה לקשר אליו), ולכן ההסבר נכנס לשם
-                הנגיש עצמו.
+                ⚠️ הסיבה להשבתה נאמרת כאן ולא רק ב-`title`: `title` על
+                ה-`<label>` הוא עכברי בלבד, ואינו נחשף לקורא מסך ואינו
+                נגיש למקלדת. `aria-describedby` לא יעזור מאותה סיבה (אין
+                טקסט נראה לקשר אליו), ולכן ההסבר נכנס לשם הנגיש עצמו.
               */
               aria-label={
                 compareFull && !compareChecked

@@ -1,5 +1,5 @@
 import catalogJson from "./packages.json";
-import { isHomeSpec } from "./types";
+import { isElectricity, isHomeSpec } from "./types";
 import type { Catalog, Category, Package, Provider } from "./types";
 
 /**
@@ -155,6 +155,79 @@ export function listable(packages: Package[]): Package[] {
 }
 
 /**
+ * האם אחוז ההנחה שהרשומה מצהירה עליו הוא **תקרה** ולא שיעור קבוע.
+ *
+ * ⚠️ הכרטיס הדפיס "10% הנחה" במספר הגדול ביותר שלו על ids 135 ו-142,
+ * שתיהן הנחה מדורגת לפי גובה החשבון (10% עד ₪149, ואז 8%/7%/6%/5%) —
+ * כלומר לקוח בצריכה של ₪300 ומעלה מקבל חצי ממה שהכרטיס הכריז. ב-135
+ * הכותרת שעל אותו כרטיס אומרת "עד 10% הנחה", כך ששתי אמירות סותרות
+ * ישבו זו מעל זו. "לא יודעים — לא מבטיחים" הוא אותו כלל שחל בענף
+ * החודשי על המחיר שאחרי ההטבה; לענף החשמל לא היה לו מקביל.
+ *
+ * ⚠️ נדרשת התאמה **לאותו מספר** שהרשומה מצהירה עליו, ולא עצם הימצאות
+ * המילה "עד" בפרוזה: רק כך השער מצמצם הבטחה ולא מרחיב אותה.
+ *
+ * ⚠️ הפונקציה יושבת כאן ולא ב-`format.ts`, למרות שהצרכנים שלה הם
+ * כרטיס וטבלה: `electricityRank` שמתחתיה חייבת אותה, `format.ts` כבר
+ * מייבא מכאן (`logicName`), וייבוא בכיוון ההפוך היה סוגר מעגל.
+ * `format.ts` מייצאת אותה מחדש, כך שאף צרכן לא ידע על ההעברה.
+ */
+export function discountIsCapped(p: Package): boolean {
+  if (p.category !== "electricity" || typeof p.discountPercent !== "number") return false;
+  /*
+   * ⚠️ `logicName` ולא `p.name`. זו לוגיקה שמחפשת ראיה בתוך השם, ולכן
+   * היא כפופה לאינווריאנט ב-`catalog.ts:51-58`. `displayName` **קוטעת
+   * כל מה שאחרי `[line]`** (קורה בפועל ב-id 36), ולכן רשומת חשמל
+   * שמשפט התקרה שלה נופל אחרי הסימן הייתה מפסיקה להיזהות כתקרה
+   * והכרטיס היה מבטיח שיעור קבוע במקום "עד".
+   */
+  const prose = [logicName(p), p.description, p.benefits].filter(Boolean).join(" ");
+  /*
+   * ⚠️ `עד` כמילה ולא כתת-מחרוזת: שתיים מ-19 רשומות החשמל הן מסלולי
+   * **ועד בית** (142, 145), ו-"ועד 10%" אינו הצהרת תקרה.
+   */
+  for (const m of prose.matchAll(/(?<![א-ת])עד\s*(\d+(?:[.,]\d+)?)\s*%/g)) {
+    if (Number(String(m[1]).replace(",", ".")) === p.discountPercent) return true;
+  }
+  return false;
+}
+
+/**
+ * ⚠️ קבוע ולא מקדם. מסלול חלקי-שעות יורד **קבוצה שלמה**, ולא אחוז
+ * מוכפל — ראה ההסבר ב-`electricityRank`. 1000 גדול מכל אחוז אפשרי
+ * (0-100) ולכן אף אחוז אינו יכול להעלות מסלול חלקי מעל מסלול מלא.
+ */
+const PARTIAL_HOURS_GROUP = 1000;
+
+/**
+ * ערך הדירוג של מסלול חשמל — אחוז ההנחה **אחרי** מה שהוא לא מבטיח.
+ *
+ * ⚠️ עד כה דורג כל מסלול לפי `-discountPercent` בלבד, ושני שדות
+ * שהרשומה כן מסרה לא השתתפו בדירוג: `spec.allHours` ו-`discountIsCapped`.
+ * התוצאה הייתה ששלושת המסלולים שהדף הכריז עליהם כמובילים
+ * (ids 150, 147, 137 — כולם 20%) הם מסלולי **שעות לילה בלבד**
+ * ("23:00 עד 7:00"), בזמן שכל מסלול שההנחה שלו חלה על החשבון כולו
+ * (5%-6%) דורג מתחת לשלושתם. 20% על צריכת לילה שווה לרוב משק בית
+ * פחות מ-6% על החשבון כולו, ולכן הדף המליץ בדיוק על המסלולים
+ * הפחות טובים עבור המבקר הטיפוסי.
+ *
+ * ⚠️ האחוז החלקי **אינו** מוכפל במקדם. חלקו של הלילה בחשבון אינו
+ * בקטלוג, וכל מקדם היה הופך ניחוש למספר שנראה מחושב. במקום זאת
+ * "כל השעות" מדורג לפני כל מסלול חלקי-שעות, והאחוז מכריע רק בתוך
+ * הקבוצה — אותה כנות של "לא יודעים, לא מבטיחים". המסלולים החלקיים
+ * נשארים גלויים בקטלוג, עם אריח השעות שלהם לידם.
+ *
+ * ⚠️ תקרה ("עד 10%") מדורגת אחרי שיעור קבוע באותו אחוז, מאותו טעם.
+ */
+export function electricityRank(p: Package): number {
+  if (!isElectricity(p) || !isMoney(p.discountPercent)) return Infinity;
+  const partialHours = !p.spec.allHours;
+  return (
+    (partialHours ? PARTIAL_HOURS_GROUP : 0) - p.discountPercent + (discountIsCapped(p) ? 0.5 : 0)
+  );
+}
+
+/**
  * ערך הדירוג של "כמה תשלמו כשההטבה נגמרת".
  *
  * ⚠️ משותף למיון ב-`CatalogBrowser` — פונקציה אחת. חשמל הוא אחוז הנחה
@@ -169,7 +242,7 @@ export function afterPrice(p: Package): number {
   // ניתנת להגעה היום (`isListable` פוסל `discountPercent` ריק), אבל
   // שתי ברירות מחדל הפוכות לאותו שדה הן מלכודת לרענון הבא.
   if (p.category === "electricity") {
-    return isMoney(p.discountPercent) ? -p.discountPercent : Infinity;
+    return electricityRank(p);
   }
   return isMoney(p.priceAfterPromo)
     ? p.priceAfterPromo
@@ -235,11 +308,13 @@ export function byPrice(a: Package, b: Package): number {
   // ⚠️ אותם שערים בדיוק כמו ב-`afterPrice`, ולא `?? Infinity` לבדו:
   // `price: 0` (הצורה שהמחלץ מייצר כשהוא לא קרא מחיר — ראה ids 18/22)
   // דורג כזול ביותר בעמוד בזמן ש-`afterPrice` שלחה אותו לסוף.
+  // ⚠️ `electricityRank` ולא `-discountPercent` כאן גם: שתי הפונקציות
+  // מדרגות את אותו שדה, וההערה שמעל `afterPrice` דורשת שיסכימו. שעות
+  // חלקיות שהיו משתתפות באחת ולא בשנייה היו מחזירות בדיוק את חוסר
+  // ההסכמה שהקובץ הזה כבר תיקן פעם אחת.
   const value = (p: Package) =>
     p.category === "electricity"
-      ? isMoney(p.discountPercent)
-        ? -p.discountPercent
-        : Infinity
+      ? electricityRank(p)
       : isMoney(p.price)
         ? p.price
         : Infinity;

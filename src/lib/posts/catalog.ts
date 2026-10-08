@@ -52,8 +52,8 @@ function trustedAfter(p: Package): number | null {
 
 function stat(p: Package): string | null {
   if (p.category === "electricity") return p.spec.hoursText ?? (p.spec.allHours ? "כל שעות היממה" : null);
-  if (p.category === "cellular") return dataLabel(p.spec as CellularSpec);
-  return speedLabel(p.spec as HomeSpec);
+  if (p.category === "cellular") return dataLabel(p, p.spec as CellularSpec);
+  return speedLabel(p, p.spec as HomeSpec);
 }
 
 export function studioPackages(): StudioPackage[] {

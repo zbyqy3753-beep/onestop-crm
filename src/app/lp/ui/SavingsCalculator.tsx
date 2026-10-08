@@ -524,7 +524,15 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             {!noMatch && (
               <>
                 החישוב מבוסס על החבילה המשתלמת ביותר בקטלוג שלנו בקטגוריה הזו
-                {track === "cellular" ? `, לפי ${unitsLabel(track, units)}` : ""}, ולפי{" "}
+                {/*
+                  ⚠️ `saving.lines` ולא `units`. המנוע מגדר את מספר הקווים
+                  ל-`MAX_LINES` ומחשב עליו, והמסך הדפיס את ה-`units` הלא
+                  מגודר — כלומר "לפי 20 קווים" מעל חיסכון שחושב על 10.
+                  `Saving.lines` נחשף בדיוק לשם כך, ובדיוק מהטעם שכבר
+                  נכתב שם על `perLine`: מספר שהמסך מדפיס נלקח מהמנוע
+                  ולא נגזר שוב לידו.
+                */}
+                {track === "cellular" ? `, לפי ${unitsLabel(track, saving.lines)}` : ""}, ולפי{" "}
                 <strong className="font-semibold text-lp-ink-2">המחיר שנשאר גם אחרי תום ההטבה</strong>{" "}
                 — ולא לפי מחיר מבצע שמסתיים.{" "}
               </>
@@ -573,7 +581,9 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 overCap
                   ? `מהמחשבון: משלם היום ${typedShekels(typedSpend)} בחודש (מעל תקרת המחשבון — החישוב נעשה לפי ${shekels(MAX_SPEND)})`
                   : `מהמחשבון: משלם היום ${typedShekels(monthlySpend)} בחודש`,
-                unitsLabel(track, units),
+                // ⚠️ `saving.lines` ולא `units` — ראה ההערה בכיתוב שמעל.
+                // ההערה לנציג חייבת לתאר את החישוב שנעשה, לא את הקלט.
+                unitsLabel(track, saving.lines),
                 // ⚠️ גם המקרה השלילי נכתב במפורש. בלעדיו הנציג קיבל הערה
                 // שנראית חתוכה ולא ידע אם המחשבון לא מצא חיסכון או שפשוט
                 // לא רץ.

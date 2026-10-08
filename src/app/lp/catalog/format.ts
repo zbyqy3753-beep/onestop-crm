@@ -65,11 +65,48 @@ export const CHANNELS_CAPTION = (n: number) => (n === 1 ? "ערוץ" : "ערוצ
 export const PACKAGES_CAPTION = (n: number) => (n === 1 ? "חבילה" : "חבילות");
 export const PLANS_CAPTION = (n: number) => (n === 1 ? "מסלול" : "מסלולים");
 
-/** Big buckets are sold as "unlimited" — say so instead of printing 10000GB. */
-export function dataLabel(spec: CellularSpec): string | null {
+/**
+ * האם הפרוזה של הרשומה מצהירה על **המספר הזה** כתקרה ("עד 600").
+ *
+ * ⚠️ המקבילה המדויקת של `discountIsCapped`, שחסרה למהירות ולנפח.
+ * `discountIsCapped` נבנתה כדי שהכרטיס לא יבטיח שיעור קבוע כשהרשומה
+ * אמרה "עד", ואותה הבטחה בדיוק נשארה פתוחה בצד השני של הכרטיס:
+ * id 85 נקרא "Partner Fiber במהירות **עד** 600/100" והאריח הדפיס
+ * "600/100Mbps" כעובדה; id 124 ("עד 1000Mb") הדפיס "1,000/250Mbps";
+ * ids 26, 27 ו-69 מבטיחים "עד 500GB"/"עד 1500GB"/"עד 5,000 דקות"
+ * והאריח הדפיס את המספר שטוח. הכרטיס הכריז יותר ממה שהחבילה מוכרת.
+ *
+ * ⚠️ אותם שני שערים של `discountIsCapped`, מאותם טעמים: `logicName`
+ * ולא `displayName` (שקוטעת אחרי `[line]`), ו-`עד` כמילה ולא כתת-מחרוזת
+ * (כדי ש-"ועד בית" לא ייקרא כתקרה). ובנוסף — התאמה **לאותו מספר**,
+ * ולא לעצם קיום המילה, כדי שהשער יצמצם הבטחה ולא ירחיב אותה.
+ *
+ * ⚠️ מספר שאחריו `%` או `:` נדחה. `%` הוא תחומה של `discountIsCapped`,
+ * ו-`:` הוא שעה — "ההנחה חלה עד 7:00" אינה הצהרה על נפח או מהירות,
+ * ובלי השער הזה כל שדה שערכו 7 היה נקרא ממנה כתקרה.
+ */
+function proseCapsAt(pkg: Package, value: number): boolean {
+  const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
+  for (const m of prose.matchAll(/(?<![א-ת])עד\s*(\d[\d,]*(?:\.\d+)?)\s*(.?)/g)) {
+    if (m[2] === "%" || m[2] === ":") continue;
+    if (Number(String(m[1]).replace(/,/g, "")) === value) return true;
+  }
+  return false;
+}
+
+/** `"עד "` כשהרשומה מצהירה על המספר הזה כתקרה, אחרת מחרוזת ריקה. */
+const upTo = (pkg: Package, ...values: (number | null | undefined)[]) =>
+  values.some((v) => typeof v === "number" && proseCapsAt(pkg, v)) ? "עד " : "";
+
+/**
+ * Big buckets are sold as "unlimited" — say so instead of printing 10000GB.
+ *
+ * ⚠️ `pkg` ולא `spec` לבדו: ה-"עד" חי בפרוזה של הרשומה, לא במפרט.
+ */
+export function dataLabel(pkg: Package, spec: CellularSpec): string | null {
   if (spec.unlimitedData) return "גלישה חופשית";
   if (spec.dataGb == null || spec.dataGb === 0) return null;
-  return `${nf.format(spec.dataGb)}GB`;
+  return `${upTo(pkg, spec.dataGb)}${nf.format(spec.dataGb)}GB`;
 }
 
 /*
@@ -93,7 +130,7 @@ export function dataLabel(spec: CellularSpec): string | null {
  * בעקבות חלוקה, על מספר שהקטלוג מסר במדויק. יחידה שאינה מחלקת את שתי
  * המהירויות בשלמות נשארת Mb, שם שום חלוקה לא מתבצעת.
  */
-export function speedLabel(spec: HomeSpec): string | null {
+export function speedLabel(pkg: Package, spec: HomeSpec): string | null {
   if (spec.downloadMbps == null) return null;
   const whole = (mbps: number) => mbps >= 1000 && mbps % 1000 === 0;
   /*
@@ -107,45 +144,35 @@ export function speedLabel(spec: HomeSpec): string | null {
    * בודד אל הפער בין שני ערכים.
    */
   const asGb = spec.uploadMbps != null && whole(spec.downloadMbps) && whole(spec.uploadMbps);
-  const unit = asGb ? "Gb" : "Mb";
+  /*
+   * ⚠️ `Mbps`/`Gbps` ולא `Mb`/`Gb`. הנתון הוא `downloadMbps` — מגהביט
+   * **לשנייה** — והאריח הדפיס "5,000/500Mb", כלומר יחידת נפח במקום
+   * יחידת מהירות, על כל 23 החבילות הביתיות שמסרו מהירות. לא כותרת
+   * האריח ("מהירות גלישה") ולא שורת הפירוט ("מהירות (הורדה/העלאה)")
+   * משלימות את "לשנייה", ולכן המספר עצמו חייב לשאת אותה — על אותו
+   * כרטיס יושב "100GB" של נפח גלישה, ושתי יחידות שנראות זהות על
+   * שני דברים שונים הן בדיוק הקריאה השגויה שהקובץ הזה נלחם בה.
+   */
+  const unit = asGb ? "Gbps" : "Mbps";
   const value = (mbps: number) => nf.format(asGb ? mbps / 1000 : mbps);
+  /*
+   * ⚠️ תחילית אחת לזוג כולו, ולא "עד" לכל מהירות בנפרד. הרשומות
+   * שמצהירות על תקרה מצהירות עליה על שתיהן (id 85: "עד 600 Mb"
+   * ו-"עד 100 Mb"), ו-"עד 600/עד 100" קורא כשתי עובדות ולא כזוג.
+   */
+  const cap = upTo(pkg, spec.downloadMbps, spec.uploadMbps);
   return spec.uploadMbps != null
-    ? `${value(spec.downloadMbps)}/${value(spec.uploadMbps)}${unit}`
-    : `${value(spec.downloadMbps)}${unit}`;
+    ? `${cap}${value(spec.downloadMbps)}/${value(spec.uploadMbps)}${unit}`
+    : `${cap}${value(spec.downloadMbps)}${unit}`;
 }
 
-/**
- * האם אחוז ההנחה שהרשומה מצהירה עליו הוא **תקרה** ולא שיעור קבוע.
- *
- * ⚠️ הכרטיס הדפיס "10% הנחה" במספר הגדול ביותר שלו על ids 135 ו-142,
- * שתיהן הנחה מדורגת לפי גובה החשבון (10% עד ₪149, ואז 8%/7%/6%/5%) —
- * כלומר לקוח בצריכה של ₪300 ומעלה מקבל חצי ממה שהכרטיס הכריז. ב-135
- * הכותרת שעל אותו כרטיס אומרת "עד 10% הנחה", כך ששתי אמירות סותרות
- * ישבו זו מעל זו. "לא יודעים — לא מבטיחים" הוא אותו כלל שחל בענף
- * החודשי על המחיר שאחרי ההטבה; לענף החשמל לא היה לו מקביל.
- *
- * ⚠️ נדרשת התאמה **לאותו מספר** שהרשומה מצהירה עליו, ולא עצם הימצאות
- * המילה "עד" בפרוזה: רק כך השער מצמצם הבטחה ולא מרחיב אותה.
+/*
+ * ⚠️ `discountIsCapped` עברה ל-`catalog.ts` ומיוצאת כאן מחדש, כדי
+ * ש-`electricityRank` תוכל להשתמש בה בלי מעגל ייבוא (`format.ts`
+ * מייבאת `logicName` מ-`catalog.ts`, ולא להפך). הצרכנים — הכרטיס
+ * וטבלת ההשוואה — ממשיכים לייבא מכאן, כמו קודם.
  */
-export function discountIsCapped(p: Package): boolean {
-  if (p.category !== "electricity" || typeof p.discountPercent !== "number") return false;
-  /*
-   * ⚠️ `logicName` ולא `p.name`. זו לוגיקה שמחפשת ראיה בתוך השם, ולכן
-   * היא כפופה לאינווריאנט ב-`catalog.ts:51-58`. `displayName` **קוטעת
-   * כל מה שאחרי `[line]`** (קורה בפועל ב-id 36), ולכן רשומת חשמל
-   * שמשפט התקרה שלה נופל אחרי הסימן הייתה מפסיקה להיזהות כתקרה
-   * והכרטיס היה מבטיח שיעור קבוע במקום "עד".
-   */
-  const prose = [logicName(p), p.description, p.benefits].filter(Boolean).join(" ");
-  /*
-   * ⚠️ `עד` כמילה ולא כתת-מחרוזת: שתיים מ-19 רשומות החשמל הן מסלולי
-   * **ועד בית** (142, 145), ו-"ועד 10%" אינו הצהרת תקרה.
-   */
-  for (const m of prose.matchAll(/(?<![א-ת])עד\s*(\d+(?:[.,]\d+)?)\s*%/g)) {
-    if (Number(String(m[1]).replace(",", ".")) === p.discountPercent) return true;
-  }
-  return false;
-}
+export { discountIsCapped } from "./catalog";
 
 export const CUSTOMER_TYPE_HE: Record<ElectricitySpec["customerType"], string> = {
   private: "לקוח פרטי",
@@ -174,10 +201,14 @@ export function cardStats(pkg: Package): Stat[] {
    * התלת-מצביים (`included()`), ואותה אמת-מידה שבנתה את שערי
    * `isListable`. אין היום אף `0` באף אחד מהשדות האלה — זה שער לרענון.
    */
-    const data = dataLabel(spec);
+    const data = dataLabel(pkg, spec);
     if (data) out.push({ value: data, caption: "גלישה בישראל" });
-    if (typeof spec.minutes === "number") out.push({ value: nf.format(spec.minutes), caption: MINUTES_CAPTION(spec.minutes) });
-    if (typeof spec.sms === "number") out.push({ value: nf.format(spec.sms), caption: SMS_CAPTION(spec.sms) });
+    // ⚠️ אותו שער "עד" גם על דקות ו-SMS: ids 26, 27 ו-69 מבטיחים
+    // "עד 5,000 דקות" בפרוזה, והאריח הדפיס 5,000 כעובדה.
+    if (typeof spec.minutes === "number")
+      out.push({ value: `${upTo(pkg, spec.minutes)}${nf.format(spec.minutes)}`, caption: MINUTES_CAPTION(spec.minutes) });
+    if (typeof spec.sms === "number")
+      out.push({ value: `${upTo(pkg, spec.sms)}${nf.format(spec.sms)}`, caption: SMS_CAPTION(spec.sms) });
     if (out.length < 3 && typeof spec.intlMinutes === "number") {
       out.push({ value: nf.format(spec.intlMinutes), caption: INTL_MINUTES_CAPTION(spec.intlMinutes) });
     }
@@ -187,7 +218,7 @@ export function cardStats(pkg: Package): Stat[] {
   if (pkg.category === "home") {
     const spec = pkg.spec as HomeSpec;
     const out: Stat[] = [];
-    const speed = speedLabel(spec);
+    const speed = speedLabel(pkg, spec);
     if (speed) out.push({ value: speed, caption: "מהירות גלישה" });
     if (typeof spec.channels === "number") out.push({ value: nf.format(spec.channels), caption: CHANNELS_CAPTION(spec.channels) });
     // ⚠️ אותה שגיאה שהערה על `lineTiers` מזהירה מפניה, רק שכאן היא
@@ -275,7 +306,7 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
 
   if (pkg.category === "home") {
     const s = pkg.spec as HomeSpec;
-    const speed = speedLabel(s);
+    const speed = speedLabel(pkg, s);
     /*
      * ⚠️ רק כששתי המהירויות נמסרו. ההחרגה של התווית הזו מבדיקת "אותה
      * עובדה פעמיים" נשענת על כך שהיא אומרת מי מהן ההורדה; על ערך בודד
