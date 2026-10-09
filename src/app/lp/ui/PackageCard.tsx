@@ -6,6 +6,7 @@ import { ProviderLogo } from "./ProviderLogo";
 import { LeadForm } from "./LeadForm";
 import { MAX_COMPARE } from "./CompareTray";
 import { cardStats, detailRows, discountIsCapped, shekels } from "../catalog/format";
+import { familyPriceOnly, requiresMultipleLines } from "../catalog/savings";
 import type { Package } from "../catalog/types";
 
 /*
@@ -53,8 +54,44 @@ export function PackageCard({
 
   // The whole point of the site: when the price jumps after the promo, say so
   // on the card rather than in the small print.
-  const rise = !isElectric && pkg.priceAfterPromo != null ? pkg.priceAfterPromo : null;
+  /*
+   * ⚠️ `> 0` ולא `!= null`, בדיוק כמו `isMoney` ב-`catalog.ts`. הקטלוג
+   * נכנס דרך `as unknown as Catalog` ואין ולידציה בזמן ריצה, ו-`0` הוא
+   * מה שהמחלץ כותב כשלא קרא מספר — `price: 0` כבר קיים בקטלוג (ids 18,
+   * 22) ונעצר ב-`isListable`. לשדה הזה לא היה שער מקביל, ולכן
+   * `priceAfterPromo: 0` היה מודפס כ-"אחרי תום ההטבה: ₪0 לחודש" —
+   * הבטחה שהחבילה נעשית חינם. עכשיו הוא נופל לענף ההערה המילולית,
+   * שאומרת מה שהרשומה באמת מסרה.
+   */
+  const rise =
+    !isElectric && typeof pkg.priceAfterPromo === "number" && pkg.priceAfterPromo > 0
+      ? pkg.priceAfterPromo
+      : null;
   const riseNote = !isElectric ? pkg.priceAfterPromoNote : null;
+
+  /*
+   * ⚠️ מחיר שמותנה בכמות מנויים אינו מחיר חודשי שטוח. `savings.ts` כבר
+   * יודעת להסתייג ממנו — `requiresMultipleLines` פוסלת אותו מהכותרת של
+   * המחשבון ו-`familyPriceOnly` תלוית-כמות ב-`computeSaving` — אבל
+   * הכרטיס, שהוא המקום שבו הגולש קורא את המספר, הכריז אותו בלי שום
+   * תנאי: id 110 ("דמי שימוש בסך של 35 ₪ ... לרוכשים 2 מנויים ויותר,
+   * עבור מנוי בודד 39.90 ₪") הדפיס "₪35 לחודש", ids 28/29 הדפיסו
+   * ₪34/₪32 שהם המחיר **לקו שני** בחבילה של ארבעה, ו-id 117
+   * (`wecomFamily`) הדפיס 29.9 במקום 34.9 לקו בודד. אותה הסתייגות
+   * בדיוק, באותו מקום שבו מודפסת ההבטחה.
+   *
+   * ⚠️ הסדר הוא `requiresMultipleLines` קודם: id 16 נושא את שתי
+   * ההצהרות ("3 קווים ב 92.70" וגם "משפחתי"), והמחמירה מהן — מינימום
+   * חוזי ולא מחיר למנוי — היא זו שצריכה להיאמר.
+   */
+  const priceCondition =
+    isElectric || pkg.price == null
+      ? null
+      : requiresMultipleLines(pkg)
+        ? "המחיר מותנה בכמות המנויים בחבילה"
+        : familyPriceOnly(pkg)
+          ? "מחיר למנוי במסלול משפחתי — משני מנויים ומעלה"
+          : null;
 
   return (
     /*
@@ -105,6 +142,13 @@ export function PackageCard({
           >
             <input
               type="checkbox"
+              /*
+                ⚠️ `id` שנגזר מה-`id` של החבילה. `CompareTray` מחזיר
+                לכאן את הפוקוס כשהוסר השבב האחרון והמגש כולו נפרק —
+                בלי נקודת אחיזה בדף, משתמש המקלדת היה נזרק ל-`<body>`,
+                כלומר לראש הדף אחרי כל הקטלוג.
+              */
+              id={`lp-compare-${pkg.id}`}
               checked={!!compareChecked}
               /*
                 ⚠️ `aria-disabled` ולא `disabled`. ההערה שמתחת כבר קבעה
@@ -174,6 +218,11 @@ export function PackageCard({
             )}
           </div>
 
+          {priceCondition && (
+            <p className="crm-text mt-2 rounded-lg bg-lp-surface-2 px-3 py-2 text-xs text-lp-ink-2">
+              {priceCondition}
+            </p>
+          )}
           {rise != null && (
             <p className="mt-2 rounded-lg bg-lp-rise-soft px-3 py-2 text-xs text-lp-rise">
               <span className="font-semibold">אחרי תום ההטבה: {shekels(rise)} לחודש</span>

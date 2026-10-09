@@ -6,6 +6,7 @@ import {
   basePackages,
   byPrice,
   disclosedRiseCount,
+  electricityRank,
   hasKnownAfterPrice,
   isListable,
   listableCounts,
@@ -190,41 +191,69 @@ test("קטלוג: המזהים ייחודיים", () => {
 test("תצוגה: יחיד ורבים — אין אריח שאומר \"1 ממירים\"", () => {
   // ⚠️ בדיוק השגיאה שההערה על `lineTiers` מזהירה מפניה, רק שהיא
   // הייתה חיה: id 70 הוא ממיר אחד והכרטיס הכריז "1 ממירים".
+  /*
+   * ⚠️ והצורה השלישית: מספר שהרשומה מצהירה עליו כ**מקסימום** אינו
+   * מספר הממירים הכלולים. id 89 ("מקסימום עד 7 ממירים ללקוח", ממיר
+   * ראשון בלבד ללא עלות) הדפיס "7 ממירים כלולים" — ושורת "ממיר נוסף
+   * ₪15" יושבת על אותו כרטיס. התווית אינה אומרת "כלולים" על מה שאינו
+   * כלול, והערך נושא את ה-"עד" כמו כל שדה אחר שהפרוזה מתנה.
+   */
   for (const p of PACKAGES.filter((x) => x.category === "home" && isListable(x))) {
     const tile = cardStats(p).find((s) => s.caption.startsWith("ממיר"));
     if (!tile) continue;
+    const capped = tile.value.startsWith("עד ");
     const singular = p.spec.converters === 1;
     assert.equal(
       tile.caption,
-      singular ? "ממיר כלול" : "ממירים כלולים",
+      capped ? "ממירים (מקסימום)" : singular ? "ממיר כלול" : "ממירים כלולים",
       `${p.id}: ${tile.value} ${tile.caption}`,
     );
   }
+
+  // id 89 הוא הרשומה שבשבילה השער נכתב — אם רענון מוציא אותה, הבדיקה
+  // שמעליה נשארת ריקה מתוכן והשער הזה מתריע על כך במקום להישען עליה.
+  const capped = PACKAGES.filter((x) => x.category === "home" && isListable(x)).filter((p) =>
+    cardStats(p).some((s) => s.caption === "ממירים (מקסימום)"),
+  );
+  assert.deepEqual(
+    capped.map((p) => `${p.id}:${cardStats(p).find((s) => s.caption === "ממירים (מקסימום)").value}`),
+    ["89:עד 7"],
+  );
 });
+
+/*
+ * ⚠️ `speedLabel` מקבלת את הרשומה **וגם** את המפרט מאז שער ה-"עד"
+ * (`proseCapsAt`), ושתי הבדיקות שמשתמשות בה נשארו עם קריאה
+ * בת-ארגומנט אחד: ה-`spec` הגיע במקום ה-`pkg`, `pkg.spec` היה
+ * `undefined`, ושתיהן נפלו על `TypeError` במקום לבדוק את מה שנכתבו
+ * לבדוק. רשומה בלי פרוזה כלל, כדי שהשער לא יוסיף "עד" למספר סינתטי.
+ */
+const NO_PROSE = { name: "", description: null, benefits: null };
+const speedOf = (spec) => speedLabel(NO_PROSE, spec);
 
 test("תצוגה: שתי המהירויות נשארות שלמות ביחידה שנבחרה", () => {
   // ⚠️ `{1000, 100}` — 15 מתוך 33 חבילות הבית — הוצג כ-"1/0.1Gb".
-  assert.equal(speedLabel({ downloadMbps: 1000, uploadMbps: 100 }), "1,000/100Mb");
-  assert.equal(speedLabel({ downloadMbps: 1000, uploadMbps: 1000 }), "1/1Gb");
-  assert.equal(speedLabel({ downloadMbps: 500, uploadMbps: 50 }), "500/50Mb");
+  assert.equal(speedOf({ downloadMbps: 1000, uploadMbps: 100 }), "1,000/100Mbps");
+  assert.equal(speedOf({ downloadMbps: 1000, uploadMbps: 1000 }), "1/1Gbps");
+  assert.equal(speedOf({ downloadMbps: 500, uploadMbps: 50 }), "500/50Mbps");
   /*
    * ⚠️ מהירות בודדת נשארת ב-Mb. היחידה נבחרה לכל חבילה בנפרד, ולכן
    * id 92 (`{1000, null}`) הודפס "1Gb" בשורה שמעל id 73 (`{1000, 100}`)
    * שהודפס "1,000/100Mb" — אותה מהירות הורדה, כ-1 מול 1,000.
    */
-  assert.equal(speedLabel({ downloadMbps: 2000, uploadMbps: null }), "2,000Mb");
-  assert.equal(speedLabel({ downloadMbps: 3000, uploadMbps: 2000 }), "3/2Gb");
+  assert.equal(speedOf({ downloadMbps: 2000, uploadMbps: null }), "2,000Mbps");
+  assert.equal(speedOf({ downloadMbps: 3000, uploadMbps: 2000 }), "3/2Gbps");
   /*
    * ⚠️ "שלמות" היא חלוקה ב-1000, לא `>= 1000`. `{1500, 1000}` עבר את
    * התנאי הקודם והוצג כ-"1.5/1Gb" — המספר הגדול כשבר, אותה קריאה
    * שגויה שהבדיקה הזו נכתבה כדי למנוע. ו-`{1000.5, …}` הוא אובדן דיוק
    * ממש: `nf` מעגל לשלוש ספרות ולכן החלוקה הדפיסה 1.001 במקום 1000.5.
    */
-  assert.equal(speedLabel({ downloadMbps: 1500, uploadMbps: 1000 }), "1,500/1,000Mb");
-  assert.equal(speedLabel({ downloadMbps: 1500, uploadMbps: null }), "1,500Mb");
-  assert.equal(speedLabel({ downloadMbps: 1000.5, uploadMbps: 1000.5 }), "1,000.5/1,000.5Mb");
+  assert.equal(speedOf({ downloadMbps: 1500, uploadMbps: 1000 }), "1,500/1,000Mbps");
+  assert.equal(speedOf({ downloadMbps: 1500, uploadMbps: null }), "1,500Mbps");
+  assert.equal(speedOf({ downloadMbps: 1000.5, uploadMbps: 1000.5 }), "1,000.5/1,000.5Mbps");
   for (const p of PACKAGES.filter((x) => x.category === "home" && isListable(x))) {
-    const label = speedLabel(p.spec);
+    const label = speedLabel(p, p.spec);
     if (label == null) continue;
     assert.ok(!/(^|[^\d])0\./.test(label), `${p.id}: מהירות שברית ב-${label}`);
   }
@@ -986,19 +1015,110 @@ test("קטלוג: `byPrice` הוא סדר מלא גם על שתי רשומות �
 });
 
 /*
+ * ⚠️ עלות התקנה שהרשומה מתנה בסוג הבית. `installationCost === 0`
+ * תורגם ל-"ללא עלות" כעובדה גורפת על 15 רשומות שהפרוזה שלהן אומרת
+ * "בית פרטי 499שח" / "125 ש"ח לבית פרטי" — הפער הכספי הגדול ביותר
+ * שכרטיס בדף הזה יכול להסתיר.
+ */
+test("תצוגה: עלות התקנה מותנית אומרת על מה היא חלה", () => {
+  const conditional = [];
+  for (const p of PACKAGES.filter((x) => x.category === "home" && isListable(x))) {
+    if (typeof p.spec.installationCost !== "number") continue;
+    const prose = [logicName(p), p.description, p.benefits].filter(Boolean).join(" ");
+    if (!/התקנ/.test(prose) || !/בית\s*פרטי/.test(prose)) continue;
+    conditional.push(p.id);
+
+    // האריח מחזיק מספר אחד, ולכן עלות מותנית אינה מקבלת אריח כלל.
+    assert.equal(
+      cardStats(p).find((t) => t.caption === "התקנה"),
+      undefined,
+      `${p.id}: אריח התקנה על עלות מותנית`,
+    );
+
+    const row = detailRows(p).find((r) => r.label === "עלות התקנה");
+    assert.ok(row, `${p.id}: אין שורת עלות התקנה`);
+    assert.ok(
+      /בבניין|בית פרטי/.test(row.value),
+      `${p.id}: "${row.value}" אינו אומר על מה המחיר חל`,
+    );
+    assert.notEqual(row.value, "ללא עלות", `${p.id}: "ללא עלות" כעובדה גורפת`);
+  }
+  // 21 מתוך 33 החבילות הביתיות — אם רענון מוריד את המספר לאפס, הבדיקה
+  // שלמעלה נשארת ריקה מתוכן והשער הזה מתריע על כך.
+  assert.ok(conditional.length >= 15, `רשומות מותנות: ${conditional.length}`);
+});
+
+/*
+ * ⚠️ דקות לחו״ל היו השדה היחיד שנשאר בלי שער ה-"עד": id 110 אומר
+ * "עד 100 דקות שיחה מישראל ל-27 יעדים בחו\"ל" והאריח הדפיס "100".
+ */
+test("תצוגה: גם דקות לחו״ל עוברות את שער ה-\"עד\"", () => {
+  const capped = [];
+  for (const p of PACKAGES.filter((x) => x.category === "cellular" && isListable(x))) {
+    if (typeof p.spec.intlMinutes !== "number") continue;
+    const prose = [logicName(p), p.description, p.benefits].filter(Boolean).join(" ");
+    // ⚠️ מחרוזת רגילה ולא תבנית: בתוך תבנית־מחרוזת `\s` הוא פשוט האות s.
+    const re = new RegExp("(?<![א-ת])עד[ ]*" + p.spec.intlMinutes + "(?![0-9,])");
+    if (!re.test(prose)) continue;
+    capped.push(p.id);
+    const shown = [
+      ...cardStats(p).filter((t) => t.caption.startsWith("דק") && t.caption.includes("חו")),
+      ...detailRows(p).filter((r) => r.label.includes("חו")),
+    ];
+    assert.ok(shown.length > 0, `${p.id}: הנתון לא מוצג בשום מקום`);
+    for (const x of shown) {
+      assert.ok((x.value ?? "").startsWith("עד "), `${p.id}: "${x.value}" בלי "עד"`);
+    }
+  }
+  assert.ok(capped.length >= 5, `רשומות עם תקרה: ${capped.length}`);
+});
+
+/*
+ * ⚠️ `allHours: false` אינו "שעות חלקיות" כשהרשומה לא אמרה דבר על
+ * שעות. חמש רשומות נושאות `hoursText: null` ונענשו קבוצה שלמה, ולכן
+ * תפריט "הנחה: על כל החשבון תחילה" החזיר 6% מעל 20% בלי שאריח השעות
+ * של אף אחת מהן מסביר למה.
+ */
+test("קטלוג: מסלול שלא הצהיר על שעות אינו נענש בדירוג", () => {
+  const electric = PACKAGES.filter((p) => p.category === "electricity" && isListable(p));
+  const silent = electric.filter((p) => !p.spec.allHours && p.spec.hoursText == null);
+  assert.ok(silent.length >= 5, `רשומות ששותקות על שעות: ${silent.length}`);
+  for (const p of silent) {
+    // אותו דירוג בדיוק כמו מסלול "כל השעות" באותו אחוז.
+    assert.ok(electricityRank(p) < 0, `${p.id}: דירוג ${electricityRank(p)}`);
+    // והכרטיס שלהן ממילא אינו מדפיס אריח שעות שיסביר הורדה.
+    assert.equal(
+      cardStats(p).find((t) => t.caption === "שעות ההנחה"),
+      undefined,
+      `${p.id}: אריח שעות על רשומה ששותקת`,
+    );
+  }
+  // בתוך קבוצת "ההנחה חלה על כל החשבון" הסדר מונוטוני לפי האחוז.
+  const whole = electric
+    .filter((p) => electricityRank(p) < 0)
+    .slice()
+    .sort(byPrice)
+    .map((p) => p.discountPercent);
+  for (let i = 1; i < whole.length; i++) {
+    assert.ok(whole[i] <= whole[i - 1], `סדר לא מונוטוני: ${whole.join(", ")}`);
+  }
+});
+
+/*
  * ⚠️ יחידה אחת לכל הדף, ולא לכל חבילה. שתי חבילות עם אותה מהירות
  * הורדה הודפסו כ-"1Gb" ו-"1,000/100Mb" בשתי שורות צמודות.
  */
 test("תצוגה: כל מהירויות הבית מוצגות באותה יחידה", () => {
   const units = new Set();
   for (const p of PACKAGES.filter((x) => x.category === "home" && isListable(x))) {
-    const label = speedLabel(p.spec);
-    if (label) units.add(label.endsWith("Gb") ? "Gb" : "Mb");
+    const label = speedLabel(p, p.spec);
+    // ⚠️ `Gbps`/`Mbps` — היחידה נושאת את "לשנייה" מאז `speedLabel`.
+    if (label) units.add(label.endsWith("Gbps") ? "Gbps" : "Mbps");
   }
   assert.ok(units.size <= 1, `שתי יחידות באותו דף: ${[...units].join(", ")}`);
   assert.equal(
-    speedLabel({ downloadMbps: 1000, uploadMbps: null }),
-    `${speedLabel({ downloadMbps: 1000, uploadMbps: 100 }).split("/")[0]}Mb`,
+    speedOf({ downloadMbps: 1000, uploadMbps: null }),
+    `${speedOf({ downloadMbps: 1000, uploadMbps: 100 }).split("/")[0]}Mbps`,
   );
 });
 

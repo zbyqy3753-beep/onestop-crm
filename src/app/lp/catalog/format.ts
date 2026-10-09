@@ -81,13 +81,20 @@ export const PLANS_CAPTION = (n: number) => (n === 1 ? "מסלול" : "מסלו�
  * (כדי ש-"ועד בית" לא ייקרא כתקרה). ובנוסף — התאמה **לאותו מספר**,
  * ולא לעצם קיום המילה, כדי שהשער יצמצם הבטחה ולא ירחיב אותה.
  *
+ * ⚠️ היחידה מותרת **לפני** המספר. הקטלוג כותב את אותה תקרה
+ * בשני הסדרים: id 69 אומר "עד 3000GB" ונתפס, ואילו ids 54,
+ * 65 ו-66 אומרים "עד GB800" / "עד GB2500" — אותה הצהרה בדיוק,
+ * והאריח הדפיס "800GB" שטוח על שלושתן. ההתנהגות לא רק
+ * חסרה — היא הייתה **לא עקבית** בין שתי רשומות של אותו ספק.
+ * רק אותיות לטיניות, כלומר יחידה (GB/MB/Mbps) ולא מילה בעברית.
+ *
  * ⚠️ מספר שאחריו `%` או `:` נדחה. `%` הוא תחומה של `discountIsCapped`,
  * ו-`:` הוא שעה — "ההנחה חלה עד 7:00" אינה הצהרה על נפח או מהירות,
  * ובלי השער הזה כל שדה שערכו 7 היה נקרא ממנה כתקרה.
  */
 function proseCapsAt(pkg: Package, value: number): boolean {
   const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
-  for (const m of prose.matchAll(/(?<![א-ת])עד\s*(\d[\d,]*(?:\.\d+)?)\s*(.?)/g)) {
+  for (const m of prose.matchAll(/(?<![א-ת])עד\s*(?:[A-Za-z]{1,5}\s*)?(\d[\d,]*(?:\.\d+)?)\s*(.?)/g)) {
     if (m[2] === "%" || m[2] === ":") continue;
     if (Number(String(m[1]).replace(/,/g, "")) === value) return true;
   }
@@ -174,6 +181,64 @@ export function speedLabel(pkg: Package, spec: HomeSpec): string | null {
  */
 export { discountIsCapped } from "./catalog";
 
+/**
+ * עלות התקנה שהרשומה מתנה ב**סוג הבית**, והמספר שבמפרט הוא צד אחד שלה בלבד.
+ *
+ * ⚠️ `installationCost` הוא שדה אחד, והפרוזה של הקטלוג הביתי מוכרת שני
+ * מחירים: 21 מתוך 33 החבילות הביתיות אומרות "בבניין X / בית פרטי Y".
+ * `installationCost === 0` תורגם ל-"ללא עלות" כעובדה גורפת — id 115
+ * ("עלות התקנה : בבנין0 שח בית פרטי 499שח"), id 73 ("0 ש"ח לבניין לזמן
+ * מוגבל , 125 ש"ח לבית פרטי") ו-id 3 ("התקנה ללא עלות בבניין בית פרטי
+ * 499") כולן הדפיסו "התקנה: ללא עלות" מול תשלום חד-פעמי של מאות
+ * שקלים. זה הפער הכספי הגדול ביותר שכרטיס בדף הזה יכול להסתיר, והוא
+ * אותה מחלקת פגם שכבר נסגרה ב-`discountIsCapped` ו-`proseCapsAt`:
+ * הפרוזה מתנה, והמפרט שכח את התנאי.
+ *
+ * ⚠️ המספר של הבית הפרטי נקרא בשני סדרים — "125 ש"ח **ל**בית פרטי"
+ * (לפני) ו-"בית פרטי 499שח" (אחרי) — והצורה שלפני דורשת את ה-`ל`:
+ * בלעדיו "בבנין0 שח בית פרטי" נקרא כ-0 לבית פרטי, כלומר השער היה
+ * מדפיס את ההפוך מהרשומה. הצורה שאחרי דורשת סימן מטבע, מאותו טעם.
+ */
+function installationProse(pkg: Package): string {
+  return [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
+}
+
+function privateHomeInstallation(pkg: Package): number | null {
+  const prose = installationProse(pkg);
+  const before = prose.match(/(\d[\d,]*(?:\.\d+)?)\s*(?:ש"ח|שח|₪)\s*לבית\s*פרטי/);
+  if (before) return Number(before[1].replace(/,/g, ""));
+  const after = prose.match(/בית\s*פרטי[^\d%]{0,40}?(\d[\d,]*(?:\.\d+)?)\s*(?:ש"ח|שח|₪)/);
+  if (after) return Number(after[1].replace(/,/g, ""));
+  return null;
+}
+
+/** הרשומה מתנה את ההתקנה בסוג הבית — גם כשלא נקרא ממנה מספר. */
+function installationIsConditional(pkg: Package): boolean {
+  const prose = installationProse(pkg);
+  return /התקנ/.test(prose) && /בית\s*פרטי/.test(prose);
+}
+
+/**
+ * שורת הפירוט: שני הצדדים, כל אחד עם מי שהוא חל עליו.
+ *
+ * ⚠️ כששני המספרים זהים, המפרט החזיק את מחיר הבית הפרטי ולא את זה של
+ * הבניין (id 70: "עלות התקנה חד פעמי: , 125 ש"ח לבית פרטי" — המחלץ
+ * איבד את הראשון). אין לנו מחיר לבניין, ולכן לא נאמר עליו דבר.
+ *
+ * ⚠️ וכשהמספר של הבית הפרטי לא נקרא (id 3 — "בית פרטי 499" בלי יחידה)
+ * הרשומה נשארת מותנית בלי מספר. "לא יודעים — לא מבטיחים": עדיף לומר
+ * על מה המחיר חל מאשר להדפיס אותו כאילו הוא חל על כולם.
+ */
+function installationDetail(pkg: Package, cost: number): string {
+  const flat = cost === 0 ? "ללא עלות" : shekels(cost);
+  if (!installationIsConditional(pkg)) return flat;
+  const priv = privateHomeInstallation(pkg);
+  const parts: string[] = [];
+  if (priv !== cost) parts.push(`${flat} בבניין`);
+  if (priv != null) parts.push(`${shekels(priv)} לבית פרטי`);
+  return parts.join(" · ");
+}
+
 export const CUSTOMER_TYPE_HE: Record<ElectricitySpec["customerType"], string> = {
   private: "לקוח פרטי",
   business: "לקוח עסקי",
@@ -209,8 +274,14 @@ export function cardStats(pkg: Package): Stat[] {
       out.push({ value: `${upTo(pkg, spec.minutes)}${nf.format(spec.minutes)}`, caption: MINUTES_CAPTION(spec.minutes) });
     if (typeof spec.sms === "number")
       out.push({ value: `${upTo(pkg, spec.sms)}${nf.format(spec.sms)}`, caption: SMS_CAPTION(spec.sms) });
+    // ⚠️ גם דקות לחו״ל. זה היה השדה היחיד שנשאר בלי השער: id 110
+    // אומר "עד 100 דקות שיחה מישראל ל-27 יעדים בחו\"ל (אופציונלי)"
+    // והאריח הדפיס "100" כעובדה, וכך גם ids 42, 54, 64, 65, 66 ו-69.
     if (out.length < 3 && typeof spec.intlMinutes === "number") {
-      out.push({ value: nf.format(spec.intlMinutes), caption: INTL_MINUTES_CAPTION(spec.intlMinutes) });
+      out.push({
+        value: `${upTo(pkg, spec.intlMinutes)}${nf.format(spec.intlMinutes)}`,
+        caption: INTL_MINUTES_CAPTION(spec.intlMinutes),
+      });
     }
     return out.slice(0, 3);
   }
@@ -223,15 +294,33 @@ export function cardStats(pkg: Package): Stat[] {
     if (typeof spec.channels === "number") out.push({ value: nf.format(spec.channels), caption: CHANNELS_CAPTION(spec.channels) });
     // ⚠️ אותה שגיאה שהערה על `lineTiers` מזהירה מפניה, רק שכאן היא
     // **חיה**: id 70 הוא ממיר אחד, והכרטיס הכריז "1 ממירים".
+    /*
+     * ⚠️ מספר שהרשומה מצהירה עליו כ**מקסימום** אינו מספר הממירים
+     * הכלולים. id 89 אומר "ממיר ראשון ללא עלות , כל ממיר נוסף עוד 15
+     * שח/ממיר , מקסימום עד 7 ממירים ללקוח", והאריח הדפיס "7 ממירים
+     * כלולים" — בזמן ששורת "ממיר נוסף ₪15" יושבת על אותו כרטיס עצמו.
+     * שתי אמירות סותרות, והיקרה מהן אינה נכונה: כלול אחד, לא שבעה.
+     * אותו שער `upTo` שחל כבר על הנפח, הדקות וה-SMS, ועוד תווית שאינה
+     * אומרת "כלולים" על מה שאינו כלול.
+     */
     if (typeof spec.converters === "number") {
+      const cap = upTo(pkg, spec.converters);
       out.push({
-        value: nf.format(spec.converters),
+        value: `${cap}${nf.format(spec.converters)}`,
         // ⚠️ רק הכיתוב משתנה, לא הערך: טבלת ההשוואה מיישרת לפי ה-`caption`,
         // ושני ניסוחים לאותה עובדה היו נפרשים לשתי שורות עם "—" הדדי.
-        caption: spec.converters === 1 ? "ממיר כלול" : "ממירים כלולים",
+        // שלוש הצורות ממופות לעובדה אחת ב-`SAME_FACT`.
+        caption: cap ? "ממירים (מקסימום)" : spec.converters === 1 ? "ממיר כלול" : "ממירים כלולים",
       });
     }
-    if (out.length < 3 && spec.installationCost != null) {
+    /*
+     * ⚠️ אריח רק כשהעלות אינה מותנית. אריח מחזיק מספר אחד, ועלות
+     * מותנית היא שני מספרים — ראה `installationDetail`. אריח "ללא
+     * עלות בבניין" ושורה שאומרת גם את הצד השני הם אותו נושא בשני
+     * מקומות, וזה בדיוק מה ששתי בדיקות התצוגה אוסרות. כשהעלות מותנית
+     * העובדה נאמרת במקום אחד — בשורת הפירוט — ושם היא שלמה.
+     */
+    if (out.length < 3 && typeof spec.installationCost === "number" && !installationIsConditional(pkg)) {
       out.push({
         value: spec.installationCost === 0 ? "ללא עלות" : shekels(spec.installationCost),
         caption: "התקנה",
@@ -286,7 +375,10 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
      * חבילה עם דקה אחת, ואותה עובדה הייתה מודפסת פעמיים.
      */
     if (typeof s.intlMinutes === "number" && !tiled.has(INTL_MINUTES_CAPTION(s.intlMinutes))) {
-      rows.push({ label: INTL_MINUTES_CAPTION(s.intlMinutes), value: nf.format(s.intlMinutes) });
+      rows.push({
+        label: INTL_MINUTES_CAPTION(s.intlMinutes),
+        value: `${upTo(pkg, s.intlMinutes)}${nf.format(s.intlMinutes)}`,
+      });
     }
     fee("עלות SIM", s.simCost);
     fee("דמי חיבור", s.connectionFee);
@@ -316,7 +408,15 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     if (speed && s.uploadMbps != null) {
       rows.push({ label: "מהירות (הורדה/העלאה)", value: speed });
     }
-    if (!tiled.has("התקנה")) fee("עלות התקנה", s.installationCost);
+    // ⚠️ עלות מותנית אינה מקבלת אריח (ראה `cardStats`), ולכן `tiled`
+    // לעולם אינו חוסם אותה כאן — השורה היא המקום היחיד שאומר אותה.
+    if (!tiled.has("התקנה")) {
+      if (typeof s.installationCost === "number") {
+        rows.push({ label: "עלות התקנה", value: installationDetail(pkg, s.installationCost) });
+      } else {
+        fee("עלות התקנה", s.installationCost);
+      }
+    }
     /*
      * ⚠️ שלושת השדות האלה הם `boolean | null` — תלת-מצביים — והגרסה
      * הקודמת דחפה שורה רק במצב החיובי. לכן `false` — שהקטלוג יודע
@@ -401,7 +501,13 @@ export const SPEED_PAIR_LABEL = "מהירות (הורדה/העלאה)";
 
 const SAME_FACT: Record<string, string> = {
   התקנה: "עלות התקנה",
-  "ממיר כלול": "ממירים כלולים",
+  // ⚠️ שלוש הצורות מתאחדות לעובדה אחת, והתווית הקנונית נקייה משתיהן:
+  // "ממירים (מקסימום)" (ראה `cardStats`) מול "ממירים כלולים" היו
+  // נפרשות לשתי שורות עם "—" הדדי, כלומר הטבלה מכחישה נתון ששני
+  // הכרטיסים מדפיסים. הערך ("2" מול "עד 7") הוא שמבדיל ביניהן.
+  "ממיר כלול": "ממירים",
+  "ממירים כלולים": "ממירים",
+  "ממירים (מקסימום)": "ממירים",
   // צורות היחיד של כיתובי הכמות — ראה ההערה על `MINUTES_CAPTION` למעלה.
   "דקת שיחה": "דקות שיחה",
   "הודעת SMS": "הודעות SMS",

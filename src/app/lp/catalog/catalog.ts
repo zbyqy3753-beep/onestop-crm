@@ -221,7 +221,25 @@ const PARTIAL_HOURS_GROUP = 1000;
  */
 export function electricityRank(p: Package): number {
   if (!isElectricity(p) || !isMoney(p.discountPercent)) return Infinity;
-  const partialHours = !p.spec.allHours;
+  /*
+   * ⚠️ הקנס חל על מי ש**הצהיר** על שעות חלקיות, ולא על מי ששתק.
+   * ל-`allHours` אין מצב "לא ידוע", וחמש רשומות נושאות `allHours: false`
+   * **וגם** `hoursText: null` (ids 135, 139, 140, 141, 142) — כלומר אין
+   * בהן שום הצהרה על שעות, ושתיים מהן אף אומרות את ההפוך בתיאור
+   * ("קבלת הנחה קבועה לאורך כל שעות היממה" ב-142, "7% הנחה קבועה בכל
+   * שעות היום" ב-139). הן ירדו קבוצה שלמה בלי סיבה שהגולש רואה:
+   * `cardStats` — האחות שקוראת את אותם שני שדות — אינה מדפיסה להן
+   * אריח שעות כלל, ולכן אין על המסך דבר שמסביר את ההורדה.
+   *
+   * התוצאה הייתה שתפריט המיון "הנחה: מהגבוהה לנמוכה" החזיר סדר שאינו
+   * מונוטוני בכלל (6%, 6%, 6%, 5%, 20%, 20%, …) — התווית מבטיחה סדר
+   * לפי האחוז, והסדר לא היה כזה. זו הטעות ההפוכה של הקנס הזה, לא
+   * ה-regression שהוא נכתב למנוע.
+   *
+   * ⚠️ שתיקה נקראת כ"כל השעות" ולא כ"לא ידוע", בדיוק כמו ש-`afterPrice`
+   * קוראת היעדר הצהרת עלייה כ"אותו מחיר" ולא שולחת אותה לסוף הרשימה.
+   */
+  const partialHours = !p.spec.allHours && p.spec.hoursText != null;
   return (
     (partialHours ? PARTIAL_HOURS_GROUP : 0) - p.discountPercent + (discountIsCapped(p) ? 0.5 : 0)
   );

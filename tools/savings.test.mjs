@@ -763,8 +763,15 @@ test("ה״א הידיעה אינה מבריחה הצהרת מחיר לשנה ה�
   }
   // "שנה ראשונה" לבדה אינה הצהרת עלייה.
   assert.equal(declaresRiseInText(fake("גלישה ללא הגבלה בשנה הראשונה")), false);
-  // ⚠️ הבריכה לא התרוקנה ולא זזה.
-  assert.equal(pool("cellular").length, 24, `סלולר: ${pool("cellular").length}`);
+  /*
+   * ⚠️ הבריכה לא התרוקנה ולא זזה.
+   *
+   * 23 ולא 24 מאז ש-`PRICED_BY_LINE_COUNT` קורא גם את הצורה
+   * "N קווים <מחיר> כל קו": id 11 (`Prince`) נושא טבלת מחירים לפי
+   * כמות בפרוזה ("קו בודד 39.9שח ... 2 קווים 34.9 שח כל קו") בלי
+   * `lineTiers`, והוא היחיד בקטלוג בצורה הזו. הנבחרת לא זזה.
+   */
+  assert.equal(pool("cellular").length, 23, `סלולר: ${pool("cellular").length}`);
   assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).pick?.price, 34);
 });
 
@@ -816,7 +823,8 @@ test("שערי הנוסח קוראים גם את `priceAfterPromoNote`", () => {
   // ⚠️ אף חבילה בקטלוג של היום לא זזה בגלל קריאת השדה: כל 11 ההערות
   // יושבות על חבילות שאין להן `priceAfterPromo` מספרי, ולכן
   // `hasKnownAfterPrice` פוסל אותן ממילא.
-  assert.equal(pool("cellular").length, 24);
+  // ⚠️ 23 — ראה ההערה על אותה בדיקה למעלה (id 11 נפסל כמחיר לפי כמות).
+  assert.equal(pool("cellular").length, 23);
   assert.equal(pool("home").length, 2);
   for (const p of PACKAGES) {
     if (p.priceAfterPromoNote == null) continue;

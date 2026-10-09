@@ -10,6 +10,14 @@ import type { Package } from "../catalog/types";
  * מכריז אותה לקורא מסך, ו-`CatalogBrowser` מייבא את שניהם — ייבוא
  * ממנו היה מעגלי.
  */
+/*
+ * ⚠️ אותה הגדרה של "מספר שמותר להדפיס" כמו `isMoney` ב-`catalog.ts`.
+ * היא אינה מיוצאת משם, ולכן היא נאמרת כאן במפורש ולא נקראת כ-`!= null`.
+ */
+function afterPriceKnown(p: { priceAfterPromo?: number | null }): boolean {
+  return typeof p.priceAfterPromo === "number" && Number.isFinite(p.priceAfterPromo) && p.priceAfterPromo > 0;
+}
+
 export const MAX_COMPARE = 4;
 
 /**
@@ -53,21 +61,29 @@ export function CompareTray({
    * אחד — לכפתור "נקה", הפקד הסמוך שנשאר במגש.
    *
    * ⚠️ הסרת השבב האחרון מפרקת את המגש כולו (`items.length === 0`
-   * מחזיר `null`), ואז אין במגש פקד למקד. זה המצב היחיד שבו הפוקוס
-   * יורד ל-`<body>`, והוא בלתי נמנע מכאן: תיבת הסימון שהוסרה יושבת
-   * ב-`PackageCard`, מחוץ לרכיב הזה.
+   * מחזיר `null`), ואז אין במגש פקד למקד — וההערה כאן קראה לזה
+   * "בלתי נמנע מכאן". זה לא נכון: הרכיב עצמו נשאר מורכב (ההורה
+   * מרנדר אותו תמיד), ה-effect כן רץ, ותיבת הסימון שמחזיקה את אותה
+   * בחירה עדיין בדף — `PackageCard` נותן לה `id` שנגזר מה-`id` של
+   * החבילה בדיוק בשביל זה. אחרת משתמש מקלדת שהסיר את הבחירה
+   * האחרונה הוחזר לראש הדף, אחרי כל הקטלוג.
    */
   const listRef = useRef<HTMLUListElement>(null);
   const clearRef = useRef<HTMLButtonElement>(null);
   const focusAfterRemove = useRef<number | null>(null);
+  const removedId = useRef<string | null>(null);
 
   useEffect(() => {
     const index = focusAfterRemove.current;
     if (index == null) return;
     focusAfterRemove.current = null;
+    const id = removedId.current;
+    removedId.current = null;
     const buttons = listRef.current?.querySelectorAll<HTMLElement>("[data-lp-chip-remove]");
     const next = buttons?.length ? buttons[Math.min(index, buttons.length - 1)] : undefined;
-    (next ?? clearRef.current)?.focus();
+    const inTray =
+      clearRef.current ?? (id != null ? document.getElementById(`lp-compare-${id}`) : null);
+    (next ?? inTray)?.focus();
   }, [items]);
 
   const close = useCallback(() => {
@@ -161,6 +177,7 @@ export function CompareTray({
                   data-lp-chip-remove
                   onClick={() => {
                     focusAfterRemove.current = i;
+                    removedId.current = p.id;
                     onRemove(p);
                   }}
                   aria-label={`הסר את ${p.name} מההשוואה`}
@@ -247,9 +264,20 @@ export function CompareTray({
               <table className="w-full min-w-[20rem] border-collapse text-sm sm:min-w-[32rem]">
                 <thead>
                   <tr>
-                    <th className="w-20 sm:w-28" />
+                    {/*
+                      ⚠️ `scope` על כותרות העמודה. שורות הגוף כבר מוצהרות
+                      כ-`<th scope="row">`, כלומר הטבלה דו-צירית במפורש,
+                      והעמודות נשארו בלי הצהרה — ולכן הקישור בין תא לספק
+                      נשען על ההיוריסטיקה של כל קורא מסך בנפרד, בטבלה
+                      שכל תפקידה הוא "איזה מספר שייך לאיזה ספק".
+                    */}
+                    <th scope="col" className="w-20 sm:w-28" />
                     {items.map((p) => (
-                      <th key={p.id} className="border-b border-lp-line p-2 text-start align-bottom">
+                      <th
+                        key={p.id}
+                        scope="col"
+                        className="border-b border-lp-line p-2 text-start align-bottom"
+                      >
                         <ProviderLogo logo={p.provider.logo} name={p.provider.name} size={26} />
                         <div className="mt-1 text-xs font-semibold text-lp-ink">{p.name}</div>
                       </th>
@@ -303,23 +331,26 @@ export function CompareTray({
                           key={p.id}
                           tone={
                             /*
-                              ⚠️ `!= null` ולא טרות'יניס. `priceAfterPromo: 0`
-                              היה נופל מהתנאי, והטבלה הייתה מדפיסה "₪0" בדיו
-                              רגיל בזמן שהכרטיס מדפיס את אותו מספר בבאנר
-                              האדום (`PackageCard` בודק `rise != null`). אין
-                              היום רשומה כזו בקטלוג — זה שער לרענון הבא,
-                              מאותה מחלקה שתוקנה כאן בכל מקום אחר.
+                              ⚠️ `isMoney` ולא `!= null`. ההערה שישבה כאן
+                              קראה לזה "שער לרענון הבא" ואז לא גידרה: `0`
+                              הוא מה שהמחלץ כותב כשלא קרא מספר (`price: 0`
+                              ב-ids 18/22 הוא אותה צורה בדיוק, ושם
+                              `isListable` עוצר אותה), והטבלה הייתה מדפיסה
+                              "אחרי ההטבה ₪0" — כלומר שהחבילה נעשית חינם.
+                              עכשיו `0` נקרא כ"לא נמסר", ואם יש הערה
+                              מילולית היא זו שמוצגת. אותו שער בדיוק נסגר
+                              ב-`PackageCard`.
                             */
                             p.category !== "electricity" &&
-                            (p.priceAfterPromo != null || p.priceAfterPromoNote != null)
+                            (afterPriceKnown(p) || p.priceAfterPromoNote != null)
                               ? "rise"
                               : undefined
                           }
                         >
                           {p.category === "electricity"
                             ? "—"
-                            : p.priceAfterPromo != null
-                              ? shekels(p.priceAfterPromo)
+                            : afterPriceKnown(p)
+                              ? shekels(p.priceAfterPromo as number)
                               : p.priceAfterPromoNote
                                 ? p.priceAfterPromoNote
                                 : "לא דווח שינוי"}

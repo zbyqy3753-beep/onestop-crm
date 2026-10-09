@@ -20,8 +20,15 @@ type SortKey = "price-asc" | "price-desc" | "after-asc" | "recommended";
  */
 const SORTS: { key: SortKey; label: string; electricLabel?: string }[] = [
   { key: "recommended", label: "מומלצים תחילה" },
-  { key: "price-asc", label: "מחיר: מהזול ליקר", electricLabel: "הנחה: מהגבוהה לנמוכה" },
-  { key: "price-desc", label: "מחיר: מהיקר לזול", electricLabel: "הנחה: מהנמוכה לגבוהה" },
+  /*
+   * ⚠️ התווית אומרת את הסדר ש-`electricityRank` באמת מחזירה. היא
+   * הבטיחה סדר מונוטוני לפי האחוז, וההנחה שחלה על כל החשבון מדורגת
+   * לפני כל מסלול שעות — בכוונה, ראה `electricityRank` — ולכן הסדר
+   * שהתקבל בפועל היה "6%, 6%, 6%, 5%, 20%, 20%…". גולש שקרא "מהגבוהה
+   * לנמוכה" ראה 6% מעל 20% בלי שום הסבר על המסך.
+   */
+  { key: "price-asc", label: "מחיר: מהזול ליקר", electricLabel: "הנחה: על כל החשבון תחילה" },
+  { key: "price-desc", label: "מחיר: מהיקר לזול", electricLabel: "הנחה: מסלולי שעות תחילה" },
   // No competitor offers this, and it is the honest way to rank a promo market.
   { key: "after-asc", label: "מחיר אחרי ההטבה: מהזול ליקר" },
 ];
@@ -165,6 +172,19 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
           ? prev
           : [...prev, pkg],
     );
+
+  /*
+   * ⚠️ בחירה להשוואה שורדת סינון שמוציא אותה מהתוצאות — וזה נכון,
+   * אחרת כל נגיעה במסנן הייתה מוחקת את מה שהגולש בחר. אבל `compareFull`
+   * נגזר מהבחירה הגולמית, ו-`PackageCard` חוסם כל תיבה שאינה מסומנת
+   * כשהמגש מלא: מי שסימן ארבע חבילות של גולן ואז סינן לפלאפון קיבל
+   * מסך שבו **כל** התיבות אפורות ומכריזות "ניתן להשוות עד 4 חבילות",
+   * ואף כרטיס על המסך אינו מסומן. ההודעה נכונה והמסך נראה שבור.
+   *
+   * המונה הזה אומר כמה מהבחירות מוסתרות, כך שהסיבה נמצאת באותה שורה
+   * שבה נמצאת התוצאה — ולא רק כשבבים במגש שמרחף בתחתית המסך.
+   */
+  const hiddenCompare = compare.filter((p) => !results.some((r) => r.id === p.id)).length;
 
   const activeFilters =
     selectedProviders.length + selectedTypes.length + (maxPrice != null ? 1 : 0);
@@ -351,6 +371,12 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
             {(isElectric ? PLANS_CAPTION : PACKAGES_CAPTION)(results.length)}
             {hasFilters && (
               <span className="nums text-lp-ink-3"> מתוך {packages.length}</span>
+            )}
+            {hiddenCompare > 0 && (
+              <span className="nums text-lp-ink-3">
+                {" "}
+                · {hiddenCompare} מההשוואה {hiddenCompare === 1 ? "מוסתרת" : "מוסתרות"} בסינון
+              </span>
             )}
           </p>
           <label className="flex min-w-0 items-center gap-2 text-sm">
