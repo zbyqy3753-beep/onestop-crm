@@ -107,8 +107,18 @@ export function byCategory(packages: Package[], category: Category): Package[] {
  * כאן היא מרוכזת כדי ששלושת השערים שמתחתיה (`isListable`, `afterPrice`
  * ו-`byPrice`) יקראו את אותה הגדרה של "מספר שמותר לדרג לפיו" — שתי
  * הגדרות שונות לאותו שדה הן בדיוק המלכודת שההערות כאן מתריעות עליה.
+ *
+ * ⚠️ מיוצאת כדי ש**גם הכרטיס** יקרא אותה הגדרה. `PackageCard` שאל
+ * `pkg.price != null` על הכותרת בגודל 3xl, ולכן `price: 0` — הצורה
+ * שהמחלץ מייצר כשלא קרא מחיר, וקיימת בפועל ב-ids 18 ו-22 — היה מודפס
+ * "₪0 לחודש", כלומר חבילה חינם; ו-`discountPercent` הוזרק לכותרת בלי
+ * שום שער, כך ש-id 144 (`discountPercent: null`) היה מדפיס "null%
+ * הנחה". שתיהן נעצרות היום ב-`isListable` בלבד — שער אחד, במקום אחד,
+ * שאם ייעקף (מסלול שמרנדר כרטיס בלי `listable`) מדפיס מספר שהרשומה
+ * לא מסרה. השדה שהכרטיס עצמו גידר (`priceAfterPromo > 0`) הוא ההוכחה
+ * שהאמת-מידה הזו כבר הוסכמה כאן — היא פשוט לא הוחלה על שני האחרים.
  */
-function isMoney(value: unknown): value is number {
+export function isMoney(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 

@@ -14,6 +14,7 @@ import {
   routerPricedSeparately,
   isComparable,
   parseSpend,
+  parseSpendRaw,
   priceUnknownAtLines,
   perLinePrice,
   requiresMultipleLines,
@@ -908,4 +909,132 @@ test("מחשבון: המחיר-לקו שה-Saving חושף הוא זה שהחי�
       );
     }
   }
+});
+
+/*
+ * ⚠️ `spec` עצמו, ולא רק `lineTiers` שבתוכו.
+ *
+ * הקובץ מתעד את הדוקטרינה במפורש: רשומה פגומה נופלת **בשקט**, אחת,
+ * ולא מפילה את רינדור השרת של הדף כולו. `tierTable` נכתב בדיוק בשביל
+ * זה — אבל הוא קורא `spec.lineTiers` בלי שער על `spec`, ולכן
+ * `"spec": null` (או שדה שחסר לגמרי) הפיל `TypeError: Cannot read
+ * properties of null (reading 'lineTiers')` בתוך `isComparable`, כלומר
+ * בתוך `computeSaving`, כלומר בתוך רינדור השרת של `/lp` — אותו כשל
+ * בדיוק שהשער ההוא נבנה למנוע, רק ברמה אחת מעל.
+ *
+ * `spec: "x"` כבר נפל בשקט (ל-`"x".lineTiers` יש `undefined`), וזו
+ * ההוכחה שהשער קיים וחסר בדיוק מצב אחד.
+ */
+test("רשומה בלי `spec` נופלת בשקט ולא מפילה את רינדור הדף", () => {
+  const cell = PACKAGES.find((p) => isComparable(p, "cellular"));
+  const home = PACKAGES.find((p) => isComparable(p, "home"));
+  assert.ok(cell && home, "לא נמצאו חבילות בת-השוואה לשתי הקטגוריות");
+
+  for (const [track, tpl] of [
+    ["cellular", cell],
+    ["home", home],
+  ]) {
+    const good = computeSaving(PACKAGES, track, 1, 400);
+    for (const spec of [null, undefined, "2", 7, [], {}]) {
+      const broken = { ...tpl, id: `broken-${track}`, slug: `broken-${track}`, spec };
+      assert.equal(
+        isComparable(broken, track),
+        false,
+        `${track}/${JSON.stringify(spec) ?? "undefined"}: רשומה בלי spec תקין נכנסה לבריכה`,
+      );
+      // ולא מפילה את החישוב של כל הדף.
+      const r = computeSaving([broken, ...PACKAGES], track, 1, 400);
+      assert.equal(r.pick?.id, good.pick?.id, `${track}: הבחירה זזה בגלל רשומה פגומה`);
+      assert.equal(r.monthly, good.monthly, `${track}: החיסכון זז בגלל רשומה פגומה`);
+    }
+  }
+});
+
+/*
+ * ⚠️ הסכום מגודר בתוך המנוע, בדיוק כמו כמות הקווים.
+ *
+ * `MAX_LINES` נוסף אחרי שהתברר ש"הסלקטור מגיש 1..10 ולכן זה שער לקורא
+ * הבא" חל גם על הצד הגבוה. אותו נימוק מילה במילה חל על `monthlySpend`,
+ * והוא **לא** יושם: `MIN_SPEND` ו-`MAX_SPEND` מוגדרים בקובץ הזה עצמו
+ * ו-`computeSaving` לא כיבד אף אחד מהם. `Infinity` החזיר
+ * `worthwhile: true` עם `yearly: Infinity`, `NaN` החזיר `monthly: NaN`,
+ * ו-`1e9` החזיר כותרת של ₪11,999,999,592 לשנה — מעל התקרה שהקובץ הזה
+ * מצהיר עליה. היום הקורא היחיד מעביר פלט של `parseSpend` ולכן זה לא
+ * הגיע למסך; זה שער לקורא הבא.
+ */
+test("מחשבון: סכום חסר-פשר מגודר בתוך המנוע ולא רק בפרסור", () => {
+  for (const track of ["cellular", "home"]) {
+    const capped = computeSaving(PACKAGES, track, 1, MAX_SPEND);
+    const zero = computeSaving(PACKAGES, track, 1, 0);
+
+    // ⚠️ `Infinity` הוא כאן ולא עם החריגה מהתקרה: אין לו "סכום מקוטע"
+    // לחשב ממנו, ו-"לא יודעים — לא מבטיחים" הוא אותו כלל של כל הקובץ.
+    for (const spend of [Number.NaN, Number.POSITIVE_INFINITY, undefined, null, "220"]) {
+      const r = computeSaving(PACKAGES, track, 1, spend);
+      assert.ok(Number.isFinite(r.monthly), `${track}/${spend}: monthly=${r.monthly}`);
+      assert.equal(r.yearly, r.monthly * 12);
+      assert.equal(r.worthwhile, false, `${track}/${spend}: worthwhile על סכום שאינו מספר`);
+    }
+
+    for (const spend of [-500, Number.NEGATIVE_INFINITY]) {
+      const r = computeSaving(PACKAGES, track, 1, spend);
+      assert.equal(r.monthly, zero.monthly, `${track}/${spend}: סכום שלילי אינו מטופל כ-0`);
+      assert.equal(r.worthwhile, false);
+    }
+
+    for (const spend of [MAX_SPEND + 0.01, 6000, 1e9]) {
+      const r = computeSaving(PACKAGES, track, 1, spend);
+      assert.ok(Number.isFinite(r.monthly), `${track}/${spend}: monthly=${r.monthly}`);
+      assert.equal(r.monthly, capped.monthly, `${track}/${spend}: החישוב חרג מ-MAX_SPEND`);
+      assert.equal(r.yearly, capped.yearly);
+    }
+
+    // והטווח הלגיטימי לא זז.
+    for (const spend of [MIN_SPEND, 220, 220.5, 1200, MAX_SPEND]) {
+      const r = computeSaving(PACKAGES, track, 1, spend);
+      const unitCount = track === "cellular" ? r.lines : 1;
+      assert.equal(
+        r.monthly,
+        Math.floor((Math.round(spend * 100) - Math.round(r.perLine * 100) * unitCount) / 100),
+        `${track}/${spend}: הגידור שינה סכום תקין`,
+      );
+    }
+  }
+});
+
+/*
+ * ⚠️ כל הסימנים הבלתי-נראים, ולא רק סימני הכיווניות העבריים.
+ *
+ * הניקוי נכתב מול U+200E/200F (מה שדף עברי ואקסל עברי מעטיפים בו סכום)
+ * ונעצר שם. אבל אותו קובץ מנרמל במפורש **ספרות ערביות-הודיות** ואת
+ * מפריד העשרוני `٫` ומפריד האלפים `٬` — כלומר הדבקה ממקלדת ומדף
+ * ערביים היא מסלול נתמך, והסימן שהמסלול הזה נושא הוא דווקא
+ * U+061C (ARABIC LETTER MARK), שלא היה ברשימה. בנוסף U+200B/200C/200D
+ * (ZWSP/ZWNJ/ZWJ) נוסעים עם העתקה מדפי אינטרנט ומ-PDF, ו-`\s` ב-JS
+ * אינו תופס אף אחד מהם.
+ *
+ * התוצאה הייתה שתי התקלות שכבר תוקנו פעמיים בשדה הזה: סכום תקין
+ * שנפסל ("הזינו סכום חודשי בין ₪10 ל-₪5,000" על שדה שבו כתוב 220),
+ * ותא ריק שהודבק והדליק שגיאה מתחת לשדה שנראה ריק לחלוטין.
+ */
+test("קלט: סימן בלתי-נראה שאינו U+200E/200F אינו פוסל סכום", () => {
+  const marks = [
+    ["U+061C ALM", "\u061c"],
+    ["U+200B ZWSP", "\u200b"],
+    ["U+200C ZWNJ", "\u200c"],
+    ["U+200D ZWJ", "\u200d"],
+    ["U+200E LRM", "\u200e"],
+    ["U+200F RLM", "\u200f"],
+    ["U+2066 LRI", "\u2066"],
+  ];
+  for (const [name, m] of marks) {
+    assert.equal(parseSpendRaw(`${m}220${m}`), 220, `${name}: סכום תקין נפסל`);
+    assert.equal(parseSpend(`${m}₪ 1,200${m}`), 1200, `${name}: סכום מפורמט נפסל`);
+    assert.equal(isBlankSpend(m), true, `${name}: שדה שמכיל רק אותו אינו נחשב ריק`);
+    assert.equal(isBlankSpend(`${m} ${m}`), true, `${name}: הדבקת תא ריק אינה נחשבת ריקה`);
+  }
+  // ומה שהוקלד באמת נשאר "לא ריק", גם מעוטף.
+  assert.equal(isBlankSpend("\u061c220\u061c"), false);
+  // ספרות ערביות-הודיות עם הסימן של אותה מקלדת.
+  assert.equal(parseSpendRaw("\u061c\u0662\u0662\u0660\u066b\u0665\u061c"), 220.5);
 });

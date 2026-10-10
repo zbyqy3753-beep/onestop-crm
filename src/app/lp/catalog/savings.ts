@@ -353,10 +353,25 @@ function isMoney(value: unknown): value is number {
  *
  * `Array.isArray` ולא `typeof === "object"`: `Set` ו-`Map` גם הם
  * אובייקטים עם `size`, ואין להם `every`.
+ *
+ * ⚠️ `spec?.lineTiers` ולא `spec.lineTiers` — השער שנכתב כאן נגד
+ * `TypeError` ברינדור השרת נפל בעצמו רמה אחת מעל: רשומה שבה
+ * `"spec": null` (או שהשדה חסר לגמרי, שתי צורות שהקטלוג נכנס איתן
+ * דרך `as unknown as Catalog` בלי ולידציה) הפילה
+ * `Cannot read properties of null (reading 'lineTiers')` בתוך
+ * `isComparable`, כלומר בתוך רינדור השרת של `/lp` כולו. `spec: "x"`
+ * דווקא נפל בשקט — ההוכחה שהיה כאן מצב אחד חסר ולא החלטה.
  */
-function tierTable(spec: Partial<CellularSpec>): { lines: number; price: number }[] | null {
-  const tiers = spec.lineTiers;
+function tierTable(
+  spec: Partial<CellularSpec> | null | undefined,
+): { lines: number; price: number }[] | null {
+  const tiers = spec?.lineTiers;
   return Array.isArray(tiers) && tiers.length > 0 ? tiers : null;
+}
+
+/** `spec` שאפשר לקרוא ממנו שדות, ולא רק משהו שיושב במפתח הזה. */
+function hasSpec(p: Package): boolean {
+  return p.spec != null && typeof p.spec === "object" && !Array.isArray(p.spec);
 }
 
 export function isComparable(p: Package, track: Track): p is MonthlyPackage {
@@ -375,6 +390,15 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
     לרענון הבא.
   */
   if (p.priceAfterPromo != null && !isMoney(p.priceAfterPromo)) return false;
+  /*
+    ⚠️ `spec` עצמו, לפני כל קריאה ממנו. כל השערים שמתחת — המדרגות,
+    הסלולר (`kosher` / `dataGb` / `minutes`) והבית (`hasInternet` /
+    `hasTv`) — קוראים שדות מתוכו, ו-`spec: null` (או שדה חסר) הפיל
+    `TypeError` ולקח איתו את רינדור השרת של הדף כולו במקום להפיל
+    רשומה אחת בשקט. ראה `tierTable` ו-`hasSpec`. `{}` נפסל כאן גם
+    כן, אבל רק בגלל השערים שמתחת — אין בו לא מהירות ולא גלישה.
+  */
+  if (!hasSpec(p)) return false;
   // ⚠️ `lineTiers` שאינו מערך הוא רשומה פגומה ולא "בלי מדרגות": ראה
   // `tierTable`. שדה כזה נפל כאן ב-`TypeError` והפיל את רינדור השרת של
   // כל הדף, במקום להפיל חבילה אחת בשקט כמו כל שער אחר בקובץ הזה.
@@ -433,7 +457,15 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
   // `routerPricedSeparately`.
   if (routerPricedSeparately(p)) return false;
   const spec = p.spec as HomeSpec;
-  return spec.hasInternet && spec.hasTv && p.type !== "TV";
+  /*
+   * ⚠️ `=== true` ולא הערך עצמו. הפונקציה מוצהרת `p is MonthlyPackage`,
+   * כלומר **בוליאן** — אבל `spec.hasInternet && …` החזיר את האופרנד
+   * הראשון הכבוי, ועל רשומה שבה השדה חסר התוצאה הייתה `undefined`.
+   * שער טיפוס שמחזיר `undefined` במקום `false` הוא בדיוק הסוג של
+   * חוסר-דיוק ש-`isMoney` ו-`tierTable` נכתבו נגדו: `"true"` כמחרוזת
+   * (הצורה שמחלץ מייצר כשהוא קורא שדה טקסטואלי) היה עובר כאן כאמת.
+   */
+  return spec.hasInternet === true && spec.hasTv === true && p.type !== "TV";
 }
 
 /**
@@ -561,6 +593,24 @@ export function computeSaving(
    * שאינו מאפס את הבחירה) ולא באג מוצג.
    */
   const lines = Number.isInteger(units) && units >= 1 ? Math.min(units, MAX_LINES) : 1;
+  /*
+   * ⚠️ והסכום מגודר כאן באותה מידה, ומאותו נימוק מילה במילה.
+   *
+   * `MAX_LINES` נוסף אחרי שהתברר ש"הסלקטור מגיש 1..10 ולכן זה שער
+   * לקורא הבא" חל גם על הצד הגבוה. `MIN_SPEND` ו-`MAX_SPEND` מוגדרים
+   * בקובץ **הזה**, ו-`computeSaving` לא כיבד אף אחד מהם: `Infinity`
+   * החזיר `worthwhile: true` עם `yearly: Infinity`, `NaN` החזיר
+   * `monthly: NaN` (כלומר `Saving` שמבטיח `number` ואינו מקיים),
+   * ו-`1e9` החזיר כותרת של ₪11,999,999,592 לשנה — פי 200,000 מהתקרה
+   * שהקובץ הזה מצהיר עליה. הקיטום ב-`parseSpend` הוא שומר של **השדה**,
+   * והוא לא השומר של המנוע: `computeSaving` מיוצאת, נבדקת ישירות,
+   * ועוברת מסלול מעבר מסלול שאינו מאפס את הבחירה.
+   *
+   * הטווח 0..`MAX_SPEND` נשאר בדיוק כפי שהיה — כל הקוראים של היום
+   * מעבירים פלט של `parseSpend`, ולכן אין כאן שינוי במספר מוצג.
+   */
+  const spend =
+    Number.isFinite(monthlySpend) && monthlySpend > 0 ? Math.min(monthlySpend, MAX_SPEND) : 0;
   const pool = packages
     .filter((p): p is MonthlyPackage => isComparable(p, track))
     // ⚠️ תלוי-כמות, ולכן כאן ולא ב-`isComparable`. ראה `priceUnknownAtLines`.
@@ -594,13 +644,13 @@ export function computeSaving(
    * (`29.9 * 10 === 299.00000000000006`).
    */
   const monthly = Math.floor(
-    (Math.round(monthlySpend * 100) - Math.round(perLine * 100) * unitCount) / 100,
+    (Math.round(spend * 100) - Math.round(perLine * 100) * unitCount) / 100,
   );
   return {
     pick,
     monthly,
     yearly: monthly * 12,
-    worthwhile: monthlySpend > 0 && monthly > 0,
+    worthwhile: spend > 0 && monthly > 0,
     lines,
     perLine,
   };
@@ -648,8 +698,26 @@ export function parseSpend(raw: string): number {
   return value === 0 ? 0 : Math.min(value, MAX_SPEND);
 }
 
-/** סימני כיווניות — `\s` ב-JS אינו תופס אותם. */
-const BIDI = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+/**
+ * סימנים בלתי-נראים שנוסעים עם הדבקה — `\s` ב-JS אינו תופס אף אחד מהם.
+ *
+ * ⚠️ הרשימה נכתבה מול U+200E/200F (מה שדף עברי ואקסל עברי מעטיפים בו
+ * סכום) ונעצרה שם, אף שאותו קובץ מנרמל במפורש **ספרות ערביות-הודיות**
+ * ואת מפריד העשרוני `٫` ומפריד האלפים `٬`. כלומר הדבקה ממקלדת ומדף
+ * ערביים היא מסלול נתמך בקובץ הזה — והסימן שהמסלול הזה נושא הוא דווקא
+ * U+061C (ARABIC LETTER MARK), שלא היה ברשימה. נוספו גם U+200B/200C/200D
+ * (ZWSP/ZWNJ/ZWJ), שנוסעים עם העתקה מדפי אינטרנט ומ-PDF.
+ *
+ * שתי התקלות הן אותן שתיים שתוקנו כבר פעמיים בשדה הזה: סכום תקין
+ * שנפסל בזמן שהמסך מציע לגולש בדיוק את מה שכתוב בשדה מולו, והדבקת תא
+ * ריק שהדליקה הודעת שגיאה מתחת לשדה שנראה ריק לגמרי (ראה `isBlankSpend`).
+ *
+ * ⚠️ קבוע **אחד** לשני הקוראים. `parseSpendRaw` החזיק עותק מוטבע
+ * בתוכו, וההערה שם מסבירה רק למה לא לייבא את `stripBidi` מהשרת — לא
+ * למה להחזיק שתי רשימות שחייבות להישאר זהות. זו ההיסטוריה של כל
+ * שער בקובץ הזה שנשכח באחד הקוראים.
+ */
+const INVISIBLE = /[\u061c\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g;
 
 /**
  * האם השדה ריק בעיני הפרסור.
@@ -660,7 +728,7 @@ const BIDI = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
  * נשבר: השדה נראה ריק לחלוטין והודעת השגיאה נדלקה מתחתיו.
  */
 export function isBlankSpend(raw: string): boolean {
-  return raw.replace(BIDI, "").trim() === "";
+  return raw.replace(INVISIBLE, "").trim() === "";
 }
 
 /**
@@ -682,8 +750,12 @@ export function parseSpendRaw(raw: string): number {
       הודעה שמציעה לו בדיוק את מה שכתוב בשדה מולו. זה הניקוי
       ש-`stripBidi` עושה לכל שדה שמגיע לשרת, רק שכאן הבדיקה רצה בדפדפן
       לפני שהשרת רואה את הערך (ובלי ייבוא — הקובץ רץ גם מתוך הבדיקה).
+
+      ⚠️ הרשימה עצמה חיה ב-`INVISIBLE`, קבוע אחד שגם `isBlankSpend`
+      קורא. כאן היה עותק מוטבע שלה, ושני העותקים התיישנו יחד: ראה
+      שם למה U+061C ו-U+200B-200D הם אותו מסלול הדבקה בדיוק.
     */
-    .replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "")
+    .replace(INVISIBLE, "")
     .replace(/[٠-٩۰-۹]/g, (d) => String((d.codePointAt(0)! - 0x0660) % 16))
     // אותה מקלדת מפיקה גם מפריד עשרוני `٫` ומפריד אלפים `٬` — בלי
     // השורה הזו `٢٢٠٫٥` נפסל בעוד שההודעה מציעה "220.50".

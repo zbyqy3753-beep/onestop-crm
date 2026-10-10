@@ -5,10 +5,10 @@ import { Card } from "./Card";
 import { PackageCard } from "./PackageCard";
 import { CompareTray, MAX_COMPARE } from "./CompareTray";
 import { PACKAGES_CAPTION, PLANS_CAPTION, shekels } from "../catalog/format";
-import { afterPrice, byPrice, hasKnownAfterPrice } from "../catalog/catalog";
+import { afterPrice, byPrice, electricityRank, hasKnownAfterPrice } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
-type SortKey = "price-asc" | "price-desc" | "after-asc" | "recommended";
+export type SortKey = "price-asc" | "price-desc" | "after-asc" | "recommended";
 
 /*
  * ⚠️ בחשמל אין מחיר — `byPrice` ממפה מסלול חשמל ל-`electricityRank`,
@@ -45,8 +45,48 @@ const SORTS: { key: SortKey; label: string; electricLabel?: string }[] = [
  *
  * ⚠️ המחוון מוסתר בחשמל, ולכן כאן אין ענף חשמל כלל: הציר הזה הוא כסף.
  */
+/*
+ * ⚠️ `isMoney` ולא `?? Infinity`, וזו בדיוק הבעיה שההערה למעלה מצהירה
+ * שתוקנה ואז נשארה חצי. `catalog.ts` מרכז את ההגדרה של "מספר שמותר
+ * לדרג לפיו" כדי שכל קוראי שדה המחיר יסכימו — `isListable`, `afterPrice`
+ * ו-`byPrice` עוברים בה — אבל היא אינה מיוצאת משם, ולכן היא נאמרת כאן
+ * במפורש (בדיוק כמו `afterPriceKnown` ב-`CompareTray`). `?? Infinity`
+ * מכסה `null` לבדו: `price: 0` — הצורה שהמחלץ מייצר כשלא קרא מחיר,
+ * ids 18/22 בקטלוג של היום — היה מוריד את קצה המחוון ל-₪0, מופיע
+ * במוני השבבים, ונכנס לתוצאות של כל ערך מחוון, בעוד `byPrice` שולחת
+ * אותו לסוף הרשימה. שתי קריאות הפוכות לאותו שדה בשני פקדים שיושבים
+ * זה מעל זה.
+ */
+function isMoney(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
 function sliderPrice(p: Package): number {
-  return p.price ?? Infinity;
+  return isMoney(p.price) ? p.price : Infinity;
+}
+
+/**
+ * האם ל-`byPrice` יש בכלל מה לדרג ברשומה — או שהיא מקבלת `Infinity`.
+ *
+ * ⚠️ נדרש כדי שהמיון היורד לא יהיה היפוך עיוור של `byPrice`. `byPrice`
+ * שולחת רשומה שאין בה מחיר שמיש לסוף הרשימה **בכוונה** (ההערה שם
+ * מתארת את זה כ"שער שכל תפקידו"), והיפוך הקומפרטור הפך בדיוק את
+ * השער הזה: `sorted.sort((a, b) => byPrice(b, a))` היה מעלה את אותן
+ * רשומות ל**ראש** העמוד, כלומר "מחיר: מהיקר לזול" פותח בחבילות
+ * שהמחיר שלהן לא נקרא. אותו דפוס בדיוק ש-`byAfterPrice` מתחת כבר
+ * מיישמת (לא-ידוע תמיד בסוף, בשני הכיוונים).
+ */
+function priceRankable(p: Package): boolean {
+  return p.category === "electricity"
+    ? Number.isFinite(electricityRank(p))
+    : isMoney(p.price);
+}
+
+function byPriceDesc(a: Package, b: Package): number {
+  const ra = priceRankable(a);
+  const rb = priceRankable(b);
+  if (ra !== rb) return ra ? -1 : 1;
+  return byPrice(b, a);
 }
 
 /*
@@ -76,6 +116,110 @@ function byAfterPrice(a: Package, b: Package): number {
   return va === vb ? 0 : va < vb ? -1 : 1;
 }
 
+/** המצב שהגולש בנה בעמודה הצדדית. */
+export interface CatalogFilters {
+  providers: string[];
+  types: string[];
+  maxPrice: number | null;
+}
+
+/**
+ * הפרדיקט של הסינון — **אחד**.
+ *
+ * ⚠️ הוא היה כתוב שלוש פעמים: בתוצאות, במוני החברות (בלי ציר החברה)
+ * ובמוני הסוגים (בלי ציר הסוג). שלוש העתקות של אותו תנאי הן בדיוק
+ * הצורה שבה מונה מפסיק להסכים עם הרשימה שמתחתיו — וזה כבר קרה כאן
+ * פעמיים (מסנן החברה ואז מסנן הסוג שנעלמו עם המסנן הפעיל שבתוכם).
+ * `except` מנטרל ציר אחד, וזו כל ההגדרה של "כמה תוצאות האפשרות הזו
+ * מוסיפה".
+ */
+export function matchesFilters(
+  p: Package,
+  f: CatalogFilters,
+  except?: keyof CatalogFilters,
+): boolean {
+  if (except !== "providers" && f.providers.length > 0 && !f.providers.includes(p.provider.slug)) {
+    return false;
+  }
+  if (except !== "types" && f.types.length > 0 && !(p.type != null && f.types.includes(p.type))) {
+    return false;
+  }
+  if (except !== "maxPrice" && f.maxPrice != null && sliderPrice(p) > f.maxPrice) return false;
+  return true;
+}
+
+export function priceBoundsOf(packages: Package[]): { min: number; max: number } | null {
+  const values = packages.map(sliderPrice).filter((v) => Number.isFinite(v));
+  if (!values.length) return null;
+  /*
+   * ⚠️ `Math.ceil` על הקצה התחתון, לא `Math.floor`.
+   *
+   * המסנן הוא `price <= maxPrice` וה-`step` הוא 1, ולכן הקצה התחתון
+   * חייב להיות מחיר שחבילה אחת לפחות **עומדת בו**. החבילה הזולה
+   * בסלולר היא 21.9 ובביתי 19.9: עיגול למטה נתן 21 ו-19, ושני הקצאות
+   * האלה החזירו "אין חבילות שמתאימות לסינון" — כלומר המחוון נגמר
+   * במקום שבו הדף ריק תמיד. עיגול למעלה מגיע ל-22 ול-20, שם
+   * החבילה הזולה באמת נמצאת.
+   */
+  return { min: Math.ceil(Math.min(...values)), max: Math.ceil(Math.max(...values)) };
+}
+
+/**
+ * Counts are computed against the *other* active filters, so each option
+ * shows how many results it would actually add — the SmartCut pattern.
+ */
+/*
+  ⚠️ חברה **מסומנת** נשארת ברשימה גם כשהמונה שלה 0. הרשימה
+  מחושבת אחרי מסנני הסוג והמחיר, ולכן חברה שאין לה תוצאה בצירוף
+  הנוכחי נעלמה מהמסך — אבל ה-slug שלה נשאר ב-`filters.providers`
+  והמשיך לסנן. הגולש קיבל "0 חבילות", תג סינון שמראה 2,
+  ושום תיבת סימון לבטל — המוצא היחיד היה "נקה הכל", שמוחק
+  גם את מסנן הסוג. מסנן פעיל חייב להיות ניתן לביטול.
+*/
+export function providerFacets(packages: Package[], f: CatalogFilters) {
+  const map = new Map<string, { slug: string; name: string; count: number }>();
+  for (const p of packages) {
+    const passes = matchesFilters(p, f, "providers");
+    if (!passes && !f.providers.includes(p.provider.slug)) continue;
+    const entry =
+      map.get(p.provider.slug) ?? { slug: p.provider.slug, name: p.provider.name, count: 0 };
+    if (passes) entry.count++;
+    map.set(p.provider.slug, entry);
+  }
+  return [...map.values()].sort((a, b) => b.count - a.count);
+}
+
+/* אותו דבר לשבבי הסוג: סוג מסומן נשאר ברשימה כדי שאפשר לבטל אותו. */
+export function typeFacets(packages: Package[], f: CatalogFilters): [string, number][] {
+  const map = new Map<string, number>();
+  for (const p of packages) {
+    if (!p.type) continue;
+    const passes = matchesFilters(p, f, "types");
+    if (!passes && !f.types.includes(p.type)) continue;
+    map.set(p.type, (map.get(p.type) ?? 0) + (passes ? 1 : 0));
+  }
+  return [...map.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+export function sortCatalog(packages: Package[], sort: SortKey): Package[] {
+  const sorted = [...packages];
+  if (sort === "price-asc") sorted.sort(byPrice);
+  else if (sort === "price-desc") sorted.sort(byPriceDesc);
+  else if (sort === "after-asc") sorted.sort(byAfterPrice);
+  else sorted.sort((a, b) => Number(b.recommended) - Number(a.recommended) || byPrice(a, b));
+  return sorted;
+}
+
+export function catalogResults(
+  packages: Package[],
+  f: CatalogFilters,
+  sort: SortKey,
+): Package[] {
+  return sortCatalog(
+    packages.filter((p) => matchesFilters(p, f)),
+    sort,
+  );
+}
 
 export function CatalogBrowser({ packages, category }: { packages: Package[]; category: string }) {
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
@@ -87,79 +231,15 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
 
   const isElectric = category === "electricity";
 
-  const priceBounds = useMemo(() => {
-    const values = packages.map(sliderPrice).filter((v) => Number.isFinite(v));
-    if (!values.length) return null;
-    /*
-     * ⚠️ `Math.ceil` על הקצה התחתון, לא `Math.floor`.
-     *
-     * המסנן הוא `price <= maxPrice` וה-`step` הוא 1, ולכן הקצה התחתון
-     * חייב להיות מחיר שחבילה אחת לפחות **עומדת בו**. החבילה הזולה
-     * בסלולר היא 21.9 ובביתי 19.9: עיגול למטה נתן 21 ו-19, ושני הקצאות
-     * האלה החזירו "אין חבילות שמתאימות לסינון" — כלומר המחוון נגמר
-     * במקום שבו הדף ריק תמיד. עיגול למעלה מגיע ל-22 ול-20, שם
-     * החבילה הזולה באמת נמצאת.
-     */
-    return { min: Math.ceil(Math.min(...values)), max: Math.ceil(Math.max(...values)) };
-  }, [packages]);
+  const filters = useMemo<CatalogFilters>(
+    () => ({ providers: selectedProviders, types: selectedTypes, maxPrice }),
+    [selectedProviders, selectedTypes, maxPrice],
+  );
 
-  /**
-   * Counts are computed against the *other* active filters, so each option
-   * shows how many results it would actually add — the SmartCut pattern.
-   */
-  const passesExceptProvider = (p: Package) =>
-    (selectedTypes.length === 0 || (p.type != null && selectedTypes.includes(p.type))) &&
-    (maxPrice == null || sliderPrice(p) <= maxPrice);
-
-  /*
-    ⚠️ חברה **מסומנת** נשארת ברשימה גם כשהמונה שלה 0. הרשימה
-    מחושבת אחרי מסנני הסוג והמחיר, ולכן חברה שאין לה תוצאה בצירוף
-    הנוכחי נעלמה מהמסך — אבל ה-slug שלה נשאר ב-`selectedProviders`
-    והמשיך לסנן. הגולש קיבל "0 חבילות", תג סינון שמראה 2,
-    ושום תיבת סימון לבטל — המוצא היחיד היה "נקה הכל", שמוחק
-    גם את מסנן הסוג. מסנן פעיל חייב להיות ניתן לביטול.
-  */
-  const providerOptions = useMemo(() => {
-    const map = new Map<string, { slug: string; name: string; count: number }>();
-    for (const p of packages) {
-      const selected = selectedProviders.includes(p.provider.slug);
-      if (!selected && !passesExceptProvider(p)) continue;
-      const entry = map.get(p.provider.slug) ?? { slug: p.provider.slug, name: p.provider.name, count: 0 };
-      if (passesExceptProvider(p)) entry.count++;
-      map.set(p.provider.slug, entry);
-    }
-    return [...map.values()].sort((a, b) => b.count - a.count);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [packages, selectedProviders, selectedTypes, maxPrice]);
-
-  /* אותו דבר לשבבי הסוג: סוג מסומן נשאר ברשימה כדי שאפשר לבטל אותו. */
-  const typeOptions = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const p of packages) {
-      if (!p.type) continue;
-      const passes =
-        (selectedProviders.length === 0 || selectedProviders.includes(p.provider.slug)) &&
-        (maxPrice == null || sliderPrice(p) <= maxPrice);
-      if (!passes && !selectedTypes.includes(p.type)) continue;
-      map.set(p.type, (map.get(p.type) ?? 0) + (passes ? 1 : 0));
-    }
-    return [...map.entries()].sort((a, b) => b[1] - a[1]);
-  }, [packages, selectedProviders, selectedTypes, maxPrice]);
-
-  const results = useMemo(() => {
-    const filtered = packages.filter(
-      (p) =>
-        (selectedProviders.length === 0 || selectedProviders.includes(p.provider.slug)) &&
-        (selectedTypes.length === 0 || (p.type != null && selectedTypes.includes(p.type))) &&
-        (maxPrice == null || sliderPrice(p) <= maxPrice),
-    );
-    const sorted = [...filtered];
-    if (sort === "price-asc") sorted.sort(byPrice);
-    else if (sort === "price-desc") sorted.sort((a, b) => byPrice(b, a));
-    else if (sort === "after-asc") sorted.sort(byAfterPrice);
-    else sorted.sort((a, b) => Number(b.recommended) - Number(a.recommended) || byPrice(a, b));
-    return sorted;
-  }, [packages, selectedProviders, selectedTypes, maxPrice, sort]);
+  const priceBounds = useMemo(() => priceBoundsOf(packages), [packages]);
+  const providerOptions = useMemo(() => providerFacets(packages, filters), [packages, filters]);
+  const typeOptions = useMemo(() => typeFacets(packages, filters), [packages, filters]);
+  const results = useMemo(() => catalogResults(packages, filters, sort), [packages, filters, sort]);
 
   const toggle = (list: string[], value: string, set: (v: string[]) => void) =>
     set(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -189,6 +269,21 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
   const activeFilters =
     selectedProviders.length + selectedTypes.length + (maxPrice != null ? 1 : 0);
   const hasFilters = activeFilters > 0;
+
+  /*
+   * ⚠️ המונה שעל כל אפשרות נאמר בשם הנגיש במפורש, ולא נשאר כ-`<span>`
+   * צמוד. חישוב השם הנגיש משרשר את טקסט הילדים **בלי** להוסיף רווח
+   * כשאין רווח ב-DOM, ולכן תיבת הסימון של גולן הכריזה "גולן טלקום18"
+   * ולשונית הסלולר "סלולר55" — מספר שנדבק למילה ונקרא כמלמול אחד.
+   * שבבי הסוג דווקא כן הפרידו (`{type} <span>`), כלומר אותו נתון
+   * הוכרז בשלוש צורות בשלושה פקדים שיושבים זה מעל זה.
+   *
+   * ⚠️ והמונה גם אומר **מה** הוא מונה. "18" לבדו אינו מידע, והמילה
+   * מגיעה מאותם `PACKAGES_CAPTION`/`PLANS_CAPTION` שכבר נבחרים לפי
+   * הקטגוריה בשורת התוצאות — כולל צורת היחיד ("1 חבילה", הסוג "בסיס").
+   */
+  const countLabel = (n: number) =>
+    `${n} ${(isElectric ? PLANS_CAPTION : PACKAGES_CAPTION)(n)}`;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
@@ -271,6 +366,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                       type="checkbox"
                       checked={selectedProviders.includes(o.slug)}
                       onChange={() => toggle(selectedProviders, o.slug, setSelectedProviders)}
+                      aria-label={`${o.name} — ${countLabel(o.count)}`}
                       className="h-4 w-4 accent-lp-brand"
                     />
                     <span className="flex-1 text-lp-ink">{o.name}</span>
@@ -300,6 +396,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                         key={type}
                         type="button"
                         aria-pressed={active}
+                        aria-label={`${type} — ${countLabel(count)}`}
                         onClick={() => toggle(selectedTypes, type, setSelectedTypes)}
                         className={`inline-flex min-h-9 items-center rounded-full border px-3 py-1 text-xs transition ${
                           active

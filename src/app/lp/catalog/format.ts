@@ -1,4 +1,5 @@
-import { logicName } from "./catalog";
+import { isMoney, logicName } from "./catalog";
+import { familyPriceOnly, requiresMultipleLines } from "./savings";
 import type { CellularSpec, ElectricitySpec, HomeSpec, Package } from "./types";
 
 const nf = new Intl.NumberFormat("he-IL");
@@ -237,6 +238,118 @@ function installationDetail(pkg: Package, cost: number): string {
   if (priv !== cost) parts.push(`${flat} בבניין`);
   if (priv != null) parts.push(`${shekels(priv)} לבית פרטי`);
   return parts.join(" · ");
+}
+
+/**
+ * האם הרשומה מצהירה על המחיר הזה כעל **רצפה** ("מ-100 ₪ לחודש").
+ *
+ * ⚠️ המקבילה של `proseCapsAt` בכיוון ההפוך, וזו שחסרה דווקא לשדה
+ * היחיד שהכרטיס מדפיס בגודל 3xl. id 85 (`Partner Fiber`) אומר
+ * פעמיים "מ-69 ₪ לחודש לחודשיים ראשונים לאחר מכן **מ-100 ₪ לחודש**",
+ * ו-`price` שלו הוא 100 — כלומר הכרטיס הדפיס "₪100 לחודש" כמחיר
+ * אחיד בזמן שההערה **שעל אותו כרטיס** (`priceAfterPromoNote`) מצטטת
+ * "מ-100 ₪". שתי אמירות על אותו מספר, זו מעל זו, והעליונה היא
+ * הגורפת מהן. אותו כלל של `discountIsCapped`: לא יודעים — לא
+ * מבטיחים.
+ *
+ * ⚠️ נדרשת התאמה **לאותו מספר** ולא עצם קיום התבנית, מאותו טעם שם:
+ * כך השער מצמצם הבטחה ולא מרחיב אותה. `מ` חייבת לבוא אחרי גבול
+ * ולא אחרי אות עברית, אחרת "**מ**חודש 4 99 ש"ח" (ids 73, 153, 159)
+ * ייקרא כרצפה; ו-`ומעלה`/`ויותר` שאחרי הסכום נדחה, כי "מ-300 ₪
+ * ומעלה" (id 135) הוא מדרגת **צריכה** ולא מחיר התוכנית.
+ */
+function proseFloorsAt(pkg: Package, value: number): boolean {
+  const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
+  for (const m of prose.matchAll(
+    /(?<![א-ת])מ-?\s*(\d[\d,]*(?:\.\d+)?)\s*(?:₪|ש"ח|שח|ש''ח)\s*(ומעלה|ויותר)?/g,
+  )) {
+    if (m[2]) continue;
+    if (Number(String(m[1]).replace(/,/g, "")) === value) return true;
+  }
+  return false;
+}
+
+/**
+ * המספר הגדול שבכרטיס — מחיר חודשי או אחוז הנחה — כמחרוזת.
+ *
+ * ⚠️ `isMoney` ולא `!= null`, ובמקום אחד לשני הענפים. `PackageCard`
+ * שאל `pkg.price != null` והזריק את `pkg.discountPercent` בלי שום
+ * שער, ולכן `price: 0` (ids 18, 22 — הצורה שהמחלץ מייצר כשלא קרא
+ * מחיר) הודפס "₪0 לחודש", כלומר **חבילה חינם**, ו-`discountPercent:
+ * null` (id 144) הודפס "null% הנחה". שתיהן נעצרות היום ב-`isListable`
+ * בלבד, שאינו על המסלול שמרנדר כרטיס; והשדה השלישי על אותו כרטיס
+ * (`priceAfterPromo`) כבר גודר כך במפורש. "—" הוא אותו דרדור של
+ * `shekels` על עמלה פגומה: עדיף להשמיט מספר מאשר להמציא אותו.
+ */
+export function headlineValue(pkg: Package): string {
+  if (pkg.category === "electricity") {
+    return isMoney(pkg.discountPercent) ? `${nf.format(pkg.discountPercent)}%` : "—";
+  }
+  return isMoney(pkg.price) ? shekels(pkg.price) : "—";
+}
+
+/**
+ * מה ההנחה של מסלול החשמל חלה עליו, כפי שהרשומה עצמה כותבת.
+ *
+ * ⚠️ 10 מתוך 19 מסלולי החשמל מצהירים במפורש שההנחה אינה על החשבון
+ * אלא על **רכיב** אחד בתוכו ("ההנחה היא על רכיב התשלום המשתנה
+ * לקוטש בלבד... בנוסף לתעריף המשתנה הלקוח יישא בתשלומים החודשיים
+ * הקבועים (אספקה, חלוקה והספק KVA)"), והכרטיס הדפיס "20% הנחה"
+ * בגודל 3xl בלי אות אחת מההסתייגות הזו. אלה בדיוק ארבעת המסלולים
+ * שהדף מכריז עליהם כמובילים (20%, 18%, 15%) — מבקר שמשווה 20% מול
+ * חשבון החשמל שלו קורא הבטחה על הסכום כולו.
+ *
+ * ⚠️ מוחזר **נוסח הרשומה** ולא ניסוח שלנו, ובלי מקדם כלשהו לחלקו
+ * של הרכיב בחשבון: המקדם אינו בקטלוג, וכל ניחוש היה הופך את
+ * ההסתייגות למספר שנראה מחושב. אותה כנות של `electricityRank`.
+ */
+const DISCOUNT_SCOPES: [RegExp, string][] = [
+  [/רכיב\s+ה?תשלום\s+המשתנה/, "רכיב התשלום המשתנה"],
+  [/רכיב\s+הצריכה/, "רכיב הצריכה"],
+  [/רכיב\s+ה?ייצור/, "רכיב הייצור"],
+];
+
+export function discountScope(pkg: Package): string | null {
+  if (pkg.category !== "electricity") return null;
+  const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
+  for (const [re, label] of DISCOUNT_SCOPES) if (re.test(prose)) return label;
+  return null;
+}
+
+/**
+ * ההסתייגות שהרשומה מסרה על המספר הגדול שבכרטיס — מחיר או אחוז הנחה.
+ *
+ * ⚠️ יושבת כאן ולא ב-`PackageCard` כדי ש**גם טבלת ההשוואה** תראה
+ * אותה. שרשרת התנאים הזו נכתבה בכרטיס בלבד, ולכן הטבלה — שכל תפקידה
+ * להשוות מחירים — הדפיסה את אותם ₪35 של id 110 בלי מילה על
+ * "לרוכשים 2 מנויים ויותר", בעוד הכרטיס שמעליה כן אמר זאת. זו הפעם
+ * הרביעית שהפער הזה מייצר באג (ראה `discountIsCapped`), ולכן
+ * `compareRows` מוסיפה את השורה מכאן, מאותו מקור.
+ *
+ * ⚠️ `requiresMultipleLines` קודם: id 16 נושא את שתי ההצהרות, והמחמירה
+ * מהן — מינימום חוזי ולא מחיר למנוי — היא זו שצריכה להיאמר.
+ */
+export interface PriceNote {
+  label: string;
+  value: string;
+}
+
+export function priceNote(pkg: Package): PriceNote | null {
+  if (pkg.category === "electricity") {
+    const scope = discountScope(pkg);
+    return scope ? { label: "מה ההנחה כוללת", value: `הנחה על ${scope} בחשבון בלבד` } : null;
+  }
+  if (!isMoney(pkg.price)) return null;
+  if (requiresMultipleLines(pkg)) {
+    return { label: "תנאי המחיר", value: "המחיר מותנה בכמות המנויים בחבילה" };
+  }
+  if (familyPriceOnly(pkg)) {
+    return { label: "תנאי המחיר", value: "מחיר למנוי במסלול משפחתי — משני מנויים ומעלה" };
+  }
+  if (proseFloorsAt(pkg, pkg.price)) {
+    return { label: "תנאי המחיר", value: "המחיר הוא מחיר התחלתי ולא מחיר אחיד" };
+  }
+  return null;
 }
 
 export const CUSTOMER_TYPE_HE: Record<ElectricitySpec["customerType"], string> = {
@@ -564,16 +677,28 @@ export function compareRows(items: Package[]): CompareRow[] {
       : (SAME_FACT[label] ?? label);
   const facts = items.map((p) => {
     const m = new Map<string, string>();
+    /*
+     * ⚠️ ההסתייגות על המחיר **ראשונה**, ולפני כל אריח. היא מתייחסת
+     * לשורת המחיר שהטבלה מדפיסה מעל השורות האלה (`CompareTray`), ולכן
+     * מקומה צמוד אליה — ובלעדיה הטבלה הדפיסה ₪35 מול ₪60 בלי מילה על
+     * כך שהראשון מותנה בשני מנויים. ראה `priceNote`.
+     */
+    const note = priceNote(p);
+    if (note) m.set(note.label, note.value);
     for (const s of cardStats(p)) m.set(canon(s.caption), s.value);
     for (const r of detailRows(p)) if (!m.has(canon(r.label))) m.set(canon(r.label), r.value);
     return m;
   });
 
-  // הסדר נשמר: כל הכותרות קודם, הפירוט אחריהן.
+  // הסדר נשמר: ההסתייגות על המחיר, אחריה הכותרות, ואחריהן הפירוט.
   const labels: string[] = [];
   const add = (label: string) => {
     if (!labels.includes(label)) labels.push(label);
   };
+  for (const p of items) {
+    const note = priceNote(p);
+    if (note) add(note.label);
+  }
   for (const p of items) for (const s of cardStats(p)) add(canon(s.caption));
   for (const p of items) for (const r of detailRows(p)) add(canon(r.label));
 

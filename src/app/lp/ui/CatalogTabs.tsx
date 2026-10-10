@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CatalogBrowser } from "./CatalogBrowser";
 import { CATEGORY_META, CATEGORY_ORDER } from "../catalog/catalog";
+import { PACKAGES_CAPTION, PLANS_CAPTION } from "../catalog/format";
 import type { Category, Package } from "../catalog/types";
 
 /**
@@ -137,6 +138,16 @@ export function CatalogTabs({ packages }: { packages: Package[] }) {
               id={`catalog-tab-${key}`}
               aria-selected={active}
               aria-controls="catalog-panel"
+              /*
+                ⚠️ השם הנגיש נאמר במפורש. חישוב השם משרשר את טקסט
+                הילדים בלי להוסיף רווח כשאין רווח ב-DOM, ולכן הלשונית
+                הכריזה "סלולר55" — ולא "סלולר, 55 חבילות". המילה מגיעה
+                מאותם `PACKAGES_CAPTION`/`PLANS_CAPTION` שהקטלוג שמתחת
+                משתמש בהם, כולל צורת היחיד.
+              */
+              aria-label={`${CATEGORY_META[key].he} — ${count} ${
+                (key === "electricity" ? PLANS_CAPTION : PACKAGES_CAPTION)(count)
+              }`}
               tabIndex={active ? 0 : -1}
               ref={(el) => {
                 tabRefs.current[key] = el;

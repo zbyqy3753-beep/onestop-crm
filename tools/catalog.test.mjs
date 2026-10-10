@@ -9,6 +9,7 @@ import {
   electricityRank,
   hasKnownAfterPrice,
   isListable,
+  isMoney,
   listableCounts,
   logicName,
   providers,
@@ -21,6 +22,9 @@ import {
   compareRows,
   detailRows,
   discountIsCapped,
+  discountScope,
+  headlineValue,
+  priceNote,
   shekels,
   speedLabel,
 } from "../src/app/lp/catalog/format.ts";
@@ -1167,4 +1171,127 @@ test("תצוגה: הכותרת על הכרטיס אינה סותרת את מה �
     })
     .map((p) => p.id);
   expectFlags(spd, ["159"], "סדר המהירויות בשם הפוך מה-spec");
+});
+
+/*
+ * ── ההסתייגות שהרשומה מסרה על המספר הגדול שבכרטיס ──────────────────
+ *
+ * ⚠️ אחוז הנחה של מסלול חשמל אינו הנחה על החשבון. 10 מתוך 19
+ * המסלולים כותבים במפורש שההנחה חלה על **רכיב** אחד בתוך החשבון
+ * ("ההנחה היא על רכיב התשלום המשתנה לקוטש בלבד... בנוסף לתעריף
+ * המשתנה הלקוח יישא בתשלומים החודשיים הקבועים"), והכרטיס הדפיס
+ * "20% הנחה" בגודל 3xl בלי אות אחת מההסתייגות. אלה בדיוק המסלולים
+ * שהדירוג מעלה לראש הקטגוריה (20%, 18%, 15%).
+ *
+ * הרשימה היא חוב ידוע בשני הכיוונים: רשומה חדשה שמצהירה על רכיב
+ * תיתפס, ורשומה שתפסיק להצהיר תוריד את עצמה מהרשימה.
+ */
+test("תצוגה: הנחה שחלה על רכיב בחשבון אומרת זאת על הכרטיס", () => {
+  const scoped = PACKAGES.filter((p) => p.category === "electricity" && isListable(p))
+    .filter((p) => discountScope(p) != null)
+    .map((p) => `${p.id}:${discountScope(p)}`);
+  expectFlags(
+    scoped,
+    [
+      "134:רכיב התשלום המשתנה",
+      "135:רכיב התשלום המשתנה",
+      "136:רכיב התשלום המשתנה",
+      "137:רכיב התשלום המשתנה",
+      "140:רכיב הייצור",
+      "142:רכיב הצריכה",
+      "146:רכיב התשלום המשתנה",
+      "147:רכיב התשלום המשתנה",
+      "149:רכיב התשלום המשתנה",
+      "150:רכיב התשלום המשתנה",
+    ],
+    "מסלולי חשמל שההנחה בהם חלה על רכיב ולא על החשבון",
+  );
+
+  // ההסתייגות מגיעה לכרטיס, ומצטטת את נוסח הרשומה ולא ניסוח משלנו.
+  const night = PACKAGES.find((p) => p.id === "150");
+  assert.deepEqual(priceNote(night), {
+    label: "מה ההנחה כוללת",
+    value: "הנחה על רכיב התשלום המשתנה בחשבון בלבד",
+  });
+
+  // ומסלול שלא הצהיר על רכיב אינו מקבל הסתייגות מומצאת.
+  assert.equal(priceNote(PACKAGES.find((p) => p.id === "151")), null);
+});
+
+/*
+ * ⚠️ מחיר שהרשומה מצהירה עליו כ**רצפה** אינו מחיר אחיד — המקבילה של
+ * `proseCapsAt` בכיוון ההפוך, על השדה היחיד שהכרטיס מדפיס בגודל 3xl.
+ * id 85 אומר "לאחר מכן **מ-100 ₪ לחודש**" ו-`price` שלו 100, כלומר
+ * ההערה שעל אותו כרטיס מצטטת "מ-100 ₪" בזמן שהכותרת מעליה הכריזה
+ * "₪100 לחודש" כעובדה.
+ */
+test("תצוגה: מחיר שהרשומה מסרה כרצפה אינו מוצג כמחיר אחיד", () => {
+  const floors = PACKAGES.filter((p) => p.category !== "electricity" && isListable(p))
+    .filter((p) => priceNote(p)?.value === "המחיר הוא מחיר התחלתי ולא מחיר אחיד")
+    .map((p) => p.id);
+  expectFlags(floors, ["85"], "רשומות שהמחיר שלהן הוא רצפה");
+
+  /*
+   * ⚠️ "מ" שאחרי אות עברית אינה רצפה: שלוש רשומות ביתיות כותבות
+   * "**מ**חודש 4 109ש"ח" (ids 73, 153, 159), וקריאה שלהן כרצפה הייתה
+   * מדביקה הסתייגות לכל חבילה שהמחיר שלה הוא המחיר שאחרי ההטבה.
+   */
+  for (const id of ["73", "153", "159"]) {
+    assert.equal(priceNote(PACKAGES.find((p) => p.id === id)), null, `${id}: "מחודש" אינו רצפה`);
+  }
+});
+
+/*
+ * ⚠️ אותה הסתייגות גם בטבלה. זו הפעם הרביעית שבה שער חובר לכרטיס
+ * בלבד (ראה `discountIsCapped` ב-168f0e6): `CompareTray` מדפיס את
+ * שורת המחיר בעצמו, ולכן ₪35 של id 110 הופיעו בטבלה מול ₪60 של
+ * id 50 בלי מילה על "לרוכשים 2 מנויים ויותר" — דווקא במסך שכל
+ * תפקידו להשוות מחירים.
+ */
+test("השוואה: ההסתייגות על המחיר אינה נמחקת בטבלה", () => {
+  const conditioned = PACKAGES.find((p) => p.id === "110");
+  const plain = PACKAGES.find((p) => p.id === "50");
+  const rows = compareRows([conditioned, plain]);
+  assert.deepEqual(rows[0], {
+    label: "תנאי המחיר",
+    values: ["המחיר מותנה בכמות המנויים בחבילה", "—"],
+  });
+
+  // וגם בהשוואת חשמל, שבה המספר המושווה הוא אחוז ההנחה.
+  const elecRows = compareRows([
+    PACKAGES.find((p) => p.id === "150"),
+    PACKAGES.find((p) => p.id === "151"),
+  ]);
+  assert.deepEqual(elecRows[0], {
+    label: "מה ההנחה כוללת",
+    values: ["הנחה על רכיב התשלום המשתנה בחשבון בלבד", "—"],
+  });
+});
+
+/*
+ * ⚠️ אותה הגדרה של "מספר שמותר להדפיס" גם בכותרת הכרטיס. `price: 0`
+ * (ids 18, 22) ו-`discountPercent: null` (id 144) קיימים בקטלוג
+ * **היום**, ושניהם נעצרים ב-`isListable` בלבד — שער אחד, שאינו על
+ * המסלול שמרנדר כרטיס.
+ */
+test("תצוגה: ערך שאינו מספר אינו נהפך לכותרת 'חינם' או 'null%'", () => {
+  // שלושת הערכים האלה קיימים בקטלוג של היום.
+  for (const id of ["18", "22"]) {
+    const p = PACKAGES.find((x) => x.id === id);
+    assert.equal(p.price, 0, `${id}: price 0`);
+    assert.equal(headlineValue(p), "—", `${id}: "₪0 לחודש" הוא הבטחת חינם`);
+  }
+  const noPct = PACKAGES.find((p) => p.id === "144");
+  assert.equal(noPct.discountPercent, null);
+  assert.equal(headlineValue(noPct), "—", "144: 'null% הנחה'");
+
+  // ומחיר תקין ממשיך להיות מודפס, כולל אגורה.
+  assert.equal(headlineValue(PACKAGES.find((p) => p.id === "85")), "₪100");
+  assert.equal(headlineValue(PACKAGES.find((p) => p.id === "129")), "₪39");
+  assert.equal(headlineValue(PACKAGES.find((p) => p.id === "150")), "20%");
+
+  // ומחרוזת שנשאבה כמחיר אינה עוברת (אין רשומה כזו היום — שער לרענון).
+  assert.equal(isMoney("39.9"), false);
+  assert.equal(isMoney(-1), false);
+  assert.equal(isMoney(39.9), true);
 });

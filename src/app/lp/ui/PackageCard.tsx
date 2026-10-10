@@ -5,8 +5,7 @@ import { Card } from "./Card";
 import { ProviderLogo } from "./ProviderLogo";
 import { LeadForm } from "./LeadForm";
 import { MAX_COMPARE } from "./CompareTray";
-import { cardStats, detailRows, discountIsCapped, shekels } from "../catalog/format";
-import { familyPriceOnly, requiresMultipleLines } from "../catalog/savings";
+import { cardStats, detailRows, discountIsCapped, headlineValue, priceNote, shekels } from "../catalog/format";
 import type { Package } from "../catalog/types";
 
 /*
@@ -70,28 +69,12 @@ export function PackageCard({
   const riseNote = !isElectric ? pkg.priceAfterPromoNote : null;
 
   /*
-   * ⚠️ מחיר שמותנה בכמות מנויים אינו מחיר חודשי שטוח. `savings.ts` כבר
-   * יודעת להסתייג ממנו — `requiresMultipleLines` פוסלת אותו מהכותרת של
-   * המחשבון ו-`familyPriceOnly` תלוית-כמות ב-`computeSaving` — אבל
-   * הכרטיס, שהוא המקום שבו הגולש קורא את המספר, הכריז אותו בלי שום
-   * תנאי: id 110 ("דמי שימוש בסך של 35 ₪ ... לרוכשים 2 מנויים ויותר,
-   * עבור מנוי בודד 39.90 ₪") הדפיס "₪35 לחודש", ids 28/29 הדפיסו
-   * ₪34/₪32 שהם המחיר **לקו שני** בחבילה של ארבעה, ו-id 117
-   * (`wecomFamily`) הדפיס 29.9 במקום 34.9 לקו בודד. אותה הסתייגות
-   * בדיוק, באותו מקום שבו מודפסת ההבטחה.
-   *
-   * ⚠️ הסדר הוא `requiresMultipleLines` קודם: id 16 נושא את שתי
-   * ההצהרות ("3 קווים ב 92.70" וגם "משפחתי"), והמחמירה מהן — מינימום
-   * חוזי ולא מחיר למנוי — היא זו שצריכה להיאמר.
+   * ⚠️ מחיר שמותנה בכמות מנויים אינו מחיר חודשי שטוח, ואחוז הנחה על
+   * רכיב אחד בחשבון אינו הנחה על החשבון. שרשרת ההסתייגויות עברה
+   * ל-`priceNote` ב-`format.ts` כדי ש**גם טבלת ההשוואה** תראה אותה
+   * (ראה ההערה שם) — כאן נשארת רק ההצגה, צמוד למספר שהיא מסתייגת ממנו.
    */
-  const priceCondition =
-    isElectric || pkg.price == null
-      ? null
-      : requiresMultipleLines(pkg)
-        ? "המחיר מותנה בכמות המנויים בחבילה"
-        : familyPriceOnly(pkg)
-          ? "מחיר למנוי במסלול משפחתי — משני מנויים ומעלה"
-          : null;
+  const note = priceNote(pkg);
 
   return (
     /*
@@ -201,26 +184,31 @@ export function PackageCard({
 
         <div className="mt-auto">
           <div className="flex items-end justify-between gap-2">
+            {/*
+              ⚠️ המספר עצמו נבנה ב-`headlineValue` ולא כאן: הוא היה
+              מודפס "₪0 לחודש" על `price: 0` ו-"null% הנחה" על
+              `discountPercent: null`, שני ערכים שקיימים בקטלוג של
+              היום (ids 18, 22, 144) ונעצרים ב-`isListable` בלבד.
+              ראה את ההערה שם.
+            */}
             {isElectric ? (
               <div>
                 {/* ⚠️ "עד" כשההנחה מדורגת — ראה `discountIsCapped`. */}
                 {discountIsCapped(pkg) && <span className="me-1 text-sm text-lp-ink-2">עד</span>}
-                <span className="nums text-3xl font-extrabold text-lp-ink">{pkg.discountPercent}%</span>
+                <span className="nums text-3xl font-extrabold text-lp-ink">{headlineValue(pkg)}</span>
                 <span className="ms-1 text-sm text-lp-ink-2">הנחה</span>
               </div>
             ) : (
               <div>
-                <span className="nums text-3xl font-extrabold text-lp-ink">
-                  {pkg.price != null ? shekels(pkg.price) : "—"}
-                </span>
+                <span className="nums text-3xl font-extrabold text-lp-ink">{headlineValue(pkg)}</span>
                 <span className="ms-1 text-sm text-lp-ink-2">לחודש</span>
               </div>
             )}
           </div>
 
-          {priceCondition && (
+          {note && (
             <p className="crm-text mt-2 rounded-lg bg-lp-surface-2 px-3 py-2 text-xs text-lp-ink-2">
-              {priceCondition}
+              {note.value}
             </p>
           )}
           {rise != null && (

@@ -2,8 +2,29 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderLogo } from "./ProviderLogo";
-import { compareRows, discountIsCapped, shekels } from "../catalog/format";
+import { compareRows, discountIsCapped, headlineValue, shekels } from "../catalog/format";
 import type { Package } from "../catalog/types";
+
+/**
+ * התא בשורת המחיר — **אותו** מספר שהכרטיס מדפיס בגודל 3xl.
+ *
+ * ⚠️ `headlineValue` ולא הרכבה מקומית. הטבלה בנתה את המחרוזת בעצמה
+ * (`p.price != null ? shekels(p.price) : "—"` ו-`${p.discountPercent}%`),
+ * ובינתיים הכרטיס עבר לשער אחד ב-`format.ts` — ולכן אותה רשומה
+ * הייתה מודפסת בשני ערכים שונים זה לצד זה: `price: 0` (הצורה שהמחלץ
+ * מייצר כשלא קרא מחיר, ids 18/22) כ-"₪0" בטבלה מול "—" בכרטיס,
+ * ו-`discountPercent: null` (id 144) כ-"null% הנחה" מול "—". זו הפעם
+ * החמישית שהערה כאן מתארת שער שנוסף לכרטיס ולא לטבלה; המספר נאמר
+ * עכשיו במקום אחד, והטבלה מוסיפה לו רק את מה שהוא שלה: "עד" ו-"הנחה".
+ *
+ * ⚠️ כשאין מספר אין גם סיומת. "— הנחה" הוא תווית שמבטיחה נתון שהתא
+ * עצמו מכחיש, וזה בדיוק מה שתוקן כבר בשורת "אחרי ההטבה".
+ */
+function headlineCell(p: Package): string {
+  const value = headlineValue(p);
+  if (p.category !== "electricity" || value === "—") return value;
+  return `${discountIsCapped(p) ? "עד " : ""}${value} הנחה`;
+}
 
 /**
  * תקרת ההשוואה. יושבת כאן ולא ב-`CatalogBrowser` כי גם `PackageCard`
@@ -149,9 +170,6 @@ export function CompareTray({
 
   if (items.length === 0) return null;
 
-  /* כל פריטי ההשוואה הם מקטגוריה אחת — ראה ההערה על שורת המחיר. */
-  const allElectric = items.every((p) => p.category === "electricity");
-
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-lp-line bg-lp-surface/95 backdrop-blur">
@@ -223,155 +241,183 @@ export function CompareTray({
         </div>
       </div>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-lp-navy/60 p-0 sm:items-center sm:p-6"
-          role="dialog"
-          aria-modal="true"
-          aria-label="השוואת חבילות"
-          /*
-           * ⚠️ `onClick` על האוברליי סגר את החלון גם כשהלחיצה התחילה
-           * *בתוך* הפאנל: אירוע `click` נורה על האב המשותף של ה-mousedown
-           * וה-mouseup, ולכן סימון טקסט בטבלה (היא `overflow-x-auto`)
-           * ששוחרר מעט מחוץ לפאנל נחת על האוברליי — ו-`stopPropagation`
-           * של הפאנל כלל לא עמד בדרך. הבדיקה על `currentTarget` סוגרת
-           * רק כשהלחיצה עצמה הייתה על הרקע.
-           */
-          onPointerDown={(e) => {
-            if (e.target === e.currentTarget) close();
-          }}
-        >
-          <div
-            ref={panelRef}
-            /* יעד הפוקוס בפתיחה — הכותרת נקראת, ומכאן Tab מתחיל בתוך החלון. */
-            tabIndex={-1}
-            className="animate-lp-rise max-h-[90dvh] w-full max-w-4xl overflow-auto rounded-t-lp-card bg-lp-surface p-5 shadow-lp-pop sm:rounded-lp-card"
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-lp-ink">השוואת חבילות</h2>
-              <button
-                type="button"
-                onClick={close}
-                /* בלי זה קורא מסך הכריז "לחצן, ✕". */
-                aria-label="סגירת ההשוואה"
-                className="-m-2 inline-flex min-h-11 min-w-11 items-center justify-center text-2xl leading-none text-lp-ink-3"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[20rem] border-collapse text-sm sm:min-w-[32rem]">
-                <thead>
-                  <tr>
-                    {/*
-                      ⚠️ `scope` על כותרות העמודה. שורות הגוף כבר מוצהרות
-                      כ-`<th scope="row">`, כלומר הטבלה דו-צירית במפורש,
-                      והעמודות נשארו בלי הצהרה — ולכן הקישור בין תא לספק
-                      נשען על ההיוריסטיקה של כל קורא מסך בנפרד, בטבלה
-                      שכל תפקידה הוא "איזה מספר שייך לאיזה ספק".
-                    */}
-                    <th scope="col" className="w-20 sm:w-28" />
-                    {items.map((p) => (
-                      <th
-                        key={p.id}
-                        scope="col"
-                        className="border-b border-lp-line p-2 text-start align-bottom"
-                      >
-                        <ProviderLogo logo={p.provider.logo} name={p.provider.name} size={26} />
-                        <div className="mt-1 text-xs font-semibold text-lp-ink">{p.name}</div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {/*
-                    ⚠️ התווית נגזרת מהקטגוריה. מסלול חשמל אינו נמכר במחיר
-                    חודשי אלא באחוז הנחה, והשורה הכריזה "מחיר לחודש: 20%
-                    הנחה" — תווית שסותרת את הערך שמתחתיה בדיוק בשורה
-                    הראשונה של הטבלה. כל פריטי ההשוואה הם מקטגוריה אחת
-                    (`CatalogBrowser` מרונדר מחדש עם `key={category}`),
-                    ולכן התווית אחת לכל הטבלה.
-                  */}
-                  <Row label={allElectric ? "הנחה בחשבון" : "מחיר לחודש"}>
-                    {items.map((p) => (
-                      <Cell key={p.id}>
-                        {/*
-                          ⚠️ "עד" גם כאן. השער הזה נוסף לכרטיס בלבד, והטבלה
-                          — שכל תפקידה להשוות — מחקה בדיוק את ההסתייגות
-                          שהכרטיס שמעליה הוסיף: מסלול מדורג (ids 135, 142)
-                          הודפס "10% הנחה" מול "עד 10% הנחה" בכרטיס, כלומר
-                          הבטחה של כפול מהשיעור הממשי בצריכה בינונית.
-                        */}
-                        {p.category === "electricity"
-                          ? `${discountIsCapped(p) ? "עד " : ""}${p.discountPercent}% הנחה`
-                          : p.price != null
-                            ? shekels(p.price)
-                            : "—"}
-                      </Cell>
-                    ))}
-                  </Row>
-                  {/*
-                    ⚠️ אחת עשרה חבילות מצהירות על העלייה ב-`priceAfterPromoNote` בלבד,
-                    בלי מספר ב-`priceAfterPromo`. קריאה של השדה המספרי לבדו הכריזה
-                    עליהן "לא דווח שינוי" — בעוד שכרטיס אותה חבילה הציג "בתום ההטבה:
-                    אחרי שנתיים 69.9". הטבלה שכל תפקידה להשוות הכחישה נתון שהדף עצמו
-                    מציג, ודווקא בעמודה שהיא הבטחת המותג.
-                  */}
-                  {/*
-                    ⚠️ ובלשונית החשמל השורה כולה יורדת. אין ולו מסלול חשמל
-                    אחד בקטלוג שנושא `priceAfterPromo` או הערה — התא עצמו
-                    כבר מחזיר "—" לחשמל, כלומר הטבלה הוסיפה שורה שלמה של
-                    מקפים מתחת לכותרת שמבטיחה את הנתון המרכזי של הדף.
-                  */}
-                  {!allElectric && (
-                    <Row label="אחרי ההטבה">
-                      {items.map((p) => (
-                        <Cell
-                          key={p.id}
-                          tone={
-                            /*
-                              ⚠️ `isMoney` ולא `!= null`. ההערה שישבה כאן
-                              קראה לזה "שער לרענון הבא" ואז לא גידרה: `0`
-                              הוא מה שהמחלץ כותב כשלא קרא מספר (`price: 0`
-                              ב-ids 18/22 הוא אותה צורה בדיוק, ושם
-                              `isListable` עוצר אותה), והטבלה הייתה מדפיסה
-                              "אחרי ההטבה ₪0" — כלומר שהחבילה נעשית חינם.
-                              עכשיו `0` נקרא כ"לא נמסר", ואם יש הערה
-                              מילולית היא זו שמוצגת. אותו שער בדיוק נסגר
-                              ב-`PackageCard`.
-                            */
-                            p.category !== "electricity" &&
-                            (afterPriceKnown(p) || p.priceAfterPromoNote != null)
-                              ? "rise"
-                              : undefined
-                          }
-                        >
-                          {p.category === "electricity"
-                            ? "—"
-                            : afterPriceKnown(p)
-                              ? shekels(p.priceAfterPromo as number)
-                              : p.priceAfterPromoNote
-                                ? p.priceAfterPromoNote
-                                : "לא דווח שינוי"}
-                        </Cell>
-                      ))}
-                    </Row>
-                  )}
-                  {compareRows(items).map((row) => (
-                    <Row key={`fact-${row.label}`} label={row.label}>
-                      {row.values.map((v, i) => (
-                        <Cell key={items[i].id}>{v}</Cell>
-                      ))}
-                    </Row>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+      {open && <CompareSheet items={items} panelRef={panelRef} onClose={close} />}
     </>
+  );
+}
+
+/**
+ * חלון ההשוואה עצמו.
+ *
+ * ⚠️ רכיב מיוצא ולא JSX בתוך `CompareTray`, מאותו טעם ש-`compareRows`
+ * עברה ל-`format.ts`: כל מה שהטבלה מדפיסה — תווית השורה, ההסתייגות על
+ * המחיר, `scope` על הכותרות, הריפוד של הגזרה הבטוחה — היה בלתי נגיש
+ * לבדיקה, כי הוא נתלה במצב `open` הפנימי. עכשיו הוא מרונדר ישירות.
+ * ה-`ref` מגיע כפרופ ולא כ-`ref` מפני שמלכודת הפוקוס שמעל קוראת אותו.
+ */
+export function CompareSheet({
+  items,
+  panelRef,
+  onClose,
+}: {
+  items: Package[];
+  panelRef?: React.Ref<HTMLDivElement>;
+  onClose: () => void;
+}) {
+  /* כל פריטי ההשוואה הם מקטגוריה אחת — ראה ההערה על שורת המחיר. */
+  const allElectric = items.every((p) => p.category === "electricity");
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-lp-navy/60 p-0 sm:items-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-label="השוואת חבילות"
+      /*
+       * ⚠️ `onClick` על האוברליי סגר את החלון גם כשהלחיצה התחילה
+       * *בתוך* הפאנל: אירוע `click` נורה על האב המשותף של ה-mousedown
+       * וה-mouseup, ולכן סימון טקסט בטבלה (היא `overflow-x-auto`)
+       * ששוחרר מעט מחוץ לפאנל נחת על האוברליי — ו-`stopPropagation`
+       * של הפאנל כלל לא עמד בדרך. הבדיקה על `currentTarget` סוגרת
+       * רק כשהלחיצה עצמה הייתה על הרקע.
+       */
+      onPointerDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      {/*
+        ⚠️ ריפוד תחתון לגזרה הבטוחה בנייד. בנייד החלון הוא גיליון
+        שנצמד לתחתית המסך (`items-end` + `p-0` על האוברליי), ולכן
+        השורה האחרונה של הטבלה נחה מתחת לפס הבית של האייפון —
+        אותו פגם בדיוק שתוקן ב-`lp.css` לשורש הדף וב-`CompareTray`
+        לסרגל עצמו, ונשאר פתוח דווקא בחלון שמעל שניהם. מ-`sm`
+        ומעלה החלון מרוכז עם שוליים משלו, ולכן התוספת מוגבלת לנייד.
+      */}
+      <div
+        ref={panelRef}
+        /* יעד הפוקוס בפתיחה — הכותרת נקראת, ומכאן Tab מתחיל בתוך החלון. */
+        tabIndex={-1}
+        className="animate-lp-rise max-h-[90dvh] w-full max-w-4xl overflow-auto rounded-t-lp-card bg-lp-surface p-5 shadow-lp-pop max-sm:pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-lp-card"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-lp-ink">השוואת חבילות</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            /* בלי זה קורא מסך הכריז "לחצן, ✕". */
+            aria-label="סגירת ההשוואה"
+            className="-m-2 inline-flex min-h-11 min-w-11 items-center justify-center text-2xl leading-none text-lp-ink-3"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[20rem] border-collapse text-sm sm:min-w-[32rem]">
+            <thead>
+              <tr>
+                {/*
+                  ⚠️ `scope` על כותרות העמודה. שורות הגוף כבר מוצהרות
+                  כ-`<th scope="row">`, כלומר הטבלה דו-צירית במפורש,
+                  והעמודות נשארו בלי הצהרה — ולכן הקישור בין תא לספק
+                  נשען על ההיוריסטיקה של כל קורא מסך בנפרד, בטבלה
+                  שכל תפקידה הוא "איזה מספר שייך לאיזה ספק".
+                */}
+                <th scope="col" className="w-20 sm:w-28" />
+                {items.map((p) => (
+                  <th
+                    key={p.id}
+                    scope="col"
+                    className="border-b border-lp-line p-2 text-start align-bottom"
+                  >
+                    <ProviderLogo logo={p.provider.logo} name={p.provider.name} size={26} />
+                    <div className="mt-1 text-xs font-semibold text-lp-ink">{p.name}</div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {/*
+                ⚠️ התווית נגזרת מהקטגוריה. מסלול חשמל אינו נמכר במחיר
+                חודשי אלא באחוז הנחה, והשורה הכריזה "מחיר לחודש: 20%
+                הנחה" — תווית שסותרת את הערך שמתחתיה בדיוק בשורה
+                הראשונה של הטבלה. כל פריטי ההשוואה הם מקטגוריה אחת
+                (`CatalogBrowser` מרונדר מחדש עם `key={category}`),
+                ולכן התווית אחת לכל הטבלה.
+              */}
+              <Row label={allElectric ? "הנחה בחשבון" : "מחיר לחודש"}>
+                {items.map((p) => (
+                  <Cell key={p.id}>
+                    {/*
+                      ⚠️ "עד" גם כאן. השער הזה נוסף לכרטיס בלבד, והטבלה
+                      — שכל תפקידה להשוות — מחקה בדיוק את ההסתייגות
+                      שהכרטיס שמעליה הוסיף: מסלול מדורג (ids 135, 142)
+                      הודפס "10% הנחה" מול "עד 10% הנחה" בכרטיס, כלומר
+                      הבטחה של כפול מהשיעור הממשי בצריכה בינונית.
+                    */}
+                    {headlineCell(p)}
+                  </Cell>
+                ))}
+              </Row>
+              {/*
+                ⚠️ אחת עשרה חבילות מצהירות על העלייה ב-`priceAfterPromoNote` בלבד,
+                בלי מספר ב-`priceAfterPromo`. קריאה של השדה המספרי לבדו הכריזה
+                עליהן "לא דווח שינוי" — בעוד שכרטיס אותה חבילה הציג "בתום ההטבה:
+                אחרי שנתיים 69.9". הטבלה שכל תפקידה להשוות הכחישה נתון שהדף עצמו
+                מציג, ודווקא בעמודה שהיא הבטחת המותג.
+              */}
+              {/*
+                ⚠️ ובלשונית החשמל השורה כולה יורדת. אין ולו מסלול חשמל
+                אחד בקטלוג שנושא `priceAfterPromo` או הערה — התא עצמו
+                כבר מחזיר "—" לחשמל, כלומר הטבלה הוסיפה שורה שלמה של
+                מקפים מתחת לכותרת שמבטיחה את הנתון המרכזי של הדף.
+              */}
+              {!allElectric && (
+                <Row label="אחרי ההטבה">
+                  {items.map((p) => (
+                    <Cell
+                      key={p.id}
+                      tone={
+                        /*
+                          ⚠️ `isMoney` ולא `!= null`. ההערה שישבה כאן
+                          קראה לזה "שער לרענון הבא" ואז לא גידרה: `0`
+                          הוא מה שהמחלץ כותב כשלא קרא מספר (`price: 0`
+                          ב-ids 18/22 הוא אותה צורה בדיוק, ושם
+                          `isListable` עוצר אותה), והטבלה הייתה מדפיסה
+                          "אחרי ההטבה ₪0" — כלומר שהחבילה נעשית חינם.
+                          עכשיו `0` נקרא כ"לא נמסר", ואם יש הערה
+                          מילולית היא זו שמוצגת. אותו שער בדיוק נסגר
+                          ב-`PackageCard`.
+                        */
+                        p.category !== "electricity" &&
+                        (afterPriceKnown(p) || p.priceAfterPromoNote != null)
+                          ? "rise"
+                          : undefined
+                      }
+                    >
+                      {p.category === "electricity"
+                        ? "—"
+                        : afterPriceKnown(p)
+                          ? shekels(p.priceAfterPromo as number)
+                          : p.priceAfterPromoNote
+                            ? p.priceAfterPromoNote
+                            : "לא דווח שינוי"}
+                    </Cell>
+                  ))}
+                </Row>
+              )}
+              {compareRows(items).map((row) => (
+                <Row key={`fact-${row.label}`} label={row.label}>
+                  {row.values.map((v, i) => (
+                    <Cell key={items[i].id}>{v}</Cell>
+                  ))}
+                </Row>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 }
 
