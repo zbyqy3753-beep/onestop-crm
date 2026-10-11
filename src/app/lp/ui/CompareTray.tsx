@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderLogo } from "./ProviderLogo";
-import { compareRows, discountIsCapped, headlineValue, shekels } from "../catalog/format";
+import { compareRows, discountIsCapped, headlineValue, promoRise, shekels } from "../catalog/format";
+import { hasKnownAfterPrice } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
 /**
@@ -32,12 +33,16 @@ function headlineCell(p: Package): string {
  * ממנו היה מעגלי.
  */
 /*
- * ⚠️ אותה הגדרה של "מספר שמותר להדפיס" כמו `isMoney` ב-`catalog.ts`.
- * היא אינה מיוצאת משם, ולכן היא נאמרת כאן במפורש ולא נקראת כ-`!= null`.
+ * ⚠️ `promoRise` מ-`format.ts` ולא שער מקומי. כאן ישב `afterPriceKnown`
+ * — העותק **השלישי** של אותה הגדרה (הכרטיס ב-`> 0`, פס ההירו
+ * ב-`!= null`) — והתא בנה בעצמו את אותה שרשרת של "מספר, אחרת הערה".
+ * `promoRise` מחזירה את שלוש התשובות האפשריות כנתון אחד, ולכן הכרטיס,
+ * פס ההירו והטבלה אומרים את אותו דבר על אותה רשומה מעצם הבנייה.
+ *
+ * ⚠️ חשמל נעצר **לפני** הקריאה: `promoRise` מחזירה `null` למסלול חשמל
+ * (אין לו מחיר חודשי שיעלה), ו-`null` כאן נקרא כ"הרשומה שתקה" — כלומר
+ * בלי הענף הנפרד הטבלה הייתה מכריזה "לא דווח שינוי" על מסלול הנחה.
  */
-function afterPriceKnown(p: { priceAfterPromo?: number | null }): boolean {
-  return typeof p.priceAfterPromo === "number" && Number.isFinite(p.priceAfterPromo) && p.priceAfterPromo > 0;
-}
 
 export const MAX_COMPARE = 4;
 
@@ -375,34 +380,7 @@ export function CompareSheet({
               {!allElectric && (
                 <Row label="אחרי ההטבה">
                   {items.map((p) => (
-                    <Cell
-                      key={p.id}
-                      tone={
-                        /*
-                          ⚠️ `isMoney` ולא `!= null`. ההערה שישבה כאן
-                          קראה לזה "שער לרענון הבא" ואז לא גידרה: `0`
-                          הוא מה שהמחלץ כותב כשלא קרא מספר (`price: 0`
-                          ב-ids 18/22 הוא אותה צורה בדיוק, ושם
-                          `isListable` עוצר אותה), והטבלה הייתה מדפיסה
-                          "אחרי ההטבה ₪0" — כלומר שהחבילה נעשית חינם.
-                          עכשיו `0` נקרא כ"לא נמסר", ואם יש הערה
-                          מילולית היא זו שמוצגת. אותו שער בדיוק נסגר
-                          ב-`PackageCard`.
-                        */
-                        p.category !== "electricity" &&
-                        (afterPriceKnown(p) || p.priceAfterPromoNote != null)
-                          ? "rise"
-                          : undefined
-                      }
-                    >
-                      {p.category === "electricity"
-                        ? "—"
-                        : afterPriceKnown(p)
-                          ? shekels(p.priceAfterPromo as number)
-                          : p.priceAfterPromoNote
-                            ? p.priceAfterPromoNote
-                            : "לא דווח שינוי"}
-                    </Cell>
+                    <AfterPromoCell key={p.id} pkg={p} />
                   ))}
                 </Row>
               )}
@@ -418,6 +396,44 @@ export function CompareSheet({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * התא בשורת "אחרי ההטבה" — **אותה** תשובה שהכרטיס ופס ההירו מדפיסים.
+ *
+ * ⚠️ `promoRise` מכריעה בין שלוש התשובות (מספר / נוסח מילולי / כלום),
+ * ולכן התא אינו בונה את השרשרת בעצמו. זה היה העותק השלישי של אותו
+ * שער — ראה ההערה על `promoRise` ב-`format.ts`.
+ *
+ * ⚠️ "לא דווח שינוי" רק כשהרשומה באמת **שתקה**, ולא כששדה
+ * המחיר-אחרי-הטבה שלה פגום. `promoRise` מחזירה `null` לשני המצבים
+ * האלה גם יחד, ו-`hasKnownAfterPrice` ב-`catalog.ts` היא זו שמבדילה:
+ * `priceAfterPromo: 0` (הצורה שהמחלץ מייצר כשלא קרא מספר; `price: 0`
+ * ב-ids 18/22 הוא אותו פגם באותו קובץ) נקרא שם כ"לא יודעים" ומוריד את
+ * החבילה לסוף המיון "מחיר אחרי ההטבה" — ולכן התא אינו יכול להכריז
+ * עליו "המחיר נשאר". "—" הוא אותו דרדור של `headlineValue` ושל
+ * `shekels`.
+ *
+ * ⚠️ חשמל נעצר לפני הכול: `promoRise` מחזירה לו `null` ו-
+ * `hasKnownAfterPrice` מחזירה `true` (אין מספר ואין הערה), כלומר בלי
+ * הענף הזה הטבלה הייתה מכריזה "לא דווח שינוי" על מסלול הנחה שאין לו
+ * מחיר חודשי בכלל. השורה כולה ממילא יורדת בלשונית החשמל; זה השער
+ * לצירוף מעורב.
+ */
+function AfterPromoCell({ pkg }: { pkg: Package }) {
+  if (pkg.category === "electricity") return <Cell>—</Cell>;
+  const rise = promoRise(pkg);
+  return (
+    <Cell tone={rise ? "rise" : undefined}>
+      {rise
+        ? rise.kind === "amount"
+          ? shekels(rise.amount)
+          : rise.note
+        : hasKnownAfterPrice(pkg)
+          ? "לא דווח שינוי"
+          : "—"}
+    </Cell>
   );
 }
 

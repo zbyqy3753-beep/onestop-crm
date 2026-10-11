@@ -289,6 +289,50 @@ export function headlineValue(pkg: Package): string {
 }
 
 /**
+ * מה שהרשומה מסרה על המחיר **אחרי** תום ההטבה — מספר, או נוסח מילולי,
+ * או כלום.
+ *
+ * ⚠️ יושבת כאן ולא בכרטיס כדי שכל מי שמדפיס את השדה יקרא **אותו** שער.
+ * שלושה מקומות בדף מדפיסים את `priceAfterPromo`, ושניים מהם גידרו אותו
+ * ב-`isMoney` (`PackageCard` ב-`> 0`, `CompareTray` ב-`afterPriceKnown`
+ * המקומי) — ואילו פס המחיר בהירו, ההצהרה הרמה ביותר בדף, שאל
+ * `!= null` בלבד. `0` הוא הצורה שהמחלץ מייצר כשלא קרא מספר (ids 18, 22
+ * מוכיחים את זה על `price` באותו קובץ), ולכן רענון שיכתוב
+ * `priceAfterPromo: 0` לחבילת הסלולר הזולה היה מדפיס בהירו "ואחרי
+ * ההטבה ₪0" — הבטחה שהחבילה נעשית **חינם** בתום המבצע — **ובמקביל
+ * בולע** את `priceAfterPromoNote`, כלומר דווקא את ההצהרה שהרשומה כן
+ * מסרה. הכרטיס שמתחתיו, על אותה חבילה, היה אומר את ההערה הנכונה.
+ *
+ * ⚠️ חשמל מוחזר `null`: `ElectricityPackage` מצהיר `priceAfterPromo:
+ * null` ואין לו "מחיר חודשי" שיעלה.
+ */
+export type PromoRise =
+  | { kind: "amount"; amount: number }
+  | { kind: "note"; note: string };
+
+export function promoRise(pkg: Package): PromoRise | null {
+  if (pkg.category === "electricity") return null;
+  if (isMoney(pkg.priceAfterPromo)) return { kind: "amount", amount: pkg.priceAfterPromo };
+  return pkg.priceAfterPromoNote ? { kind: "note", note: pkg.priceAfterPromoNote } : null;
+}
+
+/**
+ * השורה שפס המחיר בהירו מוסיף מתחת למחיר, או `null` כשאין מה לומר.
+ *
+ * ⚠️ הנוסח כאן ולא ב-`page.tsx`: הפסקה שמעל הפס מבטיחה במפורש
+ * "ומציגים גם את המחיר שאחרי תקופת המבצע", ולכן השורה הזו היא חלק
+ * מהבטחה — ומחרוזת שנבנית בתוך ה-JSX אינה ניתנת לבדיקה בלי לרנדר
+ * דף שלם (`page.tsx` מייבא `lp.css`). ראה `promoRise`.
+ */
+export function heroRiseLine(pkg: Package): string | null {
+  const rise = promoRise(pkg);
+  if (!rise) return null;
+  return rise.kind === "amount"
+    ? `ואחרי ההטבה ${shekels(rise.amount)}`
+    : `בתום ההטבה: ${rise.note}`;
+}
+
+/**
  * מה ההנחה של מסלול החשמל חלה עליו, כפי שהרשומה עצמה כותבת.
  *
  * ⚠️ 10 מתוך 19 מסלולי החשמל מצהירים במפורש שההנחה אינה על החשבון

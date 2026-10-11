@@ -5,7 +5,7 @@ import { Card } from "./Card";
 import { PackageCard } from "./PackageCard";
 import { CompareTray, MAX_COMPARE } from "./CompareTray";
 import { PACKAGES_CAPTION, PLANS_CAPTION, shekels } from "../catalog/format";
-import { afterPrice, byPrice, electricityRank, hasKnownAfterPrice } from "../catalog/catalog";
+import { afterPrice, byPrice, electricityRank, hasKnownAfterPrice, isMoney } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
 export type SortKey = "price-asc" | "price-desc" | "after-asc" | "recommended";
@@ -47,19 +47,18 @@ const SORTS: { key: SortKey; label: string; electricLabel?: string }[] = [
  */
 /*
  * ⚠️ `isMoney` ולא `?? Infinity`, וזו בדיוק הבעיה שההערה למעלה מצהירה
- * שתוקנה ואז נשארה חצי. `catalog.ts` מרכז את ההגדרה של "מספר שמותר
- * לדרג לפיו" כדי שכל קוראי שדה המחיר יסכימו — `isListable`, `afterPrice`
- * ו-`byPrice` עוברים בה — אבל היא אינה מיוצאת משם, ולכן היא נאמרת כאן
- * במפורש (בדיוק כמו `afterPriceKnown` ב-`CompareTray`). `?? Infinity`
- * מכסה `null` לבדו: `price: 0` — הצורה שהמחלץ מייצר כשלא קרא מחיר,
- * ids 18/22 בקטלוג של היום — היה מוריד את קצה המחוון ל-₪0, מופיע
- * במוני השבבים, ונכנס לתוצאות של כל ערך מחוון, בעוד `byPrice` שולחת
- * אותו לסוף הרשימה. שתי קריאות הפוכות לאותו שדה בשני פקדים שיושבים
- * זה מעל זה.
+ * שתוקנה ואז נשארה חצי. `?? Infinity` מכסה `null` לבדו: `price: 0` —
+ * הצורה שהמחלץ מייצר כשלא קרא מחיר, ids 18/22 בקטלוג של היום — היה
+ * מוריד את קצה המחוון ל-₪0, מופיע במוני השבבים, ונכנס לתוצאות של כל
+ * ערך מחוון, בעוד `byPrice` שולחת אותו לסוף הרשימה. שתי קריאות הפוכות
+ * לאותו שדה בשני פקדים שיושבים זה מעל זה.
+ *
+ * ⚠️ והיא **מיובאת** מ-`catalog.ts` ולא מועתקת לכאן. ההערה שישבה כאן
+ * הצהירה ש"היא אינה מיוצאת משם" — והיא כן (`catalog.ts:121`), וכל
+ * תפקיד הייצוא הוא שכל קוראי שדה המחיר (`isListable`, `afterPrice`,
+ * `byPrice`, הכרטיס) יקראו הגדרה אחת. העתק מקומי הוא בדיוק הדרך שבה
+ * שתי הגדרות לאותו שדה נפרדות ברענון הבא.
  */
-function isMoney(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0;
-}
 
 function sliderPrice(p: Package): number {
   return isMoney(p.price) ? p.price : Infinity;

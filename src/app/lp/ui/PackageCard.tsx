@@ -5,7 +5,15 @@ import { Card } from "./Card";
 import { ProviderLogo } from "./ProviderLogo";
 import { LeadForm } from "./LeadForm";
 import { MAX_COMPARE } from "./CompareTray";
-import { cardStats, detailRows, discountIsCapped, headlineValue, priceNote, shekels } from "../catalog/format";
+import {
+  cardStats,
+  detailRows,
+  discountIsCapped,
+  headlineValue,
+  priceNote,
+  promoRise,
+  shekels,
+} from "../catalog/format";
 import type { Package } from "../catalog/types";
 
 /*
@@ -54,19 +62,14 @@ export function PackageCard({
   // The whole point of the site: when the price jumps after the promo, say so
   // on the card rather than in the small print.
   /*
-   * ⚠️ `> 0` ולא `!= null`, בדיוק כמו `isMoney` ב-`catalog.ts`. הקטלוג
-   * נכנס דרך `as unknown as Catalog` ואין ולידציה בזמן ריצה, ו-`0` הוא
-   * מה שהמחלץ כותב כשלא קרא מספר — `price: 0` כבר קיים בקטלוג (ids 18,
-   * 22) ונעצר ב-`isListable`. לשדה הזה לא היה שער מקביל, ולכן
-   * `priceAfterPromo: 0` היה מודפס כ-"אחרי תום ההטבה: ₪0 לחודש" —
-   * הבטחה שהחבילה נעשית חינם. עכשיו הוא נופל לענף ההערה המילולית,
-   * שאומרת מה שהרשומה באמת מסרה.
+   * ⚠️ `promoRise` מ-`format.ts` ולא שרשרת מקומית. השער עצמו נכון כאן
+   * מאז ש-`priceAfterPromo: 0` גודר ב-`> 0` (הצורה שהמחלץ כותב כשלא
+   * קרא מספר — `price: 0` כבר קיים ב-ids 18, 22), אבל הוא נכתב **פעמיים
+   * ועוד פעם**: פס המחיר בהירו (`page.tsx`) שאל `!= null` ולכן היה
+   * מדפיס "ואחרי ההטבה ₪0" ובולע את ההערה המילולית, ו-`CompareTray`
+   * מחזיק עותק שלישי (`afterPriceKnown`). שער אחד, במקום אחד.
    */
-  const rise =
-    !isElectric && typeof pkg.priceAfterPromo === "number" && pkg.priceAfterPromo > 0
-      ? pkg.priceAfterPromo
-      : null;
-  const riseNote = !isElectric ? pkg.priceAfterPromoNote : null;
+  const rise = promoRise(pkg);
 
   /*
    * ⚠️ מחיר שמותנה בכמות מנויים אינו מחיר חודשי שטוח, ואחוז הנחה על
@@ -211,14 +214,14 @@ export function PackageCard({
               {note.value}
             </p>
           )}
-          {rise != null && (
+          {rise?.kind === "amount" && (
             <p className="mt-2 rounded-lg bg-lp-rise-soft px-3 py-2 text-xs text-lp-rise">
-              <span className="font-semibold">אחרי תום ההטבה: {shekels(rise)} לחודש</span>
+              <span className="font-semibold">אחרי תום ההטבה: {shekels(rise.amount)} לחודש</span>
             </p>
           )}
-          {rise == null && riseNote && (
+          {rise?.kind === "note" && (
             <p className="crm-text mt-2 rounded-lg bg-lp-surface-2 px-3 py-2 text-xs text-lp-ink-2">
-              <span className="font-semibold">בתום ההטבה:</span> {riseNote}
+              <span className="font-semibold">בתום ההטבה:</span> {rise.note}
             </p>
           )}
         </div>
@@ -240,7 +243,17 @@ export function PackageCard({
           </div>
         )}
 
-        {(rows.length > 0 || pkg.description) && (
+        {/*
+          ⚠️ השער מונה את **שלושת** הדברים שהפאנל מדפיס, ולא שניים.
+          `pkg.benefits` נשכח ממנו: רשומה שנושאת הטבות בלי `description`
+          ובלי אף שורת פירוט (ids 51, 29 ו-100 הם בדיוק הצורה הזו —
+          `detailRows` ריק ו-`description` null) קיבלה פאנל שאינו ניתן
+          לפתיחה, כלומר בלוק "הטבות" שאין שום דרך להגיע אליו, ואיתו גם
+          השורה על התנאים המחייבים של הספק. 8 רשומות בקטלוג נושאות
+          `benefits`, ובכולן יש היום גם `description` — זה שער לרענון
+          הבא, מאותה מחלקה של "הפאנל מדפיס ערך שהשער אינו מכיר".
+        */}
+        {(rows.length > 0 || pkg.description || pkg.benefits) && (
           <>
             <button
               type="button"

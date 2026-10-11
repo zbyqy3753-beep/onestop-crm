@@ -433,7 +433,36 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
 
   if (track === "cellular") {
     const spec = p.spec as CellularSpec;
-    return !spec.kosher && (spec.unlimitedData || (spec.dataGb ?? 0) > 0) && (spec.minutes ?? 0) >= 1000;
+    /*
+     * ⚠️ `=== false` ולא `!spec.kosher`, ו-`type` כסימן שני — בדיוק
+     * אותם שני תיקונים שענף הבית שמתחת כבר קיבל (`hasInternet === true`
+     * ו-`p.type !== "TV"`), ושלא הוחלו על אחיו.
+     *
+     * `!spec.kosher` קורא **היעדר הצהרה** כ"לא כשר": `kosher: null` —
+     * הצורה שהמחלץ מייצר לשדה שלא קרא, וקיימת בפועל בקטלוג הזה
+     * (`dataGb: null` בשמונה רשומות) — עבר את השער כקו רגיל. זה בדיוק
+     * הכיוון שההערה שמעל הפונקציה מזהירה ממנו: שמונה רשומות הכשר
+     * נושאות את המחירים הזולים בקטגוריה (₪25–₪39 מול ₪34 של הזולה
+     * בבריכה), ולכן רשומת כשר שדגל הכשרות שלה לא נקרא הופכת מיד
+     * לחבילה שמולה נמדד כל חשבון סלולר — חיסכון שמוצג מול מוצר שאינו
+     * תחליף לקו רגיל. id 46 (`Kosher 5000 MIN Plus 700 2025`, ₪26)
+     * עובר היום **את כל** שערי הנוסח והמחיר, ונעצר כאן בלבד.
+     *
+     * `type` הוא הסימן השני על אותה רשומה: בכל 57 רשומות הסלולר
+     * `type: "כשר"` מתקיים בדיוק כש-`spec.kosher === true` (שאר הטיפוסים
+     * הם 5G / 4G / בסיס), ולכן הוא שומר על השער גם כשה-`spec` נקרא חלקית.
+     *
+     * ⚠️ וגם חבילת הגלישה: `spec.unlimitedData` כערך **אמת ולא כבוליאן**
+     * (`"false"` — מה שמחלץ מייצר כשהוא קורא שדה טקסטואלי, הצורה
+     * שההערה בענף הבית מתעדת במפורש) סיפק את דרישת הגלישה בזמן
+     * ש-`dataGb` ריק, כלומר הכניס לבריכה **קו ללא גלישה כלל**. אותו
+     * דבר ל-`dataGb`/`minutes`: `"100" > 0` ו-`"5000" >= 1000` הם אמת
+     * ב-JS, והקטלוג נכנס דרך `as unknown as Catalog` בלי ולידציה.
+     */
+    if (spec.kosher !== false || (p.type ?? "").includes("כשר")) return false;
+    const hasData =
+      spec.unlimitedData === true || (typeof spec.dataGb === "number" && spec.dataGb > 0);
+    return hasData && typeof spec.minutes === "number" && spec.minutes >= 1000;
   }
   /*
    * ⚠️ **גם אינטרנט וגם טלוויזיה**, ולא `hasInternet` לבדו.

@@ -1038,3 +1038,134 @@ test("קלט: סימן בלתי-נראה שאינו U+200E/200F אינו פוס�
   // ספרות ערביות-הודיות עם הסימן של אותה מקלדת.
   assert.equal(parseSpendRaw("\u061c\u0662\u0662\u0660\u066b\u0665\u061c"), 220.5);
 });
+
+/*
+ * ⚠️ אותם שני תיקונים שענף הבית ב-`isComparable` כבר קיבל, ולא הוחלו
+ * על ענף הסלולר: `hasInternet === true` (ולא הערך עצמו) ו-`p.type !== "TV"`
+ * כסימן שני על רשומה שה-`spec` שלה נקרא שגוי.
+ *
+ * `!spec.kosher` קורא **היעדר הצהרה** כ"לא כשר". `kosher: null` היא הצורה
+ * שהמחלץ מייצר לשדה שלא קרא (וקיימת בקטלוג הזה — `dataGb: null` בשמונה
+ * רשומות), ושמונה רשומות הכשר הן בדיוק המחירים הזולים בקטגוריה: ₪25–₪39
+ * מול ₪34 של הזולה בבריכה. רשומת כשר שדגלה לא נקרא הופכת מיד לחבילה
+ * שמולה נמדד כל חשבון סלולר — כותרת חיסכון מול מוצר שאינו תחליף לקו רגיל,
+ * והנימוק הזה כתוב בהערה שמעל `isComparable` עצמה.
+ *
+ * הבדיקה נבנית על `Kosher 5000 MIN Plus 700 2025` (₪26) ולא על רשומה
+ * מומצאת: היא עוברת היום **את כל** שערי הנוסח, המחיר והמדרגות, ונעצרת
+ * בשער הזה בלבד.
+ */
+test("סלולר: דגל כשרות שלא נקרא אינו נקרא כ'לא כשר'", () => {
+  const kosher = PACKAGES.filter(
+    (p) => p.category === "cellular" && p.spec?.kosher === true && (p.spec.minutes ?? 0) >= 1000,
+  ).sort((a, b) => a.price - b.price);
+  assert.ok(kosher.length > 0, "לא נמצאה בקטלוג חבילת כשר להישען עליה");
+
+  const base = computeSaving(PACKAGES, "cellular", 1, 400);
+  assert.ok(base.pick, "אין בחירה בבריכה הסלולרית");
+
+  for (const src of kosher) {
+    // חבילת כשר שהמחלץ קרא לה גלישה מסוננת אבל לא קרא את דגל הכשרות.
+    for (const flag of [null, undefined, 0, ""]) {
+      const probe = {
+        ...src,
+        id: `kosher-unread-${src.id}`,
+        slug: `kosher-unread-${src.id}`,
+        type: "5G",
+        spec: { ...src.spec, kosher: flag, dataGb: 100 },
+      };
+      assert.equal(
+        isComparable(probe, "cellular"),
+        false,
+        `${src.id}/kosher=${JSON.stringify(flag)}: חבילת כשר נכנסה לבריכה`,
+      );
+      const r = computeSaving([probe, ...PACKAGES], "cellular", 1, 400);
+      assert.equal(r.pick?.id, base.pick.id, `${src.id}: הבחירה זזה לחבילת כשר`);
+      assert.equal(r.monthly, base.monthly, `${src.id}: החיסכון המוצג זז`);
+    }
+    // ואותה רשומה בדיוק, כשדווקא `type` הוא מה שנשאר והדגל התהפך.
+    const typedProbe = {
+      ...src,
+      id: `kosher-type-${src.id}`,
+      slug: `kosher-type-${src.id}`,
+      spec: { ...src.spec, kosher: false, dataGb: 100 },
+    };
+    assert.equal(
+      isComparable(typedProbe, "cellular"),
+      false,
+      `${src.id}: type="כשר" לא נקרא כראיה`,
+    );
+  }
+});
+
+/*
+ * ⚠️ `spec.unlimitedData` כערך אמת ולא כבוליאן. `"false"` — הצורה שמחלץ
+ * מייצר כשהוא קורא שדה טקסטואלי, וההערה בענף הבית מתעדת אותה במפורש —
+ * הוא truthy ב-JS, ולכן הוא סיפק את דרישת הגלישה בזמן ש-`dataGb` ריק:
+ * קו **ללא גלישה כלל** נכנס לבריכה, ובקטגוריה הזו הוא גם הזול ביותר.
+ * אותו דבר ל-`dataGb` ול-`minutes`: `"100" > 0` ו-`"5000" >= 1000` הם
+ * אמת, והקטלוג נכנס דרך `as unknown as Catalog` בלי ולידציה.
+ */
+test("סלולר: מפרט הגלישה והדקות חייב להיות מספר, ולא ערך שנראה כמו אמת", () => {
+  const voice = PACKAGES.filter(
+    (p) =>
+      p.category === "cellular" &&
+      p.spec?.dataGb == null &&
+      p.spec?.unlimitedData === false &&
+      (p.spec.minutes ?? 0) >= 1000,
+  );
+  assert.ok(voice.length > 0, "לא נמצאה בקטלוג רשומה בלי חבילת גלישה");
+
+  const base = computeSaving(PACKAGES, "cellular", 1, 400);
+
+  for (const src of voice) {
+    for (const flag of ["false", "0", {}, [1], 1]) {
+      const probe = {
+        ...src,
+        id: `unlim-${src.id}`,
+        slug: `unlim-${src.id}`,
+        type: "5G",
+        spec: { ...src.spec, kosher: false, unlimitedData: flag },
+      };
+      assert.equal(
+        isComparable(probe, "cellular"),
+        false,
+        `${src.id}/unlimitedData=${JSON.stringify(flag)}: קו בלי גלישה נכנס לבריכה`,
+      );
+      const r = computeSaving([probe, ...PACKAGES], "cellular", 1, 400);
+      assert.equal(r.monthly, base.monthly, `${src.id}: החיסכון המוצג זז`);
+    }
+    // גם מפרט שהוזן כמחרוזת אינו מספר.
+    for (const spec of [
+      { dataGb: "100", minutes: 5000 },
+      { dataGb: 100, minutes: "5000" },
+    ]) {
+      const probe = {
+        ...src,
+        id: `str-${src.id}`,
+        slug: `str-${src.id}`,
+        type: "5G",
+        spec: { ...src.spec, kosher: false, ...spec },
+      };
+      assert.equal(
+        isComparable(probe, "cellular"),
+        false,
+        `${src.id}/${JSON.stringify(spec)}: מפרט כמחרוזת עבר את השער`,
+      );
+    }
+  }
+});
+
+/* הבריכה של היום אינה מצטמצמת בעקבות ההקפדה שלמעלה. */
+test("סלולר: ההקפדה על המפרט לא הוציאה אף חבילה מהבריכה של היום", () => {
+  assert.equal(pool("cellular").length, 23, `בריכה: ${pool("cellular").length}`);
+  for (const p of pool("cellular")) {
+    assert.equal(p.spec.kosher, false, `${p.name}: דגל כשרות שאינו false`);
+    assert.ok(!(p.type ?? "").includes("כשר"), `${p.name}: type=${p.type}`);
+    assert.equal(typeof p.spec.minutes, "number", `${p.name}: דקות שאינן מספר`);
+    assert.ok(
+      p.spec.unlimitedData === true || typeof p.spec.dataGb === "number",
+      `${p.name}: חבילת גלישה שאינה מוצהרת כמספר ולא כ-unlimited`,
+    );
+  }
+});

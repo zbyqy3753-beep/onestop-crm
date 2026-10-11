@@ -1295,3 +1295,131 @@ test("תצוגה: ערך שאינו מספר אינו נהפך לכותרת 'ח�
   assert.equal(isMoney(-1), false);
   assert.equal(isMoney(39.9), true);
 });
+
+/*
+ * ── עליית המחיר אחרי ההטבה: שער אחד לשלושה מקומות ──────────────────
+ *
+ * ⚠️ שלושה מקומות בדף מדפיסים את `priceAfterPromo`, ושניים מהם גידרו
+ * אותו ב-`isMoney`: `PackageCard` (`> 0`) ו-`CompareTray`
+ * (`afterPriceKnown` המקומי). פס המחיר בהירו — ההצהרה הרמה ביותר בדף,
+ * והיחידה שהפסקה שמעליה מבטיחה במפורש ("ומציגים גם את המחיר שאחרי
+ * תקופת המבצע") — שאל `!= null` בלבד. זו הפעם החמישית שבה שער מוחל על
+ * הכרטיס ולא על שאר הצרכנים (ראה `discountIsCapped`, `priceNote`),
+ * ולכן השער עבר ל-`promoRise` ב-`format.ts`.
+ */
+test("תצוגה: עליית מחיר פגומה אינה נקראת כמחיר, וההערה שהרשומה מסרה אינה נבלעת", async () => {
+  const { heroRiseLine, promoRise } = await import("../src/app/lp/catalog/format.ts");
+
+  // מספר אמיתי ממשיך להיות מודפס — זו ההתנהגות שאין לשבור.
+  const real = PACKAGES.find((p) => p.id === "91");
+  assert.equal(real.priceAfterPromo, 57.9);
+  assert.deepEqual(promoRise(real), { kind: "amount", amount: 57.9 });
+  assert.equal(heroRiseLine(real), "ואחרי ההטבה ₪57.9");
+
+  // והצהרה מילולית בלבד (11 רשומות בקטלוג) נאמרת כמו שהיא.
+  const spoken = PACKAGES.find((p) => p.id === "23");
+  assert.equal(spoken.priceAfterPromo, null);
+  assert.equal(promoRise(spoken).kind, "note");
+  assert.match(heroRiseLine(spoken), /^בתום ההטבה: /);
+
+  /*
+   * ⚠️ הלב: `0` הוא הצורה שהמחלץ כותב כשלא קרא מספר (ids 18, 22
+   * מוכיחים את זה על `price` באותו קובץ). רשומה כזו שנושאת **גם** הערה
+   * מילולית הדפיסה בהירו "ואחרי ההטבה ₪0" — הבטחה שהחבילה נעשית חינם
+   * בתום המבצע — ובאותה נשימה בלעה את ההערה שהרשומה כן מסרה, בזמן
+   * שהכרטיס שמתחת, על אותה חבילה, אמר את ההערה הנכונה.
+   */
+  for (const broken of [0, -0, -5, "59.9", NaN]) {
+    const pkg = { ...real, priceAfterPromo: broken, priceAfterPromoNote: 'לאחר שנה 59 ש"ח' };
+    assert.deepEqual(
+      promoRise(pkg),
+      { kind: "note", note: 'לאחר שנה 59 ש"ח' },
+      `priceAfterPromo=${String(broken)} נקרא כמחיר`,
+    );
+    assert.equal(heroRiseLine(pkg), 'בתום ההטבה: לאחר שנה 59 ש"ח');
+  }
+
+  // ובלי הערה — לא נאמר דבר, ולא "₪0".
+  assert.equal(promoRise({ ...real, priceAfterPromo: 0, priceAfterPromoNote: null }), null);
+  assert.equal(heroRiseLine({ ...real, priceAfterPromo: 0, priceAfterPromoNote: null }), null);
+
+  // מסלול חשמל אינו נושא מחיר חודשי שיעלה.
+  const elec = PACKAGES.find((p) => p.category === "electricity" && isListable(p));
+  assert.equal(promoRise(elec), null);
+  assert.equal(heroRiseLine(elec), null);
+
+  /*
+   * ⚠️ והאינווריאנט מול הקטלוג האמיתי: `disclosedRiseCount` — "נתון
+   * האמון של הדף" — סופרת בדיוק את החבילות שיש להן מה לומר כאן. שני
+   * מונים לאותה עובדה שאינם מסכימים הם המלכודת שהקובץ הזה מגדר.
+   */
+  assert.equal(
+    PACKAGES.filter(isListable).filter((p) => promoRise(p) != null).length,
+    disclosedRiseCount(PACKAGES),
+  );
+});
+
+/*
+ * ── הפאנל "פרטים מלאים" ────────────────────────────────────────────
+ *
+ * ⚠️ רינדור אמיתי ולא השוואת מחרוזות, כמו ב-`lpBrowse.test.mjs`:
+ * הפגם כאן הוא ב**פלט** — בלוק שהקוד מרנדר ואין שום דרך לפתוח אותו.
+ *
+ * ⚠️ `src/app/lp/actions.ts` מוחלף: הוא מודול `"use server"` שמשרשר את
+ * שכבת ה-DB, שבה יש `await` ברמת המודול — צורה ש-tsx אינו יכול לקמפל
+ * ל-CJS, ולכן עצם ה**ייבוא** של `PackageCard` (→ `LeadForm` →
+ * `../actions`) נפל. ההחלפה מצומצמת למודול הזה, והפאץ' מוחזר מיד.
+ */
+test("כרטיס: פאנל הפרטים נפתח גם כשכל מה שיש לרשומה הוא הטבות", async () => {
+  const Module = (await import("node:module")).default;
+  const React = (await import("react")).default;
+  const { renderToStaticMarkup } = await import("react-dom/server");
+
+  const loadModule = Module._load;
+  Module._load = function (request, parent, isMain) {
+    if (/(^|[\/])actions(\.ts)?$/.test(request)) {
+      return { __esModule: true, submitLandingLead: async () => ({ status: "sent" }) };
+    }
+    return loadModule.call(this, request, parent, isMain);
+  };
+  let PackageCard;
+  try {
+    ({ PackageCard } = await import("../src/app/lp/ui/PackageCard.tsx"));
+  } finally {
+    Module._load = loadModule;
+  }
+
+  const html = (pkg) => renderToStaticMarkup(React.createElement(PackageCard, { pkg, defaultOpen: true }));
+
+  /*
+   * ⚠️ ids 51, 29 ו-100 הן בדיוק הצורה הזו בקטלוג של היום: `detailRows`
+   * ריק **וגם** `description` ריק. השער שאל רק את שני אלה, ולכן רשומה
+   * כזו שתישא הטבות ברענון הבא מקבלת כרטיס בלי כפתור "פרטים מלאים" —
+   * כלומר בלוק "הטבות" שהקוד מרנדר ואי אפשר להגיע אליו, ואיתו גם
+   * השורה על התנאים המחייבים של הספק.
+   */
+  const bare = PACKAGES.filter(isListable).filter(
+    (p) => detailRows(p).length === 0 && !p.description,
+  );
+  expectFlags(bare.map((p) => p.id), ["100", "29", "51"], "רשומות בלי שורות פירוט ובלי תיאור");
+
+  for (const p of bare) {
+    assert.equal(p.benefits, null, `${p.id}: כבר נושאת הטבות — הבדיקה מתארת מקרה שהתממש`);
+    // בלי אף אחד מהשלושה אין פאנל, וזה נכון: אין מה להציג בו.
+    assert.ok(!html(p).includes("פרטים מלאים"), `${p.id}: כפתור פאנל על כרטיס בלי תוכן`);
+
+    const withBenefits = { ...p, benefits: "חודש ראשון חינם" };
+    const out = html(withBenefits);
+    assert.ok(out.includes("הטבות"), `${p.id}: בלוק ההטבות אינו ניתן לפתיחה`);
+    assert.ok(out.includes("חודש ראשון חינם"), `${p.id}: נוסח ההטבה לא הודפס`);
+    assert.ok(
+      out.includes(withBenefits.provider.name),
+      `${p.id}: השורה על התנאים המחייבים נעלמה יחד עם הפאנל`,
+    );
+  }
+
+  // ורשומה שיש לה הטבות **וגם** תיאור ממשיכה להתנהג כמו קודם.
+  const both = PACKAGES.filter(isListable).find((p) => p.benefits && p.description);
+  assert.ok(both, "אין רשומה עם הטבות ותיאור — עדכן את הבדיקה");
+  assert.ok(html(both).includes("הטבות"));
+});

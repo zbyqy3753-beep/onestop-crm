@@ -13,11 +13,12 @@ import {
   CATEGORY_ORDER,
   cheapest,
   highlights,
+  isMoney,
   listable,
   providers,
   serviceCounts,
 } from "./catalog/catalog";
-import { PACKAGES_CAPTION, PLANS_CAPTION, shekels } from "./catalog/format";
+import { heroRiseLine, PACKAGES_CAPTION, PLANS_CAPTION, shekels } from "./catalog/format";
 import "./lp.css";
 
 /**
@@ -167,6 +168,13 @@ export default function LandingPage() {
    *      הכיתוב אומר "סלולר" כי זה מה שנספר.
    */
   const lead = cheapest(byCategory(packages, "cellular"), 1)[0] ?? null;
+  /*
+   * ⚠️ `heroRiseLine` ולא שרשרת תנאים כאן. השורה הזו נבנתה ב-JSX עם
+   * `priceAfterPromo != null` — השער הרופף מבין שלושת המקומות בדף
+   * שמדפיסים את השדה (ראה `promoRise` ב-`format.ts`): `0` היה מודפס
+   * כ-"ואחרי ההטבה ₪0" ובולע את ההערה המילולית שהרשומה כן מסרה.
+   */
+  const riseLine = lead ? heroRiseLine(lead) : null;
 
   return (
     <main className="lp-root">
@@ -218,7 +226,12 @@ export default function LandingPage() {
               ⚠️ באתר הציבורי הפס הוא קישור לעמוד החבילה. כאן אין עמוד
               כזה, ולכן הוא עוגן אל הקטלוג — לא `<Link>` לשום מקום.
             */}
-            {lead?.price != null && (
+            {/*
+              ⚠️ `isMoney` ולא `!= null`, כמו `headlineValue` על הכרטיס:
+              אותה הגדרה של "מספר שמותר להדפיס" בכל מקום בדף. `lead`
+              עובר היום דרך `listable`, ולכן זו עקביות ולא תיקון באג.
+            */}
+            {lead && isMoney(lead.price) && (
               <a
                 href="#cellular"
                 className="group mt-7 inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl bg-gradient-to-b from-lp-brand-bright to-lp-brand px-6 py-4 shadow-lp-pop transition hover:from-lp-brand-glow sm:px-9 sm:py-5"
@@ -237,14 +250,12 @@ export default function LandingPage() {
                   הגדולה בקטלוג והכחיש את ההבטחה שמעליו. 17 מ-55 חבילות
                   הסלולר נושאות עלייה כזו — 13 עם `priceAfterPromo` מספרי
                   ועוד 4 שמצהירות עליה בטקסט בלבד — כלומר זה לא מקרה קצה.
-                  שני הענפים למטה קוראים את שתיהן, ולכן הספירה כאן חייבת
-                  לכלול את שתיהן.
+                  `heroRiseLine` קוראת את שתיהן (מספר והערה מילולית),
+                  ולכן הספירה כאן חייבת לכלול את שתיהן.
                 */}
-                {(lead.priceAfterPromo != null || lead.priceAfterPromoNote) && (
+                {riseLine && (
                   <span className="basis-full text-center text-xs font-semibold text-white/80 sm:text-sm">
-                    {lead.priceAfterPromo != null
-                      ? `ואחרי ההטבה ${shekels(lead.priceAfterPromo)}`
-                      : `בתום ההטבה: ${lead.priceAfterPromoNote}`}
+                    {riseLine}
                   </span>
                 )}
               </a>

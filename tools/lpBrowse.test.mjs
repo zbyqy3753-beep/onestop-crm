@@ -5,7 +5,12 @@ import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { basePackages, byCategory, listable } from "../src/app/lp/catalog/catalog.ts";
+import {
+  basePackages,
+  byCategory,
+  hasKnownAfterPrice,
+  listable,
+} from "../src/app/lp/catalog/catalog.ts";
 import { familyPriceOnly, requiresMultipleLines } from "../src/app/lp/catalog/savings.ts";
 import { discountIsCapped, headlineValue, priceNote } from "../src/app/lp/catalog/format.ts";
 
@@ -265,6 +270,63 @@ test("השוואה: 'עד' על הנחה מדורגת, כמו בכרטיס", () 
   assert.ok(discountIsCapped(capped), "הרשומה הסינתטית אינה נקראת כתקרה");
   const flatPct = fakeElectricity("flat-pct", 6);
   assert.deepEqual(priceCells(sheetMarkup([capped, flatPct])), ["עד 10% הנחה", "6% הנחה"]);
+});
+
+/*
+ * ⚠️ שורת "אחרי ההטבה" מול `hasKnownAfterPrice` — אותו שדה, אותה
+ * קריאה. הענף האחרון של התא נפל ל-"לא דווח שינוי" על כל מה שאינו
+ * מספר שמיש ואינו הערה, כלומר `priceAfterPromo: 0` (הצורה שהמחלץ
+ * מייצר כשלא קרא מספר) הודפס כהצהרה שהמחיר **נשאר** — בעוד
+ * `hasKnownAfterPrice` קוראת את אותו ערך כ"לא יודעים" ומורידה את
+ * החבילה לסוף המיון "מחיר אחרי ההטבה". שתי קריאות הפוכות לאותו שדה,
+ * בטבלה ובתפריט המיון שמעליה.
+ */
+function afterCells(html) {
+  const tbody = html.slice(html.indexOf("<tbody>"));
+  const rows = [...tbody.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].map((m) => m[1]);
+  return [...(rows[1] ?? "").matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((m) => m[1]);
+}
+
+test("השוואה: מחיר-אחרי-הטבה פגום אינו מודפס כ'לא דווח שינוי'", () => {
+  const broken = fakePackage("zero-after", 39.9, { priceAfterPromo: 0 });
+  const silent = fakePackage("silent", 49.9);
+  assert.equal(hasKnownAfterPrice(broken), false, "הרשומה הפגומה נחשבת ידועה");
+  assert.equal(hasKnownAfterPrice(silent), true, "הרשומה ששתקה נחשבת לא ידועה");
+  assert.deepEqual(afterCells(sheetMarkup([broken, silent])), ["—", "לא דווח שינוי"]);
+});
+
+test("השוואה: הערה מילולית גוברת על שדה מספרי פגום", () => {
+  const broken = fakePackage("zero-note", 29.9, {
+    priceAfterPromo: 0,
+    priceAfterPromoNote: "מחיר לאחר פקיעה 44.9 ש״ח",
+  });
+  const silent = fakePackage("silent", 49.9);
+  assert.deepEqual(afterCells(sheetMarkup([broken, silent])), [
+    "מחיר לאחר פקיעה 44.9 ש״ח",
+    "לא דווח שינוי",
+  ]);
+});
+
+test("השוואה: התא קורא את שדה המחיר-אחרי-הטבה כמו שהמיון קורא אותו", () => {
+  const variants = [
+    fakePackage("num", 29.9, { priceAfterPromo: 59 }),
+    fakePackage("zero", 29.9, { priceAfterPromo: 0 }),
+    fakePackage("neg", 29.9, { priceAfterPromo: -5 }),
+    fakePackage("silent", 29.9),
+    fakePackage("note", 29.9, { priceAfterPromoNote: "אחרי שנתיים 69.9" }),
+  ];
+  const partner = fakePackage("partner", 49.9);
+  for (const p of variants) {
+    const cell = afterCells(sheetMarkup([p, partner]))[0];
+    const claimsNoChange = cell === "לא דווח שינוי";
+    const quiet = p.priceAfterPromo == null && p.priceAfterPromoNote == null;
+    // "המחיר נשאר" נאמר אם ורק אם הרשומה שתקה — וזו בדיוק ההגדרה
+    // ש-`hasKnownAfterPrice` משתמשת בה כדי לדרג אותה לפי המחיר של היום.
+    assert.equal(claimsNoChange, quiet && hasKnownAfterPrice(p), `${p.id}: ${cell}`);
+    if (!quiet && !p.priceAfterPromoNote && !hasKnownAfterPrice(p)) {
+      assert.equal(cell, "—", `${p.id}: רשומה פגומה לא דורדרה למקף`);
+    }
+  }
 });
 
 test("השוואה: כותרות העמודה והשורה מוצהרות עם scope", () => {
