@@ -1169,3 +1169,89 @@ test("סלולר: ההקפדה על המפרט לא הוציאה אף חבילה
     );
   }
 });
+
+test("תוקף מוגבל שנמסר בחודשים (ובמחזורי חיוב) הוא אותה הצהרה כמו בשנים", () => {
+  /*
+   * ⚠️ `למשך שנה` / `למשך שנתיים` / `למשך N שנים` כוסו, והתאום שלהן
+   * בחודשים לא. ארבעת הניסוחים כאן חיים בקטלוג של היום: `למשך חודשיים`
+   * (ids 42, 54), `למשך 3 חודשים` (ids 81, 132) ו-`למשך 24 מחזורי חיוב` /
+   * `למשך 13 מחזורי החיוב` (ids 1, 2, 36) — "מחזור חיוב" הוא חודש בשפה
+   * של המפעיל. כולן נפסלות היום מסיבה אחרת, ולכן זה שער לרענון הבא.
+   */
+  const fake = (description) => ({ name: "x", description, benefits: null });
+  for (const text of [
+    'דמי שימוש בסך של 32.90 ש"ח לחודש למשך חודשיים',
+    '*מחיר החבילה 39 ש"ח למשך 3 חודשים*',
+    'דמי שימוש בסך 24.90 ש"ח למשך 24 מחזורי חיוב',
+    "המחיר למשך 13 מחזורי החיוב הראשונים",
+    "המחיר למשך חודש",
+  ]) {
+    assert.ok(declaresRiseInText(fake(text)), `לא זוהה: ${text}`);
+  }
+  // הניסוח שאינו תוקף מוגבל ממשיך לעבור.
+  assert.equal(declaresRiseInText(fake("גלישה חופשית ללא הגבלה")), false);
+});
+
+test("הצהרת תוקף בחודשים מוציאה את החבילה מהבריכה ואינה הופכת לכותרת 'לנצח'", () => {
+  const base = PACKAGES.find((x) => x.name === "wecomFree 4G");
+  assert.ok(base, "לא נמצאה בקטלוג: wecomFree 4G");
+  const promo = {
+    ...base,
+    id: "X",
+    name: "בדיקה",
+    rawName: undefined,
+    price: 24.9,
+    priceAfterPromo: null,
+    priceAfterPromoNote: null,
+    description: 'דמי שימוש בסך של 24.90 ש"ח לחודש למנוי, למשך חודשיים',
+    benefits: null,
+  };
+  assert.equal(isComparable(promo, "cellular"), false);
+  // הכותרת נשארת זו של הבחירה האמיתית (₪34 לקו) ולא זו של מחיר חודשיים.
+  const s = computeSaving([...PACKAGES, promo], "cellular", 1, 220);
+  assert.equal(s.perLine, 34);
+  assert.equal(s.yearly, 2232);
+});
+
+test("תמחור לפי כמות מנויים נתפס גם בניסוח 'ויותר' ולא רק 'ומעלה'", () => {
+  /*
+   * ⚠️ "למצרפים 4 מנויים ויותר 30 ₪" (id 57, Partner Star) ו-"ויותר"
+   * ב-id 110 הן אותה הצהרה מילה במילה כמו "3 מנויים ומעלה – 54.90 ₪
+   * למנוי" שכבר נתפסה. שתיהן נפסלות היום מסיבה אחרת.
+   */
+  const base = PACKAGES.find((x) => x.name === "wecomFree 4G");
+  assert.ok(base);
+  const byLines = (description) => ({
+    ...base,
+    id: "Y",
+    name: "בדיקה",
+    rawName: undefined,
+    price: 24.9,
+    priceAfterPromo: 24.9,
+    priceAfterPromoNote: null,
+    description,
+    benefits: null,
+  });
+  for (const text of [
+    "מחיר התוכנית – 24.90 ₪ למנוי. למצרפים 4 מנויים ויותר 22 ₪",
+    "קו בודד 24.90 ₪, 3 קווים ויותר 22 ₪ לקו",
+    "מחיר התוכנית – 24.90 ₪ למנוי. 4 מנויים ומעלה 22 ₪",
+  ]) {
+    const p = byLines(text);
+    assert.ok(afterPriceDependsOnLines(p), `לא זוהה: ${text}`);
+    assert.equal(isComparable(p, "cellular"), false, `נכנסה לבריכה: ${text}`);
+  }
+  // מחיר שאינו מותנה בכמות ממשיך לעבור.
+  assert.equal(afterPriceDependsOnLines(byLines("מחיר קבוע 24.90 ₪ למנוי")), false);
+});
+
+test("הרחבת שערי הנוסח לא הוציאה אף חבילה מהבריכה של היום", () => {
+  // ⚠️ שני השערים שהורחבו (חודשים ב-`RISE_IN_TEXT`, `ויותר` ב-
+  // `PRICED_BY_LINE_COUNT`) נכתבו כשער לרענון הבא, ואסור שישנו מספר
+  // שמוצג כרגע. הבריכות והבחירות נשארות כפי שהן.
+  assert.equal(pool("cellular").length, 23);
+  assert.equal(pool("home").length, 2);
+  assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).pick?.name, "wecom300GB 5G");
+  assert.equal(computeSaving(PACKAGES, "cellular", 2, 500).pick?.name, "wecomFamily 4G");
+  assert.equal(computeSaving(PACKAGES, "home", 1, 300).pick?.name, "טריפל פלוס 149");
+});

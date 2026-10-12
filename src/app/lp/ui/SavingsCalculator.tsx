@@ -38,12 +38,25 @@ function unitsLabel(track: Track, units: number): string {
  * "13 באוגוסט" מהדפדפן מול "14 באוגוסט" מהשרת, כלומר hydration
  * mismatch בדיוק בהסתייגות שנועדה לתת למספר חותמת אמינה.
  */
-const CATALOG_DATE = new Date(catalog.updatedAt).toLocaleDateString("he-IL", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-  timeZone: "Asia/Jerusalem",
-});
+/*
+ * ⚠️ והתאריך מגודר, כמו `shekels` שמחזיר "—" ו-`tierTable` שמחזיר `null`.
+ * `catalog.updatedAt` מוצהר `string` ב-`types.ts` אבל הקטלוג נכנס דרך
+ * `as unknown as Catalog` בלי ולידציה — ו-`toLocaleDateString` על תאריך
+ * פגום אינו זורק אלא מחזיר את המחרוזת `"Invalid Date"`. כלומר רענון
+ * שישמיט את השדה (או יכתוב בו תאריך בפורמט אחר) היה מדפיס לגולש
+ * "מחירי הקטלוג נכונים ל-Invalid Date" ושולח לנציג "(קטלוג Invalid
+ * Date)" — הסתייגות שנועדה לתת למספר חותמת אמינה הופכת לראיה שהמסך
+ * שבור. בלי חותמת מוותרים על המשפט; לא ממציאים לו תוכן.
+ */
+const CATALOG_UPDATED = new Date(catalog.updatedAt);
+const CATALOG_DATE = Number.isFinite(CATALOG_UPDATED.getTime())
+  ? CATALOG_UPDATED.toLocaleDateString("he-IL", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "Asia/Jerusalem",
+    })
+  : null;
 
 /**
  * "What do you pay today?" — the reverse of a filter grid, and the highest
@@ -339,14 +352,35 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 className={`ltr-num text-end ${fieldClass.replace("text-sm", "text-lg")}`}
                 /* קורא מסך שמע את ההודעה אבל לא ידע שהשדה עצמו שגוי. */
                 aria-invalid={invalidSpend || undefined}
-                aria-describedby="calc-spend-hint"
+                aria-describedby="calc-spend-hint calc-spend-note"
               />
+              {/*
+                ⚠️ הנוסח הניטרלי חי **מחוץ** לאזור החי. קודם אותה פסקה
+                החזיקה את שניהם (`{spendHint || "הזינו את הסכום…"}`) והייתה
+                `aria-live="polite"`, כלומר כל **כיבוי** של הודעה החליף את
+                תוכן האזור החי בהוראה — ולכן הוכרז: מי שהקליד `abc`, יצא
+                מהשדה ושמע את השגיאה, חזר והקליד `220`, שמע בהקשה הראשונה
+                "הזינו את הסכום שאתם משלמים היום בחודש, בשקלים" בדיוק בזמן
+                שהוא מקליד סכום תקין לחלוטין. זו אותה תקלה שכבר תוקנה פעמיים
+                בשדה הזה (ראה `blurred` ו-`attempted` למעלה) — רק שהפעם היא
+                נכנסה מהצד השני: לא מהתנאי שמדליק את ההודעה אלא מהטקסט
+                שיושב באזור החי כשאין הודעה.
+
+                הפסקה הניטרלית נשארת ב-DOM תמיד ומקושרת ב-`aria-describedby`,
+                ולכן ההבטחה שבהערת ה-CTA ("הפסקה קיימת תמיד… ונושאת נוסח
+                ניטרלי") נשמרת: הכפתור המושבת עדיין מצביע על סיבה. האזור
+                החי מחזיק **רק** את ההודעה, ולכן כיבוי שלה מרוקן אותו —
+                ומחרוזת ריקה אינה הכרזה.
+              */}
+              <p id="calc-spend-hint" className="sr-only">
+                הזינו את הסכום שאתם משלמים היום בחודש, בשקלים.
+              </p>
               <p
-                id="calc-spend-hint"
+                id="calc-spend-note"
                 aria-live="polite"
                 /*
-                  ⚠️ צבע שגיאה כשהשדה שגוי. אותה פסקה מחזיקה גם את ההסבר
-                  הנייטרלי וגם את הודעת השגיאה, ובשני המצבים היא נצבעה
+                  ⚠️ צבע שגיאה כשהשדה שגוי. הפסקה מחזיקה גם את הודעת
+                  השגיאה וגם את הסתייגות התקרה, ובשני המצבים היא נצבעה
                   `text-lp-ink-3` — כלומר כל מה שגולש ראה אחרי הקלדת
                   `abc` הוא טקסט אפור שהופיע במקום שהיה ריק, באותו גודל
                   ובאותו צבע של רמז. ל-`aria-invalid` לא היה שום מקביל
@@ -356,7 +390,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 */
                 className={`mt-1.5 text-xs ${invalidSpend ? "font-medium text-lp-rise" : "text-lp-ink-3"} ${spendHint ? "" : "sr-only"}`}
               >
-                {spendHint || "הזינו את הסכום שאתם משלמים היום בחודש, בשקלים."}
+                {spendHint}
               </p>
             </div>
             {track === "cellular" && (
@@ -416,10 +450,11 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 ⚠️ הקישור קבוע ולא מותנה ב-`spendHint`. בכניסה לשלב
                 הכפתור כבר מכריז על עצמו כמושבת אבל ההסבר עוד לא נכתב,
                 כלומר קורא מסך שמע "לחצן, מושבת" בלי סיבה — בדיוק המצב
-                שההערה למעלה מבטיחה שלא יקרה. הפסקה קיימת תמיד ב-DOM
-                ונושאת נוסח ניטרלי כשאין שגיאה.
+                שההערה למעלה מבטיחה שלא יקרה. `calc-spend-hint` קיימת
+                תמיד ב-DOM ונושאת את הנוסח הניטרלי; `calc-spend-note` היא
+                האזור החי ונושאת את ההודעה בלבד (ראה ההערה שם).
               */
-              aria-describedby="calc-spend-hint"
+              aria-describedby="calc-spend-hint calc-spend-note"
               onClick={submitSpend}
               className={`inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-lp-brand px-4 py-2.5 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright ${monthlySpend <= 0 ? "opacity-40" : ""}`}
             >
@@ -543,7 +578,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
               : ""}
             עלויות חד-פעמיות (מעבר, חיבור, התקנה) אינן נכללות, והסכום המדויק תלוי בזמינות, בתנאי
             החברה ובמה שכלול היום בחשבון שלכם — נציג יעבור אתכם על החשבון ויגיד לכם בדיוק כמה
-            תחסכו. מחירי הקטלוג נכונים ל-{CATALOG_DATE}.
+            תחסכו.{CATALOG_DATE ? ` מחירי הקטלוג נכונים ל-${CATALOG_DATE}.` : ""}
           </p>
 
           <div className="mt-5 rounded-lp-card bg-lp-surface-2 p-4">
@@ -600,7 +635,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   לעמוד מאחוריו בשיחה.
                 */
                 saving.pick
-                  ? `מול ${saving.pick.provider.name} — ${saving.pick.name}, ${shekels(saving.perLine)} ${track === "cellular" ? "לקו" : "לחודש"} (קטלוג ${CATALOG_DATE})`
+                  ? `מול ${saving.pick.provider.name} — ${saving.pick.name}, ${shekels(saving.perLine)} ${track === "cellular" ? "לקו" : "לחודש"}${CATALOG_DATE ? ` (קטלוג ${CATALOG_DATE})` : ""}`
                   : null,
               ]
                 .filter(Boolean)

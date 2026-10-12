@@ -107,13 +107,38 @@ const upTo = (pkg: Package, ...values: (number | null | undefined)[]) =>
   values.some((v) => typeof v === "number" && proseCapsAt(pkg, v)) ? "עד " : "";
 
 /**
+ * כמות שמותר להדפיס דרך `nf.format` — המקבילה של `isMoney` לשדות
+ * ה**מונים** של ה-`spec`.
+ *
+ * ⚠️ `isMoney` גודר את המחירים ואת העמלות (`shekels` מדרדר ל-"—"), אבל
+ * כל שדה שמודפס כמספר חשוף נשאר בלי שער: `dataGb`, `minutes`, `sms`,
+ * `intlMinutes`, `channels`, `converters`, `downloadMbps`, `uploadMbps`.
+ * שני חורים שונים, שתוצאתם זהה — `NaN` על המסך:
+ *
+ *   • `dataLabel` ו-`speedLabel` שאלו `== null` בלבד, ולכן **מחרוזת**
+ *     עברה: `dataGb: "750GB"` הדפיס אריח "NaNGB", ו-`downloadMbps:
+ *     "1000 Mb"` הדפיס "NaN/100Mbps" מתחת לכיתוב "מהירות גלישה".
+ *   • האחרים שאלו `typeof === "number"`, ו-`NaN` **הוא** number: ערך
+ *     `uploadMbps: NaN` הדפיס "1,000/NaNMbps".
+ *
+ * זה אותו תרחיש שההערה על `shekels` מתארת — הקטלוג נכנס דרך
+ * `as unknown as Catalog`, כלומר אין ולידציה בזמן ריצה, ורשומה שתישאב
+ * פעם אחת לא-מנורמלת מגיעה לכאן כמות שהיא. `isMoney` אינו מתאים כאן
+ * כי `0` מפורש הוא **נתון** במונים (ראה ההערה ב-`cardStats`), ולכן
+ * השער בודק סופיות בלבד. אריח שנשמט עדיף על אריח שמדפיס "NaN".
+ */
+const isCount = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
+/**
  * Big buckets are sold as "unlimited" — say so instead of printing 10000GB.
  *
  * ⚠️ `pkg` ולא `spec` לבדו: ה-"עד" חי בפרוזה של הרשומה, לא במפרט.
  */
 export function dataLabel(pkg: Package, spec: CellularSpec): string | null {
   if (spec.unlimitedData) return "גלישה חופשית";
-  if (spec.dataGb == null || spec.dataGb === 0) return null;
+  // ⚠️ `isCount` ולא `== null`: "750GB" הדפיס "NaNGB". ראה ההערה שם.
+  if (!isCount(spec.dataGb) || spec.dataGb === 0) return null;
   return `${upTo(pkg, spec.dataGb)}${nf.format(spec.dataGb)}GB`;
 }
 
@@ -139,7 +164,22 @@ export function dataLabel(pkg: Package, spec: CellularSpec): string | null {
  * המהירויות בשלמות נשארת Mb, שם שום חלוקה לא מתבצעת.
  */
 export function speedLabel(pkg: Package, spec: HomeSpec): string | null {
-  if (spec.downloadMbps == null) return null;
+  /*
+   * ⚠️ `isCount` ולא `== null`, בשני השדות. השער הקודם בדק היעדר ערך
+   * ולא ערך שמיש: `downloadMbps: "1000 Mb"` עבר ו-`nf.format` החזיר
+   * `NaN`, כך שהאריח הדפיס "NaN/100Mbps" **מתחת לכיתוב "מהירות
+   * גלישה"** — מספר שהרשומה לא מסרה, בדיוק מה ש-`shekels` מדרדר
+   * ל-"—" כבר היום. ו-`uploadMbps` גרוע מזה: הוא נבדק ב-`!= null`
+   * בלבד ולכן `NaN` הדפיס "1,000/NaNMbps", כלומר חצי מספר אמיתי וחצי
+   * חור — על שדה שהערך **שלו** פגום, בזמן שההורדה נמסרה כראוי.
+   *
+   * העלאה שאינה שמישה נקראת כ"לא נמסרה" ונופלת לצורת המהירות הבודדת,
+   * בדיוק כמו ids 3, 81, 92 ו-104 שבאמת נושאים `uploadMbps: null` —
+   * וכך גם התווית הזוגית ("מהירות (הורדה/העלאה)") אינה מובטחת על
+   * נתון שאין.
+   */
+  if (!isCount(spec.downloadMbps)) return null;
+  const upload = isCount(spec.uploadMbps) ? spec.uploadMbps : null;
   const whole = (mbps: number) => mbps >= 1000 && mbps % 1000 === 0;
   /*
    * ⚠️ יחידת Gb רק כששתי המהירויות נמסרו, ולא על מהירות בודדת.
@@ -151,7 +191,7 @@ export function speedLabel(pkg: Package, spec: HomeSpec): string | null {
    * בדיוק הקריאה השגויה שההערות שמעל פוסלות, רק שהיא עברה מתוך ערך
    * בודד אל הפער בין שני ערכים.
    */
-  const asGb = spec.uploadMbps != null && whole(spec.downloadMbps) && whole(spec.uploadMbps);
+  const asGb = upload != null && whole(spec.downloadMbps) && whole(upload);
   /*
    * ⚠️ `Mbps`/`Gbps` ולא `Mb`/`Gb`. הנתון הוא `downloadMbps` — מגהביט
    * **לשנייה** — והאריח הדפיס "5,000/500Mb", כלומר יחידת נפח במקום
@@ -168,9 +208,9 @@ export function speedLabel(pkg: Package, spec: HomeSpec): string | null {
    * שמצהירות על תקרה מצהירות עליה על שתיהן (id 85: "עד 600 Mb"
    * ו-"עד 100 Mb"), ו-"עד 600/עד 100" קורא כשתי עובדות ולא כזוג.
    */
-  const cap = upTo(pkg, spec.downloadMbps, spec.uploadMbps);
-  return spec.uploadMbps != null
-    ? `${cap}${value(spec.downloadMbps)}/${value(spec.uploadMbps)}${unit}`
+  const cap = upTo(pkg, spec.downloadMbps, upload);
+  return upload != null
+    ? `${cap}${value(spec.downloadMbps)}/${value(upload)}${unit}`
     : `${cap}${value(spec.downloadMbps)}${unit}`;
 }
 
@@ -313,7 +353,17 @@ export type PromoRise =
 export function promoRise(pkg: Package): PromoRise | null {
   if (pkg.category === "electricity") return null;
   if (isMoney(pkg.priceAfterPromo)) return { kind: "amount", amount: pkg.priceAfterPromo };
-  return pkg.priceAfterPromoNote ? { kind: "note", note: pkg.priceAfterPromoNote } : null;
+  /*
+   * ⚠️ `typeof === "string"` ולא טרות'יניס. הנוסח הזה מודפס **מילה
+   * במילה** בשלושה מקומות (הכרטיס, פס ההירו, שורת "אחרי ההטבה"), ללא
+   * `shekels` ובלי `nf.format` שידרדרו ערך פגום — ולכן ערך שאינו
+   * מחרוזת הודפס "בתום ההטבה: [object Object]" דווקא בשורה שהדף
+   * מצהיר עליה כהבטחת המותג. כמו `hoursText`, זה שדה טקסט חופשי
+   * שהקטלוג נכנס אליו בלי ולידציה בזמן ריצה.
+   */
+  return typeof pkg.priceAfterPromoNote === "string" && pkg.priceAfterPromoNote
+    ? { kind: "note", note: pkg.priceAfterPromoNote }
+    : null;
 }
 
 /**
@@ -427,14 +477,16 @@ export function cardStats(pkg: Package): Stat[] {
     if (data) out.push({ value: data, caption: "גלישה בישראל" });
     // ⚠️ אותו שער "עד" גם על דקות ו-SMS: ids 26, 27 ו-69 מבטיחים
     // "עד 5,000 דקות" בפרוזה, והאריח הדפיס 5,000 כעובדה.
-    if (typeof spec.minutes === "number")
+    // ⚠️ `isCount` ולא `typeof === "number"`: `NaN` **הוא** number, ולכן
+    // השער הקודם הדפיס אריח "NaN" מתחת ל-"דקות שיחה". ראה `isCount`.
+    if (isCount(spec.minutes))
       out.push({ value: `${upTo(pkg, spec.minutes)}${nf.format(spec.minutes)}`, caption: MINUTES_CAPTION(spec.minutes) });
-    if (typeof spec.sms === "number")
+    if (isCount(spec.sms))
       out.push({ value: `${upTo(pkg, spec.sms)}${nf.format(spec.sms)}`, caption: SMS_CAPTION(spec.sms) });
     // ⚠️ גם דקות לחו״ל. זה היה השדה היחיד שנשאר בלי השער: id 110
     // אומר "עד 100 דקות שיחה מישראל ל-27 יעדים בחו\"ל (אופציונלי)"
     // והאריח הדפיס "100" כעובדה, וכך גם ids 42, 54, 64, 65, 66 ו-69.
-    if (out.length < 3 && typeof spec.intlMinutes === "number") {
+    if (out.length < 3 && isCount(spec.intlMinutes)) {
       out.push({
         value: `${upTo(pkg, spec.intlMinutes)}${nf.format(spec.intlMinutes)}`,
         caption: INTL_MINUTES_CAPTION(spec.intlMinutes),
@@ -448,7 +500,7 @@ export function cardStats(pkg: Package): Stat[] {
     const out: Stat[] = [];
     const speed = speedLabel(pkg, spec);
     if (speed) out.push({ value: speed, caption: "מהירות גלישה" });
-    if (typeof spec.channels === "number") out.push({ value: nf.format(spec.channels), caption: CHANNELS_CAPTION(spec.channels) });
+    if (isCount(spec.channels)) out.push({ value: nf.format(spec.channels), caption: CHANNELS_CAPTION(spec.channels) });
     // ⚠️ אותה שגיאה שהערה על `lineTiers` מזהירה מפניה, רק שכאן היא
     // **חיה**: id 70 הוא ממיר אחד, והכרטיס הכריז "1 ממירים".
     /*
@@ -460,7 +512,7 @@ export function cardStats(pkg: Package): Stat[] {
      * אותו שער `upTo` שחל כבר על הנפח, הדקות וה-SMS, ועוד תווית שאינה
      * אומרת "כלולים" על מה שאינו כלול.
      */
-    if (typeof spec.converters === "number") {
+    if (isCount(spec.converters)) {
       const cap = upTo(pkg, spec.converters);
       out.push({
         value: `${cap}${nf.format(spec.converters)}`,
@@ -489,7 +541,16 @@ export function cardStats(pkg: Package): Stat[] {
   const spec = pkg.spec as ElectricitySpec;
   const out: Stat[] = [];
   if (spec.allHours) out.push({ value: "כל השעות", caption: "מתי ההנחה חלה" });
-  else if (spec.hoursText) out.push({ value: spec.hoursText, caption: "שעות ההנחה" });
+  /*
+   * ⚠️ `typeof === "string"` ולא טרות'יניס. זה השדה היחיד בקטלוג שמודפס
+   * **כמות שהוא**, בלי `nf.format` ובלי `shekels` שידרדרו ערך פגום — ולכן
+   * ערך שאינו מחרוזת אינו מודפס כ-"NaN" אלא מועבר ל-React כאובייקט,
+   * ו-React זורק ("Objects are not valid as a React child") **בתוך רינדור
+   * שרת**: כל דף `/lp` מחזיר 500 במקום שכרטיס אחד יציג פחות. אותו
+   * תרחיש בדיוק שההערה על `shekels` מתארת, רק שכאן הנפילה מוחלטת.
+   */
+  else if (typeof spec.hoursText === "string" && spec.hoursText)
+    out.push({ value: spec.hoursText, caption: "שעות ההנחה" });
   /*
    * ⚠️ עם שער, מאותה סיבה ש-`shekels` מדרדר ל-"—": הקטלוג נכנס דרך
    * `as unknown as Catalog` ואין ולידציה בזמן ריצה. ערך רביעי ברענון
@@ -531,7 +592,7 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
      * שער שקורא תווית קבועה ("דקות לחו״ל") היה מפספס את האריח של
      * חבילה עם דקה אחת, ואותה עובדה הייתה מודפסת פעמיים.
      */
-    if (typeof s.intlMinutes === "number" && !tiled.has(INTL_MINUTES_CAPTION(s.intlMinutes))) {
+    if (isCount(s.intlMinutes) && !tiled.has(INTL_MINUTES_CAPTION(s.intlMinutes))) {
       rows.push({
         label: INTL_MINUTES_CAPTION(s.intlMinutes),
         value: `${upTo(pkg, s.intlMinutes)}${nf.format(s.intlMinutes)}`,
@@ -541,15 +602,29 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     fee("דמי חיבור", s.connectionFee);
     fee("דמי מעבר", s.transferFee);
     if (s.esim) rows.push({ label: "eSIM", value: "נתמך" });
-    if (s.lineTiers?.length) {
-      rows.push({
-        label: "מחיר לפי מספר קווים",
-        // מדרגה של קו אחד אינה קיימת בקטלוג היום, אבל "1 קווים" הוא
-        // בדיוק הסוג של שגיאה שרענון קטלוג מכניס בלי שאף אחד ישים לב.
-        value: s.lineTiers
+    /*
+     * ⚠️ `Array.isArray` ולא `?.length`. **למחרוזת יש `length`**, ולכן
+     * `lineTiers: "3 קווים ב99"` — בדיוק הצורה שהמחלץ מייצר כשהוא
+     * קורא את מדרגות הקווים מהשם ולא מטבלה — עבר את השער והגיע
+     * ל-`.map`, ש**זורק** `s.lineTiers.map is not a function` בתוך
+     * רינדור שרת: כל דף `/lp` מחזיר 500 במקום שכרטיס אחד יציג שורה
+     * אחת פחות. זו הנפילה שההערה על `shekels` נכתבה כדי למנוע, רק
+     * שהיא נשארה פתוחה על השדה היחיד כאן שאינו סקלר — ו-`shekels`
+     * שבתוך ה-`map` כבר מגודר, כלומר הכוונה הייתה ברורה.
+     */
+    // מדרגה של קו אחד אינה קיימת בקטלוג היום, אבל "1 קווים" הוא
+    // בדיוק הסוג של שגיאה שרענון קטלוג מכניס בלי שאף אחד ישים לב.
+    // ⚠️ גם `isCount` על `lines`, מאותו טעם: `lines: NaN` הדפיס
+    // "NaN קווים" לצד מחיר שכן נמסר. מדרגה בלי כמות שמישה אינה
+    // מדרגה, ושורה שכל מדרגותיה נפלו אינה נכתבת כלל — תווית עם ערך
+    // ריק היא בדיוק אותו "חור" שהאריחים נזהרים ממנו.
+    const tiers = Array.isArray(s.lineTiers)
+      ? s.lineTiers
+          .filter((t) => t && isCount(t.lines))
           .map((t) => `${t.lines === 1 ? "קו אחד" : `${t.lines} קווים`} ${shekels(t.price)}`)
-          .join(" · "),
-      });
+      : [];
+    if (tiers.length) {
+      rows.push({ label: "מחיר לפי מספר קווים", value: tiers.join(" · ") });
     }
   }
 
@@ -562,7 +637,11 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
      * (ids 3, 81, 92, 104) היא לא אומרת דבר — השורה הופכת לשכפול
      * מדויק של האריח שמעליה, ומבטיחה זוג שהנתון לא מסר.
      */
-    if (speed && s.uploadMbps != null) {
+    // ⚠️ `isCount` ולא `!= null`, כדי להסכים עם `speedLabel`: העלאה
+    // פגומה נופלת שם לצורת המהירות הבודדת, והשער הזה היה ממשיך
+    // להדפיס עליה את התווית הזוגית — כלומר "מהירות (הורדה/העלאה)"
+    // מעל ערך שיש בו מספר אחד בלבד.
+    if (speed && isCount(s.uploadMbps)) {
       rows.push({ label: "מהירות (הורדה/העלאה)", value: speed });
     }
     // ⚠️ עלות מותנית אינה מקבלת אריח (ראה `cardStats`), ולכן `tiled`
@@ -605,7 +684,11 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
      * רשומה כזו בקטלוג של היום; זה שער לרענון הבא.
      */
     const hoursTiled = tiled.has("שעות ההנחה") || tiled.has("מתי ההנחה חלה");
-    if (s.hoursText && !hoursTiled) rows.push({ label: "שעות ההנחה", value: s.hoursText });
+    // ⚠️ `typeof === "string"` כמו באריח שמעל — זה אותו שדה, ואותה
+    // נפילה: ערך שאינו מחרוזת מגיע ל-React כאובייקט ומפיל את הרינדור.
+    if (typeof s.hoursText === "string" && s.hoursText && !hoursTiled) {
+      rows.push({ label: "שעות ההנחה", value: s.hoursText });
+    }
     if (typeof s.maxMonthlyBill === "number") rows.push({ label: "תקרת חשבונית חודשית", value: shekels(s.maxMonthlyBill) });
     // אותה תלת-מצביות כמו למעלה, בכיוון ההפוך: רק השלילי נכתב,
     // ולכן מסלול עם התחייבות מוצהרת נראה כמו מסלול שלא ידוע עליו דבר.
@@ -710,8 +793,10 @@ export function compareRows(items: Package[]): CompareRow[] {
    * נשארת אחת (אותה עובדה, בלי "—" הדדי) ולעולם אינה מבטיחה זוג שהנתון
    * לא מסר. ראה `SPEED_TILE_CAPTION`.
    */
+  // ⚠️ `isCount` ולא `!= null`, מאותו טעם: `speedLabel` אינו מדפיס זוג
+  // על העלאה פגומה, והשער הזה היה בוחר את התווית הזוגית בכל זאת.
   const speedFactLabel = items.every(
-    (p) => p.category !== "home" || (p.spec as HomeSpec).uploadMbps != null,
+    (p) => p.category !== "home" || isCount((p.spec as HomeSpec).uploadMbps),
   )
     ? SPEED_PAIR_LABEL
     : SPEED_TILE_CAPTION;

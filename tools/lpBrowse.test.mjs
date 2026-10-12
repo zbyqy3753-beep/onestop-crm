@@ -628,3 +628,143 @@ test("מסננים: הפרדיקט מנטרל ציר אחד בלבד", () => {
     false,
   );
 });
+
+/* ────────────────────────────────────────────────────────────────────
+ * 7. הקומפרטור הוא סדר מלא, והמסננים אינם מסך ללא מוצא
+ * ──────────────────────────────────────────────────────────────────── */
+
+const SORT_KEYS = ["recommended", "price-asc", "price-desc", "after-asc"];
+
+/*
+ * ⚠️ מונוטוניות לבדה אינה מספיקה. שלושת הקומפרטורים כאן אינם
+ * `a - b` פשוט: `byPriceDesc` מפריד קודם לפי `priceRankable` ואז
+ * הופך את `byPrice`, ו-`byAfterPrice` מפריד לפי `hasKnownAfterPrice`
+ * ומדרג כל קבוצה בשדה **אחר** (`afterPrice` מול `byPrice`). חלוקה
+ * לקבוצות שאינה עקבית עם הדירוג בתוכן היא בדיוק הצורה שבה קומפרטור
+ * מפסיק להיות טרנזיטיבי — ואז `Array.sort` מחזיר סדר שתלוי בסדר
+ * הקלט, כלומר שתי קטגוריות עם אותן חבילות מסודרות אחרת. הבדיקה
+ * מאמתת את שלוש התכונות על הקטלוג האמיתי ובכל ארבעת המיונים.
+ */
+test("מיון: כל מיון הוא סדר מלא — אנטי-סימטרי וטרנזיטיבי", () => {
+  /** הסימן שהקומפרטור מחזיר, דרך `sortCatalog` בלבד (הוא אינו מיוצא). */
+  const sign = (sort) => (a, b) => {
+    const forward = sortCatalog([a, b], sort);
+    if (forward[0] !== a) return 1;
+    // מיון יציב: אם השניים שקולים, `[b, a]` נשאר `[b, a]`.
+    return sortCatalog([b, a], sort)[0] === b ? 0 : -1;
+  };
+
+  for (const cat of ["cellular", "home", "electricity"]) {
+    const pkgs = byCategory(ALL, cat);
+    for (const sort of SORT_KEYS) {
+      const cmp = sign(sort);
+      const n = pkgs.length;
+      const m = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: n }, (_, j) => cmp(pkgs[i], pkgs[j])),
+      );
+      for (let i = 0; i < n; i++) {
+        assert.equal(m[i][i], 0, `${cat}/${sort}: ${pkgs[i].id} אינו שקול לעצמו`);
+        for (let j = 0; j < n; j++) {
+          // ⚠️ `ok` ולא `equal`: `-0` ו-`0` אינם שווים ב-`assert.strict`.
+          assert.ok(
+            m[i][j] === -m[j][i],
+            `${cat}/${sort}: ${pkgs[i].id} מול ${pkgs[j].id} אינו אנטי-סימטרי`,
+          );
+        }
+      }
+      for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+          if (m[i][j] > 0) continue;
+          for (let k = 0; k < n; k++) {
+            if (m[j][k] > 0) continue;
+            assert.ok(
+              m[i][k] <= 0,
+              `${cat}/${sort}: ${pkgs[i].id} ≤ ${pkgs[j].id} ≤ ${pkgs[k].id} אך ${pkgs[i].id} > ${pkgs[k].id}`,
+            );
+          }
+        }
+      }
+    }
+  }
+});
+
+/*
+ * ⚠️ מסנן פעיל חייב להיות ניתן לביטול — והבדיקה שמעל מאמתת את זה
+ * על צירוף **בודד** של שני מסננים. כאן זה נבדק על מסלול שלם של
+ * לחיצות: בכל צעד נלחץ רק פקד שבאמת מופיע על המסך (רשימת החברות,
+ * שבבי הסוג כשה-fieldset שלהם מרונדר, והמחוון רק כשהוא קיים), ואז
+ * נדרשות שתי תכונות — שכל אילוץ פעיל נמצא על פקד גלוי, ושמסך של
+ * אפס תוצאות אפשר לצאת ממנו בביטול **אחד**, בלי "נקה הכל" שמוחק
+ * גם את שאר המסננים. זו הצורה המדויקת של "0 חבילות, תג שמראה 2,
+ * ושום פקד לבטל" שכבר קרה כאן פעמיים.
+ */
+test("מסננים: אין מסלול לחיצות שנתקע", () => {
+  for (const cat of ["cellular", "home", "electricity"]) {
+    const pkgs = byCategory(ALL, cat);
+    const bounds = priceBoundsOf(pkgs);
+    const total = catalogResults(pkgs, NONE, "recommended").length;
+
+    /* מה שהעמודה הצדדית מרנדרת בפועל עבור מצב המסננים הנתון. */
+    const visible = (f) => {
+      const types = typeFacets(pkgs, f);
+      return {
+        providers: providerFacets(pkgs, f).map((o) => o.slug),
+        // ⚠️ אותו שער כמו ב-JSX: `length > 1 || יש סוג מסומן`.
+        types: types.length > 1 || f.types.length > 0 ? types.map(([t]) => t) : [],
+        slider: bounds != null && cat !== "electricity",
+      };
+    };
+
+    /* מסלול דטרמיניסטי — אותן לחיצות בכל הרצה. */
+    let seed = 12345;
+    const pick = (n) => ((seed = (seed * 48271) % 2147483647) % n);
+
+    for (let walk = 0; walk < 200; walk++) {
+      let f = NONE;
+      for (let step = 0; step < 6; step++) {
+        const vis = visible(f);
+        const axis = pick(3);
+        if (axis === 0 && vis.providers.length > 0) {
+          const v = vis.providers[pick(vis.providers.length)];
+          f = {
+            ...f,
+            providers: f.providers.includes(v)
+              ? f.providers.filter((x) => x !== v)
+              : [...f.providers, v],
+          };
+        } else if (axis === 1 && vis.types.length > 0) {
+          const v = vis.types[pick(vis.types.length)];
+          f = { ...f, types: f.types.includes(v) ? f.types.filter((x) => x !== v) : [...f.types, v] };
+        } else if (axis === 2 && vis.slider) {
+          const v = bounds.min + pick(bounds.max - bounds.min + 1);
+          f = { ...f, maxPrice: v >= bounds.max ? null : v };
+        }
+
+        const where = `${cat} ${JSON.stringify(f)}`;
+        const after = visible(f);
+        for (const slug of f.providers) {
+          assert.ok(after.providers.includes(slug), `${where}: החברה ${slug} פעילה ואינה על המסך`);
+        }
+        for (const type of f.types) {
+          assert.ok(after.types.includes(type), `${where}: הסוג ${type} פעיל ואינו על המסך`);
+        }
+        if (f.maxPrice != null) assert.ok(after.slider, `${where}: מחוון פעיל ואינו על המסך`);
+
+        const results = catalogResults(pkgs, f, "recommended").length;
+        const badge = f.providers.length + f.types.length + (f.maxPrice != null ? 1 : 0);
+        if (badge === 0) assert.equal(results, total, `${where}: אין מסננים והתוצאות צומצמו`);
+        if (results !== 0) continue;
+
+        const undos = [
+          ...f.providers.map((x) => ({ ...f, providers: f.providers.filter((y) => y !== x) })),
+          ...f.types.map((x) => ({ ...f, types: f.types.filter((y) => y !== x) })),
+          ...(f.maxPrice != null ? [{ ...f, maxPrice: null }] : []),
+        ];
+        assert.ok(
+          undos.some((g) => catalogResults(pkgs, g, "recommended").length > 0),
+          `${where}: אפס תוצאות ואין ביטול בודד שמחזיר תוצאה`,
+        );
+      }
+    }
+  }
+});

@@ -20,11 +20,14 @@ import { catalog } from "../src/app/lp/catalog/catalog.ts";
 import {
   cardStats,
   compareRows,
+  dataLabel,
   detailRows,
   discountIsCapped,
   discountScope,
   headlineValue,
+  heroRiseLine,
   priceNote,
+  promoRise,
   shekels,
   speedLabel,
 } from "../src/app/lp/catalog/format.ts";
@@ -1422,4 +1425,215 @@ test("כרטיס: פאנל הפרטים נפתח גם כשכל מה שיש לר�
   const both = PACKAGES.filter(isListable).find((p) => p.benefits && p.description);
   assert.ok(both, "אין רשומה עם הטבות ותיאור — עדכן את הבדיקה");
   assert.ok(html(both).includes("הטבות"));
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * חלק ג': רשומה פגומה — אף פונקציית פורמוט אינה מדפיסה "NaN" ואינה מפילה
+ * את הרינדור.
+ *
+ * ⚠️ `shekels` כבר מדרדר עמלה פגומה לקו מפריד (הבדיקה שלמעלה), אבל זה
+ * השדה היחיד שהיה מגודר. כל **מונה** בקטלוג מודפס דרך `nf.format` חשוף,
+ * ושני שערים שונים נתנו לו לעבור: `== null` (שמחרוזת עוברת בו) ו-
+ * `typeof === "number"` (ש-`NaN` עובר בו, כי `NaN` הוא number). בנוסף
+ * שלושה שדות אינם מספרים כלל — `lineTiers` (מערך), `hoursText` ו-
+ * `priceAfterPromoNote` (טקסט חופשי) — ועליהם הכשל אינו "NaN" אלא
+ * **נפילה**: `.map is not a function` ו-"Objects are not valid as a React
+ * child", בתוך רינדור שרת, כלומר `/lp` כולו מחזיר 500.
+ */
+const MALFORMED = ["1000", "600 Mb", "", NaN, Infinity, -0.5, {}, [], true, null, undefined];
+
+const SPEC_BY_CATEGORY = {
+  cellular: ["dataGb", "unlimitedData", "minutes", "sms", "intlMinutes", "simCost",
+    "connectionFee", "transferFee", "esim", "lineTiers"],
+  home: ["downloadMbps", "uploadMbps", "converters", "extraConverterCost", "extraExtenderCost",
+    "installationCost", "routerIncluded", "extenderIncluded", "channels", "vodIncluded"],
+  electricity: ["discountPercent", "allHours", "hoursText", "customerType", "commitment",
+    "smartMeterRequired", "maxMonthlyBill"],
+};
+const TOP_LEVEL = ["price", "priceAfterPromo", "priceAfterPromoNote", "discountPercent"];
+
+/** כל מה שהכרטיס והטבלה מדפיסים על רשומה אחת, כזוגות תווית/ערך. */
+const everyPrintedValue = (p) => {
+  const out = [["כותרת", headlineValue(p)], ["פס ההירו", heroRiseLine(p) ?? "—"]];
+  const note = priceNote(p);
+  if (note) out.push([note.label, note.value]);
+  if (p.category === "cellular") out.push(["גלישה", dataLabel(p, p.spec) ?? "—"]);
+  if (p.category === "home") out.push(["מהירות", speedLabel(p, p.spec) ?? "—"]);
+  for (const s of cardStats(p)) out.push([s.caption, s.value]);
+  for (const r of detailRows(p)) out.push([r.label, r.value]);
+  // הטבלה מול עצמה: גם `compareRows` עוברת על אותם שני המקורות.
+  for (const row of compareRows([p, p])) for (const v of row.values) out.push([row.label, v]);
+  return out;
+};
+
+test("תצוגה: שדה spec פגום אינו מדפיס NaN ואינו מפיל את הרינדור", () => {
+  for (const p of PACKAGES) {
+    for (const field of [...SPEC_BY_CATEGORY[p.category], ...TOP_LEVEL]) {
+      const inSpec = SPEC_BY_CATEGORY[p.category].includes(field);
+      for (const value of MALFORMED) {
+        const mutated = { ...p, spec: { ...p.spec } };
+        const target = inSpec ? mutated.spec : mutated;
+        if (value === undefined) delete target[field];
+        else target[field] = value;
+
+        const where = `${p.id} · ${field} = ${JSON.stringify(value) ?? "undefined"}`;
+        let printed;
+        assert.doesNotThrow(() => {
+          printed = everyPrintedValue(mutated);
+        }, `${where}: הפורמוט זרק — רינדור השרת של כל /lp נופל`);
+
+        for (const [label, printedValue] of printed) {
+          // ⚠️ מחרוזת ולא "משהו שנראה כמו מחרוזת": אובייקט שמגיע ל-React
+          // כילד זורק, ולכן זה אותו כשל כמו זריקה — רק מאוחר יותר.
+          assert.equal(
+            typeof printedValue,
+            "string",
+            `${where}: "${label}" אינו מחרוזת (${typeof printedValue}) — React זורק על ילד כזה`,
+          );
+          assert.ok(
+            !/NaN|Infinity|undefined|\[object/.test(printedValue),
+            `${where}: "${label}" הודפס כ-"${printedValue}"`,
+          );
+          assert.notEqual(printedValue.trim(), "", `${where}: "${label}" הודפס כתווית בלי ערך`);
+        }
+      }
+    }
+  }
+});
+
+test("תצוגה: מדרגות קווים שאינן מערך אינן מפילות את הדף", () => {
+  // ⚠️ **למחרוזת יש `length`**, ולכן `s.lineTiers?.length` נתן לה לעבור
+  // אל `.map`. זו הצורה שהמחלץ מייצר כשהוא קורא את המדרגות מהשם.
+  const cellular = PACKAGES.find((p) => p.category === "cellular");
+  const tiersRow = (lineTiers) =>
+    detailRows({ ...cellular, spec: { ...cellular.spec, lineTiers } }).find(
+      (r) => r.label === "מחיר לפי מספר קווים",
+    );
+
+  assert.equal(tiersRow("3 קווים ב99"), undefined, "מחרוזת הודפסה כמדרגות");
+  assert.equal(tiersRow({ lines: 2, price: 35 }), undefined, "אובייקט בודד אינו מערך מדרגות");
+  assert.equal(tiersRow([]), undefined);
+  // מדרגה בלי כמות שמישה נשמטת, ושורה שכל מדרגותיה נשמטו אינה נכתבת.
+  assert.equal(tiersRow([{ lines: NaN, price: 35 }]), undefined, "שורה עם תווית ובלי ערך");
+  assert.equal(
+    tiersRow([{ lines: 1, price: 39 }, { lines: NaN, price: 35 }, { lines: 3, price: 33 }]).value,
+    "קו אחד ₪39 · 3 קווים ₪33",
+  );
+  // ומערך תקין ממשיך להתנהג כמו קודם.
+  assert.equal(tiersRow([{ lines: 2, price: 35 }]).value, "2 קווים ₪35");
+});
+
+test("תצוגה: טקסט חופשי שאינו מחרוזת אינו מגיע למסך", () => {
+  /*
+   * ⚠️ `hoursText` ו-`priceAfterPromoNote` מודפסים **מילה במילה**, בלי
+   * `shekels` ובלי `nf.format` שידרדרו ערך פגום — ולכן ערך שאינו
+   * מחרוזת אינו הופך ל-"NaN" אלא מגיע ל-React כאובייקט ומפיל את הדף.
+   */
+  const elec = PACKAGES.find((p) => p.category === "electricity" && p.spec.hoursText);
+  assert.ok(elec, "אין מסלול חשמל עם שעות הנחה — עדכן את הבדיקה");
+  for (const hoursText of [{ a: 1 }, 7, ["23:00"]]) {
+    const mutated = { ...elec, spec: { ...elec.spec, hoursText } };
+    assert.deepEqual(cardStats(mutated).filter((s) => s.caption === "שעות ההנחה"), []);
+    assert.deepEqual(detailRows(mutated).filter((r) => r.label === "שעות ההנחה"), []);
+  }
+  // והנוסח האמיתי ממשיך לעלות לאריח.
+  assert.equal(cardStats(elec).some((s) => s.value === elec.spec.hoursText), true);
+
+  const monthly = PACKAGES.find((p) => p.category !== "electricity");
+  for (const priceAfterPromoNote of [{ a: 1 }, 44.9, []]) {
+    const mutated = { ...monthly, priceAfterPromo: null, priceAfterPromoNote };
+    assert.equal(promoRise(mutated), null, `נוסח פגום (${typeof priceAfterPromoNote}) נקרא כהצהרה`);
+    assert.equal(heroRiseLine(mutated), null);
+  }
+  assert.deepEqual(
+    promoRise({ ...monthly, priceAfterPromo: null, priceAfterPromoNote: "לאחר שנה 69.9" }),
+    { kind: "note", note: "לאחר שנה 69.9" },
+  );
+});
+
+test("תצוגה: מהירות העלאה פגומה אינה מתחזה לזוג", () => {
+  /*
+   * ⚠️ `speedLabel` שאל `uploadMbps != null` בלבד, ולכן `NaN` הדפיס
+   * "1,000/NaNMbps" — חצי מספר שנמסר וחצי חור. העלאה פגומה נקראת
+   * כ"לא נמסרה", וכל שלושת השערים שקוראים את השדה חייבים להסכים:
+   * `speedLabel`, תווית "מהירות (הורדה/העלאה)" ב-`detailRows`,
+   * ובחירת התווית בטבלה (`compareRows`).
+   */
+  const pair = PACKAGES.find(
+    (p) =>
+      p.category === "home" &&
+      typeof p.spec.downloadMbps === "number" &&
+      typeof p.spec.uploadMbps === "number",
+  );
+  assert.ok(pair, "אין חבילה ביתית עם שתי מהירויות — עדכן את הבדיקה");
+
+  for (const uploadMbps of [NaN, "100", {}]) {
+    const mutated = { ...pair, spec: { ...pair.spec, uploadMbps } };
+    const label = speedLabel(mutated, mutated.spec);
+    assert.ok(!label.includes("/"), `העלאה פגומה הודפסה כזוג: "${label}"`);
+    assert.deepEqual(
+      detailRows(mutated).filter((r) => r.label === "מהירות (הורדה/העלאה)"),
+      [],
+      "התווית הזוגית הודפסה מעל מספר אחד",
+    );
+    assert.ok(
+      compareRows([mutated, pair]).some((r) => r.label === "מהירות גלישה"),
+      "הטבלה בחרה את התווית הזוגית על נתון שאינו זוג",
+    );
+  }
+
+  // והורדה פגומה מורידה את האריח כולו, ולא מדפיסה "NaNMbps".
+  for (const downloadMbps of [NaN, "1000 Mb", {}]) {
+    const mutated = { ...pair, spec: { ...pair.spec, downloadMbps } };
+    assert.equal(speedLabel(mutated, mutated.spec), null);
+    assert.deepEqual(cardStats(mutated).filter((s) => s.caption === "מהירות גלישה"), []);
+  }
+});
+
+test("תצוגה: הכרטיס אינו מצמיד 'הנחה' או 'לחודש' לקו מפריד", async () => {
+  /*
+   * ⚠️ `headlineCell` ב-`CompareTray` כבר אוכף את זה ("כשאין מספר אין גם
+   * סיומת"), והכרטיס המשיך להרכיב את החיבור בעצמו — ולכן על **אותה**
+   * רשומה הטבלה הדפיסה "—" והכרטיס "עד — הנחה". id 144
+   * (`discountPercent: null`) ו-ids 18/22 (`price: 0`) הם הצורה הזו
+   * בקטלוג של היום.
+   */
+  const Module = (await import("node:module")).default;
+  const React = (await import("react")).default;
+  const { renderToStaticMarkup } = await import("react-dom/server");
+
+  const loadModule = Module._load;
+  Module._load = function (request, parent, isMain) {
+    if (/(^|[/])actions(\.ts)?$/.test(request)) {
+      return { __esModule: true, submitLandingLead: async () => ({ status: "sent" }) };
+    }
+    return loadModule.call(this, request, parent, isMain);
+  };
+  let PackageCard;
+  try {
+    ({ PackageCard } = await import("../src/app/lp/ui/PackageCard.tsx"));
+  } finally {
+    Module._load = loadModule;
+  }
+  const text = (pkg) =>
+    renderToStaticMarkup(React.createElement(PackageCard, { pkg }))
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ");
+
+  const noHeadline = PACKAGES.filter((p) => headlineValue(p) === "—");
+  expectFlags(noHeadline.map((p) => p.id), ["18", "22", "144"], "רשומות בלי כותרת שמישה");
+
+  for (const p of noHeadline) {
+    const out = text(p);
+    assert.ok(!/—\s*הנחה/.test(out), `${p.id}: הכרטיס הדפיס "— הנחה"`);
+    assert.ok(!/—\s*לחודש/.test(out), `${p.id}: הכרטיס הדפיס "— לחודש"`);
+    assert.ok(!/עד\s*—/.test(out), `${p.id}: הכרטיס הדפיס "עד —"`);
+    assert.ok(out.includes("—"), `${p.id}: המקף עצמו נעלם`);
+  }
+
+  // וכרטיס עם כותרת שמישה ממשיך לשאת את הסיומת שלו.
+  const money = PACKAGES.find((p) => p.category === "cellular" && isListable(p));
+  assert.match(text(money), /לחודש/);
+  const discount = PACKAGES.find((p) => p.category === "electricity" && isListable(p));
+  assert.match(text(discount), /הנחה/);
 });

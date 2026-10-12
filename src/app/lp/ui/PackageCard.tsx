@@ -79,6 +79,22 @@ export function PackageCard({
    */
   const note = priceNote(pkg);
 
+  /*
+   * ⚠️ כשאין מספר אין גם סיומת — בדיוק הכלל ש-`headlineCell`
+   * ב-`CompareTray` כבר אוכף ("'— הנחה' הוא תווית שמבטיחה נתון שהתא
+   * עצמו מכחיש"), ושנוסף שם בלבד. הכרטיס המשיך להרכיב את החיבור
+   * בעצמו, ולכן על אותה רשומה — id 144, `discountPercent: null` —
+   * הטבלה הדפיסה "—" והכרטיס שמעליה "עד — הנחה": שלוש מילים שמצהירות
+   * שיש כאן שיעור הנחה, סביב מקף שאומר שאין. זו הפעם הששית שאותו
+   * שער נוסף לצד אחד ולא לשני (ראה `discountIsCapped`).
+   *
+   * השדה אינו מוצג היום (`isListable` פוסל אותו, ושני נתיבי הכרטיס
+   * מקבלים `listable(...)`), אבל `headlineValue` מדרדר ל-"—" גם על
+   * עמלה פגומה ברענון הבא — והכרטיס הוא הנתיב שאינו מגודר בעצמו.
+   */
+  const headline = headlineValue(pkg);
+  const headlineKnown = headline !== "—";
+
   return (
     /*
      * ⚠️ בלי `interactive`. `Card` מגדיר את הדגל כתשובה לשאלה אחת —
@@ -197,14 +213,16 @@ export function PackageCard({
             {isElectric ? (
               <div>
                 {/* ⚠️ "עד" כשההנחה מדורגת — ראה `discountIsCapped`. */}
-                {discountIsCapped(pkg) && <span className="me-1 text-sm text-lp-ink-2">עד</span>}
-                <span className="nums text-3xl font-extrabold text-lp-ink">{headlineValue(pkg)}</span>
-                <span className="ms-1 text-sm text-lp-ink-2">הנחה</span>
+                {headlineKnown && discountIsCapped(pkg) && (
+                  <span className="me-1 text-sm text-lp-ink-2">עד</span>
+                )}
+                <span className="nums text-3xl font-extrabold text-lp-ink">{headline}</span>
+                {headlineKnown && <span className="ms-1 text-sm text-lp-ink-2">הנחה</span>}
               </div>
             ) : (
               <div>
-                <span className="nums text-3xl font-extrabold text-lp-ink">{headlineValue(pkg)}</span>
-                <span className="ms-1 text-sm text-lp-ink-2">לחודש</span>
+                <span className="nums text-3xl font-extrabold text-lp-ink">{headline}</span>
+                {headlineKnown && <span className="ms-1 text-sm text-lp-ink-2">לחודש</span>}
               </div>
             )}
           </div>
