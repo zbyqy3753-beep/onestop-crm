@@ -33,6 +33,7 @@ export function LeadCardList({
   hasFilters,
   onClearFilters,
   canSeeAll,
+  canSeeTeam = false,
   onBulkAssign,
   onBulkStatus,
   onBulkDelete,
@@ -65,6 +66,8 @@ export function LeadCardList({
   onClearFilters: () => void;
   /** רואה את כל הארגון — קובע גם את שם המשויך על הכרטיס וגם את המצב הריק */
   canSeeAll: boolean;
+  /** בעל עסק — רואה את שם המטפל מהצוות שלו על הכרטיס */
+  canSeeTeam?: boolean;
   onBulkAssign: (assigneeId: string | null) => void;
   onBulkStatus: (to: LeadStatus) => void;
   onBulkDelete: () => void;
@@ -198,6 +201,9 @@ export function LeadCardList({
             const tier = tiers?.of(lead);
             const opens =
               tier !== undefined && (i === 0 || tiers!.of(leads[i - 1]) !== tier);
+            const assignee = lead.assigneeId
+              ? userById.get(lead.assigneeId)
+              : undefined;
 
             return (
               <Fragment key={lead.id}>
@@ -215,8 +221,12 @@ export function LeadCardList({
                   onStar={(next) => onStar(lead.id, next)}
                   onPatch={(patch) => onPatch(lead.id, patch)}
                   canSeeAll={canSeeAll}
-                  assigneeName={
-                    lead.assigneeId ? userById.get(lead.assigneeId)?.name : undefined
+                  showAssignee={canSeeAll || canSeeTeam}
+                  assigneeName={assignee?.name}
+                  assigneeTeamOwner={
+                    assignee?.teamOwnerId
+                      ? (userById.get(assignee.teamOwnerId)?.name ?? "")
+                      : undefined
                   }
                 />
               </Fragment>

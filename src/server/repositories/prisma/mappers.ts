@@ -126,6 +126,7 @@ export function userFromPrisma(row: PUser): User {
     active: row.active,
     store: row.store ?? undefined,
     leadSourceName: row.leadSourceName ?? undefined,
+    teamOwnerId: row.teamOwnerId ?? undefined,
     subscriptionEndsAt: row.subscriptionEndsAt?.toISOString(),
   };
 }

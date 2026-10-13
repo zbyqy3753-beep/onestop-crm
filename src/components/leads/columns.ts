@@ -48,6 +48,11 @@ export interface ColumnDef {
    * את הנתון, זו החלטה שצריכה לרדת לשליפה ב-`leads/page.tsx`.
    */
   fullAccessOnly?: boolean;
+  /**
+   * עמודה ניהולית שגם בעל עסק רואה — הוא רואה לידים של כמה עובדים,
+   * ולכן "מי מחזיק" חוזר להיות שאלה. ראה `canLeadTeam`.
+   */
+  teamVisible?: boolean;
 }
 
 export const COLUMNS: ColumnDef[] = [
@@ -63,7 +68,7 @@ export const COLUMNS: ColumnDef[] = [
   { key: "cost", label: "עלות", defaultOn: true },
   // מי מחזיק את הליד הוא נתון ניהולי: לעובד כל הלידים שהוא רואה הם
   // ממילא שלו, ולכן העמודה רק תופסת רוחב אצלו
-  { key: "assignee", label: "משויך ל", defaultOn: true, fullAccessOnly: true },
+  { key: "assignee", label: "משויך ל", defaultOn: true, fullAccessOnly: true, teamVisible: true },
   { key: "activity", label: "פעילות", defaultOn: true },
   // מאיפה הליד הגיע הוא חלק מהחלטת החיוג, לא מטא-דאטה: פנייה מטופס
   // ולקוח ממחזור הם שתי שיחות שונות לגמרי. הייתה כבויה כברירת מחדל
@@ -125,11 +130,12 @@ export const TOGGLEABLE = COLUMNS.filter((c) => !c.alwaysOn);
  * ניטרלי לתפקיד, ולכן עובד שיקודם למנהל יראה את העמודות מיד ובלי
  * שהבחירות האחרות שלו יידרסו.
  */
-export function allowedColumns<T extends { fullAccessOnly?: boolean }>(
-  cols: T[],
-  canSeeAll: boolean,
-): T[] {
-  return canSeeAll ? cols : cols.filter((c) => !c.fullAccessOnly);
+export function allowedColumns<
+  T extends { fullAccessOnly?: boolean; teamVisible?: boolean },
+>(cols: T[], canSeeAll: boolean, canSeeTeam = false): T[] {
+  return canSeeAll
+    ? cols
+    : cols.filter((c) => !c.fullAccessOnly || (canSeeTeam && c.teamVisible));
 }
 
 const STORAGE_KEY = "onestop.leads.columns";

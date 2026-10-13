@@ -19,7 +19,7 @@ import {
 import type { LeadPatch } from "@/app/(app)/leads/actions";
 import { TONE_VAR, date, phone, relative, until } from "@/lib/format";
 import { dateTimeInputValue } from "@/lib/tz";
-import { Badge } from "@/components/ui/primitives";
+import { Badge, TeamBadge } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import {
   CostCell,
@@ -268,6 +268,9 @@ export function LeadRow({
                 <span className="max-w-[110px] truncate" title={assignee.name}>
                   {assignee.name}
                 </span>
+                {assignee.teamOwnerId && (
+                  <TeamBadge ownerName={userById.get(assignee.teamOwnerId)?.name} />
+                )}
               </span>
             ) : (
               <span className="text-xs text-ink-4">ללא שיוך</span>

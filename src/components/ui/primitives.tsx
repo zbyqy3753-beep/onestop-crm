@@ -26,6 +26,37 @@ export function Badge({
   );
 }
 
+/**
+ * סימון לעובד שמשויך לבעל עסק (`User.teamOwnerId`).
+ *
+ * מקור יחיד לכל המסכים — טבלת המשתמשים, מסך הצוות, שורת הליד והכרטיס
+ * — כדי ש"משויך" ייראה ויישמע אותו דבר בכל מקום.
+ */
+export function TeamBadge({
+  ownerName,
+  showOwner = false,
+  className = "",
+}: {
+  /** שם בעל העסק, אם ידוע — מוצג בטולטיפ ובקורא מסך */
+  ownerName?: string;
+  /** לכתוב את שם בעל העסק על התגית עצמה (במסכים שיש בהם מקום) */
+  showOwner?: boolean;
+  className?: string;
+}) {
+  const label = ownerName ? `משויך ל${ownerName}` : "משויך לבעל עסק";
+  return (
+    <span title={label} className="inline-flex min-w-0">
+      <Badge
+        tone="accent"
+        className={`min-w-0 !px-1.5 !py-0 text-[10px] ${className}`}
+      >
+        <Icon name="user" size={10} />
+        <span className="truncate">{showOwner ? label : "משויך"}</span>
+      </Badge>
+    </span>
+  );
+}
+
 /* ── כפתור ────────────────────────────────────────────────────────────── */
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";

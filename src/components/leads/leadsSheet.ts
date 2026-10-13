@@ -7,6 +7,7 @@ import {
   STATUS_CONFIG,
 } from "@/lib/domain/types";
 import type { SheetCell, SheetSpec } from "@/lib/xlsxWrite";
+import { allowedColumns } from "./columns";
 import { leadCost } from "@/server/services/economics";
 
 /**
@@ -30,6 +31,8 @@ interface SheetColumnSpec {
   cell: (lead: Lead) => SheetCell;
   /** ניהולית בלבד — אותו כלל כמו העמודות במסך, ראה `columns.ts` */
   fullAccessOnly?: boolean;
+  /** גם בעל עסק מקבל אותה — ראה `ColumnDef.teamVisible` */
+  teamVisible?: boolean;
 }
 
 /** תא טקסט, כולל המקרה של ערך חסר. */
@@ -42,6 +45,7 @@ export function leadsSheet(
   userById: Map<string, UserRef>,
   costs: LeadCostTable,
   canSeeAll: boolean,
+  canSeeTeam = false,
 ): SheetSpec {
   const all: SheetColumnSpec[] = [
     { header: "סוג", width: 10, cell: (l) => text(KIND_CONFIG[l.kind].short) },
@@ -55,6 +59,7 @@ export function leadsSheet(
       header: "שיוך",
       width: 16,
       fullAccessOnly: true,
+      teamVisible: true,
       cell: (l) =>
         text(l.assigneeId ? (userById.get(l.assigneeId)?.name ?? "") : "ללא שיוך"),
     },
@@ -102,7 +107,7 @@ export function leadsSheet(
 
   // ⚠️ בלי הסינון כאן, ההסתרה במסך הייתה קישוט: לחיצה על "ייצוא"
   // הייתה מחזירה את אותן עמודות בדיוק לאותו עובד.
-  const cols = canSeeAll ? all : all.filter((c) => !c.fullAccessOnly);
+  const cols = allowedColumns(all, canSeeAll, canSeeTeam);
 
   return {
     name: "לידים",

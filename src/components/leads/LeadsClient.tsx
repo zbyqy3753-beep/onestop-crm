@@ -108,6 +108,7 @@ export function LeadsClient({
   packages,
   currentUserId,
   canSeeAll,
+  canSeeTeam = false,
   canEditCosts,
   periodPicker,
 }: {
@@ -125,6 +126,14 @@ export function LeadsClient({
    * להסתרת פקדים שאין להם משמעות בחתך אישי.
    */
   canSeeAll: boolean;
+  /**
+   * בעל עסק שרואה גם את הלידים של העובדים המשויכים אליו.
+   *
+   * מדליק רק את מה שקשור ל"מי מחזיק": עמודת השיוך, הסינון לפי עובד
+   * ושם המטפל בכרטיס. לא את המקור, העלויות והפיננסים — אלה נשארים
+   * מאחורי `canSeeAll`. אותה הסתייגות: נוחות תצוגה, לא הרשאה.
+   */
+  canSeeTeam?: boolean;
   /**
    * האם המשתמש רשאי לערוך את עלויות רכישת הלידים.
    *
@@ -942,7 +951,7 @@ export function LeadsClient({
   function exportSheet() {
     downloadXlsx(
       leadsSheetFilename(),
-      leadsSheet(sorted, userById, leadCosts, canSeeAll),
+      leadsSheet(sorted, userById, leadCosts, canSeeAll, canSeeTeam),
     );
     notify(`${sorted.length} לידים יוצאו`);
   }
@@ -1002,7 +1011,7 @@ export function LeadsClient({
         onChange={applyFilters}
         users={users}
         searchRef={searchRef}
-        canFilterByAssignee={canSeeAll}
+        canFilterByAssignee={canSeeAll || canSeeTeam}
         selectedCount={narrow ? 0 : visibleSelected.length}
         onBulkAssign={(id) => assign(visibleSelected, id)}
         onBulkStatus={(to) => requestStatus(visibleSelected, to)}
@@ -1015,6 +1024,7 @@ export function LeadsClient({
               visible={visibleColumns}
               onChange={setVisibleColumns}
               canSeeAll={canSeeAll}
+              canSeeTeam={canSeeTeam}
             />
           )
         }
@@ -1080,6 +1090,7 @@ export function LeadsClient({
           hasFilters={hasActiveFilters}
           onClearFilters={() => applyFilters(EMPTY_FILTERS)}
           canSeeAll={canSeeAll}
+          canSeeTeam={canSeeTeam}
           /* דווקא visibleSelected ולא selected — פעולה קבוצתית חייבת
              לפגוע רק בלידים שהמשתמש רואה כרגע בחתך המסונן */
           onBulkAssign={(id) => assign(visibleSelected, id)}
@@ -1108,6 +1119,7 @@ export function LeadsClient({
           onAdd={() => setAddOpen(true)}
           hasFilters={hasActiveFilters}
           canSeeAll={canSeeAll}
+          canSeeTeam={canSeeTeam}
           busyIds={busyIds}
         />
       )}

@@ -9,11 +9,13 @@ import {
 } from "@/server/auth/supabaseAdmin";
 import type { Role } from "@/lib/domain/types";
 import { isRole } from "@/lib/domain/types";
+import { canJoinTeam, canLeadTeam } from "@/lib/domain/permissions";
 import { isIsraeliPhone, parsePhoneList } from "@/lib/format";
 import { passwordProblem } from "@/lib/password";
 import { isValidLoginId, toLoginEmail } from "@/lib/loginId";
 import { revalidateUserSurfaces } from "@/app/(app)/_revalidate";
 import { resetPasswords, type ResetLink } from "@/server/auth/passwordReset";
+import { authErrorInHebrew } from "@/server/auth/authErrors";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T }
@@ -25,32 +27,6 @@ export type ActionResult<T = undefined> =
  * ל-`lib/password.ts` — מודול טהור שגם עמוד קביעת הסיסמה של העובד
  * קורא לו, כדי שלא יתפתחו שתי מדיניות שונות בשני מסכים.
  */
-
-/**
- * הודעת שגיאה של Supabase → עברית.
- *
- * ⚠️ ההודעות של Supabase מגיעות באנגלית ומתארות את המודל שלו, לא את
- * המסך שלנו: מנהל שרואה "Unable to validate email address: invalid
- * format" אחרי שהקליד שם משתמש לא יודע שהבעיה היא רווח בשדה, ולא
- * יודע שהמערכת בכלל מרכיבה ממנו כתובת מייל. שאר ההודעות עוברות כפי
- * שהן — עדיף אנגלית מובנת מ"שגיאה לא ידועה".
- */
-function authErrorInHebrew(error: unknown, email: string): string {
-  const message = error instanceof Error ? error.message : "";
-
-  if (/validate email address|invalid format/i.test(message)) {
-    return (
-      `מערכת ההתחברות דחתה את הכתובת ${email} כלא תקינה. ` +
-      `שם המשתמש הוא מילה אחת רצופה באנגלית, בלי רווחים — ` +
-      `השם המלא נכנס בשדה "שם מלא".`
-    );
-  }
-  if (/already been registered|already registered|already exists/i.test(message)) {
-    return `כבר קיים חשבון התחברות עם הכתובת ${email}.`;
-  }
-
-  return message || "יצירת חשבון האימות נכשלה";
-}
 
 /**
  * הטלפונים הנוספים מהטופס, או הודעת שגיאה.
@@ -67,6 +43,29 @@ function extraPhonesFrom(formData: FormData): string[] | { error: string } {
     return { error: `מספר טלפון לא תקין: ${invalid.join(", ")}` };
   }
   return phones;
+}
+
+/**
+ * בעל העסק שנבחר בטופס, או הודעת שגיאה.
+ *
+ * ⚠️ שיוך הוא הרשאה: בעל העסק יראה ויערוך כל ליד של העובד. לכן
+ * היעד חייב להיות בעל עסק אמיתי (`canLeadTeam`), והמשויך — עובד
+ * מן השורה (`canJoinTeam`). תפקיד שאינו מתאים מנקה את השיוך במקום
+ * להיכשל: הורדת עובד לתפקיד ספק לא אמורה להיתקע על שדה שהוא לא רואה.
+ */
+async function teamOwnerFrom(
+  formData: FormData,
+  role: Role,
+  selfId?: string,
+): Promise<string | null | { error: string }> {
+  const ownerId = String(formData.get("teamOwnerId") ?? "").trim();
+  if (!ownerId || !canJoinTeam(role)) return null;
+  if (ownerId === selfId) return { error: "אי אפשר לשייך משתמש לעצמו" };
+  const owner = await db.users.getById(ownerId);
+  if (!owner || !canLeadTeam(owner.role)) {
+    return { error: "בעל העסק שנבחר לא נמצא" };
+  }
+  return owner.id;
 }
 
 /**
@@ -132,6 +131,11 @@ export async function createUserAction(
   const weak = passwordProblem(password);
   if (weak) return { ok: false, error: weak };
 
+  const teamOwnerId = await teamOwnerFrom(formData, role);
+  if (teamOwnerId && typeof teamOwnerId === "object") {
+    return { ok: false, error: teamOwnerId.error };
+  }
+
   const existing = await db.users.getByEmail(email);
   if (existing) return { ok: false, error: "כבר קיים משתמש עם האימייל הזה" };
 
@@ -150,6 +154,7 @@ export async function createUserAction(
     // רק לספק: לשאר התפקידים השדה חסר משמעות, ושמירתו הייתה יוצרת
     // משתמשים שנראים כספקים בכל שאילתה שתיכתב בעתיד על העמודה הזו
     leadSourceName: role === "supplier" ? leadSourceName : undefined,
+    teamOwnerId: teamOwnerId ?? undefined,
     extraPhones,
     role,
   });
@@ -240,6 +245,11 @@ export async function updateUserAction(
     return { ok: false, error: "לספק לידים חובה להגדיר שם מקור" };
   }
 
+  const teamOwnerId = await teamOwnerFrom(formData, role, target.id);
+  if (teamOwnerId && typeof teamOwnerId === "object") {
+    return { ok: false, error: teamOwnerId.error };
+  }
+
   if (target.id === actor.id) {
     if (!active) return { ok: false, error: "אי אפשר להשבית את החשבון שלך" };
     if (role !== actor.role) {
@@ -269,6 +279,7 @@ export async function updateUserAction(
       // `null` ולא `undefined` כשהתפקיד אינו ספק: הורדת תפקיד מספק
       // לעובד חייבת לנקות את השדה, אחרת הוא נשאר תלוי על החשבון
       leadSourceName: role === "supplier" ? leadSourceName : null,
+      teamOwnerId,
       extraPhones,
       role,
       active,

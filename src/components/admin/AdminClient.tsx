@@ -116,7 +116,11 @@ export function AdminClient({
         </div>
       )}
 
-      <AddUserModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddUserModal
+        open={addOpen}
+        users={users}
+        onClose={() => setAddOpen(false)}
+      />
 
       {/* ה-key מרענן את ערכי ברירת המחדל של הטופס בין משתמשים */}
       {/* המחיקה יושבת במודל העריכה ולא בשורת הטבלה: כפתור מחיקה ליד
@@ -124,6 +128,7 @@ export function AdminClient({
       <EditUserModal
         key={editUser?.id ?? "none"}
         user={editUser}
+        users={users}
         canDelete={canDelete && editUser?.id !== currentUserId}
         onClose={() => setEditUser(null)}
       />
@@ -148,6 +153,7 @@ export function AdminClient({
 
       <UsersTable
         users={filteredUsers}
+        allUsers={users}
         leadCountByUser={leadCountByUser}
         hasFilters={query.trim() !== ""}
         onEdit={setEditUser}

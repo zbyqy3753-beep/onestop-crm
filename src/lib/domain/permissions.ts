@@ -27,6 +27,34 @@ export function canSeeAllLeads(role: Role): boolean {
   return FULL_LEAD_ACCESS.includes(role);
 }
 
+/* ── צוות של בעל עסק ──────────────────────────────────────────────── */
+
+/**
+ * בעלי עסק — מי שרשאי לצרף אליו עובדים ולראות את הלידים שלהם.
+ *
+ * ⚠️ זו לא "ראייה מלאה" (`canSeeAllLeads`) אלא חתך: בעל העסק רואה את
+ * הלידים שלו ושל העובדים המשויכים אליו (`User.teamOwnerId`), ותו לא.
+ * החתך נאכף בשליפה ב-`leads/page.tsx` ובכל Server Action דרך
+ * `teamScopeIds` — לא בהסתרה בלקוח.
+ */
+const TEAM_LEAD_ROLES: readonly Role[] = ["bizManager", "shopOwner"];
+
+export function canLeadTeam(role: Role): boolean {
+  return TEAM_LEAD_ROLES.includes(role);
+}
+
+/**
+ * התפקידים שבעל עסק רשאי לצרף לצוות שלו.
+ *
+ * ⚠️ רשימת היתר: בעל עסק לא מנפיק חשבון מנהל, ספק או בעל עסק נוסף —
+ * גם לא דרך קריאה ישירה ל-Server Action עם תפקיד אחר בטופס.
+ */
+export const TEAM_MEMBER_ROLES: readonly Role[] = ["employee", "agent", "operator"];
+
+export function canJoinTeam(role: Role): boolean {
+  return TEAM_MEMBER_ROLES.includes(role);
+}
+
 /**
  * ספק לידים חיצוני — לא חלק מהצוות.
  *
@@ -93,6 +121,7 @@ const ROUTE_ROLES = {
   "/mailer": ["owner", "manager"],
   "/broadcast": ["owner", "manager"],
   "/admin": ["owner", "manager"],
+  "/team": ["bizManager", "shopOwner"],
 } as const satisfies Record<string, readonly Role[]>;
 
 /**

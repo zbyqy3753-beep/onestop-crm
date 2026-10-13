@@ -44,6 +44,7 @@ export type IconName =
   | "whatsapp"
   | "mail"
   | "feedback"
+  | "user"
   | "star";
 
 export interface NavGroup {
@@ -141,6 +142,12 @@ export const NAV: NavGroup[] = [
         label: "חידושים",
         hint: "העלאת מסמכי לקוחות שהשנה שלהם הסתיימה",
         icon: "upload",
+      },
+      {
+        href: "/team",
+        label: "הצוות שלי",
+        hint: "העובדים המשויכים אליך והלידים שלהם",
+        icon: "user",
       },
       {
         href: "/admin",

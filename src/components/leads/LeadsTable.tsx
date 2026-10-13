@@ -39,6 +39,7 @@ export function LeadsTable({
   onAdd,
   hasFilters,
   canSeeAll,
+  canSeeTeam = false,
   busyIds,
 }: {
   leads: Lead[];
@@ -65,6 +66,8 @@ export function LeadsTable({
   hasFilters: boolean;
   /** רואה את כל הארגון — קובע את נוסח המצב הריק */
   canSeeAll: boolean;
+  /** בעל עסק — רואה את עמודת השיוך של הצוות שלו */
+  canSeeTeam?: boolean;
   /** הלידים שיש להם כתיבה בטיסה — רק השורות שלהם ננעלות, לא כל הטבלה */
   busyIds: ReadonlySet<string>;
 }) {
@@ -76,6 +79,7 @@ export function LeadsTable({
   const shown = allowedColumns(
     COLUMNS.filter((c) => visibleColumns.includes(c.key)),
     canSeeAll,
+    canSeeTeam,
   );
 
   const allChecked = leads.length > 0 && leads.every((l) => selected.has(l.id));

@@ -441,6 +441,11 @@ export interface User {
    * בין המשתמש לבין הלידים שלו. ראה schema.prisma.
    */
   leadSourceName?: string;
+  /**
+   * בעל העסק שהעובד משויך אליו. בעל העסק רואה ועורך את הלידים של
+   * העובד — ראה `canLeadTeam` ב-`permissions.ts`.
+   */
+  teamOwnerId?: UserId;
   /** תפוגת מנוי — המערכת המקורית מתריעה עליה */
   subscriptionEndsAt?: string;
 }
@@ -465,6 +470,8 @@ export interface UserRef {
   id: UserId;
   name: string;
   role: Role;
+  /** בעל העסק שהעובד משויך אליו — מה שמדליק את תגית "משויך" */
+  teamOwnerId?: UserId;
 }
 
 export interface LeadNote {

@@ -83,6 +83,16 @@ model User {
   /// בשקט, בלי שגיאה ובלי שאיש יבין למה.
   leadSourceName String?
 
+  /// בעל העסק שהעובד משויך אליו (`bizManager` / `shopOwner`), אם יש.
+  ///
+  /// ⚠️ זה מסנן הרשאה ולא רק תווית: בעל העסק רואה ועורך את הלידים
+  /// של כל מי שמצביע אליו כאן. ראה `teamScopeIds` ב-
+  /// `src/server/auth/team.ts`. רמה אחת בלבד — עובד משויך אינו בעל
+  /// צוות בעצמו, ולכן אין שרשראות ואין מעגלים.
+  teamOwnerId String?
+  teamOwner   User?   @relation("UserTeam", fields: [teamOwnerId], references: [id], onDelete: SetNull)
+  teamMembers User[]  @relation("UserTeam")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -106,6 +116,7 @@ model User {
   postRequests          PostRequest[]     @relation("PostRequestCreator")
 
   @@index([role, active])
+  @@index([teamOwnerId])
 }
 
 /// סשן התחברות פעיל.

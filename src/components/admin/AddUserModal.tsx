@@ -4,13 +4,18 @@ import { useState, useTransition } from "react";
 import { ROLE_CONFIG, ROLE_ORDER } from "@/lib/domain/types";
 import { createUserAction } from "@/app/(app)/admin/actions";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
+import type { User } from "@/lib/domain/types";
 import { Button, Field, Modal, inputClass } from "@/components/ui/primitives";
+import { TeamOwnerField } from "./TeamOwnerField";
 
 export function AddUserModal({
   open,
+  users,
   onClose,
 }: {
   open: boolean;
+  /** כל המשתמשים — מהם נגזרים בעלי העסק לבורר השיוך */
+  users: User[];
   onClose: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +113,8 @@ export function AddUserModal({
             className={inputClass}
           />
         </Field>
+
+        <TeamOwnerField users={users} />
 
         {/* ⚠️ נגזר מהקבוע ולא כתוב ביד. הטקסט הזה נשאר תקוע על
             "לפחות 10 תווים" בזמן שהסף עצמו היה 12 ואז 6 — כלומר המסך

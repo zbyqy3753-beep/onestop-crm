@@ -11,6 +11,8 @@ import {
   hotBatchKeyPrefix,
 } from "@/lib/domain/hotLeadBatch";
 import { phoneTargets } from "@/server/whatsapp/recipients";
+import { canLeadTeam } from "@/lib/domain/permissions";
+import type { User } from "@/lib/domain/types";
 
 /**
  * ── התראה על ליד חם שהגיע לעובד ───────────────────────────────────────
@@ -47,28 +49,59 @@ export async function notifyHotLeadAssigned(input: {
     const user = await db.users.getById(input.assigneeId);
     if (!user?.active) return;
 
-    // ⚠️ `User` של הדומיין מחזיק `undefined` ו-`PhoneOwner` מחזיק
-    // `null`. אותה משמעות, שני טיפוסים — ההמרה כאן ולא בחתימה של
-    // `phoneTargets`, שמשרתת גם קוראים שבאים ישירות מ-Prisma.
-    const owner = {
-      phone: user.phone ?? null,
-      extraPhones: user.extraPhones,
-    };
+    await announceTo(user, input.lead, input.lead.name);
 
-    for (const target of phoneTargets(owner)) {
-      const announced = await markAnnounced(
-        `${hotLeadDedupeKey(input.lead.id, user.id)}${target.keySuffix}`,
-        input.lead.id,
-        user.id,
-        target.toPhone,
-      );
-      // כבר הוכרז לעובד הזה בעבר — לא נכנס למקבץ שוב
-      if (!announced) continue;
-
-      await addToBatch(user.id, target.toPhone, input.lead);
+    /*
+     * ── עותק לבעל העסק ─────────────────────────────────────────────
+     *
+     * עובד שמשויך לבעל עסק (`teamOwnerId`) — גם בעל העסק מקבל את
+     * הליד, עם שם העובד לצד הלקוח, כדי לדעת מה נכנס לצוות שלו ולמי.
+     *
+     * ⚠️ אותה תבנית ואותו מקבץ, ולא תבנית חדשה: תבנית נוספת במטא היא
+     * אישור חדש, וזו כבר מאושרת. ⚠️ לא כשבעל העסק הוא שביצע את
+     * השיוך — אותו כלל כמו לעובד שמשייך לעצמו.
+     */
+    if (user.teamOwnerId && user.teamOwnerId !== input.actorId) {
+      const teamOwner = await db.users.getById(user.teamOwnerId);
+      if (teamOwner?.active && canLeadTeam(teamOwner.role)) {
+        await announceTo(teamOwner, input.lead, `${input.lead.name} ← ${user.name}`);
+      }
     }
   } catch (error) {
     console.error("[hot] התראת ליד חם נכשלה:", error);
+  }
+}
+
+/**
+ * מכניסה את הליד למקבץ של נמען אחד, בכל המספרים שלו — פעם אחת לתמיד.
+ *
+ * `label` הוא מה שנכתב בהודעה במקום שם הלקוח: לעובד — השם, לבעל
+ * העסק — השם ולמי מהצוות הוא הגיע.
+ */
+async function announceTo(
+  user: User,
+  lead: { id: string; phone: string },
+  label: string,
+): Promise<void> {
+  // ⚠️ `User` של הדומיין מחזיק `undefined` ו-`PhoneOwner` מחזיק
+  // `null`. אותה משמעות, שני טיפוסים — ההמרה כאן ולא בחתימה של
+  // `phoneTargets`, שמשרתת גם קוראים שבאים ישירות מ-Prisma.
+  const owner = {
+    phone: user.phone ?? null,
+    extraPhones: user.extraPhones,
+  };
+
+  for (const target of phoneTargets(owner)) {
+    const announced = await markAnnounced(
+      `${hotLeadDedupeKey(lead.id, user.id)}${target.keySuffix}`,
+      lead.id,
+      user.id,
+      target.toPhone,
+    );
+    // כבר הוכרז לנמען הזה בעבר — לא נכנס למקבץ שוב
+    if (!announced) continue;
+
+    await addToBatch(user.id, target.toPhone, { name: label, phone: lead.phone });
   }
 }
 
@@ -131,7 +164,7 @@ async function markAnnounced(
 async function addToBatch(
   userId: string,
   toPhone: string,
-  lead: { id: string; name: string; phone: string },
+  lead: { name: string; phone: string },
 ): Promise<void> {
   const open = await prisma.whatsAppMessage.findFirst({
     where: {

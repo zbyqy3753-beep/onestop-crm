@@ -6,11 +6,13 @@ import {
 import { db } from "@/server/repositories";
 import { requireSessionUser } from "@/server/auth/session";
 import {
+  canLeadTeam,
   canManageSettings,
   canSeeAllLeads,
   canUseCrm,
   isSupplier,
 } from "@/lib/domain/permissions";
+import { teamScopeIds } from "@/server/auth/team";
 import type { Lead, LeadStatus, UserRef } from "@/lib/domain/types";
 import { STATUS_ORDER } from "@/lib/domain/types";
 import type { LeadFilter } from "@/server/repositories";
@@ -163,9 +165,13 @@ export default async function LeadsPage({
    * שנכנס מה-API ולא שויך אוטומטית יושב במאגר וגלוי רק למנהלים, עד
    * שמישהו מהם משייך אותו. עובד לא לוקח לעצמו לידים.
    */
-  const scope: LeadFilter = canSeeAllLeads(currentUser.role)
-    ? {}
-    : { assigneeId: [currentUser.id] };
+  /*
+   * בעל עסק (`canLeadTeam`) רואה גם את הלידים של העובדים המשויכים
+   * אליו — ראה `teamScopeIds`. עדיין לא לידים ללא שיוך.
+   */
+  const scopeIds = await teamScopeIds(currentUser);
+  const scope: LeadFilter = scopeIds === null ? {} : { assigneeId: scopeIds };
+  const isTeamLead = canLeadTeam(currentUser.role);
 
   /*
    * ── חתך התקופה ────────────────────────────────────────────────────
@@ -223,12 +229,19 @@ export default async function LeadsPage({
    * ליד שישויך אליו נופל לתיבה שאיש לא פותח: הוא לא יכול להתחבר לכאן
    * בכלל.
    */
+  /*
+   * ⚠️ לבעל עסק — רק הוא והצוות שלו. זו גם רשימת היעדים בבורר השיוך,
+   * ובעל עסק לא משייך ליד למי שמחוץ לצוות (נאכף גם ב-`assignAction`).
+   */
+  const teamIds = isTeamLead && scopeIds ? new Set(scopeIds) : null;
   const users = allUsers
     .filter((u) => canUseCrm(u.role))
-    .map(({ id, name, role }): UserRef => ({
+    .filter((u) => !teamIds || teamIds.has(u.id))
+    .map(({ id, name, role, teamOwnerId }): UserRef => ({
       id,
       name,
       role,
+      ...(teamOwnerId ? { teamOwnerId } : {}),
     }));
 
   /*
@@ -262,6 +275,7 @@ export default async function LeadsPage({
       packages={packages}
       currentUserId={currentUser.id}
       canSeeAll={canSeeAllLeads(currentUser.role)}
+      canSeeTeam={isTeamLead}
       canEditCosts={canManageSettings(currentUser.role)}
       periodPicker={
         <PeriodPicker period={period} openOutsideRange={openOutsideRange} />

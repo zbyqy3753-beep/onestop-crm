@@ -1,7 +1,7 @@
 import { db } from "@/server/repositories";
 import type { LeadFilter } from "@/server/repositories";
 import { requireStaffUser } from "@/server/auth/session";
-import { canSeeAllLeads } from "@/lib/domain/permissions";
+import { teamScopeIds } from "@/server/auth/team";
 import { ROLE_CONFIG, STATUS_CONFIG } from "@/lib/domain/types";
 import { performanceByAgent } from "@/server/services/economics";
 import { TZ, startOfDay, startOfMonth } from "@/lib/tz";
@@ -57,9 +57,9 @@ export default async function DashboardPage() {
    * מעל רשימה אישית הן שני מספרים סותרים במסך אחד, והן מדליפות את
    * נפח הלידים הכולל של הארגון גם בלי להראות ליד בודד.
    */
-  const scope: LeadFilter = canSeeAllLeads(currentUser.role)
-    ? {}
-    : { assigneeId: [currentUser.id] };
+  // בעל עסק — גם הלידים של הצוות שלו. ראה `teamScopeIds`.
+  const scopeIds = await teamScopeIds(currentUser);
+  const scope: LeadFilter = scopeIds === null ? {} : { assigneeId: scopeIds };
 
   /*
    * ‏`users` ו-`deals` נשארים ארגוניים במכוון: מבין ילדי הדשבורד רק

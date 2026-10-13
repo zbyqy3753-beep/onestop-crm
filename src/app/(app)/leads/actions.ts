@@ -19,7 +19,8 @@ import {
 } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
 import { instantFromIsraelDateTime } from "@/lib/tz";
-import { canSeeAllLeads, isSupplier } from "@/lib/domain/permissions";
+import { canLeadTeam, isSupplier } from "@/lib/domain/permissions";
+import { teamScopeIds } from "@/server/auth/team";
 import { revalidateLeadSurfaces } from "@/app/(app)/_revalidate";
 import { notifyHotLeadAssigned } from "@/server/leads/hotLeadAlert";
 
@@ -70,7 +71,8 @@ const FORBIDDEN = "אין לך הרשאה לערוך את הליד הזה";
  */
 async function assertCanEdit(leadIds: string[]): Promise<string | null> {
   const user = await requireSessionUser();
-  if (canSeeAllLeads(user.role)) return null;
+  const scope = await teamScopeIds(user);
+  if (scope === null) return null;
 
   /*
    * ספק חיצוני — חסום על כל ליד, כולל אלה שהוא עצמו הביא.
@@ -90,10 +92,31 @@ async function assertCanEdit(leadIds: string[]): Promise<string | null> {
 
   // ליד שלא קיים נבלע כאן בשקט — הפעולה עצמה תיכשל עליו ממילא,
   // ואין סיבה להסגיר לעובד אילו מזהים קיימים במערכת
+  // בעל עסק: גם לידים של העובדים המשויכים אליו — ראה `teamScopeIds`
+  const allowed = new Set(scope);
   for (const lead of owners) {
-    if (lead.assigneeId !== user.id) return FORBIDDEN;
+    if (!lead.assigneeId || !allowed.has(lead.assigneeId)) return FORBIDDEN;
   }
   return null;
+}
+
+/**
+ * למי מותר להעביר ליד.
+ *
+ * ⚠️ בעל עסק משייך רק בתוך הצוות שלו (או מסיר שיוך). בלי זה היה
+ * יכול לדחוף לידים לעובדים של עסק אחר — ולראות דרך הבורר שהם קיימים.
+ * לשאר התפקידים ההתנהגות הקודמת נשמרת.
+ */
+async function assertCanAssignTo(
+  assigneeId: string | null,
+): Promise<string | null> {
+  if (!assigneeId) return null;
+  const user = await requireSessionUser();
+  if (!canLeadTeam(user.role)) return null;
+  const scope = await teamScopeIds(user);
+  return scope && !scope.includes(assigneeId)
+    ? "אפשר לשייך רק לעובדים מהצוות שלך"
+    : null;
 }
 
 /* ── יצירה ────────────────────────────────────────────────────────────── */
@@ -121,6 +144,8 @@ export async function createLeadAction(
 
   const kind = (formData.get("kind") as LeadKind) ?? "data";
   const targetId = assigneeId || actorId;
+  const outside = await assertCanAssignTo(targetId);
+  if (outside) return { ok: false, error: outside };
 
   const created = await db.leads.create({
     name,
@@ -184,6 +209,9 @@ export async function updateLeadAction(
   const currentProvider = String(formData.get("currentProvider") ?? "").trim();
   const sourceDetail = String(formData.get("sourceDetail") ?? "").trim();
   const packageName = String(formData.get("packageName") ?? "").trim();
+
+  const outside = await assertCanAssignTo(assigneeId || null);
+  if (outside) return { ok: false, error: outside };
 
   // `null` ולא `undefined`: שדה ריק בטופס הוא בקשה מפורשת *לנקות*.
   // עם `undefined` הבקשה הזו נבלעה ב-Postgres והמשתמש קיבל טוסט
@@ -254,12 +282,27 @@ export async function patchLeadAction(
   // השיוך עובר דרך `assign` ולא דרך `update` — רק הוא רושם את הפעולה
   // ביומן הפעילות של הליד, וזה מה שמאפשר לדעת אחר כך מי העביר למי
   if (patch.assigneeId !== undefined) {
+    const outside = await assertCanAssignTo(patch.assigneeId);
+    if (outside) return { ok: false, error: outside };
     if (patch.assigneeId) {
       const user = await db.users.getById(patch.assigneeId);
       if (!user) return { ok: false, error: "העובד לא נמצא" };
       if (!user.active) return { ok: false, error: "העובד אינו פעיל" };
     }
     await db.leads.assign([leadId], patch.assigneeId, actorId);
+
+    // שיוך מתוך השורה הוא שיוך לכל דבר — אותה התראה כמו `assignAction`,
+    // לעובד ולבעל העסק שלו. בלעדיה הבורר בטבלה היה הדרך השקטה לשייך.
+    if (patch.assigneeId) {
+      const lead = await db.leads.getById(leadId);
+      if (lead) {
+        await notifyHotLeadAssigned({
+          lead: { id: lead.id, name: lead.name, phone: lead.phone, kind: lead.kind },
+          assigneeId: patch.assigneeId,
+          actorId,
+        });
+      }
+    }
   }
 
   const update: Parameters<typeof db.leads.update>[1] = {};
@@ -452,6 +495,9 @@ export async function assignAction(
   // מעביר ליד לעמית. `assertCanEdit` מתיר לו רק לידים שכבר שלו.
   const denied = await assertCanEdit(leadIds);
   if (denied) return { ok: false, error: denied };
+
+  const outside = await assertCanAssignTo(assigneeId);
+  if (outside) return { ok: false, error: outside };
 
   if (assigneeId) {
     const user = await db.users.getById(assigneeId);

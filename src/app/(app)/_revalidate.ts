@@ -29,6 +29,7 @@ export function revalidateLeadSurfaces(): void {
  */
 export function revalidateUserSurfaces(): void {
   revalidatePath("/admin");
+  revalidatePath("/team");
   revalidatePath("/leads");
   revalidatePath("/");
 }

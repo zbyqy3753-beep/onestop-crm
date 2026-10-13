@@ -34,6 +34,7 @@ export type UserMinAggregateOutputType = {
   store: string | null
   subscriptionEndsAt: Date | null
   leadSourceName: string | null
+  teamOwnerId: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -48,6 +49,7 @@ export type UserMaxAggregateOutputType = {
   store: string | null
   subscriptionEndsAt: Date | null
   leadSourceName: string | null
+  teamOwnerId: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -63,6 +65,7 @@ export type UserCountAggregateOutputType = {
   store: number
   subscriptionEndsAt: number
   leadSourceName: number
+  teamOwnerId: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -79,6 +82,7 @@ export type UserMinAggregateInputType = {
   store?: true
   subscriptionEndsAt?: true
   leadSourceName?: true
+  teamOwnerId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -93,6 +97,7 @@ export type UserMaxAggregateInputType = {
   store?: true
   subscriptionEndsAt?: true
   leadSourceName?: true
+  teamOwnerId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -108,6 +113,7 @@ export type UserCountAggregateInputType = {
   store?: true
   subscriptionEndsAt?: true
   leadSourceName?: true
+  teamOwnerId?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -196,6 +202,7 @@ export type UserGroupByOutputType = {
   store: string | null
   subscriptionEndsAt: Date | null
   leadSourceName: string | null
+  teamOwnerId: string | null
   createdAt: Date
   updatedAt: Date
   _count: UserCountAggregateOutputType | null
@@ -232,8 +239,11 @@ export type UserWhereInput = {
   store?: Prisma.StringNullableFilter<"User"> | string | null
   subscriptionEndsAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   leadSourceName?: Prisma.StringNullableFilter<"User"> | string | null
+  teamOwnerId?: Prisma.StringNullableFilter<"User"> | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
+  teamOwner?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  teamMembers?: Prisma.UserListRelationFilter
   assignedLeads?: Prisma.LeadListRelationFilter
   createdLeads?: Prisma.LeadListRelationFilter
   notes?: Prisma.LeadNoteListRelationFilter
@@ -265,8 +275,11 @@ export type UserOrderByWithRelationInput = {
   store?: Prisma.SortOrderInput | Prisma.SortOrder
   subscriptionEndsAt?: Prisma.SortOrderInput | Prisma.SortOrder
   leadSourceName?: Prisma.SortOrderInput | Prisma.SortOrder
+  teamOwnerId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  teamOwner?: Prisma.UserOrderByWithRelationInput
+  teamMembers?: Prisma.UserOrderByRelationAggregateInput
   assignedLeads?: Prisma.LeadOrderByRelationAggregateInput
   createdLeads?: Prisma.LeadOrderByRelationAggregateInput
   notes?: Prisma.LeadNoteOrderByRelationAggregateInput
@@ -301,8 +314,11 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   store?: Prisma.StringNullableFilter<"User"> | string | null
   subscriptionEndsAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   leadSourceName?: Prisma.StringNullableFilter<"User"> | string | null
+  teamOwnerId?: Prisma.StringNullableFilter<"User"> | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
+  teamOwner?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  teamMembers?: Prisma.UserListRelationFilter
   assignedLeads?: Prisma.LeadListRelationFilter
   createdLeads?: Prisma.LeadListRelationFilter
   notes?: Prisma.LeadNoteListRelationFilter
@@ -334,6 +350,7 @@ export type UserOrderByWithAggregationInput = {
   store?: Prisma.SortOrderInput | Prisma.SortOrder
   subscriptionEndsAt?: Prisma.SortOrderInput | Prisma.SortOrder
   leadSourceName?: Prisma.SortOrderInput | Prisma.SortOrder
+  teamOwnerId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
@@ -355,6 +372,7 @@ export type UserScalarWhereWithAggregatesInput = {
   store?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   subscriptionEndsAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   leadSourceName?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  teamOwnerId?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
 }
@@ -372,6 +390,8 @@ export type UserCreateInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -403,8 +423,10 @@ export type UserUncheckedCreateInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -438,6 +460,8 @@ export type UserUpdateInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -469,8 +493,10 @@ export type UserUncheckedUpdateInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -502,6 +528,7 @@ export type UserCreateManyInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -532,6 +559,7 @@ export type UserUncheckedUpdateManyInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -542,6 +570,21 @@ export type StringNullableListFilter<$PrismaModel = never> = {
   hasEvery?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
   hasSome?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
   isEmpty?: boolean
+}
+
+export type UserNullableScalarRelationFilter = {
+  is?: Prisma.UserWhereInput | null
+  isNot?: Prisma.UserWhereInput | null
+}
+
+export type UserListRelationFilter = {
+  every?: Prisma.UserWhereInput
+  some?: Prisma.UserWhereInput
+  none?: Prisma.UserWhereInput
+}
+
+export type UserOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type UserCountOrderByAggregateInput = {
@@ -555,6 +598,7 @@ export type UserCountOrderByAggregateInput = {
   store?: Prisma.SortOrder
   subscriptionEndsAt?: Prisma.SortOrder
   leadSourceName?: Prisma.SortOrder
+  teamOwnerId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -569,6 +613,7 @@ export type UserMaxOrderByAggregateInput = {
   store?: Prisma.SortOrder
   subscriptionEndsAt?: Prisma.SortOrder
   leadSourceName?: Prisma.SortOrder
+  teamOwnerId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -583,6 +628,7 @@ export type UserMinOrderByAggregateInput = {
   store?: Prisma.SortOrder
   subscriptionEndsAt?: Prisma.SortOrder
   leadSourceName?: Prisma.SortOrder
+  teamOwnerId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -592,13 +638,28 @@ export type UserScalarRelationFilter = {
   isNot?: Prisma.UserWhereInput
 }
 
-export type UserNullableScalarRelationFilter = {
-  is?: Prisma.UserWhereInput | null
-  isNot?: Prisma.UserWhereInput | null
-}
-
 export type UserCreateextraPhonesInput = {
   set: string[]
+}
+
+export type UserCreateNestedOneWithoutTeamMembersInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutTeamMembersInput, Prisma.UserUncheckedCreateWithoutTeamMembersInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutTeamMembersInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedManyWithoutTeamOwnerInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutTeamOwnerInput, Prisma.UserUncheckedCreateWithoutTeamOwnerInput> | Prisma.UserCreateWithoutTeamOwnerInput[] | Prisma.UserUncheckedCreateWithoutTeamOwnerInput[]
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutTeamOwnerInput | Prisma.UserCreateOrConnectWithoutTeamOwnerInput[]
+  createMany?: Prisma.UserCreateManyTeamOwnerInputEnvelope
+  connect?: Prisma.UserWhereUniqueInput | Prisma.UserWhereUniqueInput[]
+}
+
+export type UserUncheckedCreateNestedManyWithoutTeamOwnerInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutTeamOwnerInput, Prisma.UserUncheckedCreateWithoutTeamOwnerInput> | Prisma.UserCreateWithoutTeamOwnerInput[] | Prisma.UserUncheckedCreateWithoutTeamOwnerInput[]
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutTeamOwnerInput | Prisma.UserCreateOrConnectWithoutTeamOwnerInput[]
+  createMany?: Prisma.UserCreateManyTeamOwnerInputEnvelope
+  connect?: Prisma.UserWhereUniqueInput | Prisma.UserWhereUniqueInput[]
 }
 
 export type StringFieldUpdateOperationsInput = {
@@ -628,6 +689,44 @@ export type NullableDateTimeFieldUpdateOperationsInput = {
 
 export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
+}
+
+export type UserUpdateOneWithoutTeamMembersNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutTeamMembersInput, Prisma.UserUncheckedCreateWithoutTeamMembersInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutTeamMembersInput
+  upsert?: Prisma.UserUpsertWithoutTeamMembersInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutTeamMembersInput, Prisma.UserUpdateWithoutTeamMembersInput>, Prisma.UserUncheckedUpdateWithoutTeamMembersInput>
+}
+
+export type UserUpdateManyWithoutTeamOwnerNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutTeamOwnerInput, Prisma.UserUncheckedCreateWithoutTeamOwnerInput> | Prisma.UserCreateWithoutTeamOwnerInput[] | Prisma.UserUncheckedCreateWithoutTeamOwnerInput[]
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutTeamOwnerInput | Prisma.UserCreateOrConnectWithoutTeamOwnerInput[]
+  upsert?: Prisma.UserUpsertWithWhereUniqueWithoutTeamOwnerInput | Prisma.UserUpsertWithWhereUniqueWithoutTeamOwnerInput[]
+  createMany?: Prisma.UserCreateManyTeamOwnerInputEnvelope
+  set?: Prisma.UserWhereUniqueInput | Prisma.UserWhereUniqueInput[]
+  disconnect?: Prisma.UserWhereUniqueInput | Prisma.UserWhereUniqueInput[]
+  delete?: Prisma.UserWhereUniqueInput | Prisma.UserWhereUniqueInput[]
+  connect?: Prisma.UserWhereUniqueInput | Prisma.UserWhereUniqueInput[]
+  update?: Prisma.UserUpdateWithWhereUniqueWithoutTeamOwnerInput | Prisma.UserUpdateWithWhereUniqueWithoutTeamOwnerInput[]
+  updateMany?: Prisma.UserUpdateManyWithWhereWithoutTeamOwnerInput | Prisma.UserUpdateManyWithWhereWithoutTeamOwnerInput[]
+  deleteMany?: Prisma.UserScalarWhereInput | Prisma.UserScalarWhereInput[]
+}
+
+export type UserUncheckedUpdateManyWithoutTeamOwnerNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutTeamOwnerInput, Prisma.UserUncheckedCreateWithoutTeamOwnerInput> | Prisma.UserCreateWithoutTeamOwnerInput[] | Prisma.UserUncheckedCreateWithoutTeamOwnerInput[]
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutTeamOwnerInput | Prisma.UserCreateOrConnectWithoutTeamOwnerInput[]
+  upsert?: Prisma.UserUpsertWithWhereUniqueWithoutTeamOwnerInput | Prisma.UserUpsertWithWhereUniqueWithoutTeamOwnerInput[]
+  createMany?: Prisma.UserCreateManyTeamOwnerInputEnvelope
+  set?: Prisma.UserWhereUniqueInput | Prisma.UserWhereUniqueInput[]
+  disconnect?: Prisma.UserWhereUniqueInput | Prisma.UserWhereUniqueInput[]
+  delete?: Prisma.UserWhereUniqueInput | Prisma.UserWhereUniqueInput[]
+  connect?: Prisma.UserWhereUniqueInput | Prisma.UserWhereUniqueInput[]
+  update?: Prisma.UserUpdateWithWhereUniqueWithoutTeamOwnerInput | Prisma.UserUpdateWithWhereUniqueWithoutTeamOwnerInput[]
+  updateMany?: Prisma.UserUpdateManyWithWhereWithoutTeamOwnerInput | Prisma.UserUpdateManyWithWhereWithoutTeamOwnerInput[]
+  deleteMany?: Prisma.UserScalarWhereInput | Prisma.UserScalarWhereInput[]
 }
 
 export type UserCreateNestedOneWithoutSessionsInput = {
@@ -900,6 +999,271 @@ export type UserUpdateOneWithoutPostRequestsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutPostRequestsInput, Prisma.UserUpdateWithoutPostRequestsInput>, Prisma.UserUncheckedUpdateWithoutPostRequestsInput>
 }
 
+export type UserCreateWithoutTeamMembersInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
+  renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
+  passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
+  issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
+  emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
+  postRequests?: Prisma.PostRequestCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutTeamMembersInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
+  teamOwnerId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
+  renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
+  passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
+  issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
+  emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  postRequests?: Prisma.PostRequestUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutTeamMembersInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutTeamMembersInput, Prisma.UserUncheckedCreateWithoutTeamMembersInput>
+}
+
+export type UserCreateWithoutTeamOwnerInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageCreateNestedManyWithoutRecipientInput
+  renewalDocuments?: Prisma.RenewalDocumentCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionCreateNestedManyWithoutImpersonatingInput
+  passwordResets?: Prisma.PasswordResetCreateNestedManyWithoutUserInput
+  issuedPasswordResets?: Prisma.PasswordResetCreateNestedManyWithoutCreatedByInput
+  emailCampaigns?: Prisma.EmailCampaignCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignCreateNestedManyWithoutCreatedByInput
+  postRequests?: Prisma.PostRequestCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutTeamOwnerInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
+  createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
+  notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
+  leadActivity?: Prisma.LeadActivityUncheckedCreateNestedManyWithoutActorInput
+  deals?: Prisma.DealUncheckedCreateNestedManyWithoutAgentInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedCreateNestedManyWithoutActorInput
+  referredRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutReferredByInput
+  handledRegistrations?: Prisma.RegistrationUncheckedCreateNestedManyWithoutHandledByInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedCreateNestedManyWithoutRecipientInput
+  renewalDocuments?: Prisma.RenewalDocumentUncheckedCreateNestedManyWithoutUploadedByInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  impersonatedSessions?: Prisma.SessionUncheckedCreateNestedManyWithoutImpersonatingInput
+  passwordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutUserInput
+  issuedPasswordResets?: Prisma.PasswordResetUncheckedCreateNestedManyWithoutCreatedByInput
+  emailCampaigns?: Prisma.EmailCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  waCampaigns?: Prisma.WaCampaignUncheckedCreateNestedManyWithoutCreatedByInput
+  postRequests?: Prisma.PostRequestUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutTeamOwnerInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutTeamOwnerInput, Prisma.UserUncheckedCreateWithoutTeamOwnerInput>
+}
+
+export type UserCreateManyTeamOwnerInputEnvelope = {
+  data: Prisma.UserCreateManyTeamOwnerInput | Prisma.UserCreateManyTeamOwnerInput[]
+  skipDuplicates?: boolean
+}
+
+export type UserUpsertWithoutTeamMembersInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutTeamMembersInput, Prisma.UserUncheckedUpdateWithoutTeamMembersInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutTeamMembersInput, Prisma.UserUncheckedCreateWithoutTeamMembersInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutTeamMembersInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutTeamMembersInput, Prisma.UserUncheckedUpdateWithoutTeamMembersInput>
+}
+
+export type UserUpdateWithoutTeamMembersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
+  renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
+  passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
+  issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
+  emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
+  postRequests?: Prisma.PostRequestUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutTeamMembersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
+  renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
+  passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
+  issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
+  emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  postRequests?: Prisma.PostRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUpsertWithWhereUniqueWithoutTeamOwnerInput = {
+  where: Prisma.UserWhereUniqueInput
+  update: Prisma.XOR<Prisma.UserUpdateWithoutTeamOwnerInput, Prisma.UserUncheckedUpdateWithoutTeamOwnerInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutTeamOwnerInput, Prisma.UserUncheckedCreateWithoutTeamOwnerInput>
+}
+
+export type UserUpdateWithWhereUniqueWithoutTeamOwnerInput = {
+  where: Prisma.UserWhereUniqueInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutTeamOwnerInput, Prisma.UserUncheckedUpdateWithoutTeamOwnerInput>
+}
+
+export type UserUpdateManyWithWhereWithoutTeamOwnerInput = {
+  where: Prisma.UserScalarWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateManyMutationInput, Prisma.UserUncheckedUpdateManyWithoutTeamOwnerInput>
+}
+
+export type UserScalarWhereInput = {
+  AND?: Prisma.UserScalarWhereInput | Prisma.UserScalarWhereInput[]
+  OR?: Prisma.UserScalarWhereInput[]
+  NOT?: Prisma.UserScalarWhereInput | Prisma.UserScalarWhereInput[]
+  id?: Prisma.StringFilter<"User"> | string
+  name?: Prisma.StringFilter<"User"> | string
+  email?: Prisma.StringFilter<"User"> | string
+  phone?: Prisma.StringNullableFilter<"User"> | string | null
+  extraPhones?: Prisma.StringNullableListFilter<"User">
+  role?: Prisma.EnumRoleFilter<"User"> | $Enums.Role
+  active?: Prisma.BoolFilter<"User"> | boolean
+  store?: Prisma.StringNullableFilter<"User"> | string | null
+  subscriptionEndsAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  leadSourceName?: Prisma.StringNullableFilter<"User"> | string | null
+  teamOwnerId?: Prisma.StringNullableFilter<"User"> | string | null
+  createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
+}
+
 export type UserCreateWithoutSessionsInput = {
   id?: string
   name: string
@@ -913,6 +1277,8 @@ export type UserCreateWithoutSessionsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -943,8 +1309,10 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -982,6 +1350,8 @@ export type UserCreateWithoutImpersonatedSessionsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -1012,8 +1382,10 @@ export type UserUncheckedCreateWithoutImpersonatedSessionsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -1062,6 +1434,8 @@ export type UserUpdateWithoutSessionsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -1092,8 +1466,10 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -1137,6 +1513,8 @@ export type UserUpdateWithoutImpersonatedSessionsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -1167,8 +1545,10 @@ export type UserUncheckedUpdateWithoutImpersonatedSessionsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -1201,6 +1581,8 @@ export type UserCreateWithoutPasswordResetsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -1231,8 +1613,10 @@ export type UserUncheckedCreateWithoutPasswordResetsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -1270,6 +1654,8 @@ export type UserCreateWithoutIssuedPasswordResetsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -1300,8 +1686,10 @@ export type UserUncheckedCreateWithoutIssuedPasswordResetsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -1350,6 +1738,8 @@ export type UserUpdateWithoutPasswordResetsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -1380,8 +1770,10 @@ export type UserUncheckedUpdateWithoutPasswordResetsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -1425,6 +1817,8 @@ export type UserUpdateWithoutIssuedPasswordResetsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -1455,8 +1849,10 @@ export type UserUncheckedUpdateWithoutIssuedPasswordResetsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -1489,6 +1885,8 @@ export type UserCreateWithoutAssignedLeadsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
@@ -1519,8 +1917,10 @@ export type UserUncheckedCreateWithoutAssignedLeadsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
@@ -1558,6 +1958,8 @@ export type UserCreateWithoutCreatedLeadsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
@@ -1588,8 +1990,10 @@ export type UserUncheckedCreateWithoutCreatedLeadsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
   statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
@@ -1638,6 +2042,8 @@ export type UserUpdateWithoutAssignedLeadsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
@@ -1668,8 +2074,10 @@ export type UserUncheckedUpdateWithoutAssignedLeadsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
@@ -1713,6 +2121,8 @@ export type UserUpdateWithoutCreatedLeadsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
@@ -1743,8 +2153,10 @@ export type UserUncheckedUpdateWithoutCreatedLeadsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
   statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
@@ -1777,6 +2189,8 @@ export type UserCreateWithoutNotesInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   statusEvents?: Prisma.LeadStatusEventCreateNestedManyWithoutActorInput
@@ -1807,8 +2221,10 @@ export type UserUncheckedCreateWithoutNotesInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   statusEvents?: Prisma.LeadStatusEventUncheckedCreateNestedManyWithoutActorInput
@@ -1857,6 +2273,8 @@ export type UserUpdateWithoutNotesInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
@@ -1887,8 +2305,10 @@ export type UserUncheckedUpdateWithoutNotesInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
@@ -1921,6 +2341,8 @@ export type UserCreateWithoutLeadActivityInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -1951,8 +2373,10 @@ export type UserUncheckedCreateWithoutLeadActivityInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -2001,6 +2425,8 @@ export type UserUpdateWithoutLeadActivityInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -2031,8 +2457,10 @@ export type UserUncheckedUpdateWithoutLeadActivityInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -2065,6 +2493,8 @@ export type UserCreateWithoutStatusEventsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -2095,8 +2525,10 @@ export type UserUncheckedCreateWithoutStatusEventsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -2145,6 +2577,8 @@ export type UserUpdateWithoutStatusEventsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -2175,8 +2609,10 @@ export type UserUncheckedUpdateWithoutStatusEventsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -2209,6 +2645,8 @@ export type UserCreateWithoutDealsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -2239,8 +2677,10 @@ export type UserUncheckedCreateWithoutDealsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -2289,6 +2729,8 @@ export type UserUpdateWithoutDealsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -2319,8 +2761,10 @@ export type UserUncheckedUpdateWithoutDealsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -2353,6 +2797,8 @@ export type UserCreateWithoutDealStageEventsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -2383,8 +2829,10 @@ export type UserUncheckedCreateWithoutDealStageEventsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -2433,6 +2881,8 @@ export type UserUpdateWithoutDealStageEventsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -2463,8 +2913,10 @@ export type UserUncheckedUpdateWithoutDealStageEventsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -2497,6 +2949,8 @@ export type UserCreateWithoutReferredRegistrationsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -2527,8 +2981,10 @@ export type UserUncheckedCreateWithoutReferredRegistrationsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -2566,6 +3022,8 @@ export type UserCreateWithoutHandledRegistrationsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -2596,8 +3054,10 @@ export type UserUncheckedCreateWithoutHandledRegistrationsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -2646,6 +3106,8 @@ export type UserUpdateWithoutReferredRegistrationsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -2676,8 +3138,10 @@ export type UserUncheckedUpdateWithoutReferredRegistrationsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -2721,6 +3185,8 @@ export type UserUpdateWithoutHandledRegistrationsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -2751,8 +3217,10 @@ export type UserUncheckedUpdateWithoutHandledRegistrationsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -2785,6 +3253,8 @@ export type UserCreateWithoutWhatsappMessagesInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -2815,8 +3285,10 @@ export type UserUncheckedCreateWithoutWhatsappMessagesInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -2865,6 +3337,8 @@ export type UserUpdateWithoutWhatsappMessagesInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -2895,8 +3369,10 @@ export type UserUncheckedUpdateWithoutWhatsappMessagesInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -2929,6 +3405,8 @@ export type UserCreateWithoutRenewalDocumentsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -2959,8 +3437,10 @@ export type UserUncheckedCreateWithoutRenewalDocumentsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -3009,6 +3489,8 @@ export type UserUpdateWithoutRenewalDocumentsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -3039,8 +3521,10 @@ export type UserUncheckedUpdateWithoutRenewalDocumentsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -3073,6 +3557,8 @@ export type UserCreateWithoutEmailCampaignsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -3103,8 +3589,10 @@ export type UserUncheckedCreateWithoutEmailCampaignsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -3153,6 +3641,8 @@ export type UserUpdateWithoutEmailCampaignsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -3183,8 +3673,10 @@ export type UserUncheckedUpdateWithoutEmailCampaignsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -3217,6 +3709,8 @@ export type UserCreateWithoutWaCampaignsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -3247,8 +3741,10 @@ export type UserUncheckedCreateWithoutWaCampaignsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -3297,6 +3793,8 @@ export type UserUpdateWithoutWaCampaignsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -3327,8 +3825,10 @@ export type UserUncheckedUpdateWithoutWaCampaignsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -3361,6 +3861,8 @@ export type UserCreateWithoutPostRequestsInput = {
   leadSourceName?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamOwner?: Prisma.UserCreateNestedOneWithoutTeamMembersInput
+  teamMembers?: Prisma.UserCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
@@ -3391,8 +3893,10 @@ export type UserUncheckedCreateWithoutPostRequestsInput = {
   store?: string | null
   subscriptionEndsAt?: Date | string | null
   leadSourceName?: string | null
+  teamOwnerId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  teamMembers?: Prisma.UserUncheckedCreateNestedManyWithoutTeamOwnerInput
   assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssigneeInput
   createdLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutCreatedByInput
   notes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
@@ -3441,6 +3945,8 @@ export type UserUpdateWithoutPostRequestsInput = {
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamOwner?: Prisma.UserUpdateOneWithoutTeamMembersNestedInput
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
@@ -3471,8 +3977,10 @@ export type UserUncheckedUpdateWithoutPostRequestsInput = {
   store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamOwnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
   assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
   createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
   notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
@@ -3492,12 +4000,111 @@ export type UserUncheckedUpdateWithoutPostRequestsInput = {
   waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
+export type UserCreateManyTeamOwnerInput = {
+  id?: string
+  name: string
+  email: string
+  phone?: string | null
+  extraPhones?: Prisma.UserCreateextraPhonesInput | string[]
+  role?: $Enums.Role
+  active?: boolean
+  store?: string | null
+  subscriptionEndsAt?: Date | string | null
+  leadSourceName?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type UserUpdateWithoutTeamOwnerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUpdateManyWithoutTeamOwnerNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUpdateManyWithoutRecipientNestedInput
+  renewalDocuments?: Prisma.RenewalDocumentUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUpdateManyWithoutImpersonatingNestedInput
+  passwordResets?: Prisma.PasswordResetUpdateManyWithoutUserNestedInput
+  issuedPasswordResets?: Prisma.PasswordResetUpdateManyWithoutCreatedByNestedInput
+  emailCampaigns?: Prisma.EmailCampaignUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUpdateManyWithoutCreatedByNestedInput
+  postRequests?: Prisma.PostRequestUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutTeamOwnerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamMembers?: Prisma.UserUncheckedUpdateManyWithoutTeamOwnerNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssigneeNestedInput
+  createdLeads?: Prisma.LeadUncheckedUpdateManyWithoutCreatedByNestedInput
+  notes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  statusEvents?: Prisma.LeadStatusEventUncheckedUpdateManyWithoutActorNestedInput
+  leadActivity?: Prisma.LeadActivityUncheckedUpdateManyWithoutActorNestedInput
+  deals?: Prisma.DealUncheckedUpdateManyWithoutAgentNestedInput
+  dealStageEvents?: Prisma.DealStageEventUncheckedUpdateManyWithoutActorNestedInput
+  referredRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutReferredByNestedInput
+  handledRegistrations?: Prisma.RegistrationUncheckedUpdateManyWithoutHandledByNestedInput
+  whatsappMessages?: Prisma.WhatsAppMessageUncheckedUpdateManyWithoutRecipientNestedInput
+  renewalDocuments?: Prisma.RenewalDocumentUncheckedUpdateManyWithoutUploadedByNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  impersonatedSessions?: Prisma.SessionUncheckedUpdateManyWithoutImpersonatingNestedInput
+  passwordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutUserNestedInput
+  issuedPasswordResets?: Prisma.PasswordResetUncheckedUpdateManyWithoutCreatedByNestedInput
+  emailCampaigns?: Prisma.EmailCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  waCampaigns?: Prisma.WaCampaignUncheckedUpdateManyWithoutCreatedByNestedInput
+  postRequests?: Prisma.PostRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateManyWithoutTeamOwnerInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  extraPhones?: Prisma.UserUpdateextraPhonesInput | string[]
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  store?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leadSourceName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 
 /**
  * Count Type UserCountOutputType
  */
 
 export type UserCountOutputType = {
+  teamMembers: number
   assignedLeads: number
   createdLeads: number
   notes: number
@@ -3519,6 +4126,7 @@ export type UserCountOutputType = {
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  teamMembers?: boolean | UserCountOutputTypeCountTeamMembersArgs
   assignedLeads?: boolean | UserCountOutputTypeCountAssignedLeadsArgs
   createdLeads?: boolean | UserCountOutputTypeCountCreatedLeadsArgs
   notes?: boolean | UserCountOutputTypeCountNotesArgs
@@ -3547,6 +4155,13 @@ export type UserCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensi
    * Select specific fields to fetch from the UserCountOutputType
    */
   select?: Prisma.UserCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountTeamMembersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.UserWhereInput
 }
 
 /**
@@ -3687,8 +4302,11 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   store?: boolean
   subscriptionEndsAt?: boolean
   leadSourceName?: boolean
+  teamOwnerId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  teamOwner?: boolean | Prisma.User$teamOwnerArgs<ExtArgs>
+  teamMembers?: boolean | Prisma.User$teamMembersArgs<ExtArgs>
   assignedLeads?: boolean | Prisma.User$assignedLeadsArgs<ExtArgs>
   createdLeads?: boolean | Prisma.User$createdLeadsArgs<ExtArgs>
   notes?: boolean | Prisma.User$notesArgs<ExtArgs>
@@ -3721,8 +4339,10 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   store?: boolean
   subscriptionEndsAt?: boolean
   leadSourceName?: boolean
+  teamOwnerId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  teamOwner?: boolean | Prisma.User$teamOwnerArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
 export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -3736,8 +4356,10 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   store?: boolean
   subscriptionEndsAt?: boolean
   leadSourceName?: boolean
+  teamOwnerId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  teamOwner?: boolean | Prisma.User$teamOwnerArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
 export type UserSelectScalar = {
@@ -3751,12 +4373,15 @@ export type UserSelectScalar = {
   store?: boolean
   subscriptionEndsAt?: boolean
   leadSourceName?: boolean
+  teamOwnerId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "phone" | "extraPhones" | "role" | "active" | "store" | "subscriptionEndsAt" | "leadSourceName" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "phone" | "extraPhones" | "role" | "active" | "store" | "subscriptionEndsAt" | "leadSourceName" | "teamOwnerId" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  teamOwner?: boolean | Prisma.User$teamOwnerArgs<ExtArgs>
+  teamMembers?: boolean | Prisma.User$teamMembersArgs<ExtArgs>
   assignedLeads?: boolean | Prisma.User$assignedLeadsArgs<ExtArgs>
   createdLeads?: boolean | Prisma.User$createdLeadsArgs<ExtArgs>
   notes?: boolean | Prisma.User$notesArgs<ExtArgs>
@@ -3777,12 +4402,18 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   postRequests?: boolean | Prisma.User$postRequestsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
-export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
-export type UserIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  teamOwner?: boolean | Prisma.User$teamOwnerArgs<ExtArgs>
+}
+export type UserIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  teamOwner?: boolean | Prisma.User$teamOwnerArgs<ExtArgs>
+}
 
 export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "User"
   objects: {
+    teamOwner: Prisma.$UserPayload<ExtArgs> | null
+    teamMembers: Prisma.$UserPayload<ExtArgs>[]
     assignedLeads: Prisma.$LeadPayload<ExtArgs>[]
     createdLeads: Prisma.$LeadPayload<ExtArgs>[]
     notes: Prisma.$LeadNotePayload<ExtArgs>[]
@@ -3839,6 +4470,15 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
      * בשקט, בלי שגיאה ובלי שאיש יבין למה.
      */
     leadSourceName: string | null
+    /**
+     * בעל העסק שהעובד משויך אליו (`bizManager` / `shopOwner`), אם יש.
+     * 
+     * ⚠️ זה מסנן הרשאה ולא רק תווית: בעל העסק רואה ועורך את הלידים
+     * של כל מי שמצביע אליו כאן. ראה `teamScopeIds` ב-
+     * `src/server/auth/team.ts`. רמה אחת בלבד — עובד משויך אינו בעל
+     * צוות בעצמו, ולכן אין שרשראות ואין מעגלים.
+     */
+    teamOwnerId: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["user"]>
@@ -4235,6 +4875,8 @@ readonly fields: UserFieldRefs;
  */
 export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  teamOwner<T extends Prisma.User$teamOwnerArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$teamOwnerArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  teamMembers<T extends Prisma.User$teamMembersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$teamMembersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   assignedLeads<T extends Prisma.User$assignedLeadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$assignedLeadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   createdLeads<T extends Prisma.User$createdLeadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$createdLeadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notes<T extends Prisma.User$notesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadNotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -4292,6 +4934,7 @@ export interface UserFieldRefs {
   readonly store: Prisma.FieldRef<"User", 'String'>
   readonly subscriptionEndsAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly leadSourceName: Prisma.FieldRef<"User", 'String'>
+  readonly teamOwnerId: Prisma.FieldRef<"User", 'String'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
 }
@@ -4548,6 +5191,10 @@ export type UserCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions
    */
   data: Prisma.UserCreateManyInput | Prisma.UserCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -4618,6 +5265,10 @@ export type UserUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions
    * Limit how many Users to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -4684,6 +5335,49 @@ export type UserDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Limit how many Users to delete.
    */
   limit?: number
+}
+
+/**
+ * User.teamOwner
+ */
+export type User$teamOwnerArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
+}
+
+/**
+ * User.teamMembers
+ */
+export type User$teamMembersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
+  orderBy?: Prisma.UserOrderByWithRelationInput | Prisma.UserOrderByWithRelationInput[]
+  cursor?: Prisma.UserWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.UserScalarFieldEnum | Prisma.UserScalarFieldEnum[]
 }
 
 /**

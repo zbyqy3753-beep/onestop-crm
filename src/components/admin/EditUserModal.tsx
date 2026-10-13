@@ -8,6 +8,7 @@ import {
   updateUserAction,
 } from "@/app/(app)/admin/actions";
 import { Button, Field, Modal, inputClass } from "@/components/ui/primitives";
+import { TeamOwnerField } from "./TeamOwnerField";
 
 /**
  * עריכת משתמש קיים.
@@ -21,11 +22,14 @@ import { Button, Field, Modal, inputClass } from "@/components/ui/primitives";
  */
 export function EditUserModal({
   user,
+  users,
   canDelete,
   onClose,
 }: {
   /** המשתמש לעריכה, או `null` כשהמודל סגור */
   user: User | null;
+  /** כל המשתמשים — מהם נגזרים בעלי העסק לבורר השיוך */
+  users: User[];
   /**
    * בעלים בלבד, ולא על עצמו. הסתרה של פקד ולא הרשאה —
    * `deleteUserAction` בודקת את התפקיד ואת הזהות בעצמה.
@@ -167,6 +171,12 @@ export function EditUserModal({
             className={inputClass}
           />
         </Field>
+
+        <TeamOwnerField
+          users={users}
+          defaultValue={user.teamOwnerId}
+          excludeId={user.id}
+        />
 
         <Field label="סטטוס">
           <label className="flex h-9 cursor-pointer items-center gap-2 text-sm text-ink-2">

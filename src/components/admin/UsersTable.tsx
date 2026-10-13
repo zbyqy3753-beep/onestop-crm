@@ -6,11 +6,13 @@ import { ROLE_CONFIG } from "@/lib/domain/types";
 import { number, phone as formatPhone } from "@/lib/format";
 import { impersonateAction } from "@/app/(app)/admin/impersonation";
 import { useIsNarrow } from "@/lib/media";
-import { Badge, Button, EmptyState } from "@/components/ui/primitives";
+import { Badge, Button, EmptyState, TeamBadge } from "@/components/ui/primitives";
+import { canLeadTeam } from "@/lib/domain/permissions";
 
 /** טבלת משתמשים: עריכה, וכניסה בתור משתמש (לבעלים בלבד). */
 export function UsersTable({
   users,
+  allUsers,
   leadCountByUser,
   hasFilters,
   onEdit,
@@ -18,6 +20,8 @@ export function UsersTable({
   currentUserId,
 }: {
   users: User[];
+  /** כל המשתמשים, גם אלה שהחיפוש מסתיר — לשם בעל העסק ולגודל הצוות */
+  allUsers: User[];
   leadCountByUser: Map<string, number>;
   hasFilters: boolean;
   onEdit: (user: User) => void;
@@ -26,6 +30,7 @@ export function UsersTable({
   currentUserId: string;
 }) {
   const narrow = useIsNarrow();
+  const team = teamInfo(allUsers);
 
   if (users.length === 0) {
     return (
@@ -53,6 +58,7 @@ export function UsersTable({
             key={user.id}
             user={user}
             leadCount={leadCountByUser.get(user.id) ?? 0}
+            team={team(user)}
             onEdit={() => onEdit(user)}
             canImpersonate={canImpersonate}
             isSelf={user.id === currentUserId}
@@ -83,6 +89,7 @@ export function UsersTable({
               key={user.id}
               user={user}
               leadCount={leadCountByUser.get(user.id) ?? 0}
+              team={team(user)}
               onEdit={() => onEdit(user)}
               canImpersonate={canImpersonate}
               isSelf={user.id === currentUserId}
@@ -92,6 +99,47 @@ export function UsersTable({
       </table>
     </div>
   );
+}
+
+/** מה להציג על השיוך: למי העובד משויך, וכמה עובדים יש לבעל עסק. */
+interface TeamInfo {
+  /** `undefined` = לא משויך. `""` = משויך לבעל עסק שאינו ברשימה. */
+  ownerName?: string;
+  /** לבעל עסק בלבד — כמה משתמשים משויכים אליו */
+  size?: number;
+}
+
+function teamInfo(all: User[]): (user: User) => TeamInfo {
+  const byId = new Map(all.map((u) => [u.id, u]));
+  const sizes = new Map<string, number>();
+  for (const u of all) {
+    if (u.teamOwnerId) sizes.set(u.teamOwnerId, (sizes.get(u.teamOwnerId) ?? 0) + 1);
+  }
+  return (user) => ({
+    ownerName: user.teamOwnerId
+      ? (byId.get(user.teamOwnerId)?.name ?? "")
+      : undefined,
+    size: canLeadTeam(user.role) ? (sizes.get(user.id) ?? 0) : undefined,
+  });
+}
+
+/** תגית השיוך / גודל הצוות מתחת לשם. */
+function TeamLine({ team }: { team: TeamInfo }) {
+  if (team.ownerName !== undefined) {
+    return (
+      <span className="mt-1 flex">
+        <TeamBadge ownerName={team.ownerName || undefined} showOwner />
+      </span>
+    );
+  }
+  if (team.size) {
+    return (
+      <span className="mt-1 flex text-[11px] text-ink-3">
+        <span className="nums">{team.size}</span>&nbsp;עובדים משויכים
+      </span>
+    );
+  }
+  return null;
 }
 
 /**
@@ -145,12 +193,14 @@ function UserActions({
 function UserCard({
   user,
   leadCount,
+  team,
   onEdit,
   canImpersonate,
   isSelf,
 }: {
   user: User;
   leadCount: number;
+  team: TeamInfo;
   onEdit: () => void;
   canImpersonate: boolean;
   isSelf: boolean;
@@ -171,6 +221,7 @@ function UserCard({
             {role.label}
             {user.store && <> · {user.store}</>}
           </p>
+          <TeamLine team={team} />
           <p className="mt-0.5 truncate text-xs text-ink-4">{user.email}</p>
           {user.phone ? (
             <p className="ltr-num truncate text-xs text-ink-4">
@@ -206,12 +257,14 @@ function UserCard({
 function Row({
   user,
   leadCount,
+  team,
   onEdit,
   canImpersonate,
   isSelf,
 }: {
   user: User;
   leadCount: number;
+  team: TeamInfo;
   onEdit: () => void;
   canImpersonate: boolean;
   isSelf: boolean;
@@ -234,6 +287,7 @@ function Row({
               {role.label}
               {user.store && <> · {user.store}</>}
             </p>
+            <TeamLine team={team} />
           </div>
         </div>
       </td>

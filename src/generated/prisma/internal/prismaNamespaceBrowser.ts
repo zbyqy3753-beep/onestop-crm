@@ -107,6 +107,7 @@ export const UserScalarFieldEnum = {
   store: 'store',
   subscriptionEndsAt: 'subscriptionEndsAt',
   leadSourceName: 'leadSourceName',
+  teamOwnerId: 'teamOwnerId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

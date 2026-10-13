@@ -232,6 +232,8 @@ export interface CreateUserInput {
   store?: string;
   /** רלוונטי ל-`supplier` בלבד — ראה `User.leadSourceName` */
   leadSourceName?: string;
+  /** בעל העסק שהעובד משויך אליו — ראה `User.teamOwnerId` */
+  teamOwnerId?: string;
 }
 
 /**
@@ -255,6 +257,8 @@ export interface UpdateUserInput {
   store?: string | null;
   /** רלוונטי ל-`supplier` בלבד — ראה `User.leadSourceName` */
   leadSourceName?: string | null;
+  /** `null` = ניתוק מבעל העסק */
+  teamOwnerId?: string | null;
   active?: boolean;
 }
 

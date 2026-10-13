@@ -54,6 +54,7 @@ const users: UserRepository = {
         role: input.role,
         store: input.store,
         leadSourceName: input.leadSourceName,
+        teamOwnerId: input.teamOwnerId,
       },
     });
     return userFromPrisma(row);

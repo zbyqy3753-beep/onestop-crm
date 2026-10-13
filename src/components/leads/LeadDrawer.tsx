@@ -16,7 +16,13 @@ import { addNoteAction } from "@/app/(app)/leads/actions";
 import { dateTime, money, phone, relative, waLink } from "@/lib/format";
 import { dateTimeInputValue } from "@/lib/tz";
 import { useBodyScrollLock } from "@/lib/overlay";
-import { Badge, Button, inputClass, useNow } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  TeamBadge,
+  inputClass,
+  useNow,
+} from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { ActivityFeed } from "./ActivityFeed";
 import { CostCell, FollowUpCell } from "./cells";
@@ -332,7 +338,18 @@ export function LeadDrawer({
                 )}
               </FollowUpCell>
             </Detail>
-            {assignee && <Detail label="סוכן מטפל">{assignee.name}</Detail>}
+            {assignee && (
+              <Detail label="סוכן מטפל">
+                <span className="flex flex-wrap items-center gap-1.5">
+                  {assignee.name}
+                  {assignee.teamOwnerId && (
+                    <TeamBadge
+                      ownerName={userById.get(assignee.teamOwnerId)?.name}
+                    />
+                  )}
+                </span>
+              </Detail>
+            )}
           </dl>
 
           {/*

@@ -49,6 +49,7 @@ const users: UserRepository = {
       role: input.role,
       store: input.store,
       leadSourceName: input.leadSourceName,
+      teamOwnerId: input.teamOwnerId,
       active: true,
     };
     state.users.push(user);
@@ -105,6 +106,9 @@ const users: UserRepository = {
     );
     for (const lead of state.leads) {
       if (lead.assigneeId === id) lead.assigneeId = undefined;
+    }
+    for (const user of state.users) {
+      if (user.teamOwnerId === id) user.teamOwnerId = undefined;
     }
   },
 };

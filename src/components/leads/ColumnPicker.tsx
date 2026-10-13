@@ -21,13 +21,16 @@ export function ColumnPicker({
   visible,
   onChange,
   canSeeAll,
+  canSeeTeam = false,
 }: {
   visible: ColumnKey[];
   onChange: (keys: ColumnKey[]) => void;
   /** עמודות ניהוליות לא מופיעות בבורר של עובד — ראה `allowedColumns` */
   canSeeAll: boolean;
+  /** בעל עסק — רואה גם את עמודת השיוך */
+  canSeeTeam?: boolean;
 }) {
-  const offered = allowedColumns(TOGGLEABLE, canSeeAll);
+  const offered = allowedColumns(TOGGLEABLE, canSeeAll, canSeeTeam);
   const extras = offered.filter((c) => !c.defaultOn && visible.includes(c.key));
 
   function toggle(key: ColumnKey) {

@@ -13,7 +13,7 @@ import { TONE_VAR, phone, relative, until, waLink } from "@/lib/format";
 import { whatsappGreeting } from "@/lib/domain/types";
 import { dateTimeInputValue } from "@/lib/tz";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
-import { Badge } from "@/components/ui/primitives";
+import { Badge, TeamBadge } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import {
   FollowUpCell,
@@ -55,7 +55,9 @@ export function LeadCard({
   onStar,
   onPatch,
   canSeeAll = false,
+  showAssignee = canSeeAll,
   assigneeName,
+  assigneeTeamOwner,
 }: {
   lead: Lead;
   now: number | null;
@@ -85,8 +87,18 @@ export function LeadCard({
    * זה בדיוק המצב שמנהל הכי צריך לראות — ליד שאיש לא מטפל בו.
    */
   canSeeAll?: boolean;
+  /**
+   * הצגת המטפל במקום הזמן היחסי. ברירת המחדל היא `canSeeAll`; בעל
+   * עסק מקבל אותה בלי שאר התצוגה הניהולית (המקור).
+   */
+  showAssignee?: boolean;
   /** שם העובד המשויך, אם יש. */
   assigneeName?: string;
+  /**
+   * כשהמטפל משויך לבעל עסק — שם בעל העסק (או `""` כשאינו ידוע).
+   * `undefined` = לא משויך, ואז אין תגית.
+   */
+  assigneeTeamOwner?: string;
 }) {
   const priority = PRIORITY_CONFIG[lead.priority];
   const status = STATUS_CONFIG[lead.status];
@@ -331,7 +343,7 @@ export function LeadCard({
           במסך של 375px. לעובד (שרואה רק את שלו) אין שם מה להציג,
           ולכן הוא ממשיך לראות את הזמן.
         */}
-        {canSeeAll ? (
+        {showAssignee ? (
           // ⚠️ עיגול ראשי-תיבות ולא עוד טקסט אפור. קודם שם העובד נכתב
           // באותו גודל וצבע של "לפני 3 שע׳" באותו מקום בדיוק, ולכן
           // נקרא כחותמת זמן. ליד ללא שיוך מקבל טון אזהרה — הוא לא
@@ -355,6 +367,9 @@ export function LeadCard({
             <span className="max-w-[72px] truncate">
               {assigneeName ?? "ללא שיוך"}
             </span>
+            {assigneeTeamOwner !== undefined && (
+              <TeamBadge ownerName={assigneeTeamOwner || undefined} />
+            )}
           </span>
         ) : (
           <span className="shrink-0 truncate whitespace-nowrap text-[11px] text-ink-4">
