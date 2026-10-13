@@ -66,7 +66,15 @@ function safeEqual(a: string, b: string): boolean {
  * לא יסגיר כמה מפתחות רשומים ואיפה ברשימה נמצא המפתח שנשלח.
  */
 export function partnerFromKey(provided: string | null): ApiPartner | null {
-  return fromKey(provided, "LEADS_API_KEYS");
+  /*
+   * ⚠️ `LEADS_API_KEYS_EXTRA` קיים כי `LEADS_API_KEYS` מוגדר ב-Vercel
+   * כמשתנה Sensitive — אי אפשר לקרוא אותו בחזרה, ולכן אי אפשר להוסיף
+   * לו זוג בלי לדרוס את המפתחות הקיימים. שותף חדש נרשם כאן. שני
+   * הרישומים נבדקים תמיד, כדי שזמן התשובה לא יסגיר באיזה מהם המפתח.
+   */
+  const primary = fromKey(provided, "LEADS_API_KEYS");
+  const extra = fromKey(provided, "LEADS_API_KEYS_EXTRA");
+  return primary ?? extra;
 }
 
 /** שם השדה/הפרמטר שנושא את המפתח מחוץ לכותרת. */
