@@ -60,7 +60,7 @@ export function TeamClient({
       <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-[30px] font-bold leading-none tracking-tight">
-            הצוות שלי
+            ניהול הצוות
           </h1>
           <p className="mt-2 text-sm text-ink-3">
             <span className="nums font-semibold text-ink-1">{members.length}</span>{" "}
