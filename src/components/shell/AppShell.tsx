@@ -42,7 +42,7 @@ export function AppShell({
   initialNarrow: boolean;
 }) {
   const pathname = usePathname();
-  const groups = visibleFor(user.role);
+  const groups = visibleFor(user.role, user.id);
 
   const [moreOpen, setMoreOpen] = useState(false);
 

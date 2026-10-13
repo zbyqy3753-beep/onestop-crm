@@ -202,10 +202,10 @@ export const NAV: NavGroup[] = [
  * הצוות — כך שהתפריט מציג בדיוק את מה שהשרת מוכן לתת, לא פחות ולא
  * יותר.
  */
-export function visibleFor(role: Role): NavGroup[] {
+export function visibleFor(role: Role, userId?: string): NavGroup[] {
   return NAV.map((g) => ({
     ...g,
-    items: g.items.filter((i) => canAccessRoute(role, i.href)),
+    items: g.items.filter((i) => canAccessRoute(role, i.href, userId)),
   })).filter((g) => g.items.length > 0);
 }
 

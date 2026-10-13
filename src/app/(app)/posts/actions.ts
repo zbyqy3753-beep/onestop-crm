@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/client";
-import { requireStaffUser } from "@/server/auth/session";
+import { actorForRoute } from "@/server/auth/session";
 
 export interface PostRequestFormState {
   ok: boolean;
@@ -22,7 +22,9 @@ export async function createPostRequest(
   _prev: PostRequestFormState | null,
   formData: FormData,
 ): Promise<PostRequestFormState> {
-  const user = await requireStaffUser();
+  // אותו שומר כמו המסך — Server Action היא נקודת קצה HTTP בפני עצמה
+  const user = await actorForRoute("/posts");
+  if (!user) return { ok: false, error: "סטודיו הפוסטים פתוח לאלירן בלבד." };
 
   const topic = String(formData.get("topic") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();

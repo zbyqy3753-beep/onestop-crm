@@ -130,7 +130,24 @@ const ROUTE_ROLES = {
  * הטיפוס נגזר מהמפה ולא נכתב ידנית, כך שכתיב שגוי בקריאה ל-
  * `requireRouteAccess` נופל בקומפילציה ולא נשאר שומר שלא שומר על כלום.
  */
-export type RestrictedRoute = keyof typeof ROUTE_ROLES;
+export type RestrictedRoute =
+  | keyof typeof ROUTE_ROLES
+  | keyof typeof PERSONAL_ROUTES;
+
+/**
+ * מסכים אישיים — פתוחים למשתמשים מסוימים לפי מזהה, לא לפי תפקיד.
+ *
+ * `/posts` הוא סטודיו הפוסטים של אלירן (אלירן תקשורת, @telecom4you):
+ * הפוסטים והבקשות שבו שלו בלבד, ושאר הצוות — כולל בעלים — לא נכנס.
+ * בעלים שצריך לראות אותו נכנס דרך "כניסה בתור" אלירן.
+ *
+ * ⚠️ לפי `User.id` ולא לפי מייל או שם: את שניהם אפשר לערוך במסך
+ * הניהול, ומשתמש שישנה לעצמו את השם ל"אלירן" לא אמור לקבל את המסך.
+ * המזהה לא משתנה לעולם.
+ */
+const PERSONAL_ROUTES = {
+  "/posts": ["cmsycm4b3000004l7504fik26"], // אלירן
+} as const satisfies Record<string, readonly string[]>;
 
 /**
  * היעדים היחידים שספק לידים חיצוני רשאי להגיע אליהם.
@@ -143,12 +160,25 @@ export type RestrictedRoute = keyof typeof ROUTE_ROLES;
  */
 const SUPPLIER_HREFS: readonly string[] = ["/leads"];
 
-/** האם התפקיד רשאי להגיע לנתיב. */
-export function canAccessRoute(role: Role, href: string): boolean {
+/**
+ * האם המשתמש רשאי להגיע לנתיב.
+ *
+ * ⚠️ `userId` נדרש למסכים אישיים (`PERSONAL_ROUTES`). בלעדיו הם נחסמים —
+ * ברירת המחדל הבטוחה למסך שהוגדר כפרטי.
+ */
+export function canAccessRoute(
+  role: Role,
+  href: string,
+  userId?: string,
+): boolean {
   if (isSupplier(role)) return SUPPLIER_HREFS.includes(href);
 
+  const personal: readonly string[] | undefined =
+    PERSONAL_ROUTES[href as keyof typeof PERSONAL_ROUTES];
+  if (personal) return !!userId && personal.includes(userId);
+
   const allowed: readonly Role[] | undefined =
-    ROUTE_ROLES[href as RestrictedRoute];
+    ROUTE_ROLES[href as keyof typeof ROUTE_ROLES];
   return !allowed || allowed.includes(role);
 }
 

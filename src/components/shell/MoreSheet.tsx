@@ -33,7 +33,7 @@ export function MoreSheet({
 
   if (!open) return null;
 
-  const groups = visibleFor(user.role);
+  const groups = visibleFor(user.role, user.id);
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">

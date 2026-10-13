@@ -1,7 +1,7 @@
 import { PostStudio } from "@/components/posts/PostStudio";
 import { studioPackages } from "@/lib/posts/catalog";
 import { prisma } from "@/server/db/client";
-import { requireStaffUser } from "@/server/auth/session";
+import { requireRouteAccess } from "@/server/auth/session";
 
 /**
  * סטודיו הפוסטים של אלירן: יוצר שקפים לאינסטגרם מהקטלוג של `/lp`, או
@@ -13,7 +13,8 @@ import { requireStaffUser } from "@/server/auth/session";
 export const dynamic = "force-dynamic";
 
 export default async function PostsPage() {
-  await requireStaffUser();
+  // ⚠️ אלירן בלבד — ראה `PERSONAL_ROUTES` ב-`permissions.ts`
+  await requireRouteAccess("/posts");
 
   const requests = await prisma.postRequest.findMany({
     orderBy: { createdAt: "desc" },

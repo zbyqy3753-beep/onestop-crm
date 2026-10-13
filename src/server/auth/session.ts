@@ -207,7 +207,7 @@ export async function requireRouteAccess(
   route: RestrictedRoute,
 ): Promise<User> {
   const user = await requireStaffUser();
-  if (!canAccessRoute(user.role, route)) notFound();
+  if (!canAccessRoute(user.role, route, user.id)) notFound();
   return user;
 }
 
@@ -226,7 +226,7 @@ export async function actorForRoute(
 ): Promise<User | null> {
   const user = await getSessionUser();
   if (!user) return null;
-  return canAccessRoute(user.role, route) ? user : null;
+  return canAccessRoute(user.role, route, user.id) ? user : null;
 }
 
 /**
