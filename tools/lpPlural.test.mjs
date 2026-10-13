@@ -6,7 +6,9 @@ import {
   PLANS_CAPTION,
   cardStats,
   compareRows,
+  dataLabel,
   detailRows,
+  speedLabel,
 } from "../src/app/lp/catalog/format.ts";
 
 /*
@@ -186,4 +188,97 @@ test("מונה מסלולי החשמל ביחיד וברבים", () => {
   assert.equal(PLANS_CAPTION(1), "מסלול");
   assert.equal(PLANS_CAPTION(0), "מסלולים");
   assert.equal(PLANS_CAPTION(18), "מסלולים");
+});
+
+
+function electricity(spec, over = {}) {
+  return {
+    ...cellular({}),
+    id: "e1",
+    slug: "e1",
+    category: "electricity",
+    categoryHe: "חשמל",
+    price: null,
+    priceModel: "discount",
+    discountPercent: 7,
+    spec: {
+      discountPercent: 7,
+      allHours: false,
+      hoursText: null,
+      customerType: "private",
+      commitment: null,
+      smartMeterRequired: null,
+      maxMonthlyBill: null,
+      ...spec,
+    },
+    ...over,
+  };
+}
+
+/*
+ * ⚠️ `spec: null` **הפיל את רינדור השרת של `/lp` כולו**, ולא רשומה אחת:
+ * שלוש הפונקציות ניגשו לשדה הראשון מיד אחרי ה-cast
+ * (`spec.unlimitedData` / `spec.downloadMbps` / `spec.allHours`, ובטבלה
+ * `uploadMbps`). זה אותו שער ש-`hasSpec`/`tierTable` ב-`savings.ts`
+ * כבר מחילות רמה אחת מעל — ראה `specOf`. רשומה בלי `spec` נקראת
+ * כ"לא נמסר דבר", כמו ids 132 ו-100 שכל שדות ה-`spec` שלהן ריקים.
+ */
+test("רשומה בלי spec אינה מפילה את הרינדור", () => {
+  for (const pkg of [cellular({}), home({}), electricity({})]) {
+    for (const spec of [null, undefined, "x", 5, []]) {
+      const broken = { ...pkg, spec };
+      assert.deepEqual(cardStats(broken), [], `cardStats ${pkg.category}`);
+      assert.deepEqual(detailRows(broken), [], `detailRows ${pkg.category}`);
+      // הטבלה מציגה "—" לכל עובדה של הרשומה הפגומה, ולא זורקת.
+      const rows = compareRows([broken, pkg]);
+      for (const row of rows) assert.equal(row.values[0], "—", `${row.label} ${pkg.category}`);
+    }
+  }
+  assert.equal(dataLabel(cellular({}), null), null);
+  assert.equal(speedLabel(home({}), null), null);
+});
+
+/*
+ * ⚠️ תווית המהירות נקבעת לפי **מי שמסר** מהירות, ולא לפי כל חבילת בית.
+ * חבילה בלי אינטרנט (ids 158, 132, 109, 102, 108, 107, 100, 89, 83, 4 —
+ * 10 מ-29 חבילות הבית הכשירות) הורידה את התווית לכולם, ולכן
+ * `compareRows([158, 70])` הדפיס "מהירות גלישה" בעוד הכרטיס של 70
+ * מדפיס "מהירות (הורדה/העלאה)" על אותו ערך בדיוק.
+ */
+test("חבילה בלי מהירות אינה מורידה את התווית הזוגית", () => {
+  const noSpeed = home({ downloadMbps: null, uploadMbps: null });
+  const pair = home({ downloadMbps: 1000, uploadMbps: 100 }, { id: "h2" });
+  const rows = compareRows([noSpeed, pair]).filter((r) => r.label.includes("מהירות"));
+  assert.equal(rows.length, 1, "אותה עובדה בשתי שורות");
+  assert.equal(rows[0].label, "מהירות (הורדה/העלאה)");
+  assert.deepEqual(rows[0].values, ["—", "1,000/100Mbps"]);
+  // והתווית הזוגית **כן** נופלת כשמי שמסר מהירות לא מסר העלאה.
+  const single = home({ downloadMbps: 1000, uploadMbps: null }, { id: "h3" });
+  const mixed = compareRows([single, pair]).filter((r) => r.label.includes("מהירות"));
+  assert.equal(mixed.length, 1);
+  assert.equal(mixed[0].label, "מהירות גלישה");
+});
+
+/*
+ * ⚠️ מדרגת קווים עוברת את **אותו** שער ש-`isComparable` מחילה עליה
+ * (`isMoney` על המחיר, כמות שלמה מ-1 ומעלה) — אחרת הכרטיס מפרסם מחיר
+ * שהמנוע מסרב להשתמש בו. `price: 0` הוא הצורה שהמחלץ מייצר כשלא קרא
+ * מחיר (ids 18, 22 על `price`), והשורה הדפיסה "3 קווים ₪0".
+ */
+test("מדרגת קווים בלי מחיר שמיש אינה מודפסת", () => {
+  const tierRow = (lineTiers) =>
+    detailRows(cellular({ lineTiers })).find((r) => r.label === "מחיר לפי מספר קווים");
+  assert.equal(tierRow([{ lines: 3, price: 0 }]), undefined, "₪0 כמחיר מדרגה");
+  assert.equal(tierRow([{ lines: 0, price: 32 }]), undefined, "0 קווים");
+  assert.equal(tierRow([{ lines: 2.5, price: 32 }]), undefined, "2.5 קווים");
+  assert.equal(tierRow([{ lines: 3, price: "33" }]), undefined, "מחיר כמחרוזת");
+  assert.deepEqual(tierRow([{ lines: 3, price: 0 }, { lines: 4, price: 29 }]), {
+    label: "מחיר לפי מספר קווים",
+    value: "4 קווים ₪29",
+  });
+  // המדרגות התקינות שבקטלוג היום אינן נוגעות בשער הזה.
+  assert.deepEqual(tierRow([{ lines: 1, price: 44.9 }, { lines: 3, price: 39.9 }]), {
+    label: "מחיר לפי מספר קווים",
+    value: "קו אחד ₪44.9 · 3 קווים ₪39.9",
+  });
 });

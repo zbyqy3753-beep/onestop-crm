@@ -277,6 +277,27 @@ const ROUTER_PRICED_SEPARATELY = new RegExp(
   [
     `הטבה על הנתב`,
     `נתב[^.•]{0,25}?בתוספת`,
+    /*
+     * ⚠️ ההצהרה **השלילית**, לא רק החיובית. ההערה שמעל כבר מנמקת למה
+     * `נתב כלול במחיר` אינו נתפס — ובדיוק ההיפוך של אותו משפט, "המחיר
+     * לא כולל נתב", נפל בין הכיסאות אף שהוא ההצהרה המפורשת ביותר
+     * שהגולש יכול לקבל על חיוב חודשי שהמספר הגדול אינו מכיל.
+     *
+     * הוא חי בקטלוג **היום**: id 114 (`סיבים 5000/500 … כולל נתב`,
+     * price 199) כותבת "מחיר 199 ש"ח לא כולל נתב 220 שח כולל נתב" —
+     * כלומר החשבון בפועל הוא 220, פער של ₪21 לחודש ו-₪252 לשנה.
+     * היא נפסלת היום על `hasTv` בלבד, ואומת ישירות: עם `hasTv: true`
+     * היא עוברת את **כל** שערי `isComparable`, כלומר הדבר היחיד
+     * שעוצר אותה הוא שדה שהרענון הבא יכול למלא.
+     *
+     * ⚠️ אין כאן דרישת ספרה, בשונה משתי החלופות שמתחת: "לא כולל נתב"
+     * הוא חוסר-ידיעה גם בלי מספר, וזה אותו "לא יודעים — לא מבטיחים"
+     * שחל בקובץ הזה על המחיר שאחרי ההטבה. סריקה על כל 109 הרשומות:
+     * התאמה אחת (114) ואפס false positives — שבעת המופעים של
+     * `כולל נתב` **בלי** השלילה (ids 82, 115, 112, 113, 3, 99, 98, 86)
+     * אינם נתפסים.
+     */
+    `(?:לא|אינו|אינה|אינם) כולל(?:ת|ים)? ה?נתב`,
     // ⚠️ `(?:\.\d+)?` כמו בשורה הבאה. מחיר נתב בישראל נכתב כמעט תמיד
     // כ-14.90 / 9.90 / 4.90, ובלי החלק העשרוני "עלות נתב 14.90" חמק —
     // חיוב חודשי נסתר שהיה מכניס את החבילה לבריכה ומנפח את
@@ -395,6 +416,35 @@ function hasSpec(p: Package): boolean {
   return p.spec != null && typeof p.spec === "object" && !Array.isArray(p.spec);
 }
 
+/**
+ * `type` כטקסט שאפשר לחפש בו — ולא כערך שיש לו במקרה `includes`.
+ *
+ * ⚠️ זה **אותו** כשל בדיוק ש-`tierTable` ו-`hasSpec` נכתבו נגדו, רמה אחת
+ * הלאה: `(p.type ?? "")` מגן רק מפני `null`/`undefined`, ולכן `type: 5`
+ * (או `0`, `false`, `true`, `NaN`, `{}` — כל מה שאינו nullish ואין לו
+ * `includes`) מפיל `TypeError: (p.type ?? "").includes is not a function`
+ * **בתוך רינדור השרת של `/lp` כולו**, במקום להפיל חבילה אחת בשקט כמו
+ * שכל שער אחר בקובץ הזה עושה. הקטלוג נכנס דרך `as unknown as Catalog`
+ * בלי ולידציה, ו-`type` הוא שדה שהמחלץ ממלא מטקסט חופשי ("5G", "4G",
+ * "כשר", `null`) — כלומר בדיוק הצורה שרענון אחד יכול לכתוב כמספר.
+ * סחיפה על כל השדות העליונים ועל כל שדות ה-`spec` × 12 ערכים פגומים
+ * מצאה שזה **מסלול ההתרסקות היחיד** שנשאר במנוע.
+ *
+ * ⚠️ וגם `badges`: `type` הוא הסימן השני על רשומת כשר (ראה הענף
+ * הסלולרי), ו-`badges: ["כשר"]` הוא אותה הצהרה מנורמלת על אותה רשומה —
+ * כל שמונה רשומות הכשר נושאות אותו. ⚠️ **זה אינו משנה את הבריכה היום
+ * ולא יכול לשנות אותה**: שמונה רשומות הכשר נפסלות גם בשער הגלישה
+ * (אין בהן `dataGb` ולא `unlimitedData`), ולכן זהו חיזוק של אותו שער
+ * ולא פסילה נוספת.
+ */
+function typeText(p: Package): string {
+  const type = typeof p.type === "string" ? p.type : "";
+  const badges = Array.isArray(p.badges)
+    ? p.badges.filter((b): b is string => typeof b === "string").join(" ")
+    : "";
+  return `${type} ${badges}`;
+}
+
 export function isComparable(p: Package, track: Track): p is MonthlyPackage {
   if (p.category !== track || p.priceModel !== "monthly") return false;
   // ⚠️ `typeof` ולא `== null` — ראה `isListable`: הקטלוג נכנס דרך cast
@@ -480,7 +530,7 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
      * דבר ל-`dataGb`/`minutes`: `"100" > 0` ו-`"5000" >= 1000` הם אמת
      * ב-JS, והקטלוג נכנס דרך `as unknown as Catalog` בלי ולידציה.
      */
-    if (spec.kosher !== false || (p.type ?? "").includes("כשר")) return false;
+    if (spec.kosher !== false || typeText(p).includes("כשר")) return false;
     const hasData =
       spec.unlimitedData === true || (typeof spec.dataGb === "number" && spec.dataGb > 0);
     return hasData && typeof spec.minutes === "number" && spec.minutes >= 1000;

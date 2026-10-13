@@ -18,7 +18,7 @@ import {
   providers,
   serviceCounts,
 } from "./catalog/catalog";
-import { heroRiseLine, PACKAGES_CAPTION, PLANS_CAPTION, shekels } from "./catalog/format";
+import { heroRiseLine, PACKAGES_CAPTION, PLANS_CAPTION, priceNote, shekels } from "./catalog/format";
 import "./lp.css";
 
 /**
@@ -175,6 +175,26 @@ export default function LandingPage() {
    * כ-"ואחרי ההטבה ₪0" ובולע את ההערה המילולית שהרשומה כן מסרה.
    */
   const riseLine = lead ? heroRiseLine(lead) : null;
+  /*
+   * ⚠️ וגם ההסתייגות על המחיר עצמו, ולא רק על מה שיקרה אחרי ההטבה.
+   *
+   * `priceNote` הוא השער המשותף שאומר מתי המספר אינו מחיר חודשי שטוח
+   * — "המחיר מותנה בכמות המנויים בחבילה", "מחיר למנוי במסלול משפחתי",
+   * "המחיר הוא מחיר התחלתי ולא מחיר אחיד" — והוא הוצא ל-`format.ts`
+   * בדיוק כדי שלא יישאר על משטח אחד (ההערה שם מתעדת שזו הייתה הפעם
+   * הרביעית). הכרטיס קורא אותו, `compareRows` קורא אותו, והפס הזה —
+   * ההצהרה הגדולה ביותר בדף, שאותה חבילה מצוטטת בה בגודל 4xl —
+   * נשאר מחוץ לשלישייה, בדיוק כפי שקרה ל-`priceAfterPromo` עד
+   * ש-`heroRiseLine` נכתב שורה מעל.
+   *
+   * ⚠️ `cheapest` מדרג לפי `price` הגולמי, בלי לדעת שהמחיר מותנה
+   * (זה ממצא פתוח על `byPrice`), ולכן הפס יצטט חבילה כזו ברגע שהיא
+   * תהיה הזולה: היום הזולה היא id 91 (₪21.9, בלי הסתייגות), אבל שש
+   * חבילות סלולר נושאות הסתייגות ומתחילות ב-id 117 ב-₪29.9 — חמישית
+   * ברשימה. רענון שמסיר שלוש מהזולות מפרסם ₪35 של id 110 כמחיר לקו
+   * יחיד, בזמן שהכרטיס שלו מתחת מודה שהמחיר מותנה בשני מנויים.
+   */
+  const leadNote = lead ? priceNote(lead) : null;
 
   return (
     <main className="lp-root">
@@ -253,6 +273,11 @@ export default function LandingPage() {
                   `heroRiseLine` קוראת את שתיהן (מספר והערה מילולית),
                   ולכן הספירה כאן חייבת לכלול את שתיהן.
                 */}
+                {leadNote && (
+                  <span className="basis-full text-center text-xs font-semibold text-white/80 sm:text-sm">
+                    {leadNote.value}
+                  </span>
+                )}
                 {riseLine && (
                   <span className="basis-full text-center text-xs font-semibold text-white/80 sm:text-sm">
                     {riseLine}

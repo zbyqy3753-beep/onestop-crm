@@ -1,4 +1,4 @@
-import { basePackages, displayName, listable } from "@/app/lp/catalog/catalog";
+import { basePackages, displayName, listable, providerName } from "@/app/lp/catalog/catalog";
 import { dataLabel, speedLabel } from "@/app/lp/catalog/format";
 import type { CellularSpec, HomeSpec, Package } from "@/app/lp/catalog/types";
 
@@ -60,7 +60,7 @@ export function studioPackages(): StudioPackage[] {
   return listable(basePackages()).map((p) => ({
     id: p.id,
     category: p.category,
-    provider: p.provider.name,
+    provider: providerName(p),
     name: displayName(p.name),
     price: p.category === "electricity" ? null : p.price,
     after: trustedAfter(p),

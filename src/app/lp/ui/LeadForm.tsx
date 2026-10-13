@@ -11,6 +11,7 @@ import { submitLandingLead, type LandingState } from "../actions";
 import { crmCategory } from "../config";
 import { btnPrimary } from "./button";
 import { fieldClass, labelClass } from "./field";
+import { providerName } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
 /**
@@ -286,7 +287,7 @@ export function LeadForm({ pkg, compact = false, category, note, packageName }: 
         <input
           type="hidden"
           name="packageName"
-          value={`${pkg.name} · ${pkg.provider.name}`}
+          value={`${pkg.name} · ${providerName(pkg)}`}
         />
       ) : packageName ? (
         <input type="hidden" name="packageName" value={packageName} />

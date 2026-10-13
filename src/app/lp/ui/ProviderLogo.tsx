@@ -10,11 +10,19 @@ export function ProviderLogo({
   size = 40,
   className = "",
 }: {
-  logo: string;
+  logo: string | null;
   name: string;
   size?: number;
   className?: string;
 }) {
+  /*
+   * ⚠️ לוגו חסר אינו `<Image>` — הוא כלום. `src={`/providers/${logo}`}`
+   * על `null` היה מבקש `/providers/null` (404 על כל כרטיס), ועל
+   * `provider: null` זרק `TypeError` ברינדור השרת והפיל את `/lp` כולו.
+   * שם הספק מודפס לצד הלוגו בשני המשטחים שקוראים לכאן, ולכן אין כאן
+   * אובדן מידע. ראה `providerLogo` ב-`catalog.ts`.
+   */
+  if (!logo) return null;
   return (
     <Image
       src={`/providers/${logo}`}

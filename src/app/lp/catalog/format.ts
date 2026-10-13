@@ -131,11 +131,37 @@ const isCount = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
 /**
+ * ה-`spec` כאובייקט שאפשר לקרוא ממנו שדות — גם כשהרשומה לא מסרה אותו.
+ *
+ * ⚠️ `spec: null` **הפיל את רינדור השרת של `/lp` כולו**. `cardStats`,
+ * `detailRows` ו-`compareRows` עשו `pkg.spec as HomeSpec` ואז ניגשו
+ * מיד לשדה (`spec.unlimitedData` / `spec.downloadMbps` / `spec.allHours`
+ * / `(p.spec as HomeSpec).uploadMbps`), ולכן `spec: null` זרק
+ * `Cannot read properties of null` — כלומר **כל** הדף מחזיר 500 במקום
+ * שכרטיס אחד יציג פחות. זו בדיוק הנפילה שההערה על `shekels` נכתבה
+ * נגדה, ואותו שער בדיוק כבר נבנה רמה אחת מעל: `hasSpec`/`tierTable`
+ * ב-`savings.ts` מסננים `spec` שאינו אובייקט לפני כל קריאה ממנו, ומה
+ * שחסר כאן הוא השכבה שמדפיסה. `spec` שאינו אובייקט נקרא כ"לא נמסר
+ * דבר": כל שערי ה-`isCount`/`typeof` שמתחת מפילים את האריחים
+ * והשורות בשקט, כמו רשומה שכל שדות ה-`spec` שלה ריקים (ids 132, 100).
+ */
+const specOf = <T>(pkg: Package): T =>
+  (pkg.spec != null && typeof pkg.spec === "object" && !Array.isArray(pkg.spec)
+    ? pkg.spec
+    : {}) as T;
+
+/**
  * Big buckets are sold as "unlimited" — say so instead of printing 10000GB.
  *
  * ⚠️ `pkg` ולא `spec` לבדו: ה-"עד" חי בפרוזה של הרשומה, לא במפרט.
+ *
+ * ⚠️ ה-`spec` מוצהר כבר-`null`, כמו `tierTable` ב-`savings.ts` ומאותו
+ * טעם: `cardStats` כבר מגודר ב-`specOf`, אבל הפונקציה הזו מיוצאת
+ * וקורא שני (`src/lib/posts/catalog.ts`, סטודיו הפוסטים) מעביר לה את
+ * `p.spec` כמות שהוא. שם הנפילה הייתה מפילה את רינדור הסטודיו.
  */
-export function dataLabel(pkg: Package, spec: CellularSpec): string | null {
+export function dataLabel(pkg: Package, spec: CellularSpec | null | undefined): string | null {
+  if (!spec) return null;
   if (spec.unlimitedData) return "גלישה חופשית";
   // ⚠️ `isCount` ולא `== null`: "750GB" הדפיס "NaNGB". ראה ההערה שם.
   if (!isCount(spec.dataGb) || spec.dataGb === 0) return null;
@@ -163,7 +189,8 @@ export function dataLabel(pkg: Package, spec: CellularSpec): string | null {
  * בעקבות חלוקה, על מספר שהקטלוג מסר במדויק. יחידה שאינה מחלקת את שתי
  * המהירויות בשלמות נשארת Mb, שם שום חלוקה לא מתבצעת.
  */
-export function speedLabel(pkg: Package, spec: HomeSpec): string | null {
+export function speedLabel(pkg: Package, spec: HomeSpec | null | undefined): string | null {
+  if (!spec) return null;
   /*
    * ⚠️ `isCount` ולא `== null`, בשני השדות. השער הקודם בדק היעדר ערך
    * ולא ערך שמיש: `downloadMbps: "1000 Mb"` עבר ו-`nf.format` החזיר
@@ -437,7 +464,16 @@ export function priceNote(pkg: Package): PriceNote | null {
   if (requiresMultipleLines(pkg)) {
     return { label: "תנאי המחיר", value: "המחיר מותנה בכמות המנויים בחבילה" };
   }
-  if (familyPriceOnly(pkg)) {
+  /*
+   * ⚠️ בסלולר בלבד, כמו במנוע. `computeSaving` מחילה את השער הזה
+   * מאחורי `track !== "cellular"` (`savings.ts:719`) כי "מסלול משפחתי"
+   * הוא מחיר לקו מתוך כמה קווים — מושג שאין לו מקבילה בחבילת בית, שם
+   * יש חיבור אחד. `FAMILY_ONLY` כולל `/family/i`, ולכן חבילת אינטרנט
+   * שהמילה הזו מופיעה בשמה הייתה מקבלת כאן "משני מנויים ומעלה" —
+   * הסתייגות שהרשומה לא מסרה. רדום בקטלוג של היום (אפס התאמות בבית),
+   * ולכן זה שער לרענון הבא ולא תיקון של מספר מוצג.
+   */
+  if (pkg.category === "cellular" && familyPriceOnly(pkg)) {
     return { label: "תנאי המחיר", value: "מחיר למנוי במסלול משפחתי — משני מנויים ומעלה" };
   }
   if (proseFloorsAt(pkg, pkg.price)) {
@@ -463,7 +499,7 @@ export interface Stat {
 
 export function cardStats(pkg: Package): Stat[] {
   if (pkg.category === "cellular") {
-    const spec = pkg.spec as CellularSpec;
+    const spec = specOf<CellularSpec>(pkg);
     const out: Stat[] = [];
   /*
    * ⚠️ `typeof === "number"` ולא טרות'יניס. `0` מפורש הוא **נתון**, ולא
@@ -496,7 +532,7 @@ export function cardStats(pkg: Package): Stat[] {
   }
 
   if (pkg.category === "home") {
-    const spec = pkg.spec as HomeSpec;
+    const spec = specOf<HomeSpec>(pkg);
     const out: Stat[] = [];
     const speed = speedLabel(pkg, spec);
     if (speed) out.push({ value: speed, caption: "מהירות גלישה" });
@@ -538,7 +574,7 @@ export function cardStats(pkg: Package): Stat[] {
     return out.slice(0, 3);
   }
 
-  const spec = pkg.spec as ElectricitySpec;
+  const spec = specOf<ElectricitySpec>(pkg);
   const out: Stat[] = [];
   if (spec.allHours) out.push({ value: "כל השעות", caption: "מתי ההנחה חלה" });
   /*
@@ -586,7 +622,7 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
   };
 
   if (pkg.category === "cellular") {
-    const s = pkg.spec as CellularSpec;
+    const s = specOf<CellularSpec>(pkg);
     /*
      * ⚠️ גם השער וגם התווית נגזרים מאותה פונקציה שהאריח השתמש בה.
      * שער שקורא תווית קבועה ("דקות לחו״ל") היה מפספס את האריח של
@@ -618,9 +654,30 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     // "NaN קווים" לצד מחיר שכן נמסר. מדרגה בלי כמות שמישה אינה
     // מדרגה, ושורה שכל מדרגותיה נפלו אינה נכתבת כלל — תווית עם ערך
     // ריק היא בדיוק אותו "חור" שהאריחים נזהרים ממנו.
+    /*
+     * ⚠️ `isMoney` על מחיר המדרגה, ו-`Number.isInteger(…) && >= 1` על
+     * הכמות — **אותו** שער בדיוק ש-`isComparable` מחילה על אותו מערך
+     * (`savings.ts:437`), ושנשאר פתוח דווקא בשכבה שמדפיסה אותו.
+     * `isCount` לבדו אישר שתי הצהרות שהרשומה לא מסרה:
+     *
+     *   • `price: 0` הודפס "3 קווים ₪0", כלומר **חבילה חינם** —
+     *     בדיוק הטענה שהוסרה מהכותרת בגודל 3xl כשהיא עברה
+     *     ל-`headlineValue` ("₪0 לחודש" על ids 18/22). `0` הוא הצורה
+     *     שהמחלץ מייצר כשלא קרא מחיר, וזה השדה היחיד בכרטיס שנשאר
+     *     בלי השער הזה: `shekels` מדרדר מחרוזת ל-"—" אבל `0` הוא
+     *     מספר תקף מבחינתו.
+     *   • `lines: 0` / `lines: 2.5` הודפסו "0 קווים" ו-"2.5 קווים".
+     *     `isComparable` פוסלת את הרשומה כולה על אותה מדרגה, כלומר
+     *     המנוע מסרב להשתמש במספר שהכרטיס פרסם.
+     *
+     * מדרגה בלי מחיר שמיש אינה מדרגה, בדיוק כמו מדרגה בלי כמות שמישה.
+     */
     const tiers = Array.isArray(s.lineTiers)
       ? s.lineTiers
-          .filter((t) => t && isCount(t.lines))
+          .filter(
+            (t) =>
+              t && isCount(t.lines) && Number.isInteger(t.lines) && t.lines >= 1 && isMoney(t.price),
+          )
           .map((t) => `${t.lines === 1 ? "קו אחד" : `${t.lines} קווים`} ${shekels(t.price)}`)
       : [];
     if (tiers.length) {
@@ -629,7 +686,7 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
   }
 
   if (pkg.category === "home") {
-    const s = pkg.spec as HomeSpec;
+    const s = specOf<HomeSpec>(pkg);
     const speed = speedLabel(pkg, s);
     /*
      * ⚠️ רק כששתי המהירויות נמסרו. ההחרגה של התווית הזו מבדיקת "אותה
@@ -673,7 +730,7 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
   }
 
   if (pkg.category === "electricity") {
-    const s = pkg.spec as ElectricitySpec;
+    const s = specOf<ElectricitySpec>(pkg);
     /*
      * ⚠️ השער בודק את **שתי** התוויות, כמו `meterTiled` שמתחת. `cardStats`
      * בוחר בין "שעות ההנחה" (כשיש `hoursText`) ל-"מתי ההנחה חלה"
@@ -795,9 +852,25 @@ export function compareRows(items: Package[]): CompareRow[] {
    */
   // ⚠️ `isCount` ולא `!= null`, מאותו טעם: `speedLabel` אינו מדפיס זוג
   // על העלאה פגומה, והשער הזה היה בוחר את התווית הזוגית בכל זאת.
-  const speedFactLabel = items.every(
-    (p) => p.category !== "home" || isCount((p.spec as HomeSpec).uploadMbps),
-  )
+  /*
+   * ⚠️ "**מי שמסר** מהירות" ולא "כל חבילת בית". השער בדק את כל פריטי
+   * הבית, כולל אלה שאין להם מהירות כלל — ולכן חבילה בלי אינטרנט
+   * הורידה את התווית לכולם: `compareRows([158, 70])` הדפיס
+   * `מהירות גלישה | — | 1,000/100Mbps`, בעוד הכרטיס של id 70 מדפיס
+   * על אותו ערך בדיוק `מהירות (הורדה/העלאה)`. אותה עובדה בשתי תוויות
+   * בשני משטחים, ודווקא האבדן של המידע היחיד שהתווית הזוגית נושאת —
+   * מי מהשניים ההורדה. 10 מ-29 חבילות הבית הכשירות אינן מוסרות
+   * מהירות (ids 158, 132, 109, 102, 108, 107, 100, 89, 83, 4), כלומר
+   * 190 מצירופי הזוגות בלשונית הבית הודפסו כך.
+   *
+   * חבילה שלא מסרה מהירות מקבלת ממילא "—" בשורה הזו, ו-"—" אינו
+   * הבטחה של זוג — ולכן אין סיבה שהיא תקבע את התווית.
+   */
+  const speedFactLabel = items.every((p) => {
+    if (p.category !== "home") return true;
+    const s = specOf<HomeSpec>(p);
+    return !isCount(s.downloadMbps) || isCount(s.uploadMbps);
+  })
     ? SPEED_PAIR_LABEL
     : SPEED_TILE_CAPTION;
   const canon = (label: string) =>

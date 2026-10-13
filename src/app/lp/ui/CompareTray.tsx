@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderLogo } from "./ProviderLogo";
 import { compareRows, discountIsCapped, headlineValue, promoRise, shekels } from "../catalog/format";
-import { hasKnownAfterPrice } from "../catalog/catalog";
+import { hasKnownAfterPrice, providerLogo, providerName } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
 /**
@@ -45,6 +45,20 @@ function headlineCell(p: Package): string {
  */
 
 export const MAX_COMPARE = 4;
+
+/**
+ * ה-`id` של תיבת ההשוואה שעל הכרטיס.
+ *
+ * ⚠️ יושב כאן ולא ב-`PackageCard` כי הצרכן השני הוא הקוד שמחזיר את
+ * הפוקוס מהמגש אל הדף (`document.getElementById`), והוא זה שנשבר
+ * כשהתבנית מתפצלת: `getElementById` מחזיר `null` בשקט, ולכן תבנית
+ * שלא תואמת אינה שגיאה אלא פוקוס שנופל ל-`<body>` — כלומר בדיוק
+ * הפגם שהחזרת הפוקוס נכתבה למנוע. `PackageCard` מייבא מכאן ממילא
+ * (`MAX_COMPARE`), וייבוא בכיוון ההפוך היה מעגלי.
+ */
+export function compareCheckboxId(pkg: Package): string {
+  return `lp-compare-${pkg.id}`;
+}
 
 /**
  * A sticky tray that fills as you tick packages, then opens a side-by-side
@@ -94,21 +108,50 @@ export function CompareTray({
    * החבילה בדיוק בשביל זה. אחרת משתמש מקלדת שהסיר את הבחירה
    * האחרונה הוחזר לראש הדף, אחרי כל הקטלוג.
    */
+  /*
+   * ⚠️ ו**גם** על "נקה", שהוא המסלול היחיד שנשאר בלי זה.
+   *
+   * ההערה שמעל מצהירה על החוזה ("סגירה שמשאירה את הפוקוס על `<body>`
+   * מחזירה את משתמש המקלדת לראש הדף"), והוא יושם לסגירת החלון ול-✕
+   * של שבב בודד — אבל "נקה" מרוקן את הבחירה כולה, ולכן `items.length`
+   * הופך ל-0, הרכיב מחזיר `null`, ו**הכפתור שנלחץ עליו עצמו** יוצא
+   * מה-DOM. `focusAfterRemove` נשאר `null` ולכן ה-effect יצא מיד:
+   * הפוקוס נפל ל-`<body>`, כלומר לראש הדף אחרי כל הקטלוג — אותה
+   * תוצאה בדיוק שהסרת שבב כבר מטופלת נגדה, רק דרך הפקד השכן.
+   *
+   * אין במגש פקד לחזור אליו (הוא נפרק כולו), ולכן היעד הוא אותה
+   * נקודת אחיזה שהסרת השבב האחרון משתמשת בה: תיבת ההשוואה של אחת
+   * מהחבילות שהיו בבחירה, שעדיין על המסך ועכשיו אינה מסומנת. נסיון
+   * לפי הסדר, כי חבילה שהמסנן הוציא מהתוצאות אינה מרונדרת כלל —
+   * וזה בדיוק המצב שבו הבחירה שורדת סינון (ראה `hiddenCompare`
+   * ב-`CatalogBrowser`).
+   */
   const listRef = useRef<HTMLUListElement>(null);
   const clearRef = useRef<HTMLButtonElement>(null);
   const focusAfterRemove = useRef<number | null>(null);
-  const removedId = useRef<string | null>(null);
+  const removedBoxId = useRef<string | null>(null);
+  const clearedIds = useRef<string[] | null>(null);
 
   useEffect(() => {
+    const cleared = clearedIds.current;
+    clearedIds.current = null;
     const index = focusAfterRemove.current;
-    if (index == null) return;
+    if (index == null) {
+      for (const domId of cleared ?? []) {
+        const box = document.getElementById(domId);
+        if (box) {
+          box.focus();
+          return;
+        }
+      }
+      return;
+    }
     focusAfterRemove.current = null;
-    const id = removedId.current;
-    removedId.current = null;
+    const id = removedBoxId.current;
+    removedBoxId.current = null;
     const buttons = listRef.current?.querySelectorAll<HTMLElement>("[data-lp-chip-remove]");
     const next = buttons?.length ? buttons[Math.min(index, buttons.length - 1)] : undefined;
-    const inTray =
-      clearRef.current ?? (id != null ? document.getElementById(`lp-compare-${id}`) : null);
+    const inTray = clearRef.current ?? (id != null ? document.getElementById(id) : null);
     (next ?? inTray)?.focus();
   }, [items]);
 
@@ -200,7 +243,7 @@ export function CompareTray({
                   data-lp-chip-remove
                   onClick={() => {
                     focusAfterRemove.current = i;
-                    removedId.current = p.id;
+                    removedBoxId.current = compareCheckboxId(p);
                     onRemove(p);
                   }}
                   aria-label={`הסר את ${p.name} מההשוואה`}
@@ -214,7 +257,10 @@ export function CompareTray({
           <button
             ref={clearRef}
             type="button"
-            onClick={onClear}
+            onClick={() => {
+              clearedIds.current = items.map(compareCheckboxId);
+              onClear();
+            }}
             className="-mx-2 inline-flex min-h-11 items-center px-2 text-xs text-lp-ink-3 hover:underline"
           >
             נקה
@@ -335,7 +381,7 @@ export function CompareSheet({
                     scope="col"
                     className="border-b border-lp-line p-2 text-start align-bottom"
                   >
-                    <ProviderLogo logo={p.provider.logo} name={p.provider.name} size={26} />
+                    <ProviderLogo logo={providerLogo(p)} name={providerName(p)} size={26} />
                     <div className="mt-1 text-xs font-semibold text-lp-ink">{p.name}</div>
                   </th>
                 ))}

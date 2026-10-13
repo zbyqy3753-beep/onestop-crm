@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import {
@@ -1254,4 +1255,91 @@ test("הרחבת שערי הנוסח לא הוציאה אף חבילה מהבר�
   assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).pick?.name, "wecom300GB 5G");
   assert.equal(computeSaving(PACKAGES, "cellular", 2, 500).pick?.name, "wecomFamily 4G");
   assert.equal(computeSaving(PACKAGES, "home", 1, 300).pick?.name, "טריפל פלוס 149");
+});
+
+test("`type` שאינו מחרוזת מפיל חבילה אחת בשקט ולא את רינדור השרת", () => {
+  /*
+   * ⚠️ אותו כשל בדיוק ש-`tierTable` ו-`hasSpec` נכתבו נגדו, רמה אחת
+   * הלאה. `(p.type ?? "")` מגן רק מפני nullish, ולכן `type: 5` זרק
+   * `TypeError: (p.type ?? "").includes is not a function` **בתוך**
+   * `isComparable`, כלומר בתוך רינדור השרת של `/lp` כולו — במקום להפיל
+   * רשומה אחת בשקט כמו כל שער אחר בקובץ. סחיפה על כל השדות העליונים
+   * ועל כל שדות ה-`spec` × 12 ערכים פגומים מצאה שזה היה מסלול
+   * ההתרסקות **היחיד** שנשאר במנוע; הבדיקה הזו מקבעת את האפס.
+   */
+  const base = PACKAGES.find((x) => x.name === "wecom300GB 5G");
+  assert.ok(base, "לא נמצאה בקטלוג: wecom300GB 5G");
+  for (const bad of [5, 0, true, false, NaN, {}, [], ["5G"], () => {}]) {
+    const p = { ...base, id: "T", type: bad };
+    assert.doesNotThrow(() => isComparable(p, "cellular"), `זרק על type=${String(bad)}`);
+    // והקטלוג כולו ממשיך לחשב גם כשרשומה אחת פגומה יושבת בתוכו.
+    const s = computeSaving([...PACKAGES, p], "cellular", 1, 220);
+    assert.equal(s.yearly, 2232, `הכותרת זזה על type=${String(bad)}`);
+  }
+  // `type: null` (הצורה שקיימת בקטלוג) ו-`"כשר"` מתנהגים כפי שהתנהגו.
+  assert.equal(isComparable({ ...base, type: null }, "cellular"), true);
+  assert.equal(isComparable({ ...base, type: "כשר" }, "cellular"), false);
+});
+
+test("`badges` הוא הסימן השלישי על רשומת כשר — ואינו מקטין את הבריכה", () => {
+  /*
+   * ⚠️ השער הסלולרי קרא שני סימנים (`spec.kosher` ו-`type`) בעוד
+   * הקטלוג נושא שלושה: כל שמונה רשומות הכשר מסומנות גם
+   * `badges: ["כשר"]`. אין בקטלוג אף רשומה שנושאת את התג ואינה כשרה,
+   * ולכן ההוספה אינה פוסלת דבר — היא רק שומרת על השער כשהמחלץ קורא
+   * את `spec` וה-`type` חלקית.
+   */
+  const tagged = PACKAGES.filter((p) => (p.badges ?? []).includes("כשר"));
+  assert.equal(tagged.length, 8);
+  for (const p of tagged) assert.equal(p.spec.kosher, true, `תג כשר על רשומה לא כשרה: ${p.id}`);
+  const base = PACKAGES.find((x) => x.name === "wecom300GB 5G");
+  assert.equal(isComparable({ ...base, id: "B", badges: ["כשר"] }, "cellular"), false);
+  // `badges` פגום אינו זורק ואינו פוסל.
+  for (const bad of ["כשר", 5, {}, [null, 7]]) {
+    assert.equal(isComparable({ ...base, id: "B", badges: bad }, "cellular"), true, String(bad));
+  }
+});
+
+test('"לא כולל נתב" הוא חיוב חודשי שהמחיר הגדול אינו מכיל', () => {
+  /*
+   * ⚠️ ההערה מעל `ROUTER_PRICED_SEPARATELY` נימקה למה `נתב כלול במחיר`
+   * אינו נתפס — וההיפוך של אותו משפט נפל בין הכיסאות. id 114 כותבת
+   * "מחיר 199 ש"ח לא כולל נתב 220 שח כולל נתב", כלומר ₪21 לחודש
+   * ו-₪252 לשנה שהמספר הגדול אינו מכיל. היא נפסלת היום על `hasTv`
+   * בלבד: עם `hasTv: true` היא עברה את **כל** שערי `isComparable`.
+   */
+  const p114 = PACKAGES.find((x) => x.id === "114");
+  assert.ok(p114, "לא נמצאה בקטלוג: id 114");
+  assert.equal(routerPricedSeparately(p114), true);
+  assert.equal(isComparable({ ...p114, spec: { ...p114.spec, hasTv: true } }, "home"), false);
+  // שבעת המופעים של "כולל נתב" **בלי** השלילה אינם נתפסים.
+  for (const id of ["82", "115", "112", "113", "3", "99", "98", "86"]) {
+    const p = PACKAGES.find((x) => x.id === id);
+    assert.ok(p, `לא נמצאה בקטלוג: id ${id}`);
+    assert.equal(routerPricedSeparately(p), false, `false positive על id ${id}`);
+  }
+});
+
+test("שערי הטיפוס והנתב לא הזיזו אף מספר שמוצג היום", () => {
+  // ⚠️ אותו קיבוע כמו הבדיקה שמעל: שלושת התיקונים הם שערים לרענון
+  // הבא, ואסור שישנו בריכה או בחירה.
+  assert.equal(pool("cellular").length, 23);
+  assert.equal(pool("home").length, 2);
+  assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).yearly, 2232);
+  assert.equal(computeSaving(PACKAGES, "home", 1, 350).pick?.id, "157");
+});
+
+test("סלקטור הקווים במחשבון נגזר מ-`MAX_LINES` ולא מרשימה כתובה", () => {
+  /*
+   * ⚠️ התקרה הוגדרה פעמיים — `MAX_LINES` במנוע ו-`[1..10]` ב-
+   * `SavingsCalculator`. הורדת `MAX_LINES` הייתה משאירה בסלקטור
+   * אפשרויות שהמנוע מגדר בשקט (הגולש בוחר 10 ומקבל הצעה ל-8), ועלייה
+   * הייתה משאירה את הסלקטור מאחור. אותה מלכודת שתוקנה ל-`MAX_COMPARE`
+   * ול-`isMoney`.
+   */
+  const src = readFileSync(new URL("../src/app/lp/ui/SavingsCalculator.tsx", import.meta.url), "utf8");
+  assert.match(src, /Array\.from\(\{ length: MAX_LINES \}/);
+  assert.doesNotMatch(src, /\[1, 2, 3, 4, 5, 6, 7, 8, 9, 10\]/);
+  // והמנוע אינו מחשב מעל התקרה שהסלקטור מגיש.
+  assert.equal(computeSaving(PACKAGES, "cellular", MAX_LINES + 5, 5000).lines, MAX_LINES);
 });

@@ -4,10 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "./Card";
 import { LeadForm } from "./LeadForm";
 import { shekels, typedShekels } from "../catalog/format";
-import { catalog } from "../catalog/catalog";
+import { catalog, providerName } from "../catalog/catalog";
 import { crmCategory } from "../config";
 import { fieldClass } from "./field";
 import {
+  MAX_LINES,
   MAX_SPEND,
   MIN_SPEND,
   computeSaving,
@@ -409,8 +410,16 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                     אבל חושבה כ-6 בדיוק: משפחה עם 8 קווים קיבלה עלות חדשה
                     של 6 קווים מול חשבון של 8 — כלומר חיסכון מנופח — והנציג
                     קיבל בהערה מספר קווים שגוי.
+
+                    ⚠️ הרשימה נגזרת מ-`MAX_LINES` ולא כתובה כאן כמספרים.
+                    התקרה הוגדרה פעמיים — `MAX_LINES` במנוע ו-`[1..10]`
+                    כאן — ושתי הגדרות לאותו גבול הן אותה מלכודת שכבר
+                    תוקנה ל-`MAX_COMPARE` ול-`isMoney`: הורדת `MAX_LINES`
+                    הייתה משאירה בסלקטור אפשרויות שהמנוע מגדר בשקט, כלומר
+                    הגולש בוחר 10 ומקבל הצעה ל-8 (`saving.lines`), ועלייה
+                    הייתה משאירה את הסלקטור מאחור. הגבול חי במקום אחד.
                   */}
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  {Array.from({ length: MAX_LINES }, (_, i) => i + 1).map((n) => (
                     <option key={n} value={n}>
                       {n}
                     </option>
@@ -604,7 +613,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 שדחף חבילה אמיתית לתוך ההערה והשאיר את העמודה ריקה.
               */
               packageName={
-                saving.pick ? `${saving.pick.name} · ${saving.pick.provider.name}` : undefined
+                saving.pick ? `${saving.pick.name} · ${providerName(saving.pick)}` : undefined
               }
               note={[
                 /*
@@ -635,7 +644,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   לעמוד מאחוריו בשיחה.
                 */
                 saving.pick
-                  ? `מול ${saving.pick.provider.name} — ${saving.pick.name}, ${shekels(saving.perLine)} ${track === "cellular" ? "לקו" : "לחודש"}${CATALOG_DATE ? ` (קטלוג ${CATALOG_DATE})` : ""}`
+                  ? `מול ${providerName(saving.pick)} — ${saving.pick.name}, ${shekels(saving.perLine)} ${track === "cellular" ? "לקו" : "לחודש"}${CATALOG_DATE ? ` (קטלוג ${CATALOG_DATE})` : ""}`
                   : null,
               ]
                 .filter(Boolean)

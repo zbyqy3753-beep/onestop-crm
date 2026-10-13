@@ -5,9 +5,12 @@ import {
   afterPrice,
   basePackages,
   byPrice,
+  cheapest,
   disclosedRiseCount,
+  displayName,
   electricityRank,
   hasKnownAfterPrice,
+  highlights,
   isListable,
   isMoney,
   listableCounts,
@@ -1636,4 +1639,156 @@ test("תצוגה: הכרטיס אינו מצמיד 'הנחה' או 'לחודש' 
   assert.match(text(money), /לחודש/);
   const discount = PACKAGES.find((p) => p.category === "electricity" && isListable(p));
   assert.match(text(discount), /הנחה/);
+});
+
+/* ── רשומה פגומה נופלת לבד ─────────────────────────────────────────────
+ *
+ * ⚠️ אותו עקרון שכבר מקובע ב-`savings.ts` (`hasSpec`, `tierTable`) וב-
+ * `format.ts`: הקטלוג נכנס דרך `as unknown as Catalog`, אין ולידציה בזמן
+ * ריצה, ולכן שדה שיישאב פעם אחת בצורה אחרת **חייב** להפיל רשומה אחת
+ * בשקט ולא את רינדור השרת של `/lp` כולו. ארבעת הנתיבים כאן לא היו
+ * מגודרים, וכל אחד מהם נקרא בדיוק פעם אחת בכל רינדור של הדף:
+ *
+ *   `displayName`     — `basePackages()`, השורה הראשונה של `page.tsx`
+ *   `electricityRank` — דרך `byPrice`/`afterPrice`, כלומר כל מיון בעמוד
+ *   `serviceCounts`   — השורה השנייה של `page.tsx`
+ *   `providers`       — רצועת הלוגואים בהירו
+ *
+ * ⚠️ הבדיקות מזריקות רשומה סינתטית, כי הקטלוג של היום נקי — זה שער
+ * לרענון הבא, ולכן כל בדיקה גם מקבעת שהמספרים של **היום** לא זזו.
+ */
+
+test("קטלוג: שם שאינו מחרוזת מחזיר כותרת ריקה ולא מפיל את הדף", () => {
+  // הצורות שמחלץ מייצר כשהוא לא קרא שם.
+  assert.equal(displayName(null), "");
+  assert.equal(displayName(undefined), "");
+  assert.equal(displayName(0), "");
+  assert.equal(displayName({}), "");
+  // והניקוי עצמו ללא שינוי.
+  assert.equal(displayName("4 ב 130 *2*"), "4 ב 130");
+  assert.equal(displayName("*IBC*"), "(IBC)");
+
+  // ומקצה לקצה: רשומה בלי שם אינה מפילה את `basePackages()`, והשם
+  // הפגום נשאר כמות שהוא ולא נדרס במחרוזת ריקה — הראיה היחידה
+  // שהרשומה פגומה.
+  const tpl = catalog.packages.find((p) => p.category === "cellular");
+  catalog.packages.push({ ...tpl, id: "test-noname", name: null });
+  try {
+    const rebuilt = basePackages();
+    const row = rebuilt.find((p) => p.id === "test-noname");
+    assert.equal(row.name, null, "השם הפגום נדרס");
+    assert.equal(logicName(row), null);
+    assert.equal(rebuilt.length, catalog.packages.length);
+  } finally {
+    catalog.packages.pop();
+  }
+});
+
+test("חשמל: מסלול בלי spec שמיש מדורג ואינו מפיל את המיון", () => {
+  const elec = PACKAGES.find((p) => p.category === "electricity" && isListable(p));
+  const other = PACKAGES.find(
+    (p) => p.category === "electricity" && isListable(p) && p.id !== elec.id,
+  );
+
+  for (const broken of [null, undefined, "x", []]) {
+    const bad = { ...elec, id: "test-nospec", spec: broken };
+    // שתיקה על שעות נקראת כ"כל השעות", בדיוק כמו רשומה עם `spec` ריק.
+    assert.equal(electricityRank(bad), -elec.discountPercent + (discountIsCapped(bad) ? 0.5 : 0));
+    assert.equal(afterPrice(bad), electricityRank(bad));
+    assert.equal(byPrice(bad, bad), 0);
+    // ושני הקוראים שעוברים דרך קומפרטור — הם שהפילו את הדף.
+    assert.equal(cheapest([bad, other, elec]).length, 3);
+    assert.equal(highlights([bad, other, elec], "electricity").length, 3);
+  }
+
+  // ודירוג כל 18 המסלולים של היום לא זז.
+  assert.deepEqual(
+    PACKAGES.filter((p) => p.category === "electricity" && isListable(p)).map((p) =>
+      electricityRank(p),
+    ),
+    [992, -5, -6, 980, 985, -6, 980, 985, 985, 982, -9.5, -5, -6, -7, -6, 980, -9.5, 985],
+  );
+});
+
+test("רצועת השירותים: רשומה בלי spec שמיש אינה מפילה את המונים", () => {
+  const home = PACKAGES.find((p) => p.category === "home" && isListable(p));
+  const base = serviceCounts(PACKAGES);
+
+  for (const broken of [null, undefined, "x", []]) {
+    const counts = serviceCounts([...PACKAGES, { ...home, id: "test-nospec", spec: broken }]);
+    // היא אינה נספרת באף אריח, והמונים של השאר אינם זזים.
+    assert.deepEqual(counts, base, `spec=${JSON.stringify(broken)} הזיז מונה`);
+  }
+
+  // והמספרים של היום, כפי שהרצועה מדפיסה אותם.
+  assert.deepEqual(base, { cellular: 55, internet: 29, tv: 16, bundle: 13, electricity: 18 });
+});
+
+test("רצועת השירותים: דגל טקסטואלי אינו נספר כאינטרנט או כטלוויזיה", () => {
+  /*
+   * ⚠️ `=== true` ולא הערך עצמו — אותו שער שענף הבית ב-`isComparable`
+   * קיבל ולא הוחל כאן. `"false"` כמחרוזת הוא אמת ב-JS, ולכן הרצועה
+   * הייתה סופרת שירות שהדגל שלו דווקא כבוי בזמן שהמחשבון באותו עמוד
+   * סופר אחרת.
+   */
+  const home = PACKAGES.find(
+    (p) => p.category === "home" && isListable(p) && p.spec.hasInternet && p.spec.hasTv,
+  );
+  const base = serviceCounts(PACKAGES);
+  const counts = serviceCounts([
+    ...PACKAGES,
+    { ...home, id: "test-strflags", spec: { ...home.spec, hasInternet: "false", hasTv: "false" } },
+  ]);
+  assert.deepEqual(counts, base);
+  // והדגל האמיתי כן נספר, כדי שהשער לא יהיה "לא סופרים כלום".
+  const real = serviceCounts([...PACKAGES, { ...home, id: "test-realflags" }]);
+  assert.equal(real.internet, base.internet + 1);
+  assert.equal(real.tv, base.tv + 1);
+  assert.equal(real.bundle, base.bundle + 1);
+});
+
+test("ספקים: ProviderRef פגום או רשומת ספק פגומה אינם מפילים את הרצועה", () => {
+  const tpl = PACKAGES.find((p) => p.category === "cellular" && isListable(p));
+  const base = providers(PACKAGES);
+
+  // חבילה בלי ספק שמיש אינה לוגו בלי שם — היא פשוט אינה ברצועה.
+  for (const broken of [null, undefined, {}, { slug: 7, name: "x", logo: "" }, { slug: "" }]) {
+    const rows = providers([...PACKAGES, { ...tpl, id: "test-noprov", provider: broken }]);
+    assert.deepEqual(
+      rows.map((p) => `${p.slug}:${p.count}`),
+      base.map((p) => `${p.slug}:${p.count}`),
+      `provider=${JSON.stringify(broken)} שינה את הרצועה`,
+    );
+  }
+
+  // ורשומה פגומה **ברשימת הספקים של הקטלוג** — נופלת לבד, והספקים
+  // שמאחוריה נשארים.
+  catalog.providers.push(null);
+  try {
+    assert.deepEqual(
+      providers(PACKAGES).map((p) => `${p.slug}:${p.count}`),
+      base.map((p) => `${p.slug}:${p.count}`),
+    );
+  } finally {
+    catalog.providers.pop();
+  }
+
+  // ו-12 הספקים של היום, עם המונים שהרצועה מדפיסה.
+  assert.deepEqual(
+    base.map((p) => `${p.slug}:${p.count}`),
+    [
+      "cellcom:27",
+      "golan:18",
+      "partner:12",
+      "hot-mobile:10",
+      "pelephone:7",
+      "hot:7",
+      "bezeq:7",
+      "wecom:6",
+      "hot-energy:4",
+      "yes:3",
+      "bezeq-energy:3",
+      "sting-tv:2",
+    ],
+  );
 });

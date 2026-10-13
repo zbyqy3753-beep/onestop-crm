@@ -5,7 +5,15 @@ import { Card } from "./Card";
 import { PackageCard } from "./PackageCard";
 import { CompareTray, MAX_COMPARE } from "./CompareTray";
 import { PACKAGES_CAPTION, PLANS_CAPTION, shekels } from "../catalog/format";
-import { afterPrice, byPrice, electricityRank, hasKnownAfterPrice, isMoney } from "../catalog/catalog";
+import {
+  afterPrice,
+  byPrice,
+  electricityRank,
+  hasKnownAfterPrice,
+  isMoney,
+  providerName,
+  providerSlug,
+} from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
 export type SortKey = "price-asc" | "price-desc" | "after-asc" | "recommended";
@@ -22,12 +30,27 @@ const SORTS: { key: SortKey; label: string; electricLabel?: string }[] = [
   { key: "recommended", label: "מומלצים תחילה" },
   /*
    * ⚠️ התווית אומרת את הסדר ש-`electricityRank` באמת מחזירה. היא
-   * הבטיחה סדר מונוטוני לפי האחוז, וההנחה שחלה על כל החשבון מדורגת
-   * לפני כל מסלול שעות — בכוונה, ראה `electricityRank` — ולכן הסדר
-   * שהתקבל בפועל היה "6%, 6%, 6%, 5%, 20%, 20%…". גולש שקרא "מהגבוהה
-   * לנמוכה" ראה 6% מעל 20% בלי שום הסבר על המסך.
+   * הבטיחה סדר מונוטוני לפי האחוז, ומסלול שאינו מצהיר על שעות חלקיות
+   * מדורג לפני כל מסלול שעות — בכוונה, ראה `electricityRank` — ולכן
+   * הסדר שהתקבל בפועל היה "6%, 6%, 6%, 5%, 20%, 20%…". גולש שקרא
+   * "מהגבוהה לנמוכה" ראה 6% מעל 20% בלי שום הסבר על המסך.
+   *
+   * ⚠️ והתווית אומרת **שעות**, לא "כל החשבון". זה היה כתוב כאן
+   * "הנחה: על כל החשבון תחילה", והציר ש-`electricityRank` מקבצת
+   * לפיו הוא `spec.allHours`/`hoursText` — שעות היממה — ולא
+   * `discountScope`, שהוא מה שההנחה חלה עליו **בתוך** החשבון. שני
+   * דברים שונים לגמרי, והתווית הבטיחה את זה שהדירוג אינו מכיר:
+   * בלשונית החשמל של היום שני המסלולים הראשונים תחתיה הם ids 142
+   * ו-135, ששניהם מדפיסים על הכרטיס ובטבלה "הנחה על רכיב הצריכה
+   * בחשבון בלבד" / "הנחה על רכיב התשלום המשתנה בחשבון בלבד" (ראה
+   * `discountScope` ב-`format.ts`) — כלומר הכותרת הבטיחה הנחה על
+   * החשבון כולו, ודווקא ההסתייגות ההפוכה הודפסה מתחתיה. ארבעת
+   * המסלולים שאינם מסתייגים בכלל (ids 151, 148, 138, 152) יושבים
+   * מתחתיהם. חיבור `discountScope` לדירוג הוא החלטה פתוחה שאין
+   * בקטלוג מקדם בשבילה; התווית, לעומת זאת, חייבת לומר את מה
+   * שהדירוג עושה.
    */
-  { key: "price-asc", label: "מחיר: מהזול ליקר", electricLabel: "הנחה: על כל החשבון תחילה" },
+  { key: "price-asc", label: "מחיר: מהזול ליקר", electricLabel: "הנחה: בכל השעות תחילה" },
   { key: "price-desc", label: "מחיר: מהיקר לזול", electricLabel: "הנחה: מסלולי שעות תחילה" },
   // No competitor offers this, and it is the honest way to rank a promo market.
   { key: "after-asc", label: "מחיר אחרי ההטבה: מהזול ליקר" },
@@ -137,8 +160,19 @@ export function matchesFilters(
   f: CatalogFilters,
   except?: keyof CatalogFilters,
 ): boolean {
-  if (except !== "providers" && f.providers.length > 0 && !f.providers.includes(p.provider.slug)) {
-    return false;
+  /*
+   * ⚠️ `providerSlug` ולא `p.provider.slug`. `provider: null` זרק כאן
+   * `TypeError` ברינדור שרת, כלומר רשומה פגומה אחת החזירה את `/lp`
+   * כולו ב-500 במקום להיעלם ממסנן אחד. השער יושב ב-`catalog.ts` כי
+   * רצועת הלוגואים בהירו קוראת את אותו שדה באותו רינדור — שער מקומי
+   * כאן היה מתרסק שם קודם.
+   *
+   * רשומה בלי ספק שמיש אינה יכולה להתאים לחברה שסומנה, ולכן היא
+   * נושרת כשהמסנן פעיל — ולא נושרת כשהוא כבוי.
+   */
+  if (except !== "providers" && f.providers.length > 0) {
+    const slug = providerSlug(p);
+    if (slug == null || !f.providers.includes(slug)) return false;
   }
   if (except !== "types" && f.types.length > 0 && !(p.type != null && f.types.includes(p.type))) {
     return false;
@@ -178,12 +212,15 @@ export function priceBoundsOf(packages: Package[]): { min: number; max: number }
 export function providerFacets(packages: Package[], f: CatalogFilters) {
   const map = new Map<string, { slug: string; name: string; count: number }>();
   for (const p of packages) {
+    // ⚠️ אותו שער משותף כמו ב-`matchesFilters`. חבילה בלי ספק שמיש
+    // אינה יכולה להיות אפשרות בתפריט החברות — ראה `providerSlug`.
+    const slug = providerSlug(p);
+    if (slug == null) continue;
     const passes = matchesFilters(p, f, "providers");
-    if (!passes && !f.providers.includes(p.provider.slug)) continue;
-    const entry =
-      map.get(p.provider.slug) ?? { slug: p.provider.slug, name: p.provider.name, count: 0 };
+    if (!passes && !f.providers.includes(slug)) continue;
+    const entry = map.get(slug) ?? { slug, name: providerName(p), count: 0 };
     if (passes) entry.count++;
-    map.set(p.provider.slug, entry);
+    map.set(slug, entry);
   }
   return [...map.values()].sort((a, b) => b.count - a.count);
 }
@@ -340,19 +377,36 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                 </span>
               )}
             </span>
-            {hasFilters && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedProviders([]);
-                  setSelectedTypes([]);
-                  setMaxPrice(null);
-                }}
-                className="-my-2 flex min-h-11 items-center py-2 text-xs text-lp-brand hover:underline lg:my-0 lg:min-h-0 lg:py-0"
-              >
-                נקה הכל
-              </button>
-            )}
+            {/*
+              ⚠️ `aria-disabled` ולא רינדור מותנה, בדיוק כמו "השוו"
+              במגש ההשוואה, תיבת ההשוואה שעל הכרטיס וה-CTA של המחשבון
+              — ומאותו טעם, בצורתו החמורה: הכפתור הזה **מבטל את התנאי
+              לקיומו שלו**. `hasFilters && (…)` הוציא אותו מה-DOM
+              באותה לחיצה שהפעילה אותו, ולכן משתמש מקלדת שהגיע אליו
+              ב-Tab ולחץ Enter נשאר בלי אלמנט ממוקד — הפוקוס נפל
+              ל-`<body>` וה-Tab הבא התחיל מראש הדף. זו אותה מחלקת
+              פגם שתוקנה כאן כבר לכפתור השליחה, לכפתור ✕ של שבב
+              ההשוואה ולסגירת חלון ההשוואה.
+
+              הכפתור נשאר במקומו, מכריז על עצמו כלא-זמין כשאין מה
+              לנקות, וה-`onClick` מגודר בעצמו — `aria-disabled` אינו
+              חוסם כלום.
+            */}
+            <button
+              type="button"
+              aria-disabled={!hasFilters}
+              onClick={() => {
+                if (!hasFilters) return;
+                setSelectedProviders([]);
+                setSelectedTypes([]);
+                setMaxPrice(null);
+              }}
+              className={`-my-2 flex min-h-11 items-center py-2 text-xs text-lp-brand hover:underline lg:my-0 lg:min-h-0 lg:py-0 ${
+                hasFilters ? "" : "cursor-not-allowed opacity-40 hover:no-underline"
+              }`}
+            >
+              נקה הכל
+            </button>
           </div>
 
           <div id="lp-filters" className={filtersOpen ? "mt-3" : "max-lg:hidden"}>

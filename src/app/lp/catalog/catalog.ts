@@ -39,7 +39,25 @@ export const catalog = catalogJson as unknown as Catalog;
  * ⚠️ נפילה חזרה למקור כשהניקוי מרוקן את השם: כותרת ריקה גרועה
  * משארית, ושם שכולו סימון פנימי הוא סימן שהנחת היסוד כאן לא מתקיימת.
  */
-export function displayName(raw: string): string {
+/*
+ * ⚠️ `unknown` ולא `string`, ושער טיפוס בשורה הראשונה.
+ *
+ * הקטלוג נכנס לקוד דרך `as unknown as Catalog`, כלומר **אין ולידציה
+ * בזמן ריצה** — הטיפוס מובטח על הקובץ שקיים היום ולא על הקובץ שהרענון
+ * הבא יכתוב. `name: null` (או מספר) זרק כאן `TypeError` על `.split`,
+ * והקורא הראשון הוא `basePackages()` — השורה הראשונה של
+ * `page.tsx`, כלומר **רשומה אחת פגומה הפילה את רינדור השרת של `/lp`
+ * כולו** לפני שאף שער אחר הספיק לפסול אותה. אותו כשל בדיוק תוקן כבר
+ * רמה אחת מעל (`tierTable`/`hasSpec` ב-`savings.ts`, ושדות הפרוזה
+ * ב-`format.ts`): רשומה פגומה נופלת בשקט, לא לוקחת איתה את הדף.
+ *
+ * ⚠️ המחרוזת הריקה ולא `String(raw)`: "נפילה חזרה למקור" שלמעלה
+ * מניחה שהמקור הוא טקסט שאפשר להציג. ל-`null` אין מקור כזה, וכותרת
+ * "null" גרועה מכותרת חסרה. `basePackages` מזהה את זה ומשאירה את
+ * הרשומה בלי לדרוס את השדה.
+ */
+export function displayName(raw: unknown): string {
+  if (typeof raw !== "string") return "";
   const cleaned = raw
     .split("[line]")[0]
     .replace(/\*(\d+)\*/g, " ")
@@ -62,9 +80,29 @@ export function logicName(p: Package): string {
 
 export function basePackages(): Package[] {
   return catalog.packages.map((p) => {
+    // ⚠️ שם שאינו מחרוזת נשאר כמות שהוא, ולא נדרס במחרוזת ריקה:
+    // `displayName` מחזירה "" על קלט כזה (ראה ההערה שם), ודריסה הייתה
+    // **מוחקת** את הראיה היחידה שהרשומה פגומה. הגזירות שמתחת
+    // (`logicName` ואילך) סופרות על `rawName` כעל השם הגולמי, ולכן אין
+    // טעם לסמן ניקוי שלא התרחש.
+    if (typeof p.name !== "string") return p;
     const name = displayName(p.name);
     return name === p.name ? p : { ...p, name, rawName: p.name };
   });
+}
+
+/**
+ * `spec` שאפשר לקרוא ממנו שדות, ולא רק משהו שיושב במפתח הזה.
+ *
+ * ⚠️ תאום של `hasSpec` ב-`savings.ts`, ומאותו טעם המתועד שם: `spec:
+ * null` (או שדה חסר) זרק `TypeError` ולקח איתו את רינדור השרת של הדף
+ * כולו במקום להפיל רשומה אחת בשקט. שם השער נכתב ל-`isComparable`
+ * ולא הוחל על שתי הפונקציות כאן שקוראות מ-`spec` באותו רינדור —
+ * `electricityRank` (דרך `byPrice`/`afterPrice`, כלומר כל מיון בעמוד)
+ * ו-`serviceCounts` (השורה השנייה של `page.tsx`).
+ */
+function hasSpec(p: Package): boolean {
+  return p.spec != null && typeof p.spec === "object" && !Array.isArray(p.spec);
 }
 
 /**
@@ -249,7 +287,16 @@ export function electricityRank(p: Package): number {
    * ⚠️ שתיקה נקראת כ"כל השעות" ולא כ"לא ידוע", בדיוק כמו ש-`afterPrice`
    * קוראת היעדר הצהרת עלייה כ"אותו מחיר" ולא שולחת אותה לסוף הרשימה.
    */
-  const partialHours = !p.spec.allHours && p.spec.hoursText != null;
+  /*
+   * ⚠️ `hasSpec` לפני כל קריאה מתוך `spec`. הפונקציה הזו היא הערך
+   * שלפיו `byPrice` ו-`afterPrice` מדרגות **כל** מסלול חשמל, כלומר היא
+   * נקראת מתוך קומפרטור בכל מיון בעמוד — ו-`spec: null` אחד זרק כאן
+   * `TypeError` שהפיל את רינדור השרת של `/lp` כולו (אומת: `cheapest`
+   * על שתי רשומות או יותר, וכן `sortCatalog` בכל ארבעת המיונים).
+   * רשומה בלי `spec` שמיש אינה מצהירה דבר על שעות, ולכן היא נקראת
+   * כמי ש**שתק** — אותה קריאה בדיוק שההערה למעלה מנמקת.
+   */
+  const partialHours = hasSpec(p) && !p.spec.allHours && p.spec.hoursText != null;
   return (
     (partialHours ? PARTIAL_HOURS_GROUP : 0) - p.discountPercent + (discountIsCapped(p) ? 0.5 : 0)
   );
@@ -303,7 +350,11 @@ export function serviceCounts(packages: Package[]) {
   // הכריזה `HomeSpec` על פרמטר מטיפוס `Package`, כלומר גם על רשומת
   // חשמל. היא נכונה היום רק מפני שהיא מוחלת על מערך שכבר סונן — שער
   // שאין לו שום דבר בטיפוסים שמחזיק אותו במקום.
-  const home = shown.filter(isHomeSpec);
+  // ⚠️ `hasSpec` אחרי `isHomeSpec`: הראשון בודק קטגוריה בלבד (ראה
+  // ההערה שלמעלה), והשדות נקראים מתוך `spec` מיד אחריו. `spec: null`
+  // על רשומת בית אחת זרק כאן `TypeError` — והקורא הוא השורה השנייה של
+  // `page.tsx`, כלומר הדף כולו חזר 500 במקום להחסיר חבילה אחת ממונה.
+  const home = shown.filter(isHomeSpec).filter(hasSpec);
   /*
    * ⚠️ אותו תיקון בדיוק כמו ב-`isComparable` ב-`savings.ts`, ומאותו
    * טעם: סטינג "החבילה המושלמת" (id 4) רשומה `hasInternet: true`
@@ -315,12 +366,20 @@ export function serviceCounts(packages: Package[]) {
    * ⚠️ הסינון חל על אינטרנט ועל החבילה המשולבת בלבד. `tv` דווקא
    * **כן** אמור לספור אותה — היא באמת טלוויזיה.
    */
-  const realInternet = home.filter((p) => p.spec.hasInternet && p.type !== "TV");
+  /*
+   * ⚠️ `=== true` ולא הערך עצמו — אותו תיקון שענף הבית ב-`isComparable`
+   * קיבל ולא הוחל כאן. `"false"` כמחרוזת (הצורה שהמחלץ מייצר כשהוא
+   * קורא שדה טקסטואלי) הוא אמת ב-JS, ולכן רצועת השירותים הייתה סופרת
+   * אינטרנט או טלוויזיה לרשומה שהדגל שלה דווקא כבוי — ובאותו עמוד
+   * המחשבון, שכן מגודר, היה סופר אחרת. שני מספרים סותרים לאותו נתון
+   * הם בדיוק מה שהתיקון מ-e9fc39f (id 4) נכתב למנוע.
+   */
+  const realInternet = home.filter((p) => p.spec.hasInternet === true && p.type !== "TV");
   return {
     cellular: shown.filter((p) => p.category === "cellular").length,
     internet: realInternet.length,
-    tv: home.filter((p) => p.spec.hasTv).length,
-    bundle: realInternet.filter((p) => p.spec.hasTv).length,
+    tv: home.filter((p) => p.spec.hasTv === true).length,
+    bundle: realInternet.filter((p) => p.spec.hasTv === true).length,
     electricity: shown.filter((p) => p.category === "electricity").length,
   };
 }
@@ -396,27 +455,94 @@ export function highlights(packages: Package[], category: Category, limit = 3): 
  * והסדר** (לוגו, שם, קטגוריות); מי שחסר שם נבנה מה-`ProviderRef`
  * שעל החבילה עצמה.
  */
+/**
+ * ה-`slug` של הספק, או `null` כשאין ממה לקרוא אותו.
+ *
+ * ⚠️ `ProviderRef` שמיש לפני הקריאה ממנו. `provider: null` זרק
+ * `TypeError` על `.slug` — ושני קוראים שונים עושים את זה באותו רינדור:
+ * רצועת הלוגואים בהירו (`providers` מתחת, דרך `page.tsx`) ומסנן החברה
+ * ב-`CatalogBrowser` (`matchesFilters`/`providerFacets`). כלומר רשומה
+ * אחת בלי ספק הפילה את רינדור השרת של הדף כולו.
+ *
+ * ⚠️ שער **אחד** ולא העתקה בכל קורא. זה הדפוס שנמצא כאן שבע פעמים:
+ * שער שחובר למשטח אחד ולא לאחיו. שער מקומי ב-`CatalogBrowser` היה גם
+ * ביטחון מדומה — `providers` קוראת את אותו שדה ומתרסקת קודם.
+ *
+ * ⚠️ מחרוזת לא ריקה ולא רק "לא null": ה-`slug` הוא המפתח שמחבר את
+ * הרשומה ל-`catalog.providers` (לוגו, שם, סדר), ומפתח שאינו מחרוזת
+ * מייצר ספק-רפאים בלי לוגו ובלי שם.
+ */
+export function providerSlug(p: Package): string | null {
+  const ref = p.provider;
+  if (ref == null || typeof ref !== "object") return null;
+  return typeof ref.slug === "string" && ref.slug ? ref.slug : null;
+}
+
+/**
+ * שם הספק להצגה, עם נפילה חזרה ל-`slug`.
+ *
+ * ⚠️ מאותו טעם כמו `providerSlug`: `name` שאינו מחרוזת היה מצייר
+ * "null" בתיבת הסימון של מסנן החברה. ה-`slug` הוא לא כותרת יפה, אבל
+ * הוא מזהה אמיתי — ותיבת סימון בלי שם היא מסנן שאין דרך לדעת מה הוא
+ * מסנן.
+ */
+export function providerName(p: Package): string {
+  const ref = p.provider;
+  const name = ref != null && typeof ref === "object" ? ref.name : null;
+  return typeof name === "string" && name ? name : (providerSlug(p) ?? "");
+}
+
+/**
+ * שם קובץ הלוגו, או `null` כשאין.
+ *
+ * ⚠️ הקורא הוא `<ProviderLogo>` בכרטיס ובמגש ההשוואה, והוא בונה
+ * `/providers/${logo}` — כלומר `logo: null` היה הופך ל-`/providers/null`,
+ * בקשה 404 על כל כרטיס. `provider: null` היה גרוע מזה וזרק `TypeError`
+ * ברינדור השרת (אומת בבדיקה: הכרטיס הפיל את הדף כולו אחרי שהמסנן
+ * והרצועה כבר גודרו). שם הספק מודפס ממילא לצד הלוגו בשני המשטחים,
+ * ולכן לוגו חסר הוא פחות מידע ולא כרטיס שבור.
+ */
+export function providerLogo(p: Package): string | null {
+  const ref = p.provider;
+  const logo = ref != null && typeof ref === "object" ? ref.logo : null;
+  return typeof logo === "string" && logo ? logo : null;
+}
+
 export function providers(packages: Package[]): Provider[] {
   const shown = listable(packages);
   const counts = new Map<string, number>();
   const refs = new Map<string, Package[]>();
   for (const p of shown) {
-    counts.set(p.provider.slug, (counts.get(p.provider.slug) ?? 0) + 1);
-    const bucket = refs.get(p.provider.slug);
+    // ספק שאין לו שום חבילה שמישה אינו אמור להופיע — זה בדיוק הכלל
+    // שההערה שמעל הפונקציה מצהירה עליו. ראה `providerSlug`.
+    const slug = providerSlug(p);
+    if (slug == null) continue;
+    counts.set(slug, (counts.get(slug) ?? 0) + 1);
+    const bucket = refs.get(slug);
     if (bucket) bucket.push(p);
-    else refs.set(p.provider.slug, [p]);
+    else refs.set(slug, [p]);
   }
 
-  const known = new Set(catalog.providers.map((p) => p.slug));
-  const fromCatalog: Provider[] = catalog.providers
+  /*
+   * ⚠️ גם רשימת הספקים של הקטלוג עצמה נבדקת, ולא רק ה-`ProviderRef`
+   * שעל החבילה: רשומה פגומה **אחת** במערך הזה (`null`, או `slug` שאינו
+   * מחרוזת) זרקה את אותו `TypeError` ב-`.map`, לפני שאף חבילה נבדקה.
+   * מי שנופל כאן עדיין יכול להיבנות מה-`ProviderRef` שעל החבילה
+   * (`fromPackages` מתחת), כלומר הרצועה מאבדת מטא-דאטה ולא ספק.
+   */
+  const catalogProviders = catalog.providers.filter(
+    (p): p is Provider => p != null && typeof p === "object" && typeof p.slug === "string" && !!p.slug,
+  );
+  const known = new Set(catalogProviders.map((p) => p.slug));
+  const fromCatalog: Provider[] = catalogProviders
     .filter((p) => (counts.get(p.slug) ?? 0) > 0)
     .map((p) => ({ ...p, count: counts.get(p.slug)! }));
   const fromPackages: Provider[] = [...refs.entries()]
     .filter(([slug]) => !known.has(slug))
     .map(([slug, own]) => ({
       slug,
-      name: own[0].provider.name,
-      logo: own[0].provider.logo,
+      name: providerName(own[0]),
+      logo: providerLogo(own[0]) ?? "",
       categories: [...new Set(own.map((p) => p.category))],
       count: own.length,
     }));

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card } from "./Card";
 import { ProviderLogo } from "./ProviderLogo";
 import { LeadForm } from "./LeadForm";
-import { MAX_COMPARE } from "./CompareTray";
+import { compareCheckboxId, MAX_COMPARE } from "./CompareTray";
 import {
   cardStats,
   detailRows,
@@ -14,6 +14,7 @@ import {
   promoRise,
   shekels,
 } from "../catalog/format";
+import { providerLogo, providerName } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
 /*
@@ -95,6 +96,28 @@ export function PackageCard({
   const headline = headlineValue(pkg);
   const headlineKnown = headline !== "—";
 
+  /*
+   * ⚠️ `Array.isArray` ולא `pkg.badges.map` ישירות — בדיוק השער
+   * ש-`detailRows` קיבלה על `lineTiers` ("**למחרוזת יש `length`**"),
+   * רק שכאן אין אפילו `?.`: `badges` הוא השדה היחיד בכרטיס שמפוענח
+   * מהפרוזה ומגיע כמערך, והקטלוג נכנס דרך `as unknown as Catalog`
+   * כלומר **אין ולידציה בזמן ריצה**. אומת בפועל: `badges: null`
+   * זורק `Cannot read properties of null (reading 'map')` ו-
+   * `badges: "5G"` זורק `pkg.badges.map is not a function` — בתוך
+   * רינדור שרת, ולכן **כל** דף `/lp` מחזיר 500 במקום שכרטיס אחד
+   * יציג תג אחד פחות. 109 הרשומות של היום נקיות; זה שער לרענון הבא,
+   * מאותה מחלקה של `spec: null` ושל `hoursText` כאובייקט.
+   *
+   * ⚠️ גם כל תג בנפרד: תג שאינו מחרוזת היה מגיע ל-React כאובייקט
+   * ("Objects are not valid as a React child") ומפיל את אותו רינדור,
+   * ותג ריק היה מצייר כפתולית ריקה. ו-`badges.includes(pkg.type)`
+   * מתחת קורא את אותו מערך מגודר — על מחרוזת `includes` הוא בדיקת
+   * תת-מחרוזת, כלומר `badges: "5G פלוס"` היה מעלים בשקט את שבב הסוג.
+   */
+  const badges = Array.isArray(pkg.badges)
+    ? pkg.badges.filter((b): b is string => typeof b === "string" && b !== "")
+    : [];
+
   return (
     /*
      * ⚠️ בלי `interactive`. `Card` מגדיר את הדגל כתשובה לשאלה אחת —
@@ -105,7 +128,7 @@ export function PackageCard({
      */
     <Card as="article" className="flex flex-col overflow-hidden">
       <div className="flex items-start gap-3 border-b border-lp-line p-4">
-        <ProviderLogo logo={pkg.provider.logo} name={pkg.provider.name} size={34} className="shrink-0" />
+        <ProviderLogo logo={providerLogo(pkg)} name={providerName(pkg)} size={34} className="shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap gap-1.5">
             {pkg.recommended && (
@@ -113,19 +136,19 @@ export function PackageCard({
                 מומלץ
               </span>
             )}
-            {pkg.badges.map((b) => (
+            {badges.map((b) => (
               <span key={b} className="rounded-full bg-lp-surface-3 px-2 py-0.5 text-lp-2xs font-medium text-lp-ink-2">
                 {b}
               </span>
             ))}
-            {pkg.type && !pkg.badges.includes(pkg.type) && (
+            {pkg.type && !badges.includes(pkg.type) && (
               <span className="rounded-full bg-lp-surface-3 px-2 py-0.5 text-lp-2xs font-medium text-lp-ink-2">
                 {pkg.type}
               </span>
             )}
           </div>
           <h3 className="text-sm leading-snug font-semibold text-lp-ink">{pkg.name}</h3>
-          <p className="text-xs text-lp-ink-3">{pkg.provider.name}</p>
+          <p className="text-xs text-lp-ink-3">{providerName(pkg)}</p>
         </div>
 
         {onCompareToggle && (
@@ -149,8 +172,15 @@ export function PackageCard({
                 לכאן את הפוקוס כשהוסר השבב האחרון והמגש כולו נפרק —
                 בלי נקודת אחיזה בדף, משתמש המקלדת היה נזרק ל-`<body>`,
                 כלומר לראש הדף אחרי כל הקטלוג.
+
+                ⚠️ דרך `compareCheckboxId` ולא תבנית מחרוזת כתובה כאן.
+                התבנית הייתה כתובה פעמיים — כאן וב-`CompareTray`, שהוא
+                היחיד שמחפש את ה-`id` הזה — כלומר שינוי בצד אחד היה
+                שובר את החזרת הפוקוס **בשקט**, בלי שום שגיאה: הקוד שם
+                קורא `getElementById` ומתעלם מ-`null`. שני הצדדים
+                קוראים עכשיו הגדרה אחת.
               */
-              id={`lp-compare-${pkg.id}`}
+              id={compareCheckboxId(pkg)}
               checked={!!compareChecked}
               /*
                 ⚠️ `aria-disabled` ולא `disabled`. ההערה שמתחת כבר קבעה
@@ -304,7 +334,7 @@ export function PackageCard({
                   </div>
                 )}
                 <p className="text-lp-2xs text-lp-ink-3">
-                  התנאים המחייבים הם אלה של {pkg.provider.name}. ייתכנו שינויים ותנאי סף.
+                  התנאים המחייבים הם אלה של {providerName(pkg)}. ייתכנו שינויים ותנאי סף.
                 </p>
               </div>
             )}

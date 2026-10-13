@@ -12,7 +12,12 @@ import {
   listable,
 } from "../src/app/lp/catalog/catalog.ts";
 import { familyPriceOnly, requiresMultipleLines } from "../src/app/lp/catalog/savings.ts";
-import { discountIsCapped, headlineValue, priceNote } from "../src/app/lp/catalog/format.ts";
+import {
+  discountIsCapped,
+  discountScope,
+  headlineValue,
+  priceNote,
+} from "../src/app/lp/catalog/format.ts";
 
 /*
  * ⚠️ `src/app/lp/actions.ts` מוחלף בבדיקה, ולא מתוך נוחות: הוא מודול
@@ -42,7 +47,8 @@ const {
   typeFacets,
 } = await import("../src/app/lp/ui/CatalogBrowser.tsx");
 const { CatalogTabs } = await import("../src/app/lp/ui/CatalogTabs.tsx");
-const { CompareSheet } = await import("../src/app/lp/ui/CompareTray.tsx");
+const { CompareSheet, compareCheckboxId } = await import("../src/app/lp/ui/CompareTray.tsx");
+const { PackageCard } = await import("../src/app/lp/ui/PackageCard.tsx");
 
 /** בריחת תווים ב-attribute, כפי ש-React כותב אותה. */
 function escapeAttr(s) {
@@ -767,4 +773,203 @@ test("מסננים: אין מסלול לחיצות שנתקע", () => {
       }
     }
   }
+});
+
+/* ────────────────────────────────────────────────────────────────────
+ * 8. שערים שנוספו בסבב 13.10.2026
+ * ──────────────────────────────────────────────────────────────────── */
+
+/*
+ * ⚠️ שדה פגום בכרטיס אינו מפיל את הדף.
+ *
+ * `badges` הוא השדה היחיד שהכרטיס קורא כמערך, ו-`pkg.badges.map`
+ * נקרא בלי שער בכלל — לא `Array.isArray` ולא `?.`. הקטלוג נכנס דרך
+ * `as unknown as Catalog`, כלומר אין ולידציה בזמן ריצה: `badges: null`
+ * זורק `reading 'map'` ו-`badges: "5G"` זורק `map is not a function`,
+ * שניהם **בתוך רינדור שרת** — כלומר כל דף `/lp` מחזיר 500 במקום
+ * שכרטיס אחד יציג תג אחד פחות. אותה מחלקה בדיוק של `spec: null`
+ * ושל `lineTiers` כמחרוזת.
+ */
+test("כרטיס: שדה התגים הפגום אינו מפיל את רינדור הדף", () => {
+  const base = byCategory(ALL, "cellular")[0];
+  for (const badges of [null, undefined, "5G", 7, {}, [null, "", "5G", 3]]) {
+    const html = renderToStaticMarkup(
+      React.createElement(PackageCard, { pkg: { ...base, badges }, onCompareToggle() {} }),
+    );
+    assert.ok(html.includes(escapeAttr(base.name)), `badges=${JSON.stringify(badges)}`);
+    assert.ok(!/NaN|\[object|>null<|>undefined</.test(html), `badges=${JSON.stringify(badges)}`);
+  }
+  // תג תקין כן מצויר, כדי שהשער לא יהפוך למחיקה גורפת.
+  const ok = renderToStaticMarkup(
+    React.createElement(PackageCard, { pkg: { ...base, badges: ["תג בדיקה"] }, onCompareToggle() {} }),
+  );
+  assert.ok(ok.includes("תג בדיקה"));
+});
+
+/*
+ * ⚠️ `badges` כמחרוזת לא רק מפיל — הוא גם מעלים בשקט. השורה שמתחת
+ * למערך התגים שואלת `badges.includes(pkg.type)`, ועל מחרוזת
+ * `includes` הוא בדיקת **תת-מחרוזת**: `badges: "5G פלוס"` היה מסתיר
+ * את שבב הסוג `5G` אף שאין שום תג כזה.
+ */
+test("כרטיס: שבב הסוג אינו נעלם מתוך תגים שאינם מערך", () => {
+  const base = { ...byCategory(ALL, "cellular")[0], type: "5G" };
+  const html = renderToStaticMarkup(
+    React.createElement(PackageCard, { pkg: { ...base, badges: "5G פלוס" } }),
+  );
+  assert.ok(html.includes(">5G<"), "שבב הסוג נעלם");
+});
+
+/*
+ * ⚠️ ה-`id` של תיבת ההשוואה הוא **חוזה בין שני קבצים**: הכרטיס מצייר
+ * אותו, ו-`CompareTray` מחפש אותו ב-`getElementById` כדי להחזיר את
+ * הפוקוס אחרי שהמגש נפרק (הסרת השבב האחרון, או "נקה"). התבנית הייתה
+ * כתובה פעמיים, ו-`getElementById` מחזיר `null` **בשקט** — כלומר
+ * פיצול בין השניים אינו שגיאה אלא פוקוס שנופל ל-`<body>`, אחרי כל
+ * הקטלוג. הבדיקה מצליבה את שתי הקצוות.
+ */
+test("נגישות: הכרטיס והמגש מסכימים על מזהה תיבת ההשוואה", () => {
+  for (const cat of ["cellular", "home", "electricity"]) {
+    for (const pkg of byCategory(ALL, cat)) {
+      const html = renderToStaticMarkup(
+        React.createElement(PackageCard, { pkg, onCompareToggle() {} }),
+      );
+      assert.ok(
+        html.includes(`id="${escapeAttr(compareCheckboxId(pkg))}"`),
+        `${cat}/${pkg.id}: הכרטיס אינו מצייר את ה-id שהמגש מחפש`,
+      );
+    }
+  }
+});
+
+/*
+ * ⚠️ "נקה הכל" מבטל את התנאי לקיומו שלו. הוא היה מרונדר רק כש-
+ * `hasFilters`, ולכן הלחיצה שהפעילה אותו הוציאה אותו מה-DOM: משתמש
+ * מקלדת נשאר בלי אלמנט ממוקד, הפוקוס נפל ל-`<body>` וה-Tab הבא
+ * התחיל מראש הדף. אותה מחלקה בדיוק שתוקנה כאן לכפתור השליחה,
+ * ל-✕ של שבב ההשוואה ולכפתור "השוו". הפקד נשאר במקומו ומצהיר
+ * `aria-disabled` כשאין מה לנקות.
+ */
+test("נגישות: 'נקה הכל' נשאר בסדר המקלדת גם כשאין מסננים", () => {
+  for (const cat of ["cellular", "home", "electricity"]) {
+    const html = renderToStaticMarkup(
+      React.createElement(CatalogBrowser, { packages: byCategory(ALL, cat), category: cat }),
+    );
+    const buttons = [...html.matchAll(/<button[^>]*>[^<]*נקה הכל/g)].map((m) => m[0]);
+    assert.equal(buttons.length, 1, `${cat}: 'נקה הכל' אינו בדף`);
+    assert.ok(!/\sdisabled(?:=|\s|>)/.test(buttons[0]), `${cat}: 'נקה הכל' יצא מסדר ה-Tab`);
+    assert.ok(
+      buttons[0].includes('aria-disabled="true"'),
+      `${cat}: 'נקה הכל' אינו מצהיר שהוא לא זמין בלי מסננים`,
+    );
+  }
+});
+
+/*
+ * ⚠️ תווית המיון בחשמל חייבת לומר את הציר ש-`electricityRank` מקבצת
+ * לפיו, וזה `spec.allHours`/`hoursText` — **שעות היממה**. היא אמרה
+ * "הנחה: על כל החשבון תחילה", שהוא `discountScope` — מה שההנחה חלה
+ * עליו בתוך החשבון — ציר שהדירוג אינו מכיר כלל (ממצא פתוח, אין
+ * בקטלוג מקדם לחלקו של הרכיב). התוצאה: שני המסלולים הראשונים תחת
+ * הכותרת הזו הם דווקא כאלה שהכרטיס והטבלה מדפיסים עליהם "הנחה על
+ * רכיב … בחשבון בלבד", בזמן שמסלולים ללא שום הסתייגות יושבים מתחתם.
+ */
+test("מיון: תווית החשמל אינה מבטיחה הנחה על כל החשבון", () => {
+  const el = byCategory(ALL, "electricity");
+  const top = sortCatalog(el, "price-asc")[0];
+  // ההוכחה שהתווית הקודמת הייתה שקר: ראש הרשימה מסתייג על הרכיב.
+  assert.ok(
+    discountScope(top) != null,
+    `ראש 'price-asc' (${top.id}) אינו מסתייג — ההוכחה התיישנה, בדקו מחדש`,
+  );
+  const html = renderToStaticMarkup(
+    React.createElement(CatalogBrowser, { packages: el, category: "electricity" }),
+  );
+  const options = [...html.matchAll(/<option[^>]*>([^<]*)<\/option>/g)].map((m) => m[1]);
+  assert.ok(
+    options.every((o) => !o.includes("כל החשבון")),
+    `תפריט המיון מבטיח הנחה על כל החשבון: ${JSON.stringify(options)}`,
+  );
+  assert.ok(options.includes("הנחה: בכל השעות תחילה"), JSON.stringify(options));
+  // ומה שהדירוג כן עושה: הקבוצה הראשונה היא מי שאינו מצהיר על שעות חלקיות.
+  const partial = (p) => !p.spec.allHours && p.spec.hoursText != null;
+  let seenPartial = false;
+  for (const p of sortCatalog(el, "price-asc")) {
+    if (partial(p)) seenPartial = true;
+    else assert.ok(!seenPartial, `${p.id} אינו חלקי-שעות אך מופיע אחרי מסלול חלקי`);
+  }
+});
+
+/*
+ * ⚠️ `provider` פגום הפיל את רינדור השרת של `/lp` כולו, בשני קוראים
+ * שונים באותו רינדור: רצועת הלוגואים בהירו (`providers` ב-`catalog.ts`)
+ * ומסנן החברה כאן (`matchesFilters`/`providerFacets`, שקראו
+ * `p.provider.slug` בלי שער). זו אותה מחלקה בדיוק של `spec: null`,
+ * `lineTiers` כמחרוזת ו-`badges` שאינו מערך — רשומה אחת פגומה חייבת
+ * ליפול בשקט ולא לקחת איתה את הדף.
+ *
+ * השער היחיד הוא `providerSlug` ב-`catalog.ts`, כי שער מקומי כאן הוא
+ * ביטחון מדומה: הרצועה קוראת את אותו שדה ומתרסקת קודם.
+ */
+test("ספק פגום מפיל חבילה אחת מהמסנן ולא את רינדור הדף", () => {
+  const pkgs = byCategory(ALL, "cellular");
+  const real = pkgs[0];
+  const slug = real.provider.slug;
+  const NONE = { providers: [], types: [], maxPrice: null };
+  const PICKED = { providers: [slug], types: [], maxPrice: null };
+
+  for (const bad of [null, undefined, "golan", 7, [], { slug: null }, { slug: "" }, { slug: 5 }]) {
+    const p = { ...real, provider: bad };
+    const shape = JSON.stringify(bad);
+
+    // המסנן כבוי: הרשומה אינה נפסלת על ציר שלא נבחר בו דבר.
+    assert.equal(matchesFilters(p, NONE), true, `מסנן כבוי פסל ספק ${shape}`);
+    // המסנן פעיל: אין ממה להתאים, ולכן היא נושרת — בלי לזרוק.
+    assert.equal(matchesFilters(p, PICKED), false, `מסנן פעיל קיבל ספק ${shape}`);
+    // והיא אינה אפשרות בתפריט החברות.
+    assert.ok(
+      !providerFacets([p], NONE).length,
+      `ספק ${shape} הופיע כאפשרות בתפריט`,
+    );
+  }
+
+  // והדף כולו נבנה עם רשומה פגומה בתוך המערך.
+  const html = renderToStaticMarkup(
+    React.createElement(CatalogBrowser, {
+      packages: [{ ...real, id: "bad-provider", provider: null }, ...pkgs],
+      category: "cellular",
+    }),
+  );
+  assert.ok(html.length > 0);
+  // המונים ממשיכים לספור את כל השאר.
+  const sum = providerFacets(pkgs, NONE).reduce((a, o) => a + o.count, 0);
+  assert.equal(sum, pkgs.length, "ספק פגום הוריד חבילות תקינות מהמונים");
+});
+
+/*
+ * ⚠️ "מסלול משפחתי" הוא מחיר לקו מתוך כמה קווים, ולכן `computeSaving`
+ * מחילה את `familyPriceOnly` מאחורי `track !== "cellular"`. ל-`priceNote`
+ * השער הזה חסר, ו-`FAMILY_ONLY` כולל `/family/i` — כלומר חבילת בית
+ * שהמילה מופיעה בשמה הייתה מקבלת "משני מנויים ומעלה" על חיבור אחד,
+ * הסתייגות שהרשומה לא מסרה. רדום בקטלוג של היום, ולכן זה שער לרענון.
+ */
+test("הסתייגות 'מסלול משפחתי' אינה מודפסת על חבילת בית", () => {
+  const home = byCategory(ALL, "home").find((p) => p.price != null);
+  assert.ok(home, "אין חבילת בית עם מחיר — ההוכחה התיישנה");
+  // אפס התאמות בבית היום: אם זה משתנה, השער הזה הפך לפגם חי.
+  assert.ok(
+    !byCategory(ALL, "home").some(familyPriceOnly),
+    "חבילת בית נושאת כבר 'family' — בדקו את ההסתייגות בפועל",
+  );
+  const named = { ...home, name: `${home.name} FAMILY`, rawName: `${home.rawName ?? home.name} FAMILY` };
+  assert.ok(familyPriceOnly(named), "השער לא נתפס — ההוכחה אינה תקפה");
+  const note = priceNote(named);
+  assert.ok(
+    note == null || !note.value.includes("משפחתי"),
+    `חבילת בית קיבלה הסתייגות משפחתית: ${JSON.stringify(note)}`,
+  );
+  // ובסלולר ההסתייגות דווקא כן נאמרת.
+  const cell = byCategory(ALL, "cellular").find((p) => p.price != null && !requiresMultipleLines(p));
+  const cellNamed = { ...cell, name: `${cell.name} FAMILY`, rawName: `${cell.rawName ?? cell.name} FAMILY` };
+  assert.ok(priceNote(cellNamed)?.value.includes("משפחתי"), "ההסתייגות נעלמה גם בסלולר");
 });
