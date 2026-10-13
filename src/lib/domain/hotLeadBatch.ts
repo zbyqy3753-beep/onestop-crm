@@ -58,8 +58,25 @@ function clean(value: string): string {
 }
 
 /** רשומה אחת בגוף: שם ואחריו טלפון. */
+/**
+ * שם תצוגה של הלקוח, בלי הזבל שהייבוא משאיר.
+ *
+ * ⚠️ "None"/"null" הם ערך ריק שעבר דרך Python או JSON ונשמר כמחרוזת.
+ * ⚠️ "ליד 0528744556" — הייבוא ממלא שם חסר בטלפון, וההודעה הציגה את
+ * המספר פעמיים ברצף. שם שמכיל את ספרות הטלפון אינו מוסיף מידע.
+ */
+function displayName(leadName: string, leadPhone: string): string {
+  const name = clean(leadName);
+  if (!name || /^(none|null|undefined)$/i.test(name)) return "לקוח";
+  const digits = leadPhone.replace(/\D/g, "");
+  if (digits.length >= 9 && name.replace(/\D/g, "").includes(digits)) {
+    return "לקוח";
+  }
+  return name;
+}
+
 function entry(leadName: string, leadPhone: string): string {
-  const name = clean(leadName) || "לקוח";
+  const name = displayName(leadName, leadPhone);
   const phone = clean(leadPhone) || "—";
   return `${name} ${phone}`;
 }
@@ -131,4 +148,33 @@ export function hotBatchDedupeKey(userId: string, openedAt: number): string {
 /** התחילית שלפיה מחפשים מקבץ פתוח של אותו עובד. */
 export function hotBatchKeyPrefix(userId: string): string {
   return `hotbatch:${userId}:`;
+}
+
+/* ── טקסט חופשי בתוך חלון 24 השעות ─────────────────────────────────── */
+
+/**
+ * כמה לידים נכנסים לטקסט החופשי לפני "ועוד N".
+ *
+ * ⚠️ מטא חותכת הודעת טקסט ב-4,096 תווים. שורה היא ~30 תווים, אז 60
+ * שורות משאירות מרווח גדול — ומעבר לזה רשימה בוואטסאפ ממילא לא
+ * נקראת; המסך הוא המקום לעבור עליה.
+ */
+export const HOT_TEXT_LIST_MAX = 60;
+
+/**
+ * המקבץ כהודעת טקסט רגילה — לשליחה בתוך חלון השירות, בלי תבנית.
+ *
+ * ⚠️ אותו גוף שמור בדיוק כמו לתבנית; רק הרינדור שונה. כך ההחלטה
+ * "תבנית או טקסט" נשארת ברגע השליחה, כשידוע אם החלון פתוח.
+ */
+export function hotBatchText(body: string): string {
+  const all = entries(body);
+  if (all.length === 0) return "🔥 ליד חם חדש — פרטים במסך הלידים";
+  const shown = all.slice(0, HOT_TEXT_LIST_MAX);
+  const extra = all.length - shown.length;
+  const head =
+    all.length === 1 ? "🔥 ליד חם חדש אצלך" : `🔥 ${all.length} לידים חמים חדשים אצלך`;
+  const lines = shown.map((e, i) => `${i + 1}. ${e}`);
+  if (extra > 0) lines.push(`…ועוד ${extra} — כולם במסך הלידים`);
+  return `${head}\n\n${lines.join("\n")}`;
 }

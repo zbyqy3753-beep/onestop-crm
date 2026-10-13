@@ -23,7 +23,7 @@ test("עלות: דיוור המוני הוא שיווק — הוא הפנייה 
   assert.equal(costCategoryOf("broadcast:camp1:0501234567"), "marketing");
 });
 
-test("עלות: כל התראות הצוות הן תועלת ולא חינם", () => {
+test("עלות: התראות הצוות הן תועלת ולא חינם", () => {
   // ⚠️ אלה השבע שנפלו בשקט. כל אחת מהן יוצאת בתבנית, וכל תבנית
   // מחויבת — "לא ברשימה" אף פעם לא אומר "לא עולה כסף".
   for (const key of [
@@ -32,7 +32,6 @@ test("עלות: כל התראות הצוות הן תועלת ולא חינם", (
     "dealwon:event1:user1",
     "unassigned:lead1:user1:2026-09-08T13:00:00.000Z",
     "yeslead:lead1:user1",
-    "hotlead:lead1:user1",
     "pwnotice:user1",
   ]) {
     assert.equal(costCategoryOf(key), "utility", key);
@@ -62,8 +61,9 @@ test("עלות: תחילית ארוכה גוברת על קצרה — חידוש 
   );
 });
 
-test("עלות: התראת ליד חם עולה כמו תזכורת, לא כמו דיוור", () => {
-  // הבאג המקורי במספרים: התראה שהוצגה כ-0 עולה בפועל אגורות.
-  assert.equal(costUsd("hotlead:lead1:user1"), WA_RATE_USD.utility);
-  assert.ok(costUsd("hotlead:lead1:user1") > 0);
+test("עלות: התראת ליד חם מחויבת כשיווק — כך מטא סיווגה את התבנית", () => {
+  // ⚠️ הוגשה כ-UTILITY ומטא הפכה אותה ל-MARKETING. החיוב הולך לפי
+  // הסיווג של מטא, ובתור תועלת היא הוצגה זולה פי 6.7 מהאמת.
+  assert.equal(costUsd("hotlead:lead1:user1"), WA_RATE_USD.marketing);
+  assert.equal(costUsd("hotbatch:user1:1"), WA_RATE_USD.marketing);
 });

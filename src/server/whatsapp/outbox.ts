@@ -529,10 +529,12 @@ export async function markUndeliverable(
 export async function attachProviderId(
   id: string,
   providerMessageId: string,
+  /** יצאה כטקסט חופשי בתוך חלון השירות — לא נספרת כהוצאה */
+  inServiceWindow = false,
 ): Promise<void> {
   await prisma.whatsAppMessage.updateMany({
     where: { id },
-    data: { providerMessageId },
+    data: { providerMessageId, inServiceWindow },
   });
 }
 

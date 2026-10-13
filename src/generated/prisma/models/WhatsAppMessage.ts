@@ -52,6 +52,7 @@ export type WhatsAppMessageMinAggregateOutputType = {
   claimedAt: Date | null
   sentAt: Date | null
   providerMessageId: string | null
+  inServiceWindow: boolean | null
   leadId: string | null
   recipientUserId: string | null
   campaignId: string | null
@@ -70,6 +71,7 @@ export type WhatsAppMessageMaxAggregateOutputType = {
   claimedAt: Date | null
   sentAt: Date | null
   providerMessageId: string | null
+  inServiceWindow: boolean | null
   leadId: string | null
   recipientUserId: string | null
   campaignId: string | null
@@ -88,6 +90,7 @@ export type WhatsAppMessageCountAggregateOutputType = {
   claimedAt: number
   sentAt: number
   providerMessageId: number
+  inServiceWindow: number
   leadId: number
   recipientUserId: number
   campaignId: number
@@ -116,6 +119,7 @@ export type WhatsAppMessageMinAggregateInputType = {
   claimedAt?: true
   sentAt?: true
   providerMessageId?: true
+  inServiceWindow?: true
   leadId?: true
   recipientUserId?: true
   campaignId?: true
@@ -134,6 +138,7 @@ export type WhatsAppMessageMaxAggregateInputType = {
   claimedAt?: true
   sentAt?: true
   providerMessageId?: true
+  inServiceWindow?: true
   leadId?: true
   recipientUserId?: true
   campaignId?: true
@@ -152,6 +157,7 @@ export type WhatsAppMessageCountAggregateInputType = {
   claimedAt?: true
   sentAt?: true
   providerMessageId?: true
+  inServiceWindow?: true
   leadId?: true
   recipientUserId?: true
   campaignId?: true
@@ -257,6 +263,7 @@ export type WhatsAppMessageGroupByOutputType = {
   claimedAt: Date | null
   sentAt: Date | null
   providerMessageId: string | null
+  inServiceWindow: boolean
   leadId: string | null
   recipientUserId: string | null
   campaignId: string | null
@@ -298,6 +305,7 @@ export type WhatsAppMessageWhereInput = {
   claimedAt?: Prisma.DateTimeNullableFilter<"WhatsAppMessage"> | Date | string | null
   sentAt?: Prisma.DateTimeNullableFilter<"WhatsAppMessage"> | Date | string | null
   providerMessageId?: Prisma.StringNullableFilter<"WhatsAppMessage"> | string | null
+  inServiceWindow?: Prisma.BoolFilter<"WhatsAppMessage"> | boolean
   leadId?: Prisma.StringNullableFilter<"WhatsAppMessage"> | string | null
   recipientUserId?: Prisma.StringNullableFilter<"WhatsAppMessage"> | string | null
   campaignId?: Prisma.StringNullableFilter<"WhatsAppMessage"> | string | null
@@ -319,6 +327,7 @@ export type WhatsAppMessageOrderByWithRelationInput = {
   claimedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   sentAt?: Prisma.SortOrderInput | Prisma.SortOrder
   providerMessageId?: Prisma.SortOrderInput | Prisma.SortOrder
+  inServiceWindow?: Prisma.SortOrder
   leadId?: Prisma.SortOrderInput | Prisma.SortOrder
   recipientUserId?: Prisma.SortOrderInput | Prisma.SortOrder
   campaignId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -343,6 +352,7 @@ export type WhatsAppMessageWhereUniqueInput = Prisma.AtLeast<{
   lastError?: Prisma.StringNullableFilter<"WhatsAppMessage"> | string | null
   claimedAt?: Prisma.DateTimeNullableFilter<"WhatsAppMessage"> | Date | string | null
   sentAt?: Prisma.DateTimeNullableFilter<"WhatsAppMessage"> | Date | string | null
+  inServiceWindow?: Prisma.BoolFilter<"WhatsAppMessage"> | boolean
   leadId?: Prisma.StringNullableFilter<"WhatsAppMessage"> | string | null
   recipientUserId?: Prisma.StringNullableFilter<"WhatsAppMessage"> | string | null
   campaignId?: Prisma.StringNullableFilter<"WhatsAppMessage"> | string | null
@@ -364,6 +374,7 @@ export type WhatsAppMessageOrderByWithAggregationInput = {
   claimedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   sentAt?: Prisma.SortOrderInput | Prisma.SortOrder
   providerMessageId?: Prisma.SortOrderInput | Prisma.SortOrder
+  inServiceWindow?: Prisma.SortOrder
   leadId?: Prisma.SortOrderInput | Prisma.SortOrder
   recipientUserId?: Prisma.SortOrderInput | Prisma.SortOrder
   campaignId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -390,6 +401,7 @@ export type WhatsAppMessageScalarWhereWithAggregatesInput = {
   claimedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"WhatsAppMessage"> | Date | string | null
   sentAt?: Prisma.DateTimeNullableWithAggregatesFilter<"WhatsAppMessage"> | Date | string | null
   providerMessageId?: Prisma.StringNullableWithAggregatesFilter<"WhatsAppMessage"> | string | null
+  inServiceWindow?: Prisma.BoolWithAggregatesFilter<"WhatsAppMessage"> | boolean
   leadId?: Prisma.StringNullableWithAggregatesFilter<"WhatsAppMessage"> | string | null
   recipientUserId?: Prisma.StringNullableWithAggregatesFilter<"WhatsAppMessage"> | string | null
   campaignId?: Prisma.StringNullableWithAggregatesFilter<"WhatsAppMessage"> | string | null
@@ -408,6 +420,7 @@ export type WhatsAppMessageCreateInput = {
   claimedAt?: Date | string | null
   sentAt?: Date | string | null
   providerMessageId?: string | null
+  inServiceWindow?: boolean
   createdAt?: Date | string
   lead?: Prisma.LeadCreateNestedOneWithoutWhatsappMessagesInput
   recipient?: Prisma.UserCreateNestedOneWithoutWhatsappMessagesInput
@@ -426,6 +439,7 @@ export type WhatsAppMessageUncheckedCreateInput = {
   claimedAt?: Date | string | null
   sentAt?: Date | string | null
   providerMessageId?: string | null
+  inServiceWindow?: boolean
   leadId?: string | null
   recipientUserId?: string | null
   campaignId?: string | null
@@ -444,6 +458,7 @@ export type WhatsAppMessageUpdateInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lead?: Prisma.LeadUpdateOneWithoutWhatsappMessagesNestedInput
   recipient?: Prisma.UserUpdateOneWithoutWhatsappMessagesNestedInput
@@ -462,6 +477,7 @@ export type WhatsAppMessageUncheckedUpdateInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   leadId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recipientUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   campaignId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -480,6 +496,7 @@ export type WhatsAppMessageCreateManyInput = {
   claimedAt?: Date | string | null
   sentAt?: Date | string | null
   providerMessageId?: string | null
+  inServiceWindow?: boolean
   leadId?: string | null
   recipientUserId?: string | null
   campaignId?: string | null
@@ -498,6 +515,7 @@ export type WhatsAppMessageUpdateManyMutationInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -513,6 +531,7 @@ export type WhatsAppMessageUncheckedUpdateManyInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   leadId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recipientUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   campaignId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -541,6 +560,7 @@ export type WhatsAppMessageCountOrderByAggregateInput = {
   claimedAt?: Prisma.SortOrder
   sentAt?: Prisma.SortOrder
   providerMessageId?: Prisma.SortOrder
+  inServiceWindow?: Prisma.SortOrder
   leadId?: Prisma.SortOrder
   recipientUserId?: Prisma.SortOrder
   campaignId?: Prisma.SortOrder
@@ -563,6 +583,7 @@ export type WhatsAppMessageMaxOrderByAggregateInput = {
   claimedAt?: Prisma.SortOrder
   sentAt?: Prisma.SortOrder
   providerMessageId?: Prisma.SortOrder
+  inServiceWindow?: Prisma.SortOrder
   leadId?: Prisma.SortOrder
   recipientUserId?: Prisma.SortOrder
   campaignId?: Prisma.SortOrder
@@ -581,6 +602,7 @@ export type WhatsAppMessageMinOrderByAggregateInput = {
   claimedAt?: Prisma.SortOrder
   sentAt?: Prisma.SortOrder
   providerMessageId?: Prisma.SortOrder
+  inServiceWindow?: Prisma.SortOrder
   leadId?: Prisma.SortOrder
   recipientUserId?: Prisma.SortOrder
   campaignId?: Prisma.SortOrder
@@ -733,6 +755,7 @@ export type WhatsAppMessageCreateWithoutRecipientInput = {
   claimedAt?: Date | string | null
   sentAt?: Date | string | null
   providerMessageId?: string | null
+  inServiceWindow?: boolean
   createdAt?: Date | string
   lead?: Prisma.LeadCreateNestedOneWithoutWhatsappMessagesInput
   campaign?: Prisma.WaCampaignCreateNestedOneWithoutMessagesInput
@@ -750,6 +773,7 @@ export type WhatsAppMessageUncheckedCreateWithoutRecipientInput = {
   claimedAt?: Date | string | null
   sentAt?: Date | string | null
   providerMessageId?: string | null
+  inServiceWindow?: boolean
   leadId?: string | null
   campaignId?: string | null
   createdAt?: Date | string
@@ -796,6 +820,7 @@ export type WhatsAppMessageScalarWhereInput = {
   claimedAt?: Prisma.DateTimeNullableFilter<"WhatsAppMessage"> | Date | string | null
   sentAt?: Prisma.DateTimeNullableFilter<"WhatsAppMessage"> | Date | string | null
   providerMessageId?: Prisma.StringNullableFilter<"WhatsAppMessage"> | string | null
+  inServiceWindow?: Prisma.BoolFilter<"WhatsAppMessage"> | boolean
   leadId?: Prisma.StringNullableFilter<"WhatsAppMessage"> | string | null
   recipientUserId?: Prisma.StringNullableFilter<"WhatsAppMessage"> | string | null
   campaignId?: Prisma.StringNullableFilter<"WhatsAppMessage"> | string | null
@@ -814,6 +839,7 @@ export type WhatsAppMessageCreateWithoutLeadInput = {
   claimedAt?: Date | string | null
   sentAt?: Date | string | null
   providerMessageId?: string | null
+  inServiceWindow?: boolean
   createdAt?: Date | string
   recipient?: Prisma.UserCreateNestedOneWithoutWhatsappMessagesInput
   campaign?: Prisma.WaCampaignCreateNestedOneWithoutMessagesInput
@@ -831,6 +857,7 @@ export type WhatsAppMessageUncheckedCreateWithoutLeadInput = {
   claimedAt?: Date | string | null
   sentAt?: Date | string | null
   providerMessageId?: string | null
+  inServiceWindow?: boolean
   recipientUserId?: string | null
   campaignId?: string | null
   createdAt?: Date | string
@@ -874,6 +901,7 @@ export type WhatsAppMessageCreateWithoutCampaignInput = {
   claimedAt?: Date | string | null
   sentAt?: Date | string | null
   providerMessageId?: string | null
+  inServiceWindow?: boolean
   createdAt?: Date | string
   lead?: Prisma.LeadCreateNestedOneWithoutWhatsappMessagesInput
   recipient?: Prisma.UserCreateNestedOneWithoutWhatsappMessagesInput
@@ -891,6 +919,7 @@ export type WhatsAppMessageUncheckedCreateWithoutCampaignInput = {
   claimedAt?: Date | string | null
   sentAt?: Date | string | null
   providerMessageId?: string | null
+  inServiceWindow?: boolean
   leadId?: string | null
   recipientUserId?: string | null
   createdAt?: Date | string
@@ -934,6 +963,7 @@ export type WhatsAppMessageCreateManyRecipientInput = {
   claimedAt?: Date | string | null
   sentAt?: Date | string | null
   providerMessageId?: string | null
+  inServiceWindow?: boolean
   leadId?: string | null
   campaignId?: string | null
   createdAt?: Date | string
@@ -951,6 +981,7 @@ export type WhatsAppMessageUpdateWithoutRecipientInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lead?: Prisma.LeadUpdateOneWithoutWhatsappMessagesNestedInput
   campaign?: Prisma.WaCampaignUpdateOneWithoutMessagesNestedInput
@@ -968,6 +999,7 @@ export type WhatsAppMessageUncheckedUpdateWithoutRecipientInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   leadId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   campaignId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -985,6 +1017,7 @@ export type WhatsAppMessageUncheckedUpdateManyWithoutRecipientInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   leadId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   campaignId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1002,6 +1035,7 @@ export type WhatsAppMessageCreateManyLeadInput = {
   claimedAt?: Date | string | null
   sentAt?: Date | string | null
   providerMessageId?: string | null
+  inServiceWindow?: boolean
   recipientUserId?: string | null
   campaignId?: string | null
   createdAt?: Date | string
@@ -1019,6 +1053,7 @@ export type WhatsAppMessageUpdateWithoutLeadInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   recipient?: Prisma.UserUpdateOneWithoutWhatsappMessagesNestedInput
   campaign?: Prisma.WaCampaignUpdateOneWithoutMessagesNestedInput
@@ -1036,6 +1071,7 @@ export type WhatsAppMessageUncheckedUpdateWithoutLeadInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   recipientUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   campaignId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1053,6 +1089,7 @@ export type WhatsAppMessageUncheckedUpdateManyWithoutLeadInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   recipientUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   campaignId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1070,6 +1107,7 @@ export type WhatsAppMessageCreateManyCampaignInput = {
   claimedAt?: Date | string | null
   sentAt?: Date | string | null
   providerMessageId?: string | null
+  inServiceWindow?: boolean
   leadId?: string | null
   recipientUserId?: string | null
   createdAt?: Date | string
@@ -1087,6 +1125,7 @@ export type WhatsAppMessageUpdateWithoutCampaignInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lead?: Prisma.LeadUpdateOneWithoutWhatsappMessagesNestedInput
   recipient?: Prisma.UserUpdateOneWithoutWhatsappMessagesNestedInput
@@ -1104,6 +1143,7 @@ export type WhatsAppMessageUncheckedUpdateWithoutCampaignInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   leadId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recipientUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1121,6 +1161,7 @@ export type WhatsAppMessageUncheckedUpdateManyWithoutCampaignInput = {
   claimedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   providerMessageId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inServiceWindow?: Prisma.BoolFieldUpdateOperationsInput | boolean
   leadId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recipientUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1140,6 +1181,7 @@ export type WhatsAppMessageSelect<ExtArgs extends runtime.Types.Extensions.Inter
   claimedAt?: boolean
   sentAt?: boolean
   providerMessageId?: boolean
+  inServiceWindow?: boolean
   leadId?: boolean
   recipientUserId?: boolean
   campaignId?: boolean
@@ -1161,6 +1203,7 @@ export type WhatsAppMessageSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   claimedAt?: boolean
   sentAt?: boolean
   providerMessageId?: boolean
+  inServiceWindow?: boolean
   leadId?: boolean
   recipientUserId?: boolean
   campaignId?: boolean
@@ -1182,6 +1225,7 @@ export type WhatsAppMessageSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   claimedAt?: boolean
   sentAt?: boolean
   providerMessageId?: boolean
+  inServiceWindow?: boolean
   leadId?: boolean
   recipientUserId?: boolean
   campaignId?: boolean
@@ -1203,13 +1247,14 @@ export type WhatsAppMessageSelectScalar = {
   claimedAt?: boolean
   sentAt?: boolean
   providerMessageId?: boolean
+  inServiceWindow?: boolean
   leadId?: boolean
   recipientUserId?: boolean
   campaignId?: boolean
   createdAt?: boolean
 }
 
-export type WhatsAppMessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "dedupeKey" | "toPhone" | "body" | "status" | "scheduledFor" | "attempts" | "lastError" | "claimedAt" | "sentAt" | "providerMessageId" | "leadId" | "recipientUserId" | "campaignId" | "createdAt", ExtArgs["result"]["whatsAppMessage"]>
+export type WhatsAppMessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "dedupeKey" | "toPhone" | "body" | "status" | "scheduledFor" | "attempts" | "lastError" | "claimedAt" | "sentAt" | "providerMessageId" | "inServiceWindow" | "leadId" | "recipientUserId" | "campaignId" | "createdAt", ExtArgs["result"]["whatsAppMessage"]>
 export type WhatsAppMessageInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   lead?: boolean | Prisma.WhatsAppMessage$leadArgs<ExtArgs>
   recipient?: boolean | Prisma.WhatsAppMessage$recipientArgs<ExtArgs>
@@ -1270,6 +1315,11 @@ export type $WhatsAppMessagePayload<ExtArgs extends runtime.Types.Extensions.Int
      * ריק בשורות שנשלחו דרך הבוט הישן, שלא היה לו מזהה כזה.
      */
     providerMessageId: string | null
+    /**
+     * יצאה כטקסט חופשי בתוך חלון השירות של 24 שעות, ולא כתבנית — ולכן
+     * לא עלתה כלום. ראה `server/whatsapp/serviceWindow.ts`.
+     */
+    inServiceWindow: boolean
     /**
      * SetNull ולא Cascade: הגוף והמספר הם snapshot, ומחיקת ליד לא צריכה
      * למחוק את הראיה שההודעה נשלחה
@@ -1722,6 +1772,7 @@ export interface WhatsAppMessageFieldRefs {
   readonly claimedAt: Prisma.FieldRef<"WhatsAppMessage", 'DateTime'>
   readonly sentAt: Prisma.FieldRef<"WhatsAppMessage", 'DateTime'>
   readonly providerMessageId: Prisma.FieldRef<"WhatsAppMessage", 'String'>
+  readonly inServiceWindow: Prisma.FieldRef<"WhatsAppMessage", 'Boolean'>
   readonly leadId: Prisma.FieldRef<"WhatsAppMessage", 'String'>
   readonly recipientUserId: Prisma.FieldRef<"WhatsAppMessage", 'String'>
   readonly campaignId: Prisma.FieldRef<"WhatsAppMessage", 'String'>

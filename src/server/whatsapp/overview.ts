@@ -196,6 +196,8 @@ async function spendFor(
 ): Promise<SpendWindow> {
   const anyOf = (category: "marketing" | "utility") => ({
     ...where,
+    // טקסט חופשי בתוך חלון השירות לא עלה כלום, גם אם התחילית שלו בתשלום
+    inServiceWindow: false,
     OR: prefixesFor(category).map((prefix) => ({
       dedupeKey: { startsWith: prefix },
     })),

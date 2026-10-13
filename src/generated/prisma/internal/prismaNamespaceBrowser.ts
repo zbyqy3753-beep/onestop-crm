@@ -298,6 +298,7 @@ export const WhatsAppMessageScalarFieldEnum = {
   claimedAt: 'claimedAt',
   sentAt: 'sentAt',
   providerMessageId: 'providerMessageId',
+  inServiceWindow: 'inServiceWindow',
   leadId: 'leadId',
   recipientUserId: 'recipientUserId',
   campaignId: 'campaignId',

@@ -616,6 +616,10 @@ model WhatsAppMessage {
   /// ריק בשורות שנשלחו דרך הבוט הישן, שלא היה לו מזהה כזה.
   providerMessageId String? @unique
 
+  /// יצאה כטקסט חופשי בתוך חלון השירות של 24 שעות, ולא כתבנית — ולכן
+  /// לא עלתה כלום. ראה `server/whatsapp/serviceWindow.ts`.
+  inServiceWindow Boolean @default(false)
+
   /// SetNull ולא Cascade: הגוף והמספר הם snapshot, ומחיקת ליד לא צריכה
   /// למחוק את הראיה שההודעה נשלחה
   leadId String?

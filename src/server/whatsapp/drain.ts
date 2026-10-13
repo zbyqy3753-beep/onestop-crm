@@ -41,7 +41,8 @@ import {
   unassignedParams,
   yesLeadParams,
 } from "@/lib/domain/alerts";
-import { hotBatchParams } from "@/lib/domain/hotLeadBatch";
+import { hotBatchParams, hotBatchText } from "@/lib/domain/hotLeadBatch";
+import { hasOpenServiceWindow } from "./serviceWindow";
 
 /**
  * ניקוז התור דרך Cloud API — מחליף את לולאת הסקר של הבוט.
@@ -198,6 +199,18 @@ async function deliverSlots(msg: ClaimedMessage): Promise<string> {
   });
 }
 
+/**
+ * מקבץ לידים חמים כטקסט חופשי, כשהעובד פתח חלון שירות.
+ *
+ * ⚠️ רק לתחילית `hotbatch:` — התבנית היחידה שמטא מסווגת שיווק ולכן
+ * נחסמת. מחזיר `null` כשאין חלון, והקורא ממשיך לתבנית כרגיל.
+ */
+async function deliverHotInWindow(msg: ClaimedMessage): Promise<string | null> {
+  if (!msg.dedupeKey.startsWith("hotbatch:")) return null;
+  if (!(await hasOpenServiceWindow(msg.toPhone))) return null;
+  return sendText(msg.toPhone, hotBatchText(msg.body));
+}
+
 async function deliver(msg: ClaimedMessage): Promise<string> {
   // ⚠️ לפני `templateFor`: זו אינה תבנית ואינה טקסט, והיא היחידה
   // שהתוכן שלה נקבע כאן ולא ב-`body` השמור
@@ -290,10 +303,11 @@ export async function drainOutbox(appUrl?: string): Promise<DrainResult> {
 
   for (const msg of res.messages) {
     try {
-      const providerId = await deliver(msg);
+      const inWindow = await deliverHotInWindow(msg);
+      const providerId = inWindow ?? (await deliver(msg));
       // ⚠️ לפני הדיווח: בלי הקישור הזה עדכון המסירה שיגיע ב-webhook
       // לא יידע לאיזו שורה הוא שייך
-      await attachProviderId(msg.id, providerId);
+      await attachProviderId(msg.id, providerId, inWindow !== null);
       // ⚠️ מיד אחרי השליחה, לא בניקוי מאוחר: הגוף של הודעת קוד **הוא**
       // הקוד, וכל שנייה שהוא יושב במסד היא חלון מיותר.
       if (msg.dedupeKey.startsWith("pwcode:")) await scrubBody(msg.id);

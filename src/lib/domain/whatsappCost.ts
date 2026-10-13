@@ -91,8 +91,12 @@ const COST_PREFIXES: { prefix: string; category: WaCostCategory }[] = [
   { prefix: "dealwon:", category: "utility" },
   { prefix: "unassigned:", category: "utility" },
   { prefix: "yeslead:", category: "utility" },
-  { prefix: "hotlead:", category: "utility" },
-  { prefix: "hotbatch:", category: "utility" },
+  // ⚠️ שיווק ולא תועלת: מטא סיווגה מחדש את `lead_hot_he` ואת
+  // `lead_hot_batch_he` ל-MARKETING (ראה `hotLeadBatch.ts`), ומחייבת
+  // לפי הסיווג שלה — לא לפי מה שהגשנו. כאן הן נספרו כתועלת, כלומר
+  // מסך העלויות הציג אותן זולות פי 6.7 מהחיוב בפועל.
+  { prefix: "hotlead:", category: "marketing" },
+  { prefix: "hotbatch:", category: "marketing" },
   { prefix: "pwnotice:", category: "utility" },
 
   // ── קוד חד-פעמי ──

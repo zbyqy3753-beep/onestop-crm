@@ -8,6 +8,8 @@ import {
   hotBatchBody,
   hotBatchCount,
   hotBatchParams,
+  hotBatchText,
+  HOT_TEXT_LIST_MAX,
 } from "../src/lib/domain/hotLeadBatch.ts";
 
 /* ── מקבץ לידים חמים ───────────────────────────────────────────────────
@@ -90,4 +92,38 @@ test("מקבץ: גוף פגום מחזיר פרמטרים בטוחים ולא ז
 
 test("מקבץ: החלון הוא חמש דקות", () => {
   assert.equal(HOT_BATCH_WINDOW_MS, 5 * 60_000);
+});
+
+test("טקסט חופשי: ליד אחד — כותרת ביחיד ושורה אחת", () => {
+  const text = hotBatchText(hotBatchBody("אתי", "0544405865"));
+  assert.equal(text, ["🔥 ליד חם חדש אצלך", "", "1. אתי 0544405865"].join("\n"));
+});
+
+test("טקסט חופשי: כמה לידים בהודעה אחת, ממוספרים", () => {
+  let body = hotBatchBody("אתי", "0544405865");
+  body = hotBatchAppend(body, "אלעד", "0542610083");
+  body = hotBatchAppend(body, "איתמר", "0545778216");
+  const text = hotBatchText(body);
+  assert.ok(text.startsWith("🔥 3 לידים חמים חדשים אצלך"));
+  assert.ok(text.includes("1. אתי 0544405865"));
+  assert.ok(text.includes("3. איתמר 0545778216"));
+});
+
+test("טקסט חופשי: שיוך קבוצתי גדול נחתך עם 'ועוד', לא נשבר", () => {
+  let body = hotBatchBody("ליד", "0500000000");
+  for (let i = 1; i < 66; i++) body = hotBatchAppend(body, `ל${i}`, `05000000${String(i).padStart(2, "0")}`);
+  const text = hotBatchText(body);
+  assert.ok(text.startsWith("🔥 66 לידים חמים חדשים"));
+  assert.ok(text.includes(`…ועוד ${66 - HOT_TEXT_LIST_MAX}`));
+  // מטא חותכת טקסט ב-4,096 תווים
+  assert.ok(text.length < 4096, String(text.length));
+});
+
+test("שם: 'None' מהייבוא ושם שהוא הטלפון עצמו הופכים ל'לקוח'", () => {
+  assert.equal(hotBatchBody("None", "0547986959"), "לידים חמים חדשים | לקוח 0547986959");
+  assert.equal(
+    hotBatchBody("ליד 0528744556", "0528744556"),
+    "לידים חמים חדשים | לקוח 0528744556",
+  );
+  assert.equal(hotBatchBody("נועם", "0502255181"), "לידים חמים חדשים | נועם 0502255181");
 });
