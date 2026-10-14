@@ -8,7 +8,7 @@ import type {
   Priority,
   UserRef,
 } from "@/lib/domain/types";
-import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
+import { PICKABLE_STATUSES, STATUS_CONFIG } from "@/lib/domain/types";
 import { Button, MultiSelect, inputClass } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 
@@ -166,7 +166,7 @@ export function FilterBar({
           }}
         >
           <option value="">שינוי סטטוס…</option>
-          {STATUS_ORDER.map((s) => (
+          {PICKABLE_STATUSES.map((s) => (
             <option key={s} value={s}>
               {STATUS_CONFIG[s].label}
             </option>

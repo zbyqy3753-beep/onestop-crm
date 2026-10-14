@@ -9,8 +9,9 @@ import {
   PROVIDER_CONFIG,
   SOURCE_CONFIG,
   STATUS_CONFIG,
-  STATUS_ORDER,
   whatsappGreeting,
+  PICKABLE_STATUSES,
+  RETIRED_STATUSES,
 } from "@/lib/domain/types";
 import { addNoteAction } from "@/app/(app)/leads/actions";
 import { dateTime, money, phone, relative, waLink } from "@/lib/format";
@@ -211,7 +212,10 @@ export function LeadDrawer({
                 disabled={busy}
                 className={inputClass}
               >
-                {STATUS_ORDER.map((s) => (
+                {(RETIRED_STATUSES.has(lead.status)
+                  ? [lead.status, ...PICKABLE_STATUSES]
+                  : PICKABLE_STATUSES
+                ).map((s) => (
                   <option key={s} value={s}>
                     {STATUS_CONFIG[s].label}
                   </option>

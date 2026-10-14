@@ -1,7 +1,7 @@
 "use client";
 
 import type { LeadStatus } from "@/lib/domain/types";
-import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
+import { STATUS_CONFIG, STATUS_ORDER, RETIRED_STATUSES } from "@/lib/domain/types";
 import { TONE_SOFT_VAR, TONE_VAR } from "@/lib/format";
 import { number } from "@/lib/format";
 
@@ -50,9 +50,14 @@ export function StatusTiles({
   compact?: boolean;
   onExpand?: () => void;
 }) {
+  // סטטוס שבוטל (`RETIRED_STATUSES`) מקבל קוביה רק כשעוד יש בו לידים או
+  // שהוא מסונן — אחרת הוא היה מציע לסנן לפי משהו שכבר לא קיים
+  const available = STATUS_ORDER.filter(
+    (s) => !RETIRED_STATUSES.has(s) || (counts[s] ?? 0) > 0 || active.includes(s),
+  );
   const shown = compact
-    ? STATUS_ORDER.filter((s) => (counts[s] ?? 0) > 0 || active.includes(s))
-    : STATUS_ORDER;
+    ? available.filter((s) => (counts[s] ?? 0) > 0 || active.includes(s))
+    : available;
 
   return (
     <div className="mb-3">
@@ -130,7 +135,7 @@ export function StatusTiles({
             onClick={onExpand}
             className="shrink-0 whitespace-nowrap rounded-card border border-dashed border-line px-3 py-1.5 text-xs text-ink-3 transition-colors hover:border-line-strong hover:text-ink-1"
           >
-            כל הסטטוסים ({STATUS_ORDER.length})
+            כל הסטטוסים ({available.length})
           </button>
         )}
       </div>

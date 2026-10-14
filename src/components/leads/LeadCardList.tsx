@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef } from "react";
 import type { Lead, LeadStatus, UserRef } from "@/lib/domain/types";
-import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
+import { PICKABLE_STATUSES, STATUS_CONFIG } from "@/lib/domain/types";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
 import { Badge, Button, EmptyState, inputClass, useNow } from "@/components/ui/primitives";
 import { LeadCard } from "./LeadCard";
@@ -334,7 +334,7 @@ export function LeadCardList({
               }}
             >
               <option value="">סטטוס…</option>
-              {STATUS_ORDER.map((s) => (
+              {PICKABLE_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {STATUS_CONFIG[s].label}
                 </option>

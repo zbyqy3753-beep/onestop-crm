@@ -107,7 +107,30 @@ export type StatusTone =
   | "bad"
   | "signal"
   | "accent"
-  | "rose";
+  | "rose"
+  /*
+   * גוון בוהק משלו לכל סטטוס ליד (אוקטובר 2026, בקשת בעל המערכת:
+   * "צבעים בוהקים יותר, גוון אחר לכל סטטוס"). הקידומת `st-` מפרידה אותם
+   * מהטונים הסמנטיים שלמעלה, שממשיכים לשמש עדיפות, מקור, שלבי עסקה
+   * וכו׳ — ומשמות הצבעים המובנים של Tailwind (`blue-500`…), שגם /lp
+   * משתמש בהם. הערכים ב-globals.css, בשתי התמות.
+   */
+  | "st-blue"
+  | "st-fuchsia"
+  | "st-indigo"
+  | "st-violet"
+  | "st-cyan"
+  | "st-amber"
+  | "st-yellow"
+  | "st-orange"
+  | "st-pink"
+  | "st-green"
+  | "st-teal"
+  | "st-slate"
+  | "st-crimson"
+  | "st-red"
+  | "st-brown"
+  | "st-zinc";
 
 export interface StatusMeta {
   label: string;
@@ -121,7 +144,7 @@ export interface StatusMeta {
 export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   new: {
     label: "חדש",
-    tone: "info",
+    tone: "st-blue",
     terminal: false,
   },
   /**
@@ -132,12 +155,12 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
    */
   recycled: {
     label: "ממחזור",
-    tone: "rose",
+    tone: "st-fuchsia",
     terminal: false,
   },
   inProgress: {
     label: "בטיפול",
-    tone: "active",
+    tone: "st-violet",
     terminal: false,
     prompt: {
       question: "פרט מה בוצע",
@@ -147,7 +170,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   },
   contacted: {
     label: "נוצר קשר",
-    tone: "signal",
+    tone: "st-cyan",
     terminal: false,
     prompt: {
       question: "סיכום השיחה",
@@ -196,7 +219,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
    */
   futureTracking: {
     label: "חזרה ללקוח",
-    tone: "signal",
+    tone: "st-amber",
     terminal: false,
     prompt: {
       question: "מתי לחזור ללקוח?",
@@ -206,7 +229,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   },
   won: {
     label: "נסגר בהצלחה",
-    tone: "good",
+    tone: "st-green",
     terminal: true,
     prompt: {
       question: "מה נמכר?",
@@ -216,7 +239,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   },
   notRelevant: {
     label: "לא רלוונטי",
-    tone: "neutral",
+    tone: "st-slate",
     terminal: true,
     prompt: {
       question: "למה לא רלוונטי?",
@@ -226,7 +249,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   },
   notInterested: {
     label: "לא מעוניין",
-    tone: "bad",
+    tone: "st-crimson",
     terminal: true,
     prompt: {
       question: "סיבת הסירוב",
@@ -236,7 +259,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   },
   existingCustomer: {
     label: "לקוח קיים",
-    tone: "neutral",
+    tone: "st-teal",
     terminal: true,
     prompt: {
       question: "פרטים נוספים",
@@ -246,7 +269,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   },
   noAnswer: {
     label: "אין מענה",
-    tone: "warn",
+    tone: "st-yellow",
     terminal: false,
     prompt: {
       question: "כמה ניסיונות?",
@@ -259,17 +282,17 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   // יותר לקרוא בהיסטוריה של הליד "עבר ל-אין מענה 2" מאשר מספר סתום.
   noAnswer1: {
     label: "אין מענה 1",
-    tone: "warn",
+    tone: "st-orange",
     terminal: false,
   },
   noAnswer2: {
     label: "אין מענה 2",
-    tone: "warn",
+    tone: "st-pink",
     terminal: false,
   },
   returning: {
     label: "ליד חוזר",
-    tone: "accent",
+    tone: "st-indigo",
     terminal: false,
     prompt: {
       question: "למה חזר?",
@@ -279,7 +302,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   },
   soldByCompetitor: {
     label: "נמכר ע״י משווק מקביל",
-    tone: "bad",
+    tone: "st-red",
     terminal: true,
     prompt: {
       question: "מי המשווק?",
@@ -289,7 +312,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   },
   denies: {
     label: "מתכחש לפנייה",
-    tone: "bad",
+    tone: "st-brown",
     terminal: true,
     prompt: {
       question: "פרטי ההתכחשות",
@@ -299,7 +322,7 @@ export const STATUS_CONFIG: Record<LeadStatus, StatusMeta> = {
   },
   lost: {
     label: "הפסד",
-    tone: "bad",
+    tone: "st-zinc",
     terminal: true,
     prompt: {
       question: "מה קרה?",
@@ -340,6 +363,30 @@ export const STATUS_ORDER: LeadStatus[] = [
   "denies",
   "lost",
 ];
+
+/**
+ * סטטוסים שבוטלו (אוקטובר 2026, בקשת בעל המערכת): "הצעה נשלחה",
+ * "ממתין ללקוח" ו"חיזור". הלידים שישבו בהם הועברו ל"בטיפול" ול"חזרה
+ * ללקוח", עם שורה בהיסטוריה.
+ *
+ * ⚠️ הם **לא נמחקו** מ-`LeadStatus`, מ-`STATUS_CONFIG` או מ-`STATUS_ORDER`:
+ *   · ה-enum ב-Postgres והסדר שלו הם סדר המיון של ה-repository (ראה
+ *     `futureTracking` למעלה) — הסרת ערך היא מיגרציה שכבר שברה פעם את
+ *     המיון;
+ *   · היסטוריית הלידים מכילה מעברים אליהם ומהם, והיא צריכה תווית.
+ * הם רק לא מוצעים: אף בורר, צ'יפ או פעולה קבוצתית לא מציעים אותם —
+ * כולם רצים על `PICKABLE_STATUSES`.
+ */
+export const RETIRED_STATUSES: ReadonlySet<LeadStatus> = new Set<LeadStatus>([
+  "quoteSent",
+  "awaitingClient",
+  "followUp",
+]);
+
+/** הסטטוסים שאפשר לבחור, בסדר התצוגה — `STATUS_ORDER` בלי המבוטלים. */
+export const PICKABLE_STATUSES: LeadStatus[] = STATUS_ORDER.filter(
+  (s) => !RETIRED_STATUSES.has(s),
+);
 
 export const OPEN_STATUSES: LeadStatus[] = STATUS_ORDER.filter(
   (s) => !STATUS_CONFIG[s].terminal,

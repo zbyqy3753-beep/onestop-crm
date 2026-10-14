@@ -5,8 +5,9 @@ import type { Lead, LeadStatus } from "@/lib/domain/types";
 import {
   KIND_CONFIG,
   STATUS_CONFIG,
-  STATUS_ORDER,
   whatsappGreeting,
+  PICKABLE_STATUSES,
+  RETIRED_STATUSES,
 } from "@/lib/domain/types";
 import { date, money, waLink } from "@/lib/format";
 import { TZ, calendarDaysBetween, dayKey } from "@/lib/tz";
@@ -218,7 +219,13 @@ export function StatusPicker({
         aria-label="שינוי סטטוס"
         className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-wait"
       >
-        {STATUS_ORDER.map((s) => (
+        {/* בלי הסטטוסים שבוטלו (`PICKABLE_STATUSES`). ליד שעדיין יושב באחד
+            מהם מקבל אותו בראש הרשימה, אחרת ה-`<select>` היה מציג ערך שאינו
+            ברשימה. */}
+        {(RETIRED_STATUSES.has(current)
+          ? [current, ...PICKABLE_STATUSES]
+          : PICKABLE_STATUSES
+        ).map((s) => (
           <option key={s} value={s}>
             {STATUS_CONFIG[s].label}
           </option>

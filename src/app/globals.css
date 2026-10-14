@@ -65,6 +65,57 @@
   --c-rose: #a3418a; /* מג׳נטה */
   --c-rose-soft: #f8e3f2;
 
+  /* גוון בוהק לכל סטטוס ליד — טקסט / רקע תגית / סימון (פס, נקודה).
+     ראה `StatusTone` ב-types.ts. */
+  --c-st-blue: #1e40af;
+  --c-st-blue-soft: #bfdbfe;
+  --c-st-blue-mark: #3b82f6;
+  --c-st-fuchsia: #86198f;
+  --c-st-fuchsia-soft: #f5d0fe;
+  --c-st-fuchsia-mark: #d946ef;
+  --c-st-indigo: #3730a3;
+  --c-st-indigo-soft: #c7d2fe;
+  --c-st-indigo-mark: #6366f1;
+  --c-st-violet: #5b21b6;
+  --c-st-violet-soft: #ddd6fe;
+  --c-st-violet-mark: #8b5cf6;
+  --c-st-cyan: #155e75;
+  --c-st-cyan-soft: #a5f3fc;
+  --c-st-cyan-mark: #06b6d4;
+  --c-st-amber: #92400e;
+  --c-st-amber-soft: #fde68a;
+  --c-st-amber-mark: #f59e0b;
+  --c-st-yellow: #854d0e;
+  --c-st-yellow-soft: #fef08a;
+  --c-st-yellow-mark: #eab308;
+  --c-st-orange: #9a3412;
+  --c-st-orange-soft: #fed7aa;
+  --c-st-orange-mark: #f97316;
+  --c-st-pink: #9d174d;
+  --c-st-pink-soft: #fbcfe8;
+  --c-st-pink-mark: #ec4899;
+  --c-st-green: #166534;
+  --c-st-green-soft: #bbf7d0;
+  --c-st-green-mark: #22c55e;
+  --c-st-teal: #115e59;
+  --c-st-teal-soft: #99f6e4;
+  --c-st-teal-mark: #14b8a6;
+  --c-st-slate: #334155;
+  --c-st-slate-soft: #e2e8f0;
+  --c-st-slate-mark: #64748b;
+  --c-st-crimson: #9f1239;
+  --c-st-crimson-soft: #fecdd3;
+  --c-st-crimson-mark: #f43f5e;
+  --c-st-red: #991b1b;
+  --c-st-red-soft: #fecaca;
+  --c-st-red-mark: #ef4444;
+  --c-st-brown: #5c3a1e;
+  --c-st-brown-soft: #ecdcc9;
+  --c-st-brown-mark: #92603b;
+  --c-st-zinc: #27272a;
+  --c-st-zinc-soft: #d4d4d8;
+  --c-st-zinc-mark: #52525b;
+
   --c-focus: #14a6d8; /* Cyan Accent */
   --sh-card: 0 1px 2px rgb(13 31 55 / 0.06), 0 1px 3px rgb(13 31 55 / 0.05);
   --sh-pop: 0 16px 36px -10px rgb(13 31 55 / 0.22);
@@ -109,6 +160,56 @@
   --c-accent-soft: #241a3d;
   --c-rose: #e086c7; /* מג׳נטה */
   --c-rose-soft: #3a1c33;
+
+  /* גווני הסטטוסים בכהה — טקסט בהיר על רקע עמוק */
+  --c-st-blue: #93c5fd;
+  --c-st-blue-soft: #1e3a8a;
+  --c-st-blue-mark: #60a5fa;
+  --c-st-fuchsia: #f0abfc;
+  --c-st-fuchsia-soft: #701a75;
+  --c-st-fuchsia-mark: #e879f9;
+  --c-st-indigo: #a5b4fc;
+  --c-st-indigo-soft: #312e81;
+  --c-st-indigo-mark: #818cf8;
+  --c-st-violet: #c4b5fd;
+  --c-st-violet-soft: #4c1d95;
+  --c-st-violet-mark: #a78bfa;
+  --c-st-cyan: #67e8f9;
+  --c-st-cyan-soft: #164e63;
+  --c-st-cyan-mark: #22d3ee;
+  --c-st-amber: #fcd34d;
+  --c-st-amber-soft: #78350f;
+  --c-st-amber-mark: #fbbf24;
+  --c-st-yellow: #fde047;
+  --c-st-yellow-soft: #713f12;
+  --c-st-yellow-mark: #facc15;
+  --c-st-orange: #fdba74;
+  --c-st-orange-soft: #7c2d12;
+  --c-st-orange-mark: #fb923c;
+  --c-st-pink: #f9a8d4;
+  --c-st-pink-soft: #831843;
+  --c-st-pink-mark: #f472b6;
+  --c-st-green: #86efac;
+  --c-st-green-soft: #14532d;
+  --c-st-green-mark: #4ade80;
+  --c-st-teal: #5eead4;
+  --c-st-teal-soft: #134e4a;
+  --c-st-teal-mark: #2dd4bf;
+  --c-st-slate: #cbd5e1;
+  --c-st-slate-soft: #334155;
+  --c-st-slate-mark: #94a3b8;
+  --c-st-crimson: #fda4af;
+  --c-st-crimson-soft: #881337;
+  --c-st-crimson-mark: #fb7185;
+  --c-st-red: #fca5a5;
+  --c-st-red-soft: #7f1d1d;
+  --c-st-red-mark: #f87171;
+  --c-st-brown: #e7c9a9;
+  --c-st-brown-soft: #4a2c17;
+  --c-st-brown-mark: #c08457;
+  --c-st-zinc: #e4e4e7;
+  --c-st-zinc-soft: #3f3f46;
+  --c-st-zinc-mark: #a1a1aa;
 
   --c-focus: #1dade3; /* Glow Blue */
   --sh-card: 0 1px 2px rgb(0 0 0 / 0.45), 0 1px 3px rgb(0 0 0 / 0.35);
@@ -184,6 +285,38 @@
   --color-accent-soft: var(--c-accent-soft);
   --color-rose: var(--c-rose);
   --color-rose-soft: var(--c-rose-soft);
+  --color-st-blue: var(--c-st-blue);
+  --color-st-blue-soft: var(--c-st-blue-soft);
+  --color-st-fuchsia: var(--c-st-fuchsia);
+  --color-st-fuchsia-soft: var(--c-st-fuchsia-soft);
+  --color-st-indigo: var(--c-st-indigo);
+  --color-st-indigo-soft: var(--c-st-indigo-soft);
+  --color-st-violet: var(--c-st-violet);
+  --color-st-violet-soft: var(--c-st-violet-soft);
+  --color-st-cyan: var(--c-st-cyan);
+  --color-st-cyan-soft: var(--c-st-cyan-soft);
+  --color-st-amber: var(--c-st-amber);
+  --color-st-amber-soft: var(--c-st-amber-soft);
+  --color-st-yellow: var(--c-st-yellow);
+  --color-st-yellow-soft: var(--c-st-yellow-soft);
+  --color-st-orange: var(--c-st-orange);
+  --color-st-orange-soft: var(--c-st-orange-soft);
+  --color-st-pink: var(--c-st-pink);
+  --color-st-pink-soft: var(--c-st-pink-soft);
+  --color-st-green: var(--c-st-green);
+  --color-st-green-soft: var(--c-st-green-soft);
+  --color-st-teal: var(--c-st-teal);
+  --color-st-teal-soft: var(--c-st-teal-soft);
+  --color-st-slate: var(--c-st-slate);
+  --color-st-slate-soft: var(--c-st-slate-soft);
+  --color-st-crimson: var(--c-st-crimson);
+  --color-st-crimson-soft: var(--c-st-crimson-soft);
+  --color-st-red: var(--c-st-red);
+  --color-st-red-soft: var(--c-st-red-soft);
+  --color-st-brown: var(--c-st-brown);
+  --color-st-brown-soft: var(--c-st-brown-soft);
+  --color-st-zinc: var(--c-st-zinc);
+  --color-st-zinc-soft: var(--c-st-zinc-soft);
 
   --font-display: var(--font-frank), Georgia, serif;
   --font-sans: var(--font-assistant), system-ui, sans-serif;
