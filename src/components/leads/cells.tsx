@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Lead, LeadStatus } from "@/lib/domain/types";
 import {
   KIND_CONFIG,
@@ -10,8 +11,9 @@ import {
   RETIRED_STATUSES,
 } from "@/lib/domain/types";
 import { date, money, waLink } from "@/lib/format";
-import { TZ, calendarDaysBetween, dayKey } from "@/lib/tz";
-import { Badge, inputClass } from "@/components/ui/primitives";
+import { TZ, calendarDaysBetween, dateTimeInputValue, dayKey } from "@/lib/tz";
+import { useBodyScrollLock } from "@/lib/overlay";
+import { Badge, Button, inputClass } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 
 /**
@@ -302,27 +304,21 @@ export function InlinePicker({
   );
 }
 
-/** רוחב עורך מועד החזרה — `w-[13rem]` שלמטה, ברֶם. */
-const FOLLOW_UP_EDITOR_REM = 13;
-
 /**
- * תאריך **ושעת** חזרה, עם עריכה במקום.
+ * תאריך **ושעת** חזרה — לחיצה על התגית פותחת חלון מסך-מלא.
  *
  * השעה נדרשת כי התזכורת בוואטסאפ יוצאת בשעה הזו בדיוק; `step` של רבע
  * שעה כי אף אחד לא קובע חזרה ל-14:37.
  *
- * ⚠️ **הבורר נפתח גלוי, ולא כ-input שקוף מעל התצוגה.** הדפוס השקוף
- * עובד ל-`<select>` (`InlinePicker`, `StatusPicker`) כי לחיצה בכל מקום
- * פותחת את הרשימה. ל-`datetime-local` הוא נשבר: הרוחב שלו נגזר מהתא
- * שהוא עוטף — נמדד 89px מול 177px שהבורר באמת צריך — וכל מה שמעבר
- * נחתך. השדות נחתכים מהסוף, כלומר **השעה והדקה הן בדיוק מה שיוצא
- * מהמסגרת**: הנציג הצליח לבחור תאריך מלוח השנה הקופץ, אבל לא הייתה לו
- * שום דרך להגיע לשעה. השקיפות החמירה — אין משוב על איזה שדה במיקוד.
+ * ⚠️ **חלון מסך-מלא ולא עורך צף ליד התגית** (אוקטובר 2026, בקשת בעל
+ * המערכת: "שזה יהיה לכל המסך כשמשנים את השעה"). העורך הצף היה
+ * `datetime-local` של 13rem שנפתח מעל הכרטיס: בטלפון השעה נחתכה בקצה
+ * המסך, השדות היו קטנים מדי לאגודל, וכל נגיעה לידו סגרה אותו ושמרה
+ * ערך באמצע הקלדה. בחלון יש שדה תאריך ושדה שעה גדולים, קיצורים לזמנים
+ * הנפוצים, ושמירה רק בלחיצה על "שמירה" — אין שמירה בטעות.
  *
- * לכן: לחיצה על התא פותחת input אמיתי ברוחב מלא, במיקום מוחלט כדי
- * שרוחב העמודה לא יקפוץ. אותו דפוס כמו `CostCell`, כולל השמירה
- * ב-blur/Enter ולא בכל הקשה — עריכת שעה ידנית עוברת דרך ערכים
- * חוקיים-אך-לא-מכוונים (14:00 בדרך ל-14:30), וכל אחד מהם היה נשמר.
+ * אותו `onPick(value)` כמו קודם (`YYYY-MM-DDTHH:mm` בשעון ישראל, או `""`
+ * לניקוי), כך שהכרטיס, השורה בטבלה והמגירה לא השתנו.
  */
 export function FollowUpCell({
   value,
@@ -336,90 +332,194 @@ export function FollowUpCell({
   busy?: boolean;
   children: React.ReactNode;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  /** לאיזה צד העורך נפתח — ראה `open` */
-  const [anchor, setAnchor] = useState<"left" | "right">("left");
-  const ref = useRef<HTMLSpanElement>(null);
-
-  function open() {
-    setDraft(value);
-
-    /*
-     * ⚠️ העורך רחב מהתגית (13rem), ונפתח מהקצה השמאלי שלה ימינה — זה
-     * מה שעשה `end-0` ב-RTL. בטבלה זה תמיד נכנס. בכרטיס התגית יכולה
-     * לשבת קרוב לתחילת השורה (הקצה הימני של המסך), ואז העורך גלש
-     * מימין למסך ונחתך — שוב בדיוק השעה. כשאין מקום ימינה ויש שמאלה,
-     * נפתחים שמאלה. נמדד ברגע הפתיחה, לא ברינדור: אין כאן מצב שתלוי
-     * ברוחב.
-     */
-    const el = ref.current;
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      const width = FOLLOW_UP_EDITOR_REM * rem;
-      const fitsRight = rect.left + width <= window.innerWidth - 8;
-      const fitsLeft = rect.right - width >= 8;
-      setAnchor(!fitsRight && fitsLeft ? "right" : "left");
-    }
-
-    setEditing(true);
-  }
-
-  function commit() {
-    setEditing(false);
-    // אין שינוי — לא שולחים בקשה סתם
-    if (draft !== value) onPick(draft);
-  }
+  const [open, setOpen] = useState(false);
 
   return (
     // אותה סיבה כמו ב-InlinePicker: נמדד בפועל 61×16 בלי זה — התאריך
     // הריק ("קבע חזרה") הוא הטקסט הכי נמוך בכרטיס, והשכבה שמעליו
     // ירשה את הגובה שלו.
-    <span
-      ref={ref}
-      className="relative inline-flex min-h-11 min-w-11 items-center rounded hover:bg-surface-3 lg:min-h-0 lg:min-w-0"
-    >
+    <span className="relative inline-flex min-h-11 min-w-11 items-center rounded hover:bg-surface-3 lg:min-h-0 lg:min-w-0">
       {children}
-      {editing ? (
-        <input
-          type="datetime-local"
-          step={900}
-          autoFocus
-          value={draft}
-          disabled={busy}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") setEditing(false);
+      <button
+        type="button"
+        disabled={busy}
+        onClick={(e) => {
+          // הלחיצה על השורה פותחת את הליד; בלי זה היא הייתה פותחת גם
+          // את המגירה מאחורי החלון
+          e.stopPropagation();
+          setOpen(true);
+        }}
+        aria-label="שינוי תאריך ושעת חזרה"
+        aria-haspopup="dialog"
+        className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-wait"
+      />
+      {open && (
+        <FollowUpSheet
+          value={value}
+          busy={busy}
+          onClose={() => setOpen(false)}
+          onSave={(next) => {
+            setOpen(false);
+            // אין שינוי — לא שולחים בקשה סתם
+            if (next !== value) onPick(next);
           }}
-          // הלחיצה על השורה פותחת את הליד; בלי זה כל נגיעה בבורר
-          // הייתה פותחת את המגירה מעליו
-          onClick={(e) => e.stopPropagation()}
-          aria-label="תאריך ושעת חזרה"
-          style={anchor === "left" ? { left: 0 } : { right: 0 }}
-          /*
-            ⚠️ רוחב קבוע ומיקום מוחלט, ולא `inputClass` עם `w-full`:
-            הבורר רחב מהתא, ובזרימה רגילה הוא היה מרחיב את העמודה בכל
-            פתיחה. `z` כדי שלא ייחתך מתחת לתא השכן. הצד (`left`/`right`)
-            נקבע ב-`open`.
-          */
-          className="nums absolute top-1/2 z-20 w-[13rem] -translate-y-1/2 rounded-md border border-line bg-surface px-2 py-1.5 text-base text-ink-1 focus:border-brand focus:outline-none lg:text-sm"
-        />
-      ) : (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={(e) => {
-            e.stopPropagation();
-            open();
-          }}
-          aria-label="שינוי תאריך ושעת חזרה"
-          className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-wait"
         />
       )}
     </span>
+  );
+}
+
+/** קיצורים לזמני החזרה הנפוצים אחרי שיחה, בשעון ישראל. */
+function followUpPresets(now: number): { label: string; value: string }[] {
+  // מעגלים כלפי מעלה לרבע שעה — אותו `step` כמו בשדה השעה
+  const round = (t: number) => Math.ceil(t / 900_000) * 900_000;
+  const day = (offset: number) => dayKey(now + offset * 86_400_000);
+  return [
+    { label: "בעוד שעה", value: dateTimeInputValue(round(now + 3_600_000)) },
+    { label: "בעוד 3 שעות", value: dateTimeInputValue(round(now + 3 * 3_600_000)) },
+    { label: "מחר ב-10:00", value: `${day(1)}T10:00` },
+    { label: "מחר ב-16:00", value: `${day(1)}T16:00` },
+    { label: "בעוד יומיים", value: `${day(2)}T10:00` },
+    { label: "בעוד שבוע", value: `${day(7)}T10:00` },
+  ];
+}
+
+/**
+ * החלון עצמו: מסך מלא בטלפון, חלון ממורכז במחשב.
+ *
+ * ⚠️ ב-portal ל-`body` ולא במקום: התגית יושבת בתוך כרטיס עם `.spine`
+ * ו-`@container`, ובתוך שורת טבלה עם `overflow-x-auto`. `fixed` בתוך
+ * הקשרים כאלה עלול להיחתך או להתמקם יחסית לכרטיס. `stopPropagation`
+ * על השורש — אירועי React עוברים דרך portal להורים ב-React, ובלעדיו
+ * לחיצה בחלון הייתה מגיעה לשורת הטבלה ופותחת את הליד.
+ */
+function FollowUpSheet({
+  value,
+  busy,
+  onClose,
+  onSave,
+}: {
+  value: string;
+  busy?: boolean;
+  onClose: () => void;
+  onSave: (value: string) => void;
+}) {
+  const [date, setDate] = useState(value.slice(0, 10));
+  const [time, setTime] = useState(value.slice(11, 16) || "10:00");
+  // הרגע שבו החלון נפתח — עוגן לקיצורים. נקבע פעם אחת, לא בכל רינדור.
+  const [openedAt] = useState(() => Date.now());
+
+  useBodyScrollLock(true);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const draft = date ? `${date}T${time || "10:00"}` : "";
+  const presets = followUpPresets(openedAt);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-stretch justify-center sm:items-center sm:p-6"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        aria-label="סגירה"
+        onClick={onClose}
+        className="absolute inset-0 bg-ink-1/45"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="מועד חזרה ללקוח"
+        className="relative flex h-dvh w-full flex-col bg-surface pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] sm:h-auto sm:max-w-md sm:rounded-card sm:border sm:border-line sm:shadow-pop"
+      >
+        <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+          <h2 className="font-display text-lg font-bold text-ink-1">מתי לחזור ללקוח?</h2>
+          {/* `after:-inset-2` — 28px + 8 מכל צד = 44 למגע */}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="סגירה"
+            className="relative rounded-md p-1 text-ink-3 after:absolute after:-inset-2 after:content-[''] hover:bg-surface-3 hover:text-ink-1 active:scale-95"
+          >
+            <Icon name="close" size={20} />
+          </button>
+        </header>
+
+        <div className="flex-1 space-y-6 overflow-y-auto overscroll-contain p-4">
+          <div className="grid grid-cols-2 gap-2">
+            {presets.map((p) => {
+              const on = draft === p.value;
+              return (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => {
+                    setDate(p.value.slice(0, 10));
+                    setTime(p.value.slice(11, 16));
+                  }}
+                  aria-pressed={on}
+                  className={`min-h-12 rounded-card border px-3 text-sm font-medium transition-colors active:scale-[0.98] ${
+                    on
+                      ? "border-brand bg-brand text-on-brand"
+                      : "border-line bg-surface text-ink-1 hover:border-line-strong hover:bg-surface-2"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* שדות גדולים: `text-lg` הוא גם מעל רצפת ה-16px של iOS — בלי זום */}
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-ink-2">תאריך</span>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className={`${inputClass} nums h-14 text-lg`}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-ink-2">שעה</span>
+            <input
+              type="time"
+              step={900}
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className={`${inputClass} nums h-14 text-lg`}
+            />
+          </label>
+        </div>
+
+        <footer className="flex flex-wrap items-center gap-2 border-t border-line p-4">
+          <Button
+            variant="primary"
+            disabled={busy || !date}
+            onClick={() => onSave(draft)}
+            className="h-12 flex-1"
+          >
+            שמירה
+          </Button>
+          {value && (
+            <Button variant="secondary" disabled={busy} onClick={() => onSave("")} className="h-12">
+              ניקוי המועד
+            </Button>
+          )}
+          <Button variant="ghost" onClick={onClose} className="h-12">
+            ביטול
+          </Button>
+        </footer>
+      </div>
+    </div>,
+    document.body,
   );
 }
 

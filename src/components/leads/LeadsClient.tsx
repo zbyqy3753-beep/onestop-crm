@@ -710,8 +710,10 @@ export function LeadsClient({
    * false, ולכן הליד נכנס — בדיוק כמו ב"לחזור היום" — והצ׳יפ שלו בודק
    * `Number.isNaN` לפני כל פורמט (ראה `ReminderChip`).
    *
-   * הסדר הוא סדר התור (`compareQueue`): המאחר ביותר ראשון. `null` עד
-   * ההרכבה — "היום" תלוי בשעון הלקוח, כמו `endOfToday`.
+   * הסדר הוא לוח הזמנים של "חזרה ללקוח" (`compareByProximity`): קודם מה
+   * שעוד לפנינו, מהקרוב לרחוק, ואחר כך האיחורים — בקשת בעל המערכת
+   * (אוקטובר 2026). קודם זה היה סדר התור, והמאחר ביותר עמד ראשון.
+   * `null` עד ההרכבה — "היום" תלוי בשעון הלקוח, כמו `endOfToday`.
    */
   const reminders = useMemo<Reminder[] | null>(() => {
     if (startOfToday === null || endOfToday === null) return null;
@@ -723,9 +725,10 @@ export function LeadsClient({
         { lead, at, late: queueTier(lead, startOfToday, endOfToday) === "late" },
       ];
     });
-    due.sort((a, b) => compareQueue(a.lead, b.lead, startOfToday, endOfToday));
+    const at = now ?? startOfToday;
+    due.sort((a, b) => compareByProximity(a.lead, b.lead, at));
     return due;
-  }, [optimisticLeads, startOfToday, endOfToday]);
+  }, [optimisticLeads, startOfToday, endOfToday, now]);
 
   /**
    * המספר על אזהרת "N לידים פתוחים מחוץ לטווח" — לפי בורר הסוג.
@@ -789,11 +792,16 @@ export function LeadsClient({
    *
    * ⚠️ חל רק על מיון ברירת המחדל. מי שלחץ על כותרת עמודה בחר מיון
    * מפורש, והלשונית לא אמורה לבטל אותו.
+   *
+   * גם התצוגה "לחזור היום" (`dueToday`) היא לוח זמנים כזה — כל השורות
+   * בה הן חזרות שמועדן הגיע — ובעל המערכת ביקש שגם שם הקרוב יעמוד
+   * ראשון והאיחורים אחריו (אוקטובר 2026). קודם היא מוינה כתור, והאיחור
+   * הישן ביותר עמד בראש.
    */
   const isFollowUpTab =
     sort.field === "queue" &&
-    filters.status.length === 1 &&
-    filters.status[0] === "futureTracking";
+    ((filters.status.length === 1 && filters.status[0] === "futureTracking") ||
+      filters.dueToday);
 
   const sorted = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
