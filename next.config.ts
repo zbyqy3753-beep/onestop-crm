@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  /**
+   * שרת הפיתוח, כשנפתח מהטלפון ברשת הביתית (`http://10.0.0.26:3017`).
+   *
+   * ⚠️ בלי זה Next חוסם את קבצי הפיתוח לכל כתובת שאינה localhost: הדף
+   * נטען, אבל ה-JavaScript לא עולה — כל הכפתורים נראים ולא עובדים.
+   * חל על `next dev` בלבד; בייצור אין לזה שום השפעה.
+   */
+  allowedDevOrigins: ["10.0.0.26"],
+
   experimental: {
     /**
      * ⚠️ ברירת המחדל היא 1MB, וחשבונית PDF אחת חוצה אותה בקלות —
