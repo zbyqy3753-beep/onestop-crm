@@ -1,22 +1,186 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Lead, LeadStatus } from "@/lib/domain/types";
 import {
+  KIND_CONFIG,
   STATUS_CONFIG,
   STATUS_ORDER,
   whatsappGreeting,
 } from "@/lib/domain/types";
-import { money, waLink } from "@/lib/format";
+import { date, money, waLink } from "@/lib/format";
+import { TZ, calendarDaysBetween, dayKey } from "@/lib/tz";
 import { Badge, inputClass } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 
 /**
- * תאים שחוזרים בכל שורה בטבלת הלידים.
+ * תאים ותגיות שחוזרים בכל ליד — בשורת הטבלה, בכרטיס, ובמסך "פוספסו".
  *
  * הופרדו מ-`LeadsTable` כשמספר העמודות גדל — הקובץ ההוא צריך להישאר
- * "כותרת + מיפוי שורות" וכלום מעבר לזה.
+ * "כותרת + מיפוי שורות" וכלום מעבר לזה. מאוקטובר 2026 גם העזרים של
+ * הכרטיס (גיל, "נגרר מ…", ניסיונות חיוג) חיים כאן, כדי שכרטיס, שורה
+ * ומסך "פוספסו" יגידו את אותו דבר באותן מילים.
  */
+
+/* ── עזרי זמן ונגזרות ─────────────────────────────────────────────────── */
+
+/**
+ * חותמת זמן מ-ISO, או `null` לתאריך חסר או פגום.
+ *
+ * ⚠️ כל פורמט תאריך (`date`, `dateTime`, `relative`, `until`,
+ * `dateTimeInputValue`) זורק `RangeError` על `NaN` — `Intl.DateTimeFormat`
+ * לא מחזיר "Invalid Date" אלא מפיל את הרינדור. ליד אחד עם `followUpAt`
+ * פגום הפיל כך את כל מסך הלידים. כל פורמט תאריך בכרטיס ובשורה עובר דרך
+ * הבדיקה הזו קודם.
+ */
+export function safeTime(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? null : t;
+}
+
+/** "יום אחד" / "יומיים" / "5 ימים" — ספירת ימים בעברית תקינה. */
+export function dayCount(n: number): string {
+  if (n === 1) return "יום אחד";
+  if (n === 2) return "יומיים";
+  return `${n} ימים`;
+}
+
+/**
+ * כמה זמן הליד במערכת, בימי לוח בשעון ישראל: "היום", "אתמול", "לפני
+ * יומיים", "לפני 5 ימים". `null` כשתאריך הכניסה פגום.
+ */
+export function leadAge(createdAt: string, now: number): string | null {
+  const created = safeTime(createdAt);
+  if (created === null) return null;
+  const days = Math.max(0, calendarDaysBetween(created, now));
+  if (days === 0) return "היום";
+  if (days === 1) return "אתמול";
+  return `לפני ${dayCount(days)}`;
+}
+
+/** שלושת שלבי "אין מענה" — כל מעבר אליהם הוא ניסיון חיוג שלא נענה. */
+const NO_ANSWER_STEPS: ReadonlySet<LeadStatus> = new Set<LeadStatus>([
+  "noAnswer",
+  "noAnswer1",
+  "noAnswer2",
+]);
+
+/**
+ * כמה פעמים חייגו ולא ענו — מעברים בהיסטוריה לאחד משלבי "אין מענה".
+ *
+ * נגזר מההיסטוריה ולא מהסטטוס הנוכחי: ליד שעבר "אין מענה" → "אין מענה 1"
+ * → "בטיפול" ניסו לתפוס אותו פעמיים, גם אם עכשיו הוא כבר בטיפול.
+ */
+export function dialAttempts(lead: Lead): number {
+  return (lead.history ?? []).filter((h) => NO_ANSWER_STEPS.has(h.to)).length;
+}
+
+const monthFmt = new Intl.DateTimeFormat("he-IL", { timeZone: TZ, month: "long" });
+
+/**
+ * "נגרר מ…" — ליד פתוח שנכנס בחודש קלנדרי קודם (שעון ישראל).
+ *
+ * מחזיר את שם החודש (עם שנה, כשהיא אחרת מהשנה הנוכחית), או `null` כשהליד
+ * סגור, נכנס החודש, או שתאריך הכניסה שלו פגום.
+ */
+export function carriedFrom(lead: Lead, now: number): string | null {
+  if (STATUS_CONFIG[lead.status].terminal) return null;
+  const created = safeTime(lead.createdAt);
+  if (created === null) return null;
+
+  // `YYYY-MM` בשעון ישראל — השוואת מחרוזות נכונה כאן, כי הפורמט קבוע
+  const from = dayKey(created).slice(0, 7);
+  const current = dayKey(now).slice(0, 7);
+  if (from >= current) return null;
+
+  const month = monthFmt.format(created);
+  return from.slice(0, 4) === current.slice(0, 4)
+    ? month
+    : `${month} ${from.slice(0, 4)}`;
+}
+
+/** ראשי תיבות לעיגול המטפל: שם פרטי + משפחה, או שתי האותיות הראשונות. */
+export function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "";
+  if (words.length === 1) return [...words[0]].slice(0, 2).join("");
+  return `${[...words[0]][0]}${[...words[words.length - 1]][0]}`;
+}
+
+/* ── תגיות ────────────────────────────────────────────────────────────── */
+
+/**
+ * גיל הליד — טקסט קטן ואפור ליד השם ("היום", "לפני 3 ימים").
+ *
+ * ⚠️ ריק עד ההרכבה (`now === null`): הגיל נגזר מ"עכשיו", והשרת לא יכול
+ * לחשב אותו בלי ליצור אי-התאמת הידרציה.
+ */
+export function AgeBadge({
+  createdAt,
+  now,
+  className = "",
+}: {
+  createdAt: string;
+  now: number | null;
+  className?: string;
+}) {
+  if (now === null) return null;
+  const label = leadAge(createdAt, now);
+  if (label === null) return null;
+
+  return (
+    <span
+      // `leadAge` כבר וידא שהתאריך תקין, ולכן `date()` כאן בטוח
+      title={`נכנס ב-${date(createdAt)}`}
+      className={`nums shrink-0 whitespace-nowrap text-xs text-ink-3 ${className}`}
+    >
+      <span className="sr-only">נכנס </span>
+      {label}
+    </span>
+  );
+}
+
+/** "חם" — הטון והתווית מ-`KIND_CONFIG`, מקור האמת לסוגי ליד. */
+export function HotBadge() {
+  const hot = KIND_CONFIG.hot;
+  return (
+    <Badge tone={hot.tone}>
+      <Icon name="flame" size={12} />
+      {hot.short}
+    </Badge>
+  );
+}
+
+/** "נגרר מספטמבר" — ענבר, רק לליד פתוח מחודש קודם. ראה `carriedFrom`. */
+export function CarriedBadge({ lead, now }: { lead: Lead; now: number | null }) {
+  if (now === null) return null;
+  const from = carriedFrom(lead, now);
+  if (!from) return null;
+  return <Badge tone="warn">נגרר מ{from}</Badge>;
+}
+
+/**
+ * עיגול ראשי התיבות של המטפל (24px).
+ *
+ * ⚠️ עיגול ולא עוד טקסט אפור: שם העובד שנכתב באותו גודל וצבע של "לפני
+ * 3 שע׳" נקרא כחותמת זמן. בלי שם — עיגול ענבר עם "?": ליד שאיש לא
+ * מטפל בו הוא לא "מידע חסר" אלא מצב שמנהל צריך לראות.
+ */
+export function AssigneeAvatar({ name }: { name?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`grid size-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
+        name ? "bg-surface-3 text-ink-2" : "bg-warn-soft text-warn"
+      }`}
+    >
+      {name ? initials(name) : "?"}
+    </span>
+  );
+}
+
+/* ── פקדי עריכה במקום ─────────────────────────────────────────────────── */
 
 /**
  * שינוי סטטוס מתוך השורה, בלי לפתוח את הליד.
@@ -131,6 +295,9 @@ export function InlinePicker({
   );
 }
 
+/** רוחב עורך מועד החזרה — `w-[13rem]` שלמטה, ברֶם. */
+const FOLLOW_UP_EDITOR_REM = 13;
+
 /**
  * תאריך **ושעת** חזרה, עם עריכה במקום.
  *
@@ -164,9 +331,31 @@ export function FollowUpCell({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
+  /** לאיזה צד העורך נפתח — ראה `open` */
+  const [anchor, setAnchor] = useState<"left" | "right">("left");
+  const ref = useRef<HTMLSpanElement>(null);
 
   function open() {
     setDraft(value);
+
+    /*
+     * ⚠️ העורך רחב מהתגית (13rem), ונפתח מהקצה השמאלי שלה ימינה — זה
+     * מה שעשה `end-0` ב-RTL. בטבלה זה תמיד נכנס. בכרטיס התגית יכולה
+     * לשבת קרוב לתחילת השורה (הקצה הימני של המסך), ואז העורך גלש
+     * מימין למסך ונחתך — שוב בדיוק השעה. כשאין מקום ימינה ויש שמאלה,
+     * נפתחים שמאלה. נמדד ברגע הפתיחה, לא ברינדור: אין כאן מצב שתלוי
+     * ברוחב.
+     */
+    const el = ref.current;
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const width = FOLLOW_UP_EDITOR_REM * rem;
+      const fitsRight = rect.left + width <= window.innerWidth - 8;
+      const fitsLeft = rect.right - width >= 8;
+      setAnchor(!fitsRight && fitsLeft ? "right" : "left");
+    }
+
     setEditing(true);
   }
 
@@ -180,7 +369,10 @@ export function FollowUpCell({
     // אותה סיבה כמו ב-InlinePicker: נמדד בפועל 61×16 בלי זה — התאריך
     // הריק ("קבע חזרה") הוא הטקסט הכי נמוך בכרטיס, והשכבה שמעליו
     // ירשה את הגובה שלו.
-    <span className="relative inline-flex min-h-11 min-w-11 items-center rounded hover:bg-surface-3 lg:min-h-0 lg:min-w-0">
+    <span
+      ref={ref}
+      className="relative inline-flex min-h-11 min-w-11 items-center rounded hover:bg-surface-3 lg:min-h-0 lg:min-w-0"
+    >
       {children}
       {editing ? (
         <input
@@ -199,12 +391,14 @@ export function FollowUpCell({
           // הייתה פותחת את המגירה מעליו
           onClick={(e) => e.stopPropagation()}
           aria-label="תאריך ושעת חזרה"
+          style={anchor === "left" ? { left: 0 } : { right: 0 }}
           /*
             ⚠️ רוחב קבוע ומיקום מוחלט, ולא `inputClass` עם `w-full`:
             הבורר רחב מהתא, ובזרימה רגילה הוא היה מרחיב את העמודה בכל
-            פתיחה. `z` כדי שלא ייחתך מתחת לתא השכן.
+            פתיחה. `z` כדי שלא ייחתך מתחת לתא השכן. הצד (`left`/`right`)
+            נקבע ב-`open`.
           */
-          className="nums absolute top-1/2 end-0 z-20 w-[13rem] -translate-y-1/2 rounded-md border border-line bg-surface px-2 py-1.5 text-base text-ink-1 focus:border-brand focus:outline-none lg:text-sm"
+          className="nums absolute top-1/2 z-20 w-[13rem] -translate-y-1/2 rounded-md border border-line bg-surface px-2 py-1.5 text-base text-ink-1 focus:border-brand focus:outline-none lg:text-sm"
         />
       ) : (
         <button
@@ -306,16 +500,50 @@ export function CostCell({
   );
 }
 
-/** סימון ליד לטיפול. */
+/**
+ * סימון ליד לטיפול.
+ *
+ * `variant="inline"` (ברירת המחדל) — כוכב קטן לפני השם בשורת הטבלה.
+ * `variant="button"` — ריבוע של כפתור אייקון (36/32px) לאשכול הפעולות
+ * של הכרטיס, גלוי תמיד.
+ */
 export function StarToggle({
   lead,
   onToggle,
   busy,
+  variant = "inline",
 }: {
   lead: Lead;
   onToggle: (next: boolean) => void;
   busy: boolean;
+  variant?: "inline" | "button";
 }) {
+  if (variant === "button") {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle(!lead.isStarred);
+        }}
+        disabled={busy}
+        aria-pressed={lead.isStarred}
+        aria-label={lead.isStarred ? `הסרת הסימון מ${lead.name}` : `סימון ${lead.name}`}
+        title={lead.isStarred ? "הסרת סימון" : "סימון ליד"}
+        /*
+         * ⚠️ 36px בטלפון ו-`after:-inset-1` מוסיף 4px לכל צד (44px) בלי
+         * לשנות את הפריסה; בשולחן 32px בדיוק. בכרטיס הכוכב **תמיד**
+         * גלוי — שם הוא חלק מאשכול הפעולות ולא קישוט שמופיע בריחוף.
+         */
+        className={`relative grid size-9 shrink-0 touch-manipulation place-items-center rounded-lg transition-colors after:absolute after:-inset-1 after:content-[''] hover:bg-surface-3 active:scale-95 active:bg-surface-3 disabled:cursor-wait lg:size-8 lg:after:inset-0 ${
+          lead.isStarred ? "text-warn" : "text-ink-4 hover:text-ink-2"
+        }`}
+      >
+        <Icon name="star" size={18} fill={lead.isStarred ? "currentColor" : "none"} />
+      </button>
+    );
+  }
+
   return (
     <button
       onClick={(e) => {

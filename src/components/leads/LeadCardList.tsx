@@ -4,13 +4,14 @@ import { Fragment, useEffect, useRef } from "react";
 import type { Lead, LeadStatus, UserRef } from "@/lib/domain/types";
 import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
 import type { LeadPatch } from "@/app/(app)/leads/actions";
-import { Button, EmptyState, inputClass, useNow } from "@/components/ui/primitives";
+import { Badge, Button, EmptyState, inputClass, useNow } from "@/components/ui/primitives";
 import { LeadCard } from "./LeadCard";
 import { QUEUE_TIER_META, type QueueTiers } from "./queue";
-import { TONE_SOFT_VAR, TONE_VAR, number } from "@/lib/format";
+import { number } from "@/lib/format";
 
 /**
- * תצוגת הלידים בטלפון — רשימת כרטיסים במקום טבלה.
+ * תצוגת הכרטיסים — בטלפון תמיד, ומאוקטובר 2026 ברירת המחדל גם בשולחן
+ * (עם מעבר לטבלה ב-`LeadsClient`).
  *
  * ⚠️ אין כאן `overflow` ואין `max-h`. הטבלה עוטפת את עצמה בגובה קבוע
  * כדי שכותרת ה-`<thead>` הדביקה תהיה למה להידבק, ובטלפון זה יצר שלושה
@@ -194,8 +195,18 @@ export function LeadCardList({
           ריפוד ה-`<main>` ב-`AppShell` מפנה מקום לניווט התחתון בלבד ולא
           יודע דבר על ה-FAB. 3.5rem (ניווט) + 0.75rem (מרווח) + 3.5rem
           (הכפתור) ≈ 7.75rem, ו-`pb-20` נותן 5rem מעבר לריפוד הקיים.
+
+          `lg:` — בשולחן אין ניווט תחתון ואין FAB, והסרגל דביק בזרימה
+          (ראה למטה) ולכן תופס את המקום של עצמו.
+
+          `gap-3` — 12px בין כרטיסים, האוויר של DC. רשימה אחת ברוחב מלא
+          גם בשולחן, לא רשת עמודות: הכרטיס עצמו נפתח לשלושה אזורים
+          (`@container` ב-`LeadCard`), ושתי עמודות כרטיסים היו שוברות את
+          סדר התור — העין קוראת שורה-שורה, לא עמודה-עמודה.
         */
-        <ul className={`flex flex-col gap-2 ${selecting ? "pb-56" : "pb-20"}`}>
+        <ul
+          className={`flex flex-col gap-3 ${selecting ? "pb-56 lg:pb-0" : "pb-20 lg:pb-0"}`}
+        >
           {leads.map((lead, i) => {
             // כותרת רק כשהשכבה משתנה — ראה `LeadsTable`, אותו כלל
             const tier = tiers?.of(lead);
@@ -222,6 +233,7 @@ export function LeadCardList({
                   onPatch={(patch) => onPatch(lead.id, patch)}
                   canSeeAll={canSeeAll}
                   showAssignee={canSeeAll || canSeeTeam}
+                  users={users}
                   assigneeName={assignee?.name}
                   assigneeTeamOwner={
                     assignee?.teamOwnerId
@@ -244,15 +256,20 @@ export function LeadCardList({
         הזה ב-DOM, כך שהוא היה מכסה בדיוק את שורת השיוך/סטטוס/מחיקה.
         ההיסט הוא גובה הניווט (3.5rem) + ה-safe-area, והניווט שמתחת הוא
         זה שסופג את ה-safe-area — לכן כאן רק ריפוד רגיל.
+
+        שולחן (`lg:`): מאוקטובר 2026 הכרטיסים הם ברירת המחדל גם שם. אין
+        ניווט תחתון, ו-`fixed inset-x-0` היה נפרש גם מעל סרגל הצד. שם
+        הסרגל `sticky` בתוך עמודת התוכן — צף בתחתית המסך כל עוד הרשימה
+        גלויה, ונעצר בסופה.
       */}
       {selecting && (
         <div
           ref={barRef}
           // הריפוד האופקי ב-`max()` — במצב נוף על מכשיר עם מגרעת, ה-inset
           // הצדדי אינו אפס, ו-`px-3` קבוע היה דוחף את בורר השיוך מתחתיה
-          className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t border-line bg-surface-2 pb-2 pt-2 ps-[max(0.75rem,env(safe-area-inset-right))] pe-[max(0.75rem,env(safe-area-inset-left))] shadow-card"
+          className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t border-line bg-surface-2 pb-2 pt-2 ps-[max(0.75rem,env(safe-area-inset-right))] pe-[max(0.75rem,env(safe-area-inset-left))] shadow-card lg:sticky lg:bottom-4 lg:mt-3 lg:flex lg:flex-wrap lg:items-center lg:gap-3 lg:rounded-card lg:border lg:p-3 lg:shadow-pop"
         >
-          <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="mb-2 flex items-center justify-between gap-2 lg:mb-0 lg:justify-start">
             <span className="text-sm font-semibold text-brand">
               {selected.size} נבחרו
             </span>
@@ -278,7 +295,7 @@ export function LeadCardList({
           </div>
 
           <div
-            className={`flex flex-wrap gap-2 ${selected.size === 0 ? "pointer-events-none opacity-40" : ""}`}
+            className={`flex flex-wrap gap-2 lg:flex-1 lg:justify-end ${selected.size === 0 ? "pointer-events-none opacity-40" : ""}`}
           >
             {/*
               ⚠️ `min-w-0` חובה: ל-`<select>` יש רוחב מובנה לפי ה-`option`
@@ -288,7 +305,7 @@ export function LeadCardList({
               המינימלית, ו-40px היה מתחתיה.
             */}
             <select
-              className={`${inputClass} h-11 w-auto min-w-0 flex-1`}
+              className={`${inputClass} h-11 w-auto min-w-0 flex-1 lg:h-9 lg:max-w-56`}
               defaultValue=""
               disabled={bulkBusy}
               onChange={(e) => {
@@ -307,7 +324,7 @@ export function LeadCardList({
             </select>
 
             <select
-              className={`${inputClass} h-11 w-auto min-w-0 flex-1`}
+              className={`${inputClass} h-11 w-auto min-w-0 flex-1 lg:h-9 lg:max-w-56`}
               defaultValue=""
               disabled={bulkBusy}
               onChange={(e) => {
@@ -329,7 +346,7 @@ export function LeadCardList({
               icon="trash"
               onClick={onBulkDelete}
               disabled={bulkBusy}
-              className="h-11"
+              className="h-11 lg:h-9"
             >
               מחיקה
             </Button>
@@ -341,7 +358,12 @@ export function LeadCardList({
 }
 
 /**
- * כותרת שכבה ברשימת הכרטיסים.
+ * כותרת שכבה ברשימת הכרטיסים: שם השכבה, כמה לידים בה, ומה היא אומרת.
+ *
+ * ⚠️ שקטה בכוונה — טקסט על הרקע, בלי פס צבעוני לרוחב המסך. הצבע יושב
+ * רק במונה (`Badge` בטון השכבה), כך שהעין מוצאת את הקבוצה בלי שהכותרת
+ * תתחרה בכרטיסים שמתחתיה. קודם היא הייתה רצועה ממולאת בצבע, וברשימה
+ * של ארבע שכבות זה היה ארבעה פסים צבעוניים בין הלידים.
  *
  * ⚠️ `<li>` ולא `<div>`: ההורה הוא `<ul>`, וילד שאינו `<li>` שם הוא
  * HTML לא תקין שקוראי מסך מדווחים עליו כרשימה שבורה. `role="presentation"`
@@ -357,20 +379,17 @@ function QueueTierHeading({
   const meta = QUEUE_TIER_META[tier];
 
   return (
-    <li role="presentation" className="mt-1 first:mt-0">
-      <div
-        style={{ background: TONE_SOFT_VAR[meta.tone] }}
-        className="flex items-baseline gap-2 rounded-card px-3 py-1.5"
-      >
-        <span
-          className="text-[13px] font-semibold"
-          style={{ color: TONE_VAR[meta.tone] }}
-        >
-          {meta.label}
-        </span>
-        <span className="nums text-[12px] text-ink-3">{number(tiers.totals[tier])}</span>
-        <span className="truncate text-[11px] text-ink-4">{meta.hint}</span>
-      </div>
+    <li
+      role="presentation"
+      className="mt-3 flex min-w-0 items-center gap-2 px-1 first:mt-0"
+    >
+      <span className="shrink-0 text-sm font-semibold text-ink-1">{meta.label}</span>
+      <Badge tone={meta.tone} className="nums shrink-0">
+        {number(tiers.totals[tier])}
+      </Badge>
+      {/* ההסבר מה השכבה אומרת. "באיחור" לבדו לא מבדיל בין "מועד
+          החזרה עבר" לבין "הליד יושב יותר מדי זמן" */}
+      <span className="min-w-0 truncate text-xs text-ink-3">{meta.hint}</span>
     </li>
   );
 }

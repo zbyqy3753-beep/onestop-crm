@@ -13,7 +13,7 @@ import {
   useIsNarrow,
 } from "@/lib/media";
 import { endSession } from "@/app/login/actions";
-import { NAV, visibleFor } from "./nav";
+import { NAV, activeHref, visibleFor } from "./nav";
 import { BottomNav } from "./BottomNav";
 import { MoreSheet } from "./MoreSheet";
 import {
@@ -133,6 +133,8 @@ function Sidebar({
   // המסכים שנבנו והמסכים שעדיין לא — מופרדים, כדי שהזמינים ינצחו
   const ready = groups.flatMap((g) => g.items.filter((i) => !i.planned));
   const planned = groups.flatMap((g) => g.items.filter((i) => i.planned));
+  // הקידומת הארוכה ביותר — כדי ש-`/leads/missed` לא ידליק גם את "לידים"
+  const current = activeHref(pathname);
 
   return (
     <aside className="hidden w-[244px] shrink-0 flex-col border-s border-line bg-surface lg:flex">
@@ -143,10 +145,7 @@ function Sidebar({
         <nav className="scroll-thin flex-1 overflow-y-auto px-3 pb-4">
           <ul className="space-y-0.5">
             {ready.map((item) => {
-              const active =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(item.href);
+              const active = item.href === current;
               return (
                 <li key={item.href}>
                   <Link
@@ -246,6 +245,7 @@ function Wordmark() {
 const PAGE_TITLES: Record<string, string> = {
   "/": "בית",
   "/leads": "תור העבודה",
+  "/leads/missed": "לידים שפוספסו",
   "/packages": "קטלוג החבילות",
   "/deals": "מעקב עסקאות",
   "/my-deals": "העסקאות שלי",
@@ -265,9 +265,8 @@ function pageTitle(pathname: string): string {
   const exact = PAGE_TITLES[pathname];
   if (exact) return exact;
 
-  return NAV.flatMap((g) => g.items)
-    .filter((i) => i.href !== "/" && pathname.startsWith(i.href))
-    .sort((a, b) => b.href.length - a.href.length)[0]?.label ?? "";
+  const href = activeHref(pathname);
+  return NAV.flatMap((g) => g.items).find((i) => i.href === href)?.label ?? "";
 }
 
 function TopBar({ user }: { user: User }) {

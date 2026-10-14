@@ -22,19 +22,26 @@ import { dateTimeInputValue } from "@/lib/tz";
 import { Badge, TeamBadge } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import {
+  AgeBadge,
+  AssigneeAvatar,
   CostCell,
   FollowUpCell,
   InlinePicker,
   RowActions,
   StarToggle,
   StatusPicker,
+  safeTime,
 } from "./cells";
 import { buildTimeline } from "./ActivityFeed";
 import type { ColumnDef, ColumnKey } from "./columns";
 
-/** ISO → `YYYY-MM-DDTHH:mm` בשעון ישראל, כפי ש-`datetime-local` מצפה. */
+/**
+ * ISO → `YYYY-MM-DDTHH:mm` בשעון ישראל, כפי ש-`datetime-local` מצפה.
+ * ריק לתאריך פגום — ראה `safeTime`.
+ */
 function isoToDateTimeInput(iso: string): string {
-  return dateTimeInputValue(Date.parse(iso));
+  const t = safeTime(iso);
+  return t === null ? "" : dateTimeInputValue(t);
 }
 
 /** מחלקות התא לכל עמודה — נשמר כאן ולא ב-columns.ts כדי ש-columns.ts יישאר נטול JSX. */
@@ -130,13 +137,13 @@ export function LeadRow({
         return (
           <span className="flex items-center gap-1.5">
             <StarToggle lead={lead} onToggle={onStar} busy={busy} />
-            <button
-              onClick={onOpen}
-              title={lead.name}
-              className="block max-w-[260px] text-start"
-            >
-              <span className="flex items-center gap-1.5">
-                <span className="truncate text-[15px] font-semibold text-ink-1 group-hover:text-brand">
+            <span className="block min-w-0 max-w-[260px]">
+              <button
+                onClick={onOpen}
+                title={lead.name}
+                className="flex max-w-full items-center gap-1.5 text-start"
+              >
+                <span className="truncate text-base font-semibold text-ink-1 group-hover:text-brand">
                   {lead.name}
                 </span>
                 {lead.kind === "hot" && (
@@ -146,11 +153,27 @@ export function LeadRow({
                     aria-label="ליד חם"
                   />
                 )}
+              </button>
+              {/*
+                הטלפון כקישור חיוג כחול, כמו בכרטיס — ולצידו גיל הליד.
+
+                ⚠️ הטלפון יצא מכפתור הפתיחה: קודם הוא היה טקסט אפור בתוך
+                הכפתור, ואי אפשר לקנן קישור בתוך כפתור. הפתיחה נשארת על
+                השם (ועל החץ בעמודת הפעולות). הוואטסאפ הירוק כבר יושב
+                בעמודת הפעולות (`RowActions`) ולא משוכפל כאן.
+              */}
+              <span className="mt-0.5 flex items-center gap-2 text-sm">
+                <a
+                  href={`tel:${lead.phone}`}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={`חיוג ל${lead.name}, ${phone(lead.phone)}`}
+                  className="ltr-num shrink-0 text-brand hover:underline"
+                >
+                  {phone(lead.phone)}
+                </a>
+                <AgeBadge createdAt={lead.createdAt} now={now} />
               </span>
-              <span className="ltr-num mt-0.5 block text-[13px] text-ink-3">
-                {phone(lead.phone)}
-              </span>
-            </button>
+            </span>
           </span>
         );
 
@@ -190,23 +213,28 @@ export function LeadRow({
           </InlinePicker>
         );
 
+      // ⚠️ כל עמודת תאריך עוברת `safeTime` לפני הפורמט — פורמט על `NaN`
+      // זורק `RangeError`, וליד אחד עם תאריך פגום הפיל כך את כל הטבלה.
       case "updatedAt":
-        return now === null ? skeleton("w-16") : relative(lead.updatedAt, now);
+        if (now === null) return skeleton("w-16");
+        return safeTime(lead.updatedAt) === null ? dash : relative(lead.updatedAt, now);
 
       case "followUpAt": {
         if (now === null) return skeleton("w-14");
+        const followUpAt = safeTime(lead.followUpAt);
         // באיחור — אדום ומודגש. חזרה שעברה היא לא "תזכורת", היא חוב.
         // ⚠️ ההשוואה היא לרגע ולא ליום קלנדרי: מרגע שיש שעה, חזרה
         // שנקבעה להיום 09:00 היא באיחור ב-11:00 — לא בחצות.
-        const followUpOverdue =
-          lead.followUpAt !== undefined && Date.parse(lead.followUpAt) < now;
+        const followUpOverdue = followUpAt !== null && followUpAt < now;
         return (
           <FollowUpCell
             value={lead.followUpAt ? isoToDateTimeInput(lead.followUpAt) : ""}
             busy={busy}
             onPick={(v) => onPatch({ followUpDate: v || null })}
           >
-            {lead.followUpAt ? (
+            {lead.followUpAt && followUpAt === null ? (
+              <span className="text-xs text-ink-4">מועד לא תקין</span>
+            ) : lead.followUpAt ? (
               <span
                 className={`flex items-center gap-1 ${
                   followUpOverdue ? "font-semibold text-bad" : "text-warn"
@@ -261,9 +289,9 @@ export function LeadRow({
           >
             {assignee ? (
               <span className="flex items-center gap-1.5 text-xs">
-                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-surface-3 text-[9px] font-bold text-ink-2">
-                  {assignee.name.slice(0, 2)}
-                </span>
+                {/* אותו עיגול כמו בכרטיס — `text-[9px]` הקודם היה מתחת לסף
+                    הקריאות של 12px */}
+                <AssigneeAvatar name={assignee.name} />
                 {/* truncate: שם ארוך היה נשבר לשתי שורות ומגביה את השורה */}
                 <span className="max-w-[110px] truncate" title={assignee.name}>
                   {assignee.name}
@@ -369,10 +397,12 @@ export function LeadRow({
         );
 
       case "createdAt":
-        return date(lead.createdAt);
+        return safeTime(lead.createdAt) === null ? dash : date(lead.createdAt);
 
       case "lastContactAt":
-        return lead.lastContactAt ? date(lead.lastContactAt) : dash;
+        return lead.lastContactAt && safeTime(lead.lastContactAt) !== null
+          ? date(lead.lastContactAt)
+          : dash;
     }
   }
 

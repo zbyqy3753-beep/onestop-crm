@@ -64,15 +64,25 @@ export function FilterBar({
   onBulkStatus,
   onBulkDelete,
   onClearSelection,
-  columnPicker,
+  sortControl,
+  tools,
   overflow,
   busy,
 }: {
   filters: Filters;
   onChange: (f: Filters) => void;
   users: UserRef[];
-  /** בורר העמודות, מוזרק מבחוץ כדי ש-FilterBar יישאר על סינון בלבד */
-  columnPicker?: React.ReactNode;
+  /**
+   * בורר המיון — צמוד לחיפוש, כי שניהם עונים על "מה אני רואה ובאיזה
+   * סדר". גלוי בכל גודל מסך: בכרטיסים (ברירת המחדל גם בשולחן) אין כותרות
+   * עמודה ללחוץ עליהן.
+   */
+  sortControl?: React.ReactNode;
+  /**
+   * כלי התצוגה בשולחן — כרטיסים/טבלה, "בחירה", בורר העמודות. מוזרקים
+   * מבחוץ כדי ש-FilterBar יישאר על סינון בלבד.
+   */
+  tools?: React.ReactNode;
   /**
    * כפתור ה-`⋯` של הטלפון. יושב בשורת החיפוש ולא בשורה משלו — שורה
    * נוספת היא 44px מתוך המסך, ושורת החיפוש ממילא לא מנוצלת עד הסוף.
@@ -224,6 +234,8 @@ export function FilterBar({
         )}
       </div>
 
+      {sortControl}
+
       {/*
         מסנן השיוך חזר, ולבדו.
 
@@ -265,9 +277,9 @@ export function FilterBar({
         </Button>
       )}
 
-      {/* בורר העמודות בקצה השורה — הוא שולט בתצוגה, לא מסנן */}
+      {/* כלי התצוגה בקצה השורה — הם שולטים בתצוגה, לא מסננים */}
       <div className="ms-auto flex items-center gap-2">
-        {columnPicker}
+        {tools}
         {overflow}
       </div>
     </div>

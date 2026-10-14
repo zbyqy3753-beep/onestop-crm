@@ -38,7 +38,24 @@ export type IconKey =
   | "play"
   | "note"
   | "feedback"
-  | "logout";
+  | "logout"
+  | "home"
+  | "chart"
+  | "bot"
+  | "send"
+  | "team"
+  | "more"
+  | "flame"
+  | "arrowUp"
+  | "arrowLeft"
+  | "chevronRight"
+  | "chevronUp"
+  | "calendar"
+  | "edit"
+  | "alert"
+  | "link"
+  | "copy"
+  | "bell";
 
 const PATHS: Record<IconKey, React.ReactNode> = {
   leads: (
@@ -180,6 +197,90 @@ const PATHS: Record<IconKey, React.ReactNode> = {
   ),
   /* משולש מלא — בקו בלבד הוא נקרא כחץ ולא כ"הפעל" */
   play: <path d="M7.5 5.5l11 6.5-11 6.5z" fill="currentColor" />,
+  /*
+   * ── נוספו באוקטובר 2026 ──
+   * כל יעד בניווט מקבל אייקון משלו (קודם `dashboard` ו-`whatsapp` שימשו
+   * כל אחד לשני יעדים), ותווים שעמדו במקום אייקונים (← ▾ ⋯ ✓) מקבלים
+   * גרסה מצוירת באותו קו.
+   */
+  home: <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z" />,
+  chart: (
+    <>
+      <path d="M4 4v16h16" />
+      <path d="m7.5 14.5 3.5-4 3 3 5-6" />
+    </>
+  ),
+  bot: (
+    <>
+      <rect x="4.5" y="8" width="15" height="11" rx="2.5" />
+      <path d="M12 8V5.5M9 12.5v1.5m6-1.5v1.5" />
+      <circle cx="12" cy="4.5" r="1" />
+    </>
+  ),
+  send: (
+    <>
+      <path d="M20.5 3.5 3.5 10.5l7 2.5 2.5 7z" />
+      <path d="m10.5 13 10-9.5" />
+    </>
+  ),
+  team: (
+    <>
+      <circle cx="9" cy="8.5" r="3" />
+      <path d="M3.5 19.5a5.5 5.5 0 0 1 11 0" />
+      <path d="M15.5 5.6a3 3 0 0 1 0 5.8M17 13.8a5.5 5.5 0 0 1 3.5 5.7" />
+    </>
+  ),
+  more: (
+    <>
+      <circle cx="5.5" cy="12" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="18.5" cy="12" r="1.3" fill="currentColor" stroke="none" />
+    </>
+  ),
+  flame: (
+    <path d="M12 21a6 6 0 0 0 6-6c0-3.6-2.6-5.6-3.6-8.6-.6 2-1.8 3.1-3 3.6.3-2.5-.5-5-2.4-7C8.6 6 6 8.6 6 15a6 6 0 0 0 6 6z" />
+  ),
+  arrowUp: <path d="M12 19V5m0 0-6 6m6-6 6 6" />,
+  arrowLeft: <path d="M19 12H5m0 0 6-6m-6 6 6 6" />,
+  chevronRight: <path d="m9 6 6 6-6 6" />,
+  chevronUp: <path d="m6 15 6-6 6 6" />,
+  calendar: (
+    <>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+      <path d="M3.5 9.5h17M8 3v4m8-4v4" />
+    </>
+  ),
+  edit: (
+    <>
+      <path d="m4 20 1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z" />
+      <path d="m14.5 6.5 3 3" />
+    </>
+  ),
+  alert: (
+    <>
+      <path d="M12 4 2.8 19.5h18.4z" />
+      <path d="M12 10v4" />
+      <circle cx="12" cy="16.8" r=".7" fill="currentColor" stroke="none" />
+    </>
+  ),
+  link: (
+    <>
+      <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" />
+      <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
+    </>
+  ),
+  bell: (
+    <>
+      <path d="M6 10a6 6 0 0 1 12 0v4.5l2 3H4l2-3z" />
+      <path d="M10 20.5a2 2 0 0 0 4 0" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="8" y="8" width="12" height="12" rx="2" />
+      <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+    </>
+  ),
   note: (
     <>
       <path d="M5 4h14v11l-5 5H5z" />

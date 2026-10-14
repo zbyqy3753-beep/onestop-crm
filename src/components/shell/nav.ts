@@ -45,7 +45,8 @@ export type IconName =
   | "mail"
   | "feedback"
   | "user"
-  | "star";
+  | "star"
+  | "clock";
 
 export interface NavGroup {
   title: string;
@@ -73,6 +74,12 @@ export const NAV: NavGroup[] = [
         icon: "leads",
         // ראשון בסרגל התחתון לכל תפקיד — זה גם `start_url` של האפליקציה
         mobileOrder: 1,
+      },
+      {
+        href: "/leads/missed",
+        label: "לידים שפוספסו",
+        hint: "לידים שעברו למתחרה, נסגרו בלי עסקה או נתקעו בתור — ולמה",
+        icon: "clock",
       },
       {
         href: "/packages",
@@ -207,6 +214,24 @@ export function visibleFor(role: Role, userId?: string): NavGroup[] {
     ...g,
     items: g.items.filter((i) => canAccessRoute(role, i.href, userId)),
   })).filter((g) => g.items.length > 0);
+}
+
+/**
+ * היעד הפעיל — הקידומת **הארוכה ביותר** שמתאימה לנתיב.
+ *
+ * ⚠️ לא `pathname.startsWith(item.href)` לכל פריט בנפרד: מאז שנוסף
+ * `/leads/missed`, בדיקה כזו מדליקה גם את "לידים" וגם את "לידים
+ * שפוספסו" באותו רגע (וגם `/deals` מתאים ל-`/deals-dashboard`). התאמה
+ * היא הנתיב עצמו או הנתיב ואחריו `/`, ו-`/` מתאים רק לעצמו.
+ */
+export function activeHref(pathname: string): string | undefined {
+  return NAV.flatMap((g) => g.items)
+    .filter((i) =>
+      i.href === "/"
+        ? pathname === "/"
+        : pathname === i.href || pathname.startsWith(`${i.href}/`),
+    )
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 }
 
 /** כמה יעדים נכנסים לסרגל התחתון לפני שהרביעי הופך ל"עוד". */

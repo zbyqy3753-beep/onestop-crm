@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/Icon";
 import { ROLE_CONFIG, type User } from "@/lib/domain/types";
 import { useBodyScrollLock } from "@/lib/overlay";
 import { endSession } from "@/app/login/actions";
-import { visibleFor } from "./nav";
+import { activeHref, visibleFor } from "./nav";
 
 /**
  * גיליון "עוד" — כל היעדים, הזהות והיציאה.
@@ -34,6 +34,8 @@ export function MoreSheet({
   if (!open) return null;
 
   const groups = visibleFor(user.role, user.id);
+  // הקידומת הארוכה ביותר — כדי ש-`/leads/missed` לא ידליק גם את "לידים"
+  const current = activeHref(pathname);
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
@@ -84,10 +86,7 @@ export function MoreSheet({
             </h2>
             <ul>
               {group.items.map((item) => {
-                const active =
-                  item.href === "/"
-                    ? pathname === "/"
-                    : pathname.startsWith(item.href);
+                const active = item.href === current;
                 return (
                   <li key={item.href}>
                     <Link

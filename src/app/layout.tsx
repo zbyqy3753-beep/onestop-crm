@@ -60,10 +60,10 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   // צובע את שורת הסטטוס של הדפדפן. שתי רשומות כי לאפליקציה יש שתי
   // תמות, והערכים זהים ל-`--c-bg` ב-globals.css.
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#eef3f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#081421" },
-  ],
+  // רשומה אחת ולא שתיים לפי `prefers-color-scheme`: התמה כבר לא נגזרת
+  // ממערכת ההפעלה (ראה `THEME_INIT_SCRIPT`), ושורת סטטוס כהה מעל מסך
+  // בהיר הייתה בדיוק התוצאה של שתי רשומות. = `--c-bg` הבהיר.
+  themeColor: "#eef3f7",
 };
 
 export default function RootLayout({

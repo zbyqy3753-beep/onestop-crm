@@ -7,6 +7,7 @@ import {
   useOptimistic,
   useRef,
   useState,
+  useSyncExternalStore,
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -34,6 +35,7 @@ import {
   toggleStarAction,
 } from "@/app/(app)/leads/actions";
 import { useNow } from "@/lib/clock";
+import { endOfDay, startOfDay } from "@/lib/tz";
 import { useIsNarrow } from "@/lib/media";
 import { downloadXlsx } from "@/lib/xlsxWrite";
 import {
@@ -54,9 +56,15 @@ import { LeadCostsModal } from "@/components/settings/LeadCostsModal";
 import { LeadsFinancePanel } from "./LeadsFinancePanel";
 import { LeadsPerformancePanel } from "./LeadsPerformancePanel";
 import { leadsSheet, leadsSheetFilename } from "./leadsSheet";
-import { QueueHeader } from "./QueueHeader";
+import { QueueHeader, QuickViews, type Reminder } from "./QueueHeader";
+import { PeriodPicker, type PeriodNav } from "./PeriodPicker";
 import { FilterBar, type Filters, EMPTY_FILTERS } from "./FilterBar";
-import { INITIAL_FILTERS, isOpeningStatus, toggleStatusFilter } from "./views";
+import {
+  INITIAL_FILTERS,
+  QUICK_VIEWS,
+  isOpeningStatus,
+  toggleStatusFilter,
+} from "./views";
 import {
   compareByProximity,
   compareQueue,
@@ -100,6 +108,104 @@ export type SortField =
   | "status"
   | "followUpAt";
 
+type SortState = { field: SortField; dir: "asc" | "desc" };
+
+/**
+ * בורר המיון — בניסוח של מערכת הלידים שהמשתמש הצביע עליה, ממופה
+ * **לשדות המיון הקיימים** ולא לשום דירוג חדש:
+ *
+ *   · "מיון חכם"             = `queue` — תור העבודה (באיחור/היום → חדשים → השאר)
+ *   · "חדשים / ישנים קודם"   = `createdAt` יורד / עולה
+ *
+ * ושאר המיונים שהיו קיימים — עדכון, מועד חזרה, עדיפות, סטטוס ושם —
+ * נשארים, כל אחד בכיוון שלחיצה ראשונה על הכותרת שלו בטבלה נותנת
+ * (`SORT_PRIMARY_DIR`), כדי ששתי הדרכים לבקש אותו מיון לא יחזירו שני
+ * סדרים הפוכים.
+ */
+const SORT_OPTIONS: (SortState & { label: string })[] = [
+  { field: "queue", dir: "desc", label: "מיון חכם" },
+  { field: "createdAt", dir: "desc", label: "חדשים קודם" },
+  { field: "createdAt", dir: "asc", label: "ישנים קודם" },
+  { field: "updatedAt", dir: "desc", label: "עודכן לאחרונה" },
+  { field: "followUpAt", dir: "asc", label: "מועד חזרה" },
+  { field: "priority", dir: "desc", label: "עדיפות" },
+  { field: "status", dir: "asc", label: "סטטוס" },
+  { field: "name", dir: "asc", label: "שם" },
+];
+
+/** שם השדה, לאפשרות "סדר הפוך" שנוצרת מלחיצה שנייה על כותרת בטבלה. */
+const SORT_FIELD_LABEL: Record<SortField, string> = {
+  queue: "מיון חכם",
+  createdAt: "תאריך כניסה",
+  updatedAt: "עודכן לאחרונה",
+  followUpAt: "מועד חזרה",
+  priority: "עדיפות",
+  status: "סטטוס",
+  name: "שם",
+};
+
+/** ערך ה-`<option>`. ל"תור" אין כיוון — הסדר שלו קבוע. */
+function sortValue(s: SortState): string {
+  return s.field === "queue" ? "queue" : `${s.field}:${s.dir}`;
+}
+
+/** התצוגה שכותרת רצועת "להתקשר היום" מחילה. */
+const DUE_VIEW = QUICK_VIEWS.find((v) => v.key === "due");
+
+/* ── כרטיסים או טבלה ──────────────────────────────────────────────────── */
+
+type LeadsView = "cards" | "table";
+
+/**
+ * הבחירה בין כרטיסים לטבלה בשולחן, שמורה בדפדפן.
+ *
+ * ⚠️ בקידומת `onestop.` ועטוף ב-try/catch (מצב פרטי, אחסון חסום), כמו
+ * `onestop.leads.columns`.
+ *
+ * נקרא דרך `useSyncExternalStore` ולא effect שמעדכן state — אותו דפוס
+ * כמו `columns.ts`: השרת מחזיר "כרטיסים" (ברירת המחדל), הלקוח מחזיר את
+ * השמור, ואין אי-התאמת הידרציה.
+ */
+const VIEW_STORAGE_KEY = "onestop.leads.view";
+
+let storedView: LeadsView | null = null;
+const viewListeners = new Set<() => void>();
+
+function readStoredView(): LeadsView {
+  try {
+    return window.localStorage.getItem(VIEW_STORAGE_KEY) === "table"
+      ? "table"
+      : "cards";
+  } catch {
+    return "cards";
+  }
+}
+
+function getViewSnapshot(): LeadsView {
+  // נקרא פעם אחת ונשמר — `useSyncExternalStore` דורש ערך יציב
+  storedView ??= readStoredView();
+  return storedView;
+}
+
+function getViewServerSnapshot(): LeadsView {
+  return "cards";
+}
+
+function subscribeView(onChange: () => void): () => void {
+  viewListeners.add(onChange);
+  return () => viewListeners.delete(onChange);
+}
+
+function setStoredView(next: LeadsView): void {
+  storedView = next;
+  try {
+    window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+  } catch {
+    // מצב פרטי / אחסון מלא — הבחירה פשוט לא תישמר בין רענונים
+  }
+  for (const l of viewListeners) l();
+}
+
 export function LeadsClient({
   leads,
   users,
@@ -110,7 +216,7 @@ export function LeadsClient({
   canSeeAll,
   canSeeTeam = false,
   canEditCosts,
-  periodPicker,
+  periodNav,
 }: {
   leads: Lead[];
   users: UserRef[];
@@ -143,20 +249,24 @@ export function LeadsClient({
    */
   canEditCosts: boolean;
   /**
-   * בורר התקופה, מרונדר בשרת ומוזרק כ-slot.
+   * תיקיית החודשים — נתונים שחושבו בשרת (`page.tsx`).
    *
-   * ⚠️ slot ולא רכיב שנבנה כאן: הטווח נקבע ב-`page.tsx` **לפני**
-   * השליפה — הוא חותך את `leads`, ואיתם כל מה שנגזר מהם. אילו הבורר היה
-   * יושב בלקוח, הוא היה מסנן מחדש נתונים שכבר הגיעו חתוכים, והמספר
-   * שבריבוע היה מפסיק להתאים לטבלה.
+   * ⚠️ **הטווח עדיין נקבע בשרת, לפני השליפה.** הוא חותך את `leads`,
+   * ואיתם כל מה שנגזר מהם; הבורר (`PeriodPicker`) רק כותב לכתובת. אילו
+   * הבורר היה מסנן כאן בלקוח, הוא היה מסנן מחדש נתונים שכבר הגיעו
+   * חתוכים, והמספר שבריבוע היה מפסיק להתאים לטבלה.
+   *
+   * ⚠️ נתונים ולא slot מרונדר (כמו שהיה): הבורר מרונדר כאן כי האזהרה
+   * "N לידים פתוחים מחוץ לטווח" צריכה גם לנקות את מסנן הסטטוס של המסך
+   * (`revealOpenOutside`) — ו-slot שנבנה בשרת לא יכול לקבל פונקציה.
    */
-  periodPicker?: React.ReactNode;
+  periodNav?: PeriodNav;
 }) {
   // המסך נפתח על הלידים החדשים בלבד — ראה `INITIAL_FILTERS`
   const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
   // ברירת המחדל היא תור העבודה — מה שדחוף היום צף למעלה בלי
   // שהמשתמש יבחר מיון. הכיוון לא משפיע על "queue" (הסדר קבוע).
-  const [sort, setSort] = useState<{ field: SortField; dir: "asc" | "desc" }>({
+  const [sort, setSort] = useState<SortState>({
     field: "queue",
     dir: "desc",
   });
@@ -191,8 +301,23 @@ export function LeadsClient({
    */
   const [deleteTarget, setDeleteTarget] = useState<string[] | null>(null);
 
-  /** מסך צר = תצוגת כרטיסים במקום טבלה */
+  /** מסך צר = תמיד כרטיסים. בשולחן — לפי הבחירה השמורה */
   const narrow = useIsNarrow();
+  /**
+   * כרטיסים או טבלה בשולחן. ברירת המחדל **כרטיסים** — המראה שהמשתמש
+   * בחר; הטבלה נשארת במרחק לחיצה, מלאה, עם כל העמודות.
+   */
+  const view = useSyncExternalStore(
+    subscribeView,
+    getViewSnapshot,
+    getViewServerSnapshot,
+  );
+  /**
+   * ⚠️ אחד מהם, לא שניהם עם `hidden` — ראה ההערה מעל הרשימה למטה.
+   * `useIsNarrow` נשאר הקובע בטלפון (עוגיית הרוחב מה-layout), כך שגם
+   * הרינדור בשרת יודע לצייר כרטיסים בטלפון.
+   */
+  const showCards = narrow || view === "cards";
   const [statusTarget, setStatusTarget] = useState<{
     leadIds: string[];
     to: LeadStatus;
@@ -376,22 +501,24 @@ export function LeadsClient({
 
   // סוף היום הנוכחי. null עד שהלקוח נרשם — לכן הסינון לפי תאריך
   // חזרה מתחיל לפעול רק בלקוח, ולא יוצר אי-התאמת הידרציה.
+  //
+  // ⚠️ בשעון ישראל (`lib/tz`) ולא בשעון הדפדפן: "היום" של רצועת "להתקשר
+  // היום", של התצוגה "לחזור היום" ושל שכבות התור חייב להיות אותו יום —
+  // וגם אותו יום שבו `until` אומר "היום". דפדפן בחו״ל או במכשיר עם אזור
+  // זמן שגוי היה מזיז את הגבול בשעה-שעתיים, וליד היה "באיחור" ברצועה
+  // ו"היום" על הכרטיס.
   const now = useNow();
-  const endOfToday = useMemo(() => {
-    if (now === null) return null;
-    const d = new Date(now);
-    d.setHours(23, 59, 59, 999);
-    return d.getTime();
-  }, [now]);
+  const endOfToday = useMemo(
+    () => (now === null ? null : endOfDay(now)),
+    [now],
+  );
 
   // תחילת היום — יחד עם `endOfToday` הם מגדירים את "היום" עבור שכבות
   // התור (`queue.ts`). אותה תלות בשעון הלקוח, ולכן אותו `null`.
-  const startOfToday = useMemo(() => {
-    if (now === null) return null;
-    const d = new Date(now);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  }, [now]);
+  const startOfToday = useMemo(
+    () => (now === null ? null : startOfDay(now)),
+    [now],
+  );
 
   // ⚠️ מעל `matched` ולא ליד שאר המפות: החיפוש קורא ממנו את שם העובד
   // המשויך, ו-`const` שמוצהר אחרי השימוש נופל ב-TDZ בזמן הרינדור
@@ -566,6 +693,53 @@ export function LeadsClient({
     for (const lead of hotLeads) out[lead.status] += 1;
     return out;
   }, [hotLeads]);
+
+  /**
+   * רצועת "להתקשר היום" — לידים שמועד החזרה שלהם הגיע: באיחור או היום.
+   *
+   * ⚠️⚠️ **אותו חתך בדיוק כמו התצוגה "לחזור היום"** (`DUE_VIEW`), ולא
+   * "כל מי שיש לו תאריך": חם (דאטה קרה מוסתרת כמו בכל התור), פתוח
+   * (`openOnly`), ומועד שאינו אחרי סוף היום — אותו תנאי כמו `dueToday`
+   * ב-`preStatus`. הכותרת ברצועה מחילה את התצוגה הזו, ורצועה שמבטיחה 9
+   * ופותחת 7 היא בדיוק הסתירה ש-`tileCounts` נלחם בה.
+   *
+   * ⚠️ על `optimisticLeads` ולא על `filtered`: הרצועה עונה על "למי צריך
+   * להתקשר", והיא לא אמורה להיעלם כשמסננים לסטטוס אחר.
+   *
+   * ⚠️ מועד פגום (`NaN`) לא נזרק החוצה ולא מפיל: `NaN > endOfToday` הוא
+   * false, ולכן הליד נכנס — בדיוק כמו ב"לחזור היום" — והצ׳יפ שלו בודק
+   * `Number.isNaN` לפני כל פורמט (ראה `ReminderChip`).
+   *
+   * הסדר הוא סדר התור (`compareQueue`): המאחר ביותר ראשון. `null` עד
+   * ההרכבה — "היום" תלוי בשעון הלקוח, כמו `endOfToday`.
+   */
+  const reminders = useMemo<Reminder[] | null>(() => {
+    if (startOfToday === null || endOfToday === null) return null;
+    const due = optimisticLeads.flatMap((lead) => {
+      const at = lead.followUpAt;
+      if (!at || lead.kind === "data" || STATUS_CONFIG[lead.status].terminal) return [];
+      if (Date.parse(at) > endOfToday) return [];
+      return [
+        { lead, at, late: queueTier(lead, startOfToday, endOfToday) === "late" },
+      ];
+    });
+    due.sort((a, b) => compareQueue(a.lead, b.lead, startOfToday, endOfToday));
+    return due;
+  }, [optimisticLeads, startOfToday, endOfToday]);
+
+  /**
+   * המספר על אזהרת "N לידים פתוחים מחוץ לטווח" — לפי בורר הסוג.
+   *
+   * ⚠️ השרת סופר חם ודאטה בנפרד (ראה `page.tsx`), וכאן נבחר מה שבאמת
+   * יופיע בלחיצה: בברירת המחדל דאטה קרה מוסתרת, ואזהרה שסופרת 358
+   * לידי דאטה ישנים ופותחת 7 לידים חמים היא אזהרה שלומדים להתעלם ממנה.
+   */
+  const openOutsideCount = periodNav
+    ? (filters.kind.length === 0 || filters.kind.includes("hot")
+        ? periodNav.openOutside.hot
+        : 0) +
+      (filters.kind.includes("data") ? periodNav.openOutside.data : 0)
+    : 0;
 
   const matched = useMemo(() => {
     /*
@@ -808,7 +982,7 @@ export function LeadsClient({
     setPage(1);
   }
 
-  function applySort(next: { field: SortField; dir: "asc" | "desc" }) {
+  function applySort(next: SortState) {
     setSort(next);
     setPage(1);
   }
@@ -816,6 +990,45 @@ export function LeadsClient({
   function applyPageSize(size: number) {
     setPageSize(size);
     setPage(1);
+  }
+
+  /**
+   * לחיצה על "הצג את כל הזמן" באזהרה. הבורר עובר ל"כל הזמן" (בכתובת),
+   * וכאן נחשפים **כל הסטטוסים הפתוחים** — `EMPTY_FILTERS`, שהוא בדיוק
+   * "פתוחים בלבד, בלי מסנן סטטוס".
+   *
+   * ⚠️ בלי זה הלחיצה הייתה מחליפה תקופה ולא מראה כלום: המסך נפתח מסונן
+   * ל"חדשים", וליד ישן שכבר עבר ל"אין מענה" היה נשאר מוסתר גם בכל הזמן.
+   * הסוג והחיפוש נשמרים — המספר על האזהרה נספר לפי הסוג שנבחר.
+   */
+  function revealOpenOutside() {
+    applyFilters({ ...EMPTY_FILTERS, kind: filters.kind, query: filters.query });
+  }
+
+  /**
+   * כותרת רצועת "להתקשר היום" ו-"+N" → התצוגה "לחזור היום", כמו לחיצה על
+   * הצ׳יפ שלה: החיפוש שורד את המעבר (ראה `QuickViews`).
+   */
+  function showReminders() {
+    if (!DUE_VIEW) return;
+    applyFilters({ ...DUE_VIEW.patch(currentUserId), query: filters.query });
+  }
+
+  /**
+   * מעבר בין כרטיסים לטבלה. הבחירה מתאפסת: בחירה שנבנתה בתיבות של
+   * הטבלה הייתה עוברת לכרטיסים בלי שום סימון גלוי — ומחכה שם לפעולה
+   * קבוצתית שמישהו כבר שכח שהתחיל.
+   */
+  function changeView(next: LeadsView) {
+    setStoredView(next);
+    setSelected(new Set());
+    setSelecting(false);
+  }
+
+  /** "בחירה" בכרטיסים בשולחן — המקבילה של הגיליון בטלפון */
+  function toggleSelecting() {
+    if (selecting) setSelected(new Set());
+    setSelecting(!selecting);
   }
 
   /**
@@ -975,13 +1188,36 @@ export function LeadsClient({
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-3 sm:px-6">
-      {periodPicker}
-
       <QueueHeader
         counts={headerCounts}
         tileCounts={tileCounts}
         total={hotLeads.length}
         showing={sorted.length}
+        dealsCount={deals.length}
+        period={
+          periodNav && (
+            <PeriodPicker
+              nav={periodNav}
+              openOutsideRange={openOutsideCount}
+              onReveal={revealOpenOutside}
+            />
+          )
+        }
+        stats={
+          statsOpen && (
+            <>
+              <LeadsFinancePanel
+                cost={finance.cost}
+                commission={finance.commission}
+                onEditCosts={canEditCosts ? () => setCostsOpen(true) : undefined}
+              />
+              <LeadsPerformancePanel rows={performance} userById={userById} />
+            </>
+          )
+        }
+        reminders={reminders}
+        now={now}
+        onShowReminders={showReminders}
         onAdd={() => setAddOpen(true)}
         onExport={exportSheet}
         onImport={() => setImportOpen(true)}
@@ -989,22 +1225,9 @@ export function LeadsClient({
         statsOpen={statsOpen}
         filters={filters}
         onFiltersChange={applyFilters}
-        currentUserId={currentUserId}
-        canSeeAll={canSeeAll}
         compact={narrow}
         onExpandStatuses={() => setStatusSheetOpen(true)}
       />
-
-      {statsOpen && (
-        <div className="mb-3">
-          <LeadsFinancePanel
-            cost={finance.cost}
-            commission={finance.commission}
-            onEditCosts={canEditCosts ? () => setCostsOpen(true) : undefined}
-          />
-          <LeadsPerformancePanel rows={performance} userById={userById} />
-        </div>
-      )}
 
       <FilterBar
         filters={filters}
@@ -1012,68 +1235,79 @@ export function LeadsClient({
         users={users}
         searchRef={searchRef}
         canFilterByAssignee={canSeeAll || canSeeTeam}
-        selectedCount={narrow ? 0 : visibleSelected.length}
+        // בכרטיסים לבחירה יש סרגל משלה (`LeadCardList`) — שני סרגלים
+        // קבוצתיים על אותה בחירה היו שתי דרכים לעשות אותו דבר
+        selectedCount={showCards ? 0 : visibleSelected.length}
         onBulkAssign={(id) => assign(visibleSelected, id)}
         onBulkStatus={(to) => requestStatus(visibleSelected, to)}
         onBulkDelete={() => setDeleteTarget(visibleSelected)}
         onClearSelection={() => setSelected(new Set())}
-        columnPicker={
-          // בורר העמודות הוא כלי של הטבלה בלבד — לכרטיס אין עמודות
+        /*
+          בורר המיון גלוי תמיד: בכרטיסים אין כותרות עמודה ללחוץ עליהן,
+          והכרטיסים הם ברירת המחדל גם בשולחן. בטבלה הוא והכותרות
+          כותבים לאותו `sort`, כך שהם לא יכולים לסתור זה את זה.
+        */
+        sortControl={<SortSelect sort={sort} onChange={applySort} />}
+        tools={
           narrow ? undefined : (
-            <ColumnPicker
-              visible={visibleColumns}
-              onChange={setVisibleColumns}
-              canSeeAll={canSeeAll}
-              canSeeTeam={canSeeTeam}
-            />
+            <>
+              <ViewToggle value={view} onChange={changeView} />
+              {showCards ? (
+                /* בטלפון "בחירה מרובה" יושבת בגיליון ה-`⋯`; בשולחן כאן */
+                <Button
+                  variant="secondary"
+                  icon="check"
+                  onClick={toggleSelecting}
+                  aria-pressed={selecting}
+                  className="h-9"
+                >
+                  {selecting ? "סיום בחירה" : "בחירה"}
+                </Button>
+              ) : (
+                // בורר העמודות הוא כלי של הטבלה בלבד — לכרטיס אין עמודות
+                <ColumnPicker
+                  visible={visibleColumns}
+                  onChange={setVisibleColumns}
+                  canSeeAll={canSeeAll}
+                  canSeeTeam={canSeeTeam}
+                />
+              )}
+            </>
           )
         }
         overflow={
           narrow ? (
-            <div className="flex shrink-0 items-center gap-2">
-              {/*
-                בטלפון אין כותרות עמודה ללחוץ עליהן — זה פקד המיון
-                היחיד. "תור עבודה" הוא ברירת המחדל; הכיוון קבוע לכל
-                אפשרות (שם עולה, תאריך חזרה עולה, השאר יורד) כי בורר
-                כיוון נפרד היה מכפיל את הפקד בשביל מקרה שאיש לא צריך.
-              */}
-              <select
-                value={sort.field}
-                onChange={(e) => {
-                  const field = e.target.value as SortField;
-                  applySort({ field, dir: SORT_PRIMARY_DIR[field] });
-                }}
-                aria-label="מיון"
-                className={`${inputClass} min-h-11 w-auto`}
-              >
-                <option value="queue">תור עבודה</option>
-                <option value="updatedAt">עודכן לאחרונה</option>
-                <option value="createdAt">חדשים קודם</option>
-                <option value="followUpAt">תאריך חזרה</option>
-                <option value="name">שם</option>
-              </select>
-              <Button
-                variant="secondary"
-                onClick={() => setMoreOpen(true)}
-                aria-label="פעולות נוספות"
-                className="size-11 shrink-0 px-0"
-              >
-                <span aria-hidden className="text-lg leading-none">
-                  ⋯
-                </span>
-              </Button>
-            </div>
+            <Button
+              variant="secondary"
+              onClick={() => setMoreOpen(true)}
+              aria-label="פעולות נוספות"
+              className="size-11 shrink-0 px-0"
+            >
+              <span aria-hidden className="text-lg leading-none">
+                ⋯
+              </span>
+            </Button>
           ) : undefined
         }
         busy={pending}
+      />
+
+      <QuickViews
+        filters={filters}
+        onFiltersChange={applyFilters}
+        currentUserId={currentUserId}
+        canSeeAll={canSeeAll}
       />
 
       {/*
         טבלה או כרטיסים — אחד מהם, לא שניהם עם `hidden`. רינדור כפול
         היה מכפיל 50 שורות × 11 תאים ואת כל ה-`<select>`-ים שבתוכן,
         דווקא על המכשיר החלש ביותר. ראה `useIsNarrow`.
+
+        כרטיסים: תמיד בטלפון, ובשולחן כברירת מחדל (`view`). אותם props
+        בדיוק כמו בטלפון — כולל מצב הבחירה ופעולותיו.
       */}
-      {narrow ? (
+      {showCards ? (
         <LeadCardList
           leads={paged}
           tiers={queueTiers}
@@ -1321,6 +1555,98 @@ export function LeadsClient({
       </Modal>
 
       <ToastStack toasts={toasts} onDismiss={dismiss} />
+    </div>
+  );
+}
+
+/**
+ * בורר המיון שבסרגל החיפוש — ראה `SORT_OPTIONS`.
+ *
+ * ⚠️ ערך האפשרות כולל את הכיוון (`createdAt:asc`), כי "חדשים קודם" ו"ישנים
+ * קודם" הם אותו שדה. מיון שלא ברשימה — לחיצה שנייה על כותרת בטבלה הופכת
+ * את הכיוון — מקבל אפשרות משלו ("· סדר הפוך"), אחרת הבורר היה מציג
+ * בשקט מיון אחר מזה שעל המסך.
+ *
+ * ⚠️ `min-w-0 max-w-full` לצד `w-auto` — ל-`<select>` יש רוחב מובנה לפי
+ * האפשרות הארוכה ביותר, ובפריט flex הוא לא מתכווץ מתחתיו בלי זה. ראה
+ * ההערה המקבילה בסרגל הבחירה של `FilterBar`.
+ */
+function SortSelect({
+  sort,
+  onChange,
+}: {
+  sort: SortState;
+  onChange: (s: SortState) => void;
+}) {
+  const value = sortValue(sort);
+  const listed = SORT_OPTIONS.some((o) => sortValue(o) === value);
+
+  return (
+    <select
+      value={value}
+      onChange={(e) => {
+        const [field, dir] = e.target.value.split(":") as [
+          SortField,
+          ("asc" | "desc")?,
+        ];
+        onChange({ field, dir: dir ?? SORT_PRIMARY_DIR[field] });
+      }}
+      aria-label="מיון"
+      title="מיון"
+      className={`${inputClass} w-auto min-w-0 max-w-full`}
+    >
+      {SORT_OPTIONS.map((o) => (
+        <option key={sortValue(o)} value={sortValue(o)}>
+          {o.label}
+        </option>
+      ))}
+      {!listed && (
+        <option value={value}>{SORT_FIELD_LABEL[sort.field]} · סדר הפוך</option>
+      )}
+    </select>
+  );
+}
+
+/**
+ * כרטיסים / טבלה — בשולחן בלבד (בטלפון תמיד כרטיסים).
+ *
+ * שני צ׳יפים של המקור בתוך מסגרת אחת `rounded-full`, ולא רכיב "מתג"
+ * חדש: נבחר = כחול מלא, כמו כל צ׳יפ נבחר במסך.
+ */
+function ViewToggle({
+  value,
+  onChange,
+}: {
+  value: LeadsView;
+  onChange: (v: LeadsView) => void;
+}) {
+  const options: { value: LeadsView; label: string }[] = [
+    { value: "cards", label: "כרטיסים" },
+    { value: "table", label: "טבלה" },
+  ];
+
+  return (
+    <div
+      role="group"
+      aria-label="תצוגת הלידים"
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-line bg-surface p-0.5"
+    >
+      {options.map((o) => {
+        const on = value === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            aria-pressed={on}
+            className={`rounded-full px-3 py-1 text-[13px] font-medium transition-colors ${
+              on ? "bg-brand text-on-brand" : "text-ink-2 hover:text-ink-1"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

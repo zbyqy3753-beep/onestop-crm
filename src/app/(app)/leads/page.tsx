@@ -16,8 +16,17 @@ import { teamScopeIds } from "@/server/auth/team";
 import type { Lead, LeadStatus, UserRef } from "@/lib/domain/types";
 import { STATUS_ORDER } from "@/lib/domain/types";
 import type { LeadFilter } from "@/server/repositories";
-import { periodFromParams } from "@/lib/domain/period";
-import { PeriodPicker } from "@/components/leads/PeriodPicker";
+import {
+  FROM_PARAM,
+  PERIOD_LABEL,
+  PERIOD_PARAM,
+  TO_PARAM,
+  periodFromParams,
+  toDateInput,
+  type Period,
+} from "@/lib/domain/period";
+import { dayKey } from "@/lib/tz";
+import type { MonthTab, PeriodNav } from "@/components/leads/PeriodPicker";
 
 /**
  * מה הצוות כתב על הליד, בערוץ אחד ולפי סדר הזמן.
@@ -50,6 +59,139 @@ function teamNotes(lead: Lead): SupplierLeadRow["notes"] {
       return body ? [{ body, createdAt: event.createdAt, status: event.to }] : [];
     }),
   ].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+/* ── תיקיית החודשים ──────────────────────────────────────────────────── */
+
+/**
+ * שמות החודשים. רשימה קבועה ולא `Intl` — אותה מחרוזת בכל סביבה, בלי
+ * תלות בנתוני ה-ICU של השרת.
+ */
+const MONTH_NAMES = [
+  "ינואר",
+  "פברואר",
+  "מרץ",
+  "אפריל",
+  "מאי",
+  "יוני",
+  "יולי",
+  "אוגוסט",
+  "ספטמבר",
+  "אוקטובר",
+  "נובמבר",
+  "דצמבר",
+];
+
+/**
+ * כמה חודשים מוצגים כלשוניות, כולל הנוכחי.
+ *
+ * שישה ולא יותר: כל לשונית היא שאילתת ספירה, והמסך מתרענן כל דקה.
+ * חודש ישן יותר — דרך שדות התאריך או "תקופה אחרת".
+ */
+const MONTH_TABS = 6;
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** היום האחרון בחודש (`month` מ-1): יום 0 של החודש הבא הוא האחרון של זה. */
+function lastDayOf(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+interface MonthSpan {
+  year: number;
+  month: number;
+  /** `YYYY-MM-DD` — הערכים שהלשונית כותבת לכתובת */
+  from: string;
+  to: string;
+  /** אותם גבולות כרגעים — בדיוק מה ש-`periodFromParams` יחזיר בלחיצה */
+  isoFrom: string;
+  isoTo: string;
+}
+
+/**
+ * החודש הנוכחי ו-`n - 1` שלפניו, בשעון ישראל, מהחדש לישן.
+ *
+ * ⚠️ הגבולות נגזרים מ-`periodFromParams` עצמו, עם אותם פרמטרים שהלשונית
+ * כותבת לכתובת — ולא מחישוב מקביל כאן. כך המספר על הלשונית נספר בדיוק
+ * על הטווח שהלחיצה עליה תשלוף, ו"הלשונית הנבחרת" היא השוואת מחרוזות.
+ * (`thisMonth` ו-`lastMonth` נותנים בדיוק את אותם רגעים — ראה
+ * `monthBounds` ב-period.ts — ולכן גם הם מסמנים את הלשונית הנכונה.)
+ *
+ * ⚠️ `dayKey` ולא `new Date().getMonth()`: השרת רץ ב-UTC, ובחצות של ה-1
+ * לחודש בישראל הוא עדיין בחודש הקודם.
+ */
+function recentMonths(now: number, n: number): MonthSpan[] {
+  const [year, month] = dayKey(now).split("-").map(Number);
+  return Array.from({ length: n }, (_, i) => {
+    const index = year * 12 + (month - 1) - i;
+    const y = Math.floor(index / 12);
+    const m = (index % 12) + 1;
+    const from = `${y}-${pad2(m)}-01`;
+    const to = `${y}-${pad2(m)}-${pad2(lastDayOf(y, m))}`;
+    const bounds = periodFromParams(
+      { [PERIOD_PARAM]: "custom", [FROM_PARAM]: from, [TO_PARAM]: to },
+      now,
+    );
+    return {
+      year: y,
+      month: m,
+      from,
+      to,
+      isoFrom: bounds.from ?? "",
+      isoTo: bounds.to ?? "",
+    };
+  });
+}
+
+/** אם הטווח הוא חודש קלנדרי שלם (החודש, החודש שעבר, לשונית) — איזה. */
+function wholeMonth(p: Period): { year: number; month: number } | null {
+  if (!p.from || !p.to) return null;
+  const [fy, fm, fd] = toDateInput(p.from).split("-").map(Number);
+  const [ty, tm, td] = toDateInput(p.to, true).split("-").map(Number);
+  if (fd !== 1 || fy !== ty || fm !== tm || td !== lastDayOf(fy, fm)) return null;
+  return { year: fy, month: fm };
+}
+
+/** `YYYY-MM-DD` → `13.10.2026` */
+function shortDate(ymd: string): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return `${d}.${m}.${y}`;
+}
+
+/** "אוקטובר", ובשנה אחרת "דצמבר 2025" */
+function monthLabel(year: number, month: number, currentYear: number): string {
+  const name = MONTH_NAMES[month - 1];
+  return year === currentYear ? name : `${name} ${year}`;
+}
+
+/**
+ * הטווח ולשוניות החודשים, מ"עכשיו" **אחד** לכל הבקשה.
+ *
+ * הטווח, הלשוניות והשאלה אם הטווח מגיע עד היום נשענים כולם על השעון.
+ * קריאות נפרדות היו יכולות להתפצל על חצות של ה-1 בחודש — טווח של חודש
+ * אחד ולשוניות של אחר, ואף לשונית לא מסומנת.
+ *
+ * פונקציה ולא שורה בגוף הרכיב: `react-hooks/purity` אוסר `Date.now()`
+ * ישירות ברינדור, גם ברכיב שרת.
+ */
+function periodContext(params: Record<string, string | string[] | undefined>) {
+  const now = Date.now();
+  return {
+    now,
+    period: periodFromParams(params, now),
+    months: recentMonths(now, MONTH_TABS),
+  };
+}
+
+/** השם שעל "תקופה אחרת" כשהטווח אינו אחת הלשוניות. */
+function otherPeriodLabel(p: Period, currentYear: number): string {
+  const month = wholeMonth(p);
+  if (month) return monthLabel(month.year, month.month, currentYear);
+  if (p.key !== "custom") return PERIOD_LABEL[p.key];
+  const from = p.from ? shortDate(toDateInput(p.from)) : null;
+  const to = p.to ? shortDate(toDateInput(p.to, true)) : null;
+  if (from && to) return `${from}–${to}`;
+  return from ? `מ-${from}` : `עד ${to}`;
 }
 
 /**
@@ -179,7 +321,7 @@ export default async function LeadsPage({
    * ⚠️ מוחל על `scoped` שעובר גם ל-`list` וגם ל-`countByStatus`, ולכן
    * הריבועים והטבלה חתוכים זהה. ראה lib/domain/period.ts
    */
-  const period = periodFromParams(await searchParams);
+  const { now, period, months } = periodContext(await searchParams);
   const scoped: LeadFilter = {
     ...scope,
     ...(period.from ? { createdFrom: period.from } : {}),
@@ -187,34 +329,96 @@ export default async function LeadsPage({
   };
 
   const [
-    { rows: leads },
-    allUsers,
-    openInRange,
-    openAllTime,
-    leadCosts,
-    allDeals,
-    packages,
+    [{ rows: leads }, allUsers, openInRange, openAllTime, leadCosts, allDeals, packages],
+    [openHotInRange, openHotAllTime, allTimeHot],
+    monthCounts,
   ] = await Promise.all([
-    db.leads.list(scoped),
-    db.users.listActive(),
+    Promise.all([
+      db.leads.list(scoped),
+      db.users.listActive(),
+
+      /*
+       * ⚠️⚠️ שתי ספירות של לידים **פתוחים** — בתוך הטווח ומחוץ לזמן.
+       * ההפרש ביניהן הוא כמה עבודה פתוחה החתך מסתיר, וזו האזהרה
+       * היחידה שמונעת מברירת המחדל החודשית לבלוע לידים ב-1 בחודש.
+       * ראה PeriodPicker › openOutsideRange.
+       */
+      db.leads.countByStatus({ ...scoped, openOnly: true }),
+      db.leads.countByStatus({ ...scope, openOnly: true }),
+
+      db.settings.getLeadCosts(),
+      db.deals.list(),
+      db.packages.list(),
+    ]),
 
     /*
-     * ⚠️⚠️ שתי ספירות של לידים **פתוחים** — בתוך הטווח ומחוץ לזמן.
-     * ההפרש ביניהן הוא כמה עבודה פתוחה החתך מסתיר, וזו האזהרה
-     * היחידה שמונעת מברירת המחדל החודשית לבלוע לידים ב-1 בחודש.
-     * ראה PeriodPicker › openOutsideRange.
+     * ⚠️ אותן שתי ספירות, **לחמים בלבד** — ועוד סך החמים מכל הזמן
+     * (המספר על "הכל").
+     *
+     * הפיצול קיים כדי שהמספר על האזהרה יהיה בדיוק מה שהלחיצה עליה
+     * מראה. התור מסתיר דאטה קרה עד שמבקשים אותה (`KindToggle`), כך
+     * שייבוא ישן של 358 שורות דאטה היה מחזיק אזהרה קבועה של "358
+     * פתוחים" מעל רשימה שמוסיפה 7 — אזהרה שלומדים להתעלם ממנה בדיוק
+     * ביום שהיא אמיתית. `LeadsClient` בוחר את החלק לפי בורר הסוג.
      */
-    db.leads.countByStatus({ ...scoped, openOnly: true }),
-    db.leads.countByStatus({ ...scope, openOnly: true }),
+    Promise.all([
+      db.leads.countByStatus({ ...scoped, kind: ["hot"], openOnly: true }),
+      db.leads.countByStatus({ ...scope, kind: ["hot"], openOnly: true }),
+      db.leads.countByStatus({ ...scope, kind: ["hot"] }),
+    ]),
 
-    db.settings.getLeadCosts(),
-    db.deals.list(),
-    db.packages.list(),
+    /*
+     * המספר על כל לשונית חודש: לידים **חמים** שנכנסו בחודש — אותו מונה
+     * כמו "N לידים" בסיכום (`hotLeads` ב-`LeadsClient`), כדי שהלשונית
+     * הנבחרת והסיכום יגידו את אותו מספר.
+     *
+     * ⚠️ קריאה בלבד, ו-`scope` תמיד בפנים — עובד רואה על הלשונית רק את
+     * הלידים שלו, בדיוק כמו ברשימה. מונה של כל הארגון היה מדליף כמה
+     * לידים נכנסו לאחרים, וגם סותר את הרשימה שמתחתיו.
+     */
+    Promise.all(
+      months.map((m) =>
+        db.leads.countByStatus({
+          ...scope,
+          kind: ["hot"],
+          createdFrom: m.isoFrom,
+          createdTo: m.isoTo,
+        }),
+      ),
+    ),
   ]);
 
   const sum = (c: Record<string, number>) =>
     Object.values(c).reduce((a, b) => a + b, 0);
   const openOutsideRange = Math.max(0, sum(openAllTime) - sum(openInRange));
+  const openOutsideHot = Math.min(
+    openOutsideRange,
+    Math.max(0, sum(openHotAllTime) - sum(openHotInRange)),
+  );
+
+  /*
+   * כל מה ששורת החודשים צריכה — מחושב כאן, בשרת, ועובר כנתונים.
+   * "החודש הנוכחי" בלקוח היה מסכים עם השרת בכל רגע חוץ מחצות של ה-1
+   * בחודש, ואז הלשוניות היו זזות אחת הצידה בהידרציה.
+   */
+  const currentYear = months[0].year;
+  const monthTabs: MonthTab[] = months.map((m, i) => ({
+    from: m.from,
+    to: m.to,
+    label: monthLabel(m.year, m.month, currentYear),
+    count: sum(monthCounts[i]),
+    current: i === 0,
+    active: period.from === m.isoFrom && period.to === m.isoTo,
+  }));
+  const onTab = period.key === "all" || monthTabs.some((t) => t.active);
+  const periodNav: PeriodNav = {
+    period,
+    months: monthTabs,
+    allCount: sum(allTimeHot),
+    otherLabel: onTab ? null : otherPeriodLabel(period, currentYear),
+    reachesNow: period.to === null || Date.parse(period.to) > now,
+    openOutside: { hot: openOutsideHot, data: openOutsideRange - openOutsideHot },
+  };
 
   /*
    * ⚠️ המסך שולח יותר מהלידים עצמם, וגם הנלווה חייב להיחתך.
@@ -277,9 +481,7 @@ export default async function LeadsPage({
       canSeeAll={canSeeAllLeads(currentUser.role)}
       canSeeTeam={isTeamLead}
       canEditCosts={canManageSettings(currentUser.role)}
-      periodPicker={
-        <PeriodPicker period={period} openOutsideRange={openOutsideRange} />
-      }
+      periodNav={periodNav}
     />
   );
 }

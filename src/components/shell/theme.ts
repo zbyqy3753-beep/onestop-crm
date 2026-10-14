@@ -5,10 +5,15 @@ export const THEME_STORAGE_KEY = "onestop.theme";
 /**
  * מורץ inline ב-<head>, לפני הציור הראשון.
  *
- * סדר העדיפויות: בחירה מפורשת של המשתמש → העדפת מערכת ההפעלה → בהיר.
- * מכווץ ידנית כי הוא נכנס ל-HTML כמחרוזת.
+ * סדר העדיפויות: בחירה מפורשת של המשתמש (כפתור התמה) → בהיר.
+ *
+ * ⚠️ **לא** עוקב אחרי `prefers-color-scheme`: מכשיר עם מערכת כהה פתח
+ * את ה-CRM כהה בלי שאיש בחר בזה, ובעל המערכת ביקש שייפתח בהיר בכל
+ * מכשיר ("תשנה לבהיר", אוקטובר 2026). הכהה זמינה דרך הכפתור ונשמרת.
+ * ה-`<html>` ב-layout כבר נושא `data-theme="light"`, ולכן הסקריפט רק
+ * דורס ל-"dark" כשזו הבחירה. מכווץ ידנית כי הוא נכנס ל-HTML כמחרוזת.
  */
-export const THEME_INIT_SCRIPT = `(function(){try{var k="${THEME_STORAGE_KEY}",s=localStorage.getItem(k),t=s||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(function(){try{if(localStorage.getItem("${THEME_STORAGE_KEY}")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();`;
 
 /**
  * התמה נשמרת ב-DOM, לא ב-React — הסקריפט ה-inline כותב אותה לפני

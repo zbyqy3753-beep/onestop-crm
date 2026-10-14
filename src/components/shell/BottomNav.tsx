@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import type { Role } from "@/lib/domain/types";
-import { mobileTabsFor } from "./nav";
+import { activeHref, mobileTabsFor } from "./nav";
 
 /**
  * הניווט של הטלפון.
@@ -32,6 +32,8 @@ export function BottomNav({
   moreOpen: boolean;
 }) {
   const tabs = mobileTabsFor(role);
+  // הקידומת הארוכה ביותר — כדי ש-`/leads/missed` לא ידליק גם את "לידים"
+  const current = activeHref(pathname);
 
   return (
     <nav
@@ -42,7 +44,7 @@ export function BottomNav({
       className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] ps-[env(safe-area-inset-right)] pe-[env(safe-area-inset-left)] lg:hidden"
     >
       {tabs.map((item) => {
-        const active = pathname.startsWith(item.href);
+        const active = item.href === current;
         return (
           <Link
             key={item.href}

@@ -335,17 +335,17 @@ function QueueTierRow({
       >
         <span className="flex items-baseline gap-2">
           <span
-            className="text-[12px] font-semibold"
+            className="text-xs font-semibold"
             style={{ color: TONE_VAR[meta.tone] }}
           >
             {meta.label}
           </span>
-          <span className="nums text-[12px] text-ink-3">
+          <span className="nums text-xs text-ink-3">
             {number(tiers.totals[tier])}
           </span>
           {/* ההסבר מה השכבה אומרת. "באיחור" לבדו לא מבדיל בין "מועד
               החזרה עבר" לבין "הליד יושב יותר מדי זמן" */}
-          <span className="text-[11px] text-ink-4">{meta.hint}</span>
+          <span className="text-xs text-ink-4">{meta.hint}</span>
         </span>
       </td>
     </tr>
