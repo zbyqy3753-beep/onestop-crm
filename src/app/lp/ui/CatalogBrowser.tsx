@@ -9,6 +9,7 @@ import {
   afterPrice,
   byPrice,
   electricityRank,
+  freeText,
   hasKnownAfterPrice,
   isMoney,
   providerName,
@@ -174,8 +175,17 @@ export function matchesFilters(
     const slug = providerSlug(p);
     if (slug == null || !f.providers.includes(slug)) return false;
   }
-  if (except !== "types" && f.types.length > 0 && !(p.type != null && f.types.includes(p.type))) {
-    return false;
+  /*
+   * ⚠️ `freeText` ולא `p.type != null`. `type` הוא טקסט חופשי מאותו
+   * מחלץ, והשבב שמתחת מדפיס אותו כילד של React: `type: {}` זרק
+   * `Objects are not valid as a React child` בתוך רינדור השרת והחזיר
+   * את `/lp` כולו ב-500 (אומת), ו-`type: 5` נכנס כמפתח ל-`selectedTypes`
+   * שמוצהר `string[]`. `savings.ts:441` כבר גודר את אותו שדה ומתעד
+   * את אותו `type: 5`; השכבה שמדפיסה היא זו שנשכחה. ראה `text.ts`.
+   */
+  if (except !== "types" && f.types.length > 0) {
+    const type = freeText(p.type);
+    if (type == null || !f.types.includes(type)) return false;
   }
   if (except !== "maxPrice" && f.maxPrice != null && sliderPrice(p) > f.maxPrice) return false;
   return true;
@@ -229,10 +239,13 @@ export function providerFacets(packages: Package[], f: CatalogFilters) {
 export function typeFacets(packages: Package[], f: CatalogFilters): [string, number][] {
   const map = new Map<string, number>();
   for (const p of packages) {
-    if (!p.type) continue;
+    // ⚠️ אותו שער משותף כמו ב-`matchesFilters`: סוג שאינו טקסט אינו
+    // יכול להיות אפשרות בתפריט — ראה `freeText`.
+    const type = freeText(p.type);
+    if (type == null) continue;
     const passes = matchesFilters(p, f, "types");
-    if (!passes && !f.types.includes(p.type)) continue;
-    map.set(p.type, (map.get(p.type) ?? 0) + (passes ? 1 : 0));
+    if (!passes && !f.types.includes(type)) continue;
+    map.set(type, (map.get(type) ?? 0) + (passes ? 1 : 0));
   }
   return [...map.entries()].sort((a, b) => b[1] - a[1]);
 }

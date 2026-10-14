@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderLogo } from "./ProviderLogo";
 import { compareRows, discountIsCapped, headlineValue, promoRise, shekels } from "../catalog/format";
-import { hasKnownAfterPrice, providerLogo, providerName } from "../catalog/catalog";
+import {
+  hasKnownAfterPrice,
+  packageLabel,
+  packageTitle,
+  providerLogo,
+  providerName,
+} from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
 /**
@@ -236,8 +242,15 @@ export function CompareTray({
             className="order-last flex w-full flex-nowrap gap-2 overflow-x-auto sm:order-none sm:w-auto sm:flex-1 sm:flex-wrap sm:overflow-visible"
           >
             {items.map((p, i) => (
+              /*
+                ⚠️ שם החבילה דרך `packageTitle`/`packageLabel` ולא `p.name`
+                חשוף — ראה `text.ts`. `name: {}` זרק כאן `Objects are not
+                valid as a React child` (אומת), כלומר רשומה אחת פגומה
+                בבחירה הפילה את רינדור הדף כולו; והשם הנגיש נופל חזרה לשם
+                הספק, כי "הסר את  מההשוואה" הוא פקד שאינו אומר על מה.
+              */
               <li key={p.id} className="flex shrink-0 items-center gap-1 rounded-full bg-lp-surface-2 px-3 py-1 text-xs">
-                <span className="max-w-[10rem] truncate text-lp-ink">{p.name}</span>
+                <span className="max-w-[10rem] truncate text-lp-ink">{packageTitle(p)}</span>
                 <button
                   type="button"
                   data-lp-chip-remove
@@ -246,7 +259,7 @@ export function CompareTray({
                     removedBoxId.current = compareCheckboxId(p);
                     onRemove(p);
                   }}
-                  aria-label={`הסר את ${p.name} מההשוואה`}
+                  aria-label={`הסר את ${packageLabel(p, providerName(p))} מההשוואה`}
                   className="-my-1 inline-flex min-h-9 min-w-9 items-center justify-center text-lp-ink-3 hover:text-lp-rise"
                 >
                   ✕
@@ -382,7 +395,8 @@ export function CompareSheet({
                     className="border-b border-lp-line p-2 text-start align-bottom"
                   >
                     <ProviderLogo logo={providerLogo(p)} name={providerName(p)} size={26} />
-                    <div className="mt-1 text-xs font-semibold text-lp-ink">{p.name}</div>
+                    {/* ⚠️ `packageTitle` ולא `p.name` — אותו שער כמו בשבב ובכרטיס. */}
+                    <div className="mt-1 text-xs font-semibold text-lp-ink">{packageTitle(p)}</div>
                   </th>
                 ))}
               </tr>

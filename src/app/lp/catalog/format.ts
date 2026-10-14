@@ -144,8 +144,12 @@ const isCount = (value: unknown): value is number =>
  * שחסר כאן הוא השכבה שמדפיסה. `spec` שאינו אובייקט נקרא כ"לא נמסר
  * דבר": כל שערי ה-`isCount`/`typeof` שמתחת מפילים את האריחים
  * והשורות בשקט, כמו רשומה שכל שדות ה-`spec` שלה ריקים (ids 132, 100).
+ *
+ * ⚠️ מיוצאת מאותו טעם ש-`installationIsConditional` מיוצאת: סטודיו
+ * הפוסטים קרא `p.spec.hoursText` ישירות, כלומר אותה נפילה בדיוק נשארה
+ * פתוחה במשטח הרביעי. שער אחד לארבעת הצרכנים.
  */
-const specOf = <T>(pkg: Package): T =>
+export const specOf = <T>(pkg: Package): T =>
   (pkg.spec != null && typeof pkg.spec === "object" && !Array.isArray(pkg.spec)
     ? pkg.spec
     : {}) as T;
@@ -280,8 +284,18 @@ function privateHomeInstallation(pkg: Package): number | null {
   return null;
 }
 
-/** הרשומה מתנה את ההתקנה בסוג הבית — גם כשלא נקרא ממנה מספר. */
-function installationIsConditional(pkg: Package): boolean {
+/**
+ * הרשומה מתנה את ההתקנה בסוג הבית — גם כשלא נקרא ממנה מספר.
+ *
+ * ⚠️ מיוצאת כי יש **צרכן רביעי** מחוץ לדף: `src/lib/posts/catalog.ts`
+ * (סטודיו הפוסטים) פרסם `installationCost` גולמי, ולכן "0" הודפס
+ * "התקנה: ללא עלות" על 15 רשומות שהפרוזה שלהן מוכרת 125/499 ש"ח לבית
+ * פרטי. זה בדיוק הדפוס שחזר כאן שבע פעמים — שער שחובר לכרטיס ולא לשאר
+ * המשטחים שמדפיסים את אותו שדה — ובפוסט הוא גרוע מבאתר: המספר מתפרסם
+ * בשם של אלירן, והקובץ שמייצר אותו מצהיר בהערה שלו שמספר שאינו מה
+ * שהגולש רואה הוא הסתירה שהפוסטים טוענים לחשוף.
+ */
+export function installationIsConditional(pkg: Package): boolean {
   const prose = installationProse(pkg);
   return /התקנ/.test(prose) && /בית\s*פרטי/.test(prose);
 }
@@ -565,7 +579,15 @@ export function cardStats(pkg: Package): Stat[] {
      * מקומות, וזה בדיוק מה ששתי בדיקות התצוגה אוסרות. כשהעלות מותנית
      * העובדה נאמרת במקום אחד — בשורת הפירוט — ושם היא שלמה.
      */
-    if (out.length < 3 && typeof spec.installationCost === "number" && !installationIsConditional(pkg)) {
+    /*
+     * ⚠️ `isCount` ולא `typeof === "number"`, כמו בכל אריח אחר: `NaN`
+     * **הוא** number, ו-`=== 0` לא תפס אותו, ולכן `shekels(NaN)` הדפיס
+     * אריח שכל ערכו "—" מתחת לכיתוב "התקנה" — ועוד תפס אחד משלושת
+     * המקומות בשלישיית הכותרות, כלומר דחק עובדה אמיתית. "אריח שנשמט
+     * עדיף על אריח שמדפיס חור" הוא אותו כלל שבנה את `isCount`; שורת
+     * הפירוט מתחת מדרדרת ממילא ל-"—" דרך `fee`, שם מקומו של קו מפריד.
+     */
+    if (out.length < 3 && isCount(spec.installationCost) && !installationIsConditional(pkg)) {
       out.push({
         value: spec.installationCost === 0 ? "ללא עלות" : shekels(spec.installationCost),
         caption: "התקנה",
@@ -594,7 +616,17 @@ export function cardStats(pkg: Package): Stat[] {
    * ההשוואה `undefined` נופל ל-"—" — כלומר הדף מכחיש נתון שהחבילה
    * כן נושאת. עדיף להשמיט את האריח מאשר להדפיס חור.
    */
-  const customerType = CUSTOMER_TYPE_HE[spec.customerType];
+  /*
+   * ⚠️ `Object.hasOwn` ולא קריאה ישירה מהמפה. השער נכתב כדי שערך רביעי
+   * ברענון (למשל `municipal`) ישמיט את האריח, אבל כל מפת אובייקט ירשה
+   * את `Object.prototype`: `customerType: "toString"` — ערך שאינו
+   * בטיפוס, כמו כל השדות שהקובץ הזה גודר — היה מחזיר **פונקציה**
+   * טרות'ית, וזו עוברת ל-React כערך אריח. אותה מחלקת נפילה של
+   * `hoursText` כאובייקט, רק דרך ירושה ולא דרך הנתון.
+   */
+  const customerType = Object.hasOwn(CUSTOMER_TYPE_HE, spec.customerType)
+    ? CUSTOMER_TYPE_HE[spec.customerType]
+    : undefined;
   if (customerType) out.push({ value: customerType, caption: "מיועד ל" });
   if (spec.smartMeterRequired === true) out.push({ value: "מונה חכם", caption: "נדרש" });
   else if (spec.smartMeterRequired === false) out.push({ value: "כל המונים", caption: "מתאים ל" });
@@ -704,7 +736,10 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     // ⚠️ עלות מותנית אינה מקבלת אריח (ראה `cardStats`), ולכן `tiled`
     // לעולם אינו חוסם אותה כאן — השורה היא המקום היחיד שאומר אותה.
     if (!tiled.has("התקנה")) {
-      if (typeof s.installationCost === "number") {
+      // ⚠️ `isCount` כמו באריח: `NaN` נופל ל-`fee` ומודפס "—", ולא
+      // מגיע ל-`installationDetail` שהיה כותב "— בבניין · ₪499 לבית
+      // פרטי" — חצי מספר אמיתי וחצי חור, על אותה שורה.
+      if (isCount(s.installationCost)) {
         rows.push({ label: "עלות התקנה", value: installationDetail(pkg, s.installationCost) });
       } else {
         fee("עלות התקנה", s.installationCost);

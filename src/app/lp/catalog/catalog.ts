@@ -78,8 +78,29 @@ export function logicName(p: Package): string {
   return p.rawName ?? p.name;
 }
 
+/*
+ * ⚠️ רשומה שאינה אובייקט נופלת כאן, לפני שנקרא ממנה שדה אחד.
+ *
+ * זה אותו שער בדיוק שרשימת הספקים כבר קיבלה (`catalogProviders` מתחת,
+ * ושם ההערה מנמקת אותו) — ולא הוחל על **מערך החבילות**, האח שלו. ההפרש
+ * בחומרה לרעת זה שנשכח: `catalog.providers` נקרא רק מתוך `providers()`,
+ * ואילו `basePackages()` היא **השורה הראשונה של `page.tsx`**. `null`
+ * אחד במערך זרק כאן `TypeError` על `.name` (אומת) והפיל את רינדור השרת
+ * של `/lp` כולו — לפני הירו, לפני המונים, לפני כל שער אחר. מחלץ שמייצר
+ * קובץ JSON הוא בדיוק המקום שבו רשומה חסרה נראית כ-`null` במערך.
+ *
+ * ⚠️ גם ערך פרימיטיבי (מחרוזת, מספר) ולא רק `null`: הוא אינו זורק מיד,
+ * אבל הוא זורם לכל הגזירות שמתחת כרשומה לכל דבר ונופל רק בשער כזה או
+ * אחר — ושקט שתלוי במקריות אינו שער. מי שנופל כאן נעלם מ-`PACKAGES`,
+ * כלומר גם מההשוואה מול `catalog.counts` בבדיקות: הצהרה של 109 מול
+ * מערך של 108 מכשילה בשם במקום לעבור בשתיקה.
+ */
+function usablePackage(p: unknown): p is Package {
+  return p != null && typeof p === "object" && !Array.isArray(p);
+}
+
 export function basePackages(): Package[] {
-  return catalog.packages.map((p) => {
+  return catalog.packages.filter(usablePackage).map((p) => {
     // ⚠️ שם שאינו מחרוזת נשאר כמות שהוא, ולא נדרס במחרוזת ריקה:
     // `displayName` מחזירה "" על קלט כזה (ראה ההערה שם), ודריסה הייתה
     // **מוחקת** את הראיה היחידה שהרשומה פגומה. הגזירות שמתחת
@@ -534,9 +555,31 @@ export function providers(packages: Package[]): Provider[] {
     (p): p is Provider => p != null && typeof p === "object" && typeof p.slug === "string" && !!p.slug,
   );
   const known = new Set(catalogProviders.map((p) => p.slug));
+  /*
+   * ⚠️ גם השם והלוגו **שברשימת הספקים** עוברים את אותם שערים.
+   *
+   * הסינון שמעל בדק `slug` בלבד, ושאר השדות הועברו כמות שהם ישר
+   * לרצועה: רשומת ספק עם `name: null` ציירה בהירו `title="חבילות null"`
+   * (אומת), כלומר בדיוק מה ש-`providerName` נכתב למנוע — רק שהוא הוחל
+   * על ה-`ProviderRef` שעל החבילה ולא על האח שלו, רשומת הקטלוג. זה
+   * הדפוס שהקובץ הזה מתעד שוב ושוב: שער שחובר למשטח אחד ולא לשני.
+   *
+   * ⚠️ הנפילה חזרה היא ל-`ProviderRef` של חבילה אמיתית של אותו ספק,
+   * ולא ל-`slug` ישר: `fromCatalog` נבנה רק לספק שיש לו חבילה גלויה
+   * (`counts > 0`), ולכן ה-`ref` קיים תמיד — ודווקא הוא עשוי להחזיק את
+   * השם היפה שרשומת הקטלוג איבדה. `providerName` ממילא נופל ל-`slug`.
+   */
   const fromCatalog: Provider[] = catalogProviders
     .filter((p) => (counts.get(p.slug) ?? 0) > 0)
-    .map((p) => ({ ...p, count: counts.get(p.slug)! }));
+    .map((p) => {
+      const own = refs.get(p.slug)!;
+      return {
+        ...p,
+        name: typeof p.name === "string" && p.name ? p.name : providerName(own[0]),
+        logo: typeof p.logo === "string" && p.logo ? p.logo : (providerLogo(own[0]) ?? ""),
+        count: counts.get(p.slug)!,
+      };
+    });
   const fromPackages: Provider[] = [...refs.entries()]
     .filter(([slug]) => !known.has(slug))
     .map(([slug, own]) => ({
@@ -550,6 +593,17 @@ export function providers(packages: Package[]): Provider[] {
   return [...fromCatalog, ...fromPackages].sort((a, b) => b.count - a.count);
 }
 
+/**
+ * הצהרה מילולית על עליית מחיר שבאמת תגיע למסך.
+ *
+ * ⚠️ מחרוזת לא ריקה, בדיוק כמו `promoRise` ב-`format.ts` — המשטח
+ * **היחיד** שמדפיס את השדה הזה. השער המספרי לצידו (`isMoney` על
+ * `priceAfterPromo`) כבר מרוכז כאן; זה היה החצי שנשאר כל אחד לעצמו.
+ */
+function hasRiseNote(p: Package): boolean {
+  return typeof p.priceAfterPromoNote === "string" && p.priceAfterPromoNote !== "";
+}
+
 /** כמה חבילות מגלות את המחיר שאחרי ההטבה — נתון האמון של הדף. */
 export function disclosedRiseCount(packages: Package[]): number {
   return listable(packages).filter(
@@ -558,7 +612,12 @@ export function disclosedRiseCount(packages: Package[]): number {
       // ⚠️ `isMoney` ולא `!= null`: `priceAfterPromo: 0` אינו הצהרה על
       // עליית מחיר אלא שדה שלא נקרא, ו"נתון האמון" של הדף אינו יכול
       // להיות מנופח על ידי בדיוק הרשומות שלא דיווחו כלום.
-      (isMoney(p.priceAfterPromo) || p.priceAfterPromoNote != null),
+      // ⚠️ ואותו כלל בדיוק על ההערה המילולית. `!= null` ספר כהצהרה גם
+      // `""`, גם `0` וגם אובייקט (אומת: כל אחד מהם הגדיל את המונה ב-1
+      // בזמן ש-`promoRise` לא החזירה דבר) — כלומר הדף הצהיר על שקיפות
+      // שאין מאחוריה שורה אחת על אף כרטיס. מונה אמון שסופר אחרת מהמשטח
+      // שמדפיס הוא בדיוק שתי ההגדרות לאותו שדה שהקובץ הזה מתריע עליהן.
+      (isMoney(p.priceAfterPromo) || hasRiseNote(p)),
   ).length;
 }
 
@@ -593,7 +652,91 @@ export function disclosedRiseCount(packages: Package[]): number {
  * חבילה שמחירה 39.9. `isComparable` ב-`savings.ts` כבר פוסל אותה
  * דרך `isMoney`; כאן השער היה חסר.
  */
+/*
+ * ⚠️ וכאן דווקא **כל** תוכן בשדה ההערה ולא `hasRiseNote`, בכוונה.
+ *
+ * `disclosedRiseCount` שואלת "האם נאמר לגולש משהו" ולכן היא כפופה למה
+ * שהמסך מדפיס; הפונקציה הזאת שואלת את השאלה ההפוכה — "האם מותר להבטיח
+ * שהמחיר נשאר" — וערך שאינו קריא בשדה שכל תפקידו להצהיר על עלייה הוא
+ * סימן שלא יודעים, לא היתר. שתי ההגדרות נבדלות כאן בכוונה ולכל אחת
+ * כתוב למה; זה לא העתק שנשכח.
+ */
 export function hasKnownAfterPrice(p: Package): boolean {
   if (p.priceAfterPromo != null && !isMoney(p.priceAfterPromo)) return false;
   return !(p.priceAfterPromoNote && p.priceAfterPromo == null);
+}
+
+/**
+ * ── השערים על שדות הטקסט שהמשטחים של `/lp` **מדפיסים** ──────────────
+ *
+ * ⚠️ הקטלוג נכנס דרך `as unknown as Catalog`, כלומר **אין ולידציה בזמן
+ * ריצה**: הטיפוס מובטח על `packages.json` שקיים היום ולא על הקובץ
+ * שהרענון הבא יכתוב. שדה שצורתו בלתי צפויה ונקרא בלי שער אינו מפיל
+ * כרטיס אחד — הוא זורק בתוך רינדור השרת ומחזיר את **כל** הדף ב-500.
+ * אותו שער כבר נבנה פעם אחר פעם רמה אחת מתחת (`providerSlug`,
+ * `specOf`, `isCount`, `priceAfterPromoNote` ב-`promoRise`) ונשכח
+ * דווקא בשכבה שמדפיסה.
+ *
+ * ⚠️ המודול הזה הוא העלה שכל שלושת המשטחים שלי קוראים ממנו:
+ * `CatalogBrowser` ו-`PackageCard` שניהם מייבאים מכאן, ו-`PackageCard`
+ * אינו יכול לייבא מ-`CatalogBrowser` (ייבוא מעגלי). הבית הטבעי של
+ * שתי הפונקציות הוא `catalog.ts`, לצד `displayName` ו-`providerSlug`,
+ * ושם כל הקוראים — כולל סטודיו הפוסטים — היו קוראים הגדרה אחת; זו
+ * העברה לבעל הקובץ ההוא, לא העתק נוסף.
+ */
+
+/**
+ * שדה טקסט חופשי שמותר להדפיס, או `null`.
+ *
+ * ⚠️ אומת בפועל: `type: {}` זרק `Objects are not valid as a React
+ * child` גם בשבב הסוג של `PackageCard` וגם בשבבי הסוג של
+ * `CatalogBrowser` — כלומר רשומה אחת פגומה החזירה את `/lp` כולו
+ * ב-500. `description`/`benefits` זורקים את אותה שגיאה ברגע שהגולש
+ * פותח "פרטים מלאים", ובנוסף `benefits` הוא אחד משלושת התנאים שפותחים
+ * את הפאנל — כלומר ערך פגום גם מצייר כפתור וגם מפיל אותו בלחיצה.
+ *
+ * ⚠️ `typeof === "string"` ולא טרות'יניס, בדיוק כמו השער על
+ * `priceAfterPromoNote` ב-`promoRise` ועל `p.type` ב-`savings.ts:441`
+ * (שם ההערה מתעדת `type: 5` שמפיל `TypeError` על `.includes`). מספר
+ * אינו זורק ב-React אבל הוא גם אינו תווית: שבב שכתוב בו "5" הוא מסנן
+ * שאין דרך לדעת מה הוא מסנן.
+ *
+ * ⚠️ גם מחרוזת ריקה נופלת: שבב ריק הוא פקד בלי שם, ו-`typeFacets`
+ * ממילא דילג על `!p.type`.
+ */
+export function freeText(value: unknown): string | null {
+  return typeof value === "string" && value !== "" ? value : null;
+}
+
+/**
+ * שם החבילה **להצגה**.
+ *
+ * ⚠️ דרך `displayName` ולא `pkg.name` ישירות. `basePackages` משאירה שם
+ * שאינו מחרוזת כמות שהוא **בכוונה** ("דריסה הייתה מוחקת את הראיה
+ * היחידה שהרשומה פגומה"), ולכן השער חייב לשבת בצד שמדפיס — והוא נבנה
+ * שם רק לצרכן אחד: `src/lib/posts/catalog.ts` קורא `displayName(p.name)`,
+ * בזמן ששלושת המשטחים של הדף עצמו קראו את השדה חשוף. אומת בפועל:
+ * `name: {}` זרק `Objects are not valid as a React child` בכותרת
+ * הכרטיס, בשבב של מגש ההשוואה **וב**כותרת העמודה של טבלת ההשוואה.
+ * זו הפעם השמינית שאותו שער חובר למשטח אחד ולא לאחיו.
+ *
+ * ⚠️ מחרוזת ריקה ולא `String(raw)` — זו ההכרעה של `displayName` עצמה
+ * ("כותרת 'null' גרועה מכותרת חסרה"), ואותו קו שבו `ProviderLogo`
+ * מחזיר `null` במקום לצייר `/providers/null`.
+ */
+export function packageTitle(pkg: Package): string {
+  return displayName(pkg.name);
+}
+
+/**
+ * שם החבילה לתוך **שם נגיש** — מובטח שאינו ריק.
+ *
+ * ⚠️ `packageTitle` מחזירה "" לרשומה פגומה, ו-"" בתוך `aria-label`
+ * מייצר "הסר את  מההשוואה" — פקד שמכריז על פעולה בלי לומר על מה.
+ * הנפילה חזרה היא לשם הספק, בדיוק כמו `providerName` שנופלת ל-`slug`
+ * ("ה-slug הוא לא כותרת יפה, אבל הוא מזהה אמיתי"). בכותרת הנראית
+ * לעומת זאת אין נפילה חזרה: שם הספק מודפס שם ממילא בשורה שמתחתיה.
+ */
+export function packageLabel(pkg: Package, providerFallback: string): string {
+  return packageTitle(pkg) || providerFallback;
 }

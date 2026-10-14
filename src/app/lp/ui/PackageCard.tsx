@@ -14,7 +14,13 @@ import {
   promoRise,
   shekels,
 } from "../catalog/format";
-import { providerLogo, providerName } from "../catalog/catalog";
+import {
+  freeText,
+  packageLabel,
+  packageTitle,
+  providerLogo,
+  providerName,
+} from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
 /*
@@ -114,9 +120,29 @@ export function PackageCard({
    * מתחת קורא את אותו מערך מגודר — על מחרוזת `includes` הוא בדיקת
    * תת-מחרוזת, כלומר `badges: "5G פלוס"` היה מעלים בשקט את שבב הסוג.
    */
-  const badges = Array.isArray(pkg.badges)
-    ? pkg.badges.filter((b): b is string => typeof b === "string" && b !== "")
-    : [];
+  const badges = Array.isArray(pkg.badges) ? pkg.badges.filter((b) => freeText(b) != null) : [];
+
+  /*
+   * ⚠️ אותו שער בדיוק על `type`, `description` ו-`benefits` — ראה
+   * `freeText` ב-`text.ts`. ההערה על `badges` למעלה הצהירה ש-`badges`
+   * הוא "השדה היחיד בכרטיס שמפוענח מהפרוזה", וזה לא נכון: שלושת
+   * האלה הם טקסט חופשי מאותו מחלץ, ושלושתם הודפסו חשופים. `type: {}`
+   * הפיל את רינדור השרת של הדף כולו (אומת), ו-`description`/`benefits`
+   * פגומים הפילו את הפאנל בלחיצה — כשדווקא `benefits` הוא אחד
+   * משלושת התנאים שמציירים את הכפתור.
+   */
+  const type = freeText(pkg.type);
+  const description = freeText(pkg.description);
+  const benefits = freeText(pkg.benefits);
+
+  /*
+   * ⚠️ שם החבילה דרך `packageTitle` — ראה `text.ts`. `name: {}` זרק
+   * כאן `Objects are not valid as a React child` בתוך רינדור השרת,
+   * ולכן רשומה אחת פגומה החזירה את `/lp` כולו ב-500.
+   */
+  const provider = providerName(pkg);
+  const title = packageTitle(pkg);
+  const label = packageLabel(pkg, provider);
 
   return (
     /*
@@ -128,7 +154,7 @@ export function PackageCard({
      */
     <Card as="article" className="flex flex-col overflow-hidden">
       <div className="flex items-start gap-3 border-b border-lp-line p-4">
-        <ProviderLogo logo={providerLogo(pkg)} name={providerName(pkg)} size={34} className="shrink-0" />
+        <ProviderLogo logo={providerLogo(pkg)} name={provider} size={34} className="shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap gap-1.5">
             {pkg.recommended && (
@@ -141,14 +167,14 @@ export function PackageCard({
                 {b}
               </span>
             ))}
-            {pkg.type && !badges.includes(pkg.type) && (
+            {type && !badges.includes(type) && (
               <span className="rounded-full bg-lp-surface-3 px-2 py-0.5 text-lp-2xs font-medium text-lp-ink-2">
-                {pkg.type}
+                {type}
               </span>
             )}
           </div>
-          <h3 className="text-sm leading-snug font-semibold text-lp-ink">{pkg.name}</h3>
-          <p className="text-xs text-lp-ink-3">{providerName(pkg)}</p>
+          <h3 className="text-sm leading-snug font-semibold text-lp-ink">{title}</h3>
+          <p className="text-xs text-lp-ink-3">{provider}</p>
         </div>
 
         {onCompareToggle && (
@@ -210,8 +236,8 @@ export function PackageCard({
               */
               aria-label={
                 compareFull && !compareChecked
-                  ? `הוסף את ${pkg.name} להשוואה — לא זמין, ניתן להשוות עד ${compareMax} חבילות`
-                  : `${compareChecked ? "הסר את" : "הוסף את"} ${pkg.name} ${compareChecked ? "מההשוואה" : "להשוואה"}`
+                  ? `הוסף את ${label} להשוואה — לא זמין, ניתן להשוות עד ${compareMax} חבילות`
+                  : `${compareChecked ? "הסר את" : "הוסף את"} ${label} ${compareChecked ? "מההשוואה" : "להשוואה"}`
               }
             />
             השוואה
@@ -301,7 +327,7 @@ export function PackageCard({
           `benefits`, ובכולן יש היום גם `description` — זה שער לרענון
           הבא, מאותה מחלקה של "הפאנל מדפיס ערך שהשער אינו מכיר".
         */}
-        {(rows.length > 0 || pkg.description || pkg.benefits) && (
+        {(rows.length > 0 || description || benefits) && (
           <>
             <button
               type="button"
@@ -324,17 +350,17 @@ export function PackageCard({
                     ))}
                   </dl>
                 )}
-                {pkg.description && (
-                  <div className="crm-text text-xs leading-relaxed text-lp-ink-2">{pkg.description}</div>
+                {description && (
+                  <div className="crm-text text-xs leading-relaxed text-lp-ink-2">{description}</div>
                 )}
-                {pkg.benefits && (
+                {benefits && (
                   <div className="rounded-lg bg-lp-brand/5 p-3">
                     <p className="mb-1 text-xs font-semibold text-lp-brand">הטבות</p>
-                    <div className="crm-text text-xs leading-relaxed text-lp-ink-2">{pkg.benefits}</div>
+                    <div className="crm-text text-xs leading-relaxed text-lp-ink-2">{benefits}</div>
                   </div>
                 )}
                 <p className="text-lp-2xs text-lp-ink-3">
-                  התנאים המחייבים הם אלה של {providerName(pkg)}. ייתכנו שינויים ותנאי סף.
+                  התנאים המחייבים הם אלה של {provider}. ייתכנו שינויים ותנאי סף.
                 </p>
               </div>
             )}

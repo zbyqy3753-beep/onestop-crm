@@ -117,6 +117,37 @@ function gateText(p: Package): string {
   return `${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""} ${p.priceAfterPromoNote ?? ""}`;
 }
 
+/**
+ * שם שאפשר לקרוא ממנו — ולא רק שדה שיושב במפתח `name`.
+ *
+ * ⚠️ שני דברים נשברים יחד על רשומה שהשם שלה אינו מחרוזת, ואף שער
+ * בקובץ הזה לא בדק את זה:
+ *
+ *  1. **כל חמשת שערי הנוסח מתעוורים.** ההערה שמעל `declaresRiseInText`
+ *     מתעדת במפורש שחמש חבילות בקטלוג חסרות `description` **ו**`benefits`
+ *     גם יחד, ולכן השם הוא "הראיה היחידה שקיימת". רשומה שבה
+ *     `"name": null` מזרימה ל-`gateText` את המחרוזת `"null"` — אפס טקסט
+ *     שימושי — ולכן `declaresRiseInText` / `requiresMultipleLines` /
+ *     `familyPriceOnly` / `afterPriceDependsOnLines` / `addonFreeThenPaid`
+ *     כולם מחזירים `false` עליה **בלי לבדוק דבר**, בעוד היא ממשיכה
+ *     להתחרות על ה-argmin. זה בדיוק ההיפוך של הכיוון השמרני שכל השערים
+ *     האלה נבנו כדי לשמור עליו.
+ *  2. **הנציג לא יכול לשחזר את המספר.** ההערה ב-`SavingsCalculator`
+ *     מנמקת את עמודת `packageName` ואת שורת "מול <ספק> — <שם>" בכך
+ *     שבלעדיהן הנציג מחזיק "חיסכון ₪1,020 בשנה" בלי שום דרך לדעת מולי
+ *     מה נמדד. `${null}` כותב לשתיהן את המילה `null` — כלומר בדיוק
+ *     אותו מספר שאי אפשר לעמוד מאחוריו, רק עם מראה של נתון.
+ *
+ * `basePackages` מתעדת שהיא **משאירה** שם כזה כמות שהוא במכוון ("דריסה
+ * הייתה מוחקת את הראיה היחידה שהרשומה פגומה"), ולכן הגידור הוא כאן.
+ * הקטלוג של היום נקי (אפס רשומות כאלה), והכיוון שמרני — בריכה קטנה
+ * יותר — בדיוק כמו `hasSpec` ו-`typeText`.
+ */
+function hasReadableName(p: Package): boolean {
+  const name = logicName(p);
+  return typeof name === "string" && name.trim() !== "";
+}
+
 // ⚠️ גם `logicName` — כמו ב-`requiresMultipleLines` ו-`familyPriceOnly`.
 // חמש חבילות בקטלוג חסרות `description` **ו**`benefits` גם יחד, ולכן
 // שלושת המסננים האלה היו עבורן ריקים מראש. שם שנושא מחיר
@@ -461,6 +492,10 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
     לרענון הבא.
   */
   if (p.priceAfterPromo != null && !isMoney(p.priceAfterPromo)) return false;
+  // ⚠️ שם קריא הוא תנאי להשוואה, לא קוסמטיקה. ראה `hasReadableName`:
+  // בלעדיו חמשת שערי הנוסח מתעוורים על הרשומה והנציג מקבל "מול <ספק>
+  // — null".
+  if (!hasReadableName(p)) return false;
   /*
     ⚠️ `spec` עצמו, לפני כל קריאה ממנו. כל השערים שמתחת — המדרגות,
     הסלולר (`kosher` / `dataGb` / `minutes`) והבית (`hasInternet` /
@@ -552,6 +587,24 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
    * סטרימינג בלבד ("שירות טלוויזיה הפועל על גבי האינטרנט") — המחלץ
    * קרא את המילה "אינטרנט" בתיאור. היא הזולה בקטגוריה, כלומר בלי
    * השורה הזו היא הופכת לחבילה שמולה נמדד כל חשבון טריפל בארץ.
+   *
+   * ⚠️ `typeText(p)` ולא `p.type` ישירות. זה אותו תיקון בדיוק שהענף
+   * הסלולרי קיבל (`typeText(p).includes("כשר")` במקום `p.type === "כשר"`)
+   * ו**לא הוחל חזרה לכאן** — אף שההערה שם מתארת את שני הענפים כזוג
+   * שמקבל את אותם תיקונים. ההשלכה אינה תיאורטית: `p.type !== "TV"`
+   * דורש שהשדה יהיה בדיוק המחרוזת `"TV"`, ולכן רענון שיכתוב
+   * `"type": null` ו-`"badges": ["TV"]` — אותה הצהרה מנורמלת, הצורה
+   * שהמחלץ מייצר לשדה שהוא לא קרא (`dataGb: null` בשמונה רשומות) —
+   * מחזיר את סטינג "החבילה המושלמת" לבריכה. אומת ישירות: עם
+   * `type: null, badges: ["TV"]` היא עוברת את **כל** שערי `isComparable`
+   * ב-₪49, כלומר הופכת מיד לחבילה שמולה נמדד כל חשבון טריפל (הזולה
+   * בבריכה היום היא ₪149) — שירות סטרימינג שמולו מוצג חיסכון של
+   * ₪1,200 בשנה לבעל טריפל.
+   *
+   * ⚠️ `includes("TV")` ולא השוואה מדויקת, ומאותו טעם: "NEXT TV" /
+   * "TV APP" הם אותה הצהרה. שלושת טיפוסי הבית האחרים ("טריפל", "סיבים",
+   * "נחושת", "קו ביתי") אינם מכילים את הרצף, ולכן הבריכה של היום
+   * אינה משתנה.
    */
   // ⚠️ נתב שמתומחר מחוץ למחיר הוא חיוב חודשי שהכותרת לא רואה. ראה
   // `routerPricedSeparately`.
@@ -565,7 +618,7 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
    * חוסר-דיוק ש-`isMoney` ו-`tierTable` נכתבו נגדו: `"true"` כמחרוזת
    * (הצורה שמחלץ מייצר כשהוא קורא שדה טקסטואלי) היה עובר כאן כאמת.
    */
-  return spec.hasInternet === true && spec.hasTv === true && p.type !== "TV";
+  return spec.hasInternet === true && spec.hasTv === true && !typeText(p).includes("TV");
 }
 
 /**
