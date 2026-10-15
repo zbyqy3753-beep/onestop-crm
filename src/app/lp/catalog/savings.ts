@@ -178,8 +178,36 @@ const REQUIRES_MULTIPLE_LINES =
   // כמו "3 קווים ב99", והגרסה הקודמת תפסה רק את השנייה.
   /לרוכשים \d+ מנויים|קו שני|\*\s?[2-9]\s?\*|\d+\s?קווים ב[-־\s]?\s?\d/;
 
+/**
+ * מחירון מדורג שבו **המחיר שבמפרט** הוא המדרגה של כמה קווים.
+ *
+ * ⚠️ id 68 ("קיץ חם בדור 5", price 39.9) מוכרת "* קו בודד – 49.90 ₪
+ * * 2 קווים – 44.90 ₪ לקו * 3 קווים ומעלה – **39.90 ₪** לקו", כלומר
+ * ה-39.90 שבמפרט הוא המחיר לשלושה קווים ומעלה — ובאותו תיאור גם
+ * "המחיר קבוע – לכל החיים!". הרגקס שלמעלה דורש "ב" לפני המספר
+ * ("3 קווים ב99") ואינו תופס תבליט כוכבית, ולכן היא נשארה בבריכה.
+ *
+ * ⚠️ נדרשת התאמה **לאותו מספר** ולא עצם קיום מחירון מדורג, מאותו טעם
+ * שמתועד על `proseFloorsAt`: כך השער פוסל רק כשהכותרת עצמה היא מדרגת
+ * הקווים. id 129 אומרת "קו ראשון 39, בצירוף 2 קווים ומעלה 35 לקו"
+ * ו-`price` שלה 39 — המחיר של קו בודד, ולכן היא **נשארת** בבריכה
+ * בצדק; גרסה שתפסה את התבנית בלי המספר הוציאה אותה משם.
+ *
+ * היום WeCom ב-34 ₪ מנצחת את id 68 בכל כמות, ולכן זו הגנה על הרענון
+ * הבא ולא תיקון של מספר שמוצג כרגע.
+ */
+function headlineIsLineTierPrice(p: Package): boolean {
+  if (typeof p.price !== "number" || !Number.isFinite(p.price)) return false;
+  for (const m of gateText(p).matchAll(
+    /[2-9]\s?קווים\s*(?:ומעלה|ויותר)?\s*(?:[–־-]|ב[-־\s]?)?\s*(\d[\d,]*(?:\.\d+)?)/g,
+  )) {
+    if (Number(String(m[1]).replace(/,/g, "")) === p.price) return true;
+  }
+  return false;
+}
+
 export function requiresMultipleLines(p: Package): boolean {
-  return REQUIRES_MULTIPLE_LINES.test(gateText(p));
+  return REQUIRES_MULTIPLE_LINES.test(gateText(p)) || headlineIsLineTierPrice(p);
 }
 
 /**

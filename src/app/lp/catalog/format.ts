@@ -1,5 +1,5 @@
 import { isMoney, logicName } from "./catalog";
-import { familyPriceOnly, requiresMultipleLines } from "./savings";
+import { declaresRiseInText, familyPriceOnly, requiresMultipleLines } from "./savings";
 import type { CellularSpec, ElectricitySpec, HomeSpec, Package } from "./types";
 
 const nf = new Intl.NumberFormat("he-IL");
@@ -297,7 +297,52 @@ function privateHomeInstallation(pkg: Package): number | null {
  */
 export function installationIsConditional(pkg: Package): boolean {
   const prose = installationProse(pkg);
-  return /התקנ/.test(prose) && /בית\s*פרטי/.test(prose);
+  if (!/התקנ/.test(prose)) return false;
+  return /בית\s*פרטי/.test(prose) || /\d\s*דירות/.test(prose);
+}
+
+/**
+ * התנאי שהפרוזה תולה בו דווקא את **צד הבניין**, כלומר את המספר שבמפרט.
+ *
+ * ⚠️ `installationIsConditional` סגר את "0 ⇒ חינם גורף", אבל הצד השני
+ * של אותו משפט נשאר מתפרסם כעובדה: ids 157, 92, 102, 107, 108, 109
+ * אומרות "עלות התקנה מתחת ל 4 דירות **או בית פרטי** 499 ש"ח / **מעל 4
+ * דירות** ללא עלות התקנה" — כלומר ה-0 שבמפרט הוא המחיר של בניין מעל
+ * ארבע דירות בלבד, והתווית "בבניין" הבטיחה אותו לכל מי שאינו בבית
+ * פרטי. גולש בבניין של שלוש דירות קרא "ללא עלות" מול 499 ש"ח, וזו
+ * בדיוק הרשומה שהמחשבון מצטט בכל קלט במסלול הבית.
+ *
+ * ⚠️ ו-ids 73, 153, 154, 159 אומרות "0 ש"ח לבניין **לזמן מוגבל**" —
+ * מבצע בתוקף, לא תכונה של החבילה. אותו כלל של `discountIsCapped`
+ * ו-`proseCapsAt`: הפרוזה מתנה, והתווית מוותרת על התנאי.
+ *
+ * התנאי נלקח **מהטקסט עצמו** ולא מושלם: רשומה שאין בה אחת משתי
+ * התבניות נשארת עם "בבניין" כשהיתה.
+ */
+function housingQualifiers(pkg: Package): { building: string; privateHome: string } {
+  const prose = installationProse(pkg);
+  const apartments = prose.match(/מעל\s*(\d+)\s*דירות[^.|]{0,24}?ללא\s*עלות/);
+  if (apartments) {
+    return {
+      building: `בבניין מעל ${apartments[1]} דירות`,
+      privateHome: `לבית פרטי או עד ${apartments[1]} דירות`,
+    };
+  }
+  if (/לבניין\s*לזמן\s*מוגבל/.test(prose)) {
+    return { building: "בבניין לזמן מוגבל", privateHome: "לבית פרטי" };
+  }
+  return { building: "בבניין", privateHome: "לבית פרטי" };
+}
+
+/**
+ * ids 158, 104: "התקנה ללא עלות בבניין / בית פרטי **במידה ואין סיב
+ * מותקן** עלות התקנה 499שח" — התנאי האמיתי הוא קיום סיב, והוא חל על
+ * שתי צורות המגורים. הרגקס של הבית הפרטי חוטף את ה-499 ומייחס אותו
+ * לבית פרטי בלבד, כלומר מבטיח חינם לבניין שאין בו סיב. כאן התנאי
+ * מוחלף במה שהרשומה באמת אמרה, ולא במי שהוא חל עליו.
+ */
+function fiberConditionedInstallation(pkg: Package): boolean {
+  return /במידה\s*ו?אין\s*סיב/.test(installationProse(pkg));
 }
 
 /**
@@ -315,9 +360,13 @@ function installationDetail(pkg: Package, cost: number): string {
   const flat = cost === 0 ? "ללא עלות" : shekels(cost);
   if (!installationIsConditional(pkg)) return flat;
   const priv = privateHomeInstallation(pkg);
+  if (fiberConditionedInstallation(pkg) && priv != null && priv !== cost) {
+    return `${flat} כשיש סיב מותקן · ${shekels(priv)} כשאין`;
+  }
+  const qualifiers = housingQualifiers(pkg);
   const parts: string[] = [];
-  if (priv !== cost) parts.push(`${flat} בבניין`);
-  if (priv != null) parts.push(`${shekels(priv)} לבית פרטי`);
+  if (priv !== cost) parts.push(`${flat} ${qualifiers.building}`);
+  if (priv != null) parts.push(`${shekels(priv)} ${qualifiers.privateHome}`);
   return parts.join(" · ");
 }
 
@@ -389,7 +438,27 @@ export function headlineValue(pkg: Package): string {
  */
 export type PromoRise =
   | { kind: "amount"; amount: number }
-  | { kind: "note"; note: string };
+  | { kind: "note"; note: string }
+  /**
+   * הרשומה מצהירה בתיאור על תקופת מבצע ולא מסרה לא מספר ולא נוסח.
+   *
+   * ⚠️ 19 חבילות (ids 17, 24, 27, 31, 34, 45, 50, 54, 57, 64, 67, 71,
+   * 72, 73, 98, 124, 125, 153, 159) נתפסות ב-`declaresRiseInText`
+   * ולכן **נפסלות נכון** מהמחשבון — אבל `priceAfterPromo` ו-
+   * `priceAfterPromoNote` ריקים אצל כולן, ולכן `promoRise` החזיר
+   * `null`, הכרטיס לא הראה באנר, ושורת "אחרי ההטבה" בטבלת ההשוואה
+   * הכריזה **"לא דווח שינוי"** — הכחשה של מה שהרשומה כן אמרה. על
+   * id 17 התיאור שעל אותו כרטיס אומר "מהחודש ה-13 והלאה- 59.9 ₪".
+   *
+   * ⚠️ הענף הזה **אינו אומר שהמחיר עולה**, בכוונה: ב-10 מתוך 19
+   * (ids 45, 67, 71, 72, 73, 98, 124, 125, 153, 159) ה-`price`
+   * שבכרטיס הוא כבר מחיר הקבע וההצהרה היא על מבצע **זול** בהתחלה
+   * ("חודש 1-3 79ש"ח מחודש 4 109ש"ח" כש-`price` 109). "המחיר עולה
+   * בהמשך" היה שם מספר שגוי בכיוון ההפוך. אותו כלל של
+   * `discountIsCapped`: אומרים מה שהרשומה אמרה — שיש תקופת מבצע —
+   * ולא מה שלא מסרה.
+   */
+  | { kind: "period" };
 
 export function promoRise(pkg: Package): PromoRise | null {
   if (pkg.category === "electricity") return null;
@@ -402,10 +471,14 @@ export function promoRise(pkg: Package): PromoRise | null {
    * מצהיר עליה כהבטחת המותג. כמו `hoursText`, זה שדה טקסט חופשי
    * שהקטלוג נכנס אליו בלי ולידציה בזמן ריצה.
    */
-  return typeof pkg.priceAfterPromoNote === "string" && pkg.priceAfterPromoNote
-    ? { kind: "note", note: pkg.priceAfterPromoNote }
-    : null;
+  if (typeof pkg.priceAfterPromoNote === "string" && pkg.priceAfterPromoNote) {
+    return { kind: "note", note: pkg.priceAfterPromoNote };
+  }
+  return declaresRiseInText(pkg) ? { kind: "period" } : null;
 }
+
+/** הנוסח היחיד של ענף `period`, בכל המשטחים שמדפיסים אותו. */
+export const PROMO_PERIOD_TEXT = "התיאור מצהיר על תקופת מבצע — בדקו מה המחיר אחריה";
 
 /**
  * השורה שפס המחיר בהירו מוסיף מתחת למחיר, או `null` כשאין מה לומר.
@@ -418,9 +491,9 @@ export function promoRise(pkg: Package): PromoRise | null {
 export function heroRiseLine(pkg: Package): string | null {
   const rise = promoRise(pkg);
   if (!rise) return null;
-  return rise.kind === "amount"
-    ? `ואחרי ההטבה ${shekels(rise.amount)}`
-    : `בתום ההטבה: ${rise.note}`;
+  if (rise.kind === "amount") return `ואחרי ההטבה ${shekels(rise.amount)}`;
+  if (rise.kind === "note") return `בתום ההטבה: ${rise.note}`;
+  return "יש תקופת מבצע — בדקו מה המחיר אחריה";
 }
 
 /**

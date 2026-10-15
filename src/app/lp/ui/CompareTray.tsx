@@ -250,7 +250,17 @@ export function CompareTray({
                 הספק, כי "הסר את  מההשוואה" הוא פקד שאינו אומר על מה.
               */
               <li key={p.id} className="flex shrink-0 items-center gap-1 rounded-full bg-lp-surface-2 px-3 py-1 text-xs">
-                <span className="max-w-[10rem] truncate text-lp-ink">{packageTitle(p)}</span>
+                {/*
+                  ⚠️ `dir="auto"` על השבב. `truncate` תולה את ה-"…" בקצה
+                  ה**סוף** של כיוון האלמנט, והשבב ירש RTL מהדף — ולכן שם
+                  לטיני נחתך ב**פתיח** שלו: `5G ULTRA 3000GB…` הוצג
+                  `…TRA 3000GB Plus FLY 10GB 2025`, שלושה שבבים זה לצד זה
+                  שנפתחים ב-"TRA" בזמן שהמותג הוא מה שנעלם. `auto` נותן
+                  לשם הלטיני LTR ולשם העברי RTL, וכל אחד נחתך בסופו.
+                */}
+                <span dir="auto" className="max-w-[10rem] truncate text-lp-ink">
+                  {packageTitle(p)}
+                </span>
                 <button
                   type="button"
                   data-lp-chip-remove
@@ -260,7 +270,8 @@ export function CompareTray({
                     onRemove(p);
                   }}
                   aria-label={`הסר את ${packageLabel(p, providerName(p))} מההשוואה`}
-                  className="-my-1 inline-flex min-h-9 min-w-9 items-center justify-center text-lp-ink-3 hover:text-lp-rise"
+                  /* ⚠️ 44×44 ולא 36×36: ארבעה ✕ ו-"נקה" צמודים בשורה אחת שנגללת. */
+                  className="-my-1 inline-flex min-h-11 min-w-11 items-center justify-center text-lp-ink-2 hover:text-lp-rise"
                 >
                   ✕
                 </button>
@@ -274,7 +285,8 @@ export function CompareTray({
               clearedIds.current = items.map(compareCheckboxId);
               onClear();
             }}
-            className="-mx-2 inline-flex min-h-11 items-center px-2 text-xs text-lp-ink-3 hover:underline"
+            /* ⚠️ הגובה היה 44 אבל הרוחב 34 — יעד מגע נמדד בשני הצירים. */
+            className="-mx-2 inline-flex min-h-11 min-w-11 items-center justify-center px-3 text-xs text-lp-ink-2 hover:underline"
           >
             נקה
           </button>
@@ -377,7 +389,16 @@ export function CompareSheet({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[20rem] border-collapse text-sm sm:min-w-[32rem]">
+          {/*
+            ⚠️ `min-w-[32rem]` גם בטלפון. כאן היה `min-w-[20rem]` (320px)
+            ו-`sm:min-w-[32rem]`, כלומר הרוחב הגדול נדלק רק מ-640px —
+            דווקא במסך שיש בו מקום. ב-375px רוחב המכולה הוא 335px, גדול
+            מ-320, ולכן ה-`overflow-x-auto` **לא** נכנס לפעולה והדפדפן
+            דחס ארבע עמודות ל-~60px כל אחת: כותרת הטבלה לבדה תפסה 159px,
+            שמות נשברו לחמש ושבע שורות, ו-"עד 2,500GB" נחתך לשתיים.
+            עמודה צרה מהמסך גוללת; עמודה רחבה מהמסך נקראת.
+          */}
+          <table className="w-full min-w-[32rem] border-collapse text-sm">
             <thead>
               <tr>
                 {/*
@@ -392,7 +413,13 @@ export function CompareSheet({
                   <th
                     key={p.id}
                     scope="col"
-                    className="border-b border-lp-line p-2 text-start align-bottom"
+                    /*
+                     * ⚠️ `align-top` ולא `align-bottom`: השם מתחת ללוגו
+                     * נשבר למספר שורות שונה בכל עמודה, ולכן יישור לתחתית
+                     * דחף כל לוגו לגובה אחר — פער של 48px בין ארבעה
+                     * לוגואים באותה שורה, שנקרא כשבירה ולא כטבלה.
+                     */
+                    className="border-b border-lp-line p-2 text-start align-top"
                   >
                     <ProviderLogo logo={providerLogo(p)} name={providerName(p)} size={26} />
                     {/* ⚠️ `packageTitle` ולא `p.name` — אותו שער כמו בשבב ובכרטיס. */}
@@ -466,6 +493,11 @@ export function CompareSheet({
  * ולכן התא אינו בונה את השרשרת בעצמו. זה היה העותק השלישי של אותו
  * שער — ראה ההערה על `promoRise` ב-`format.ts`.
  *
+ * ⚠️ הענף `period` נוסף כאן מפני שהתא הכריז "לא דווח שינוי" על 19
+ * חבילות שכן דיווחו — בתיאור בלבד, בלי שהמחלץ העביר את המספר לשדה.
+ * הנוסח אומר שיש תקופת מבצע ולא שהמחיר עולה, מהטעם שמתועד על
+ * `PromoRise` ב-`format.ts`: בעשר מהן המחיר שבכרטיס הוא כבר מחיר הקבע.
+ *
  * ⚠️ "לא דווח שינוי" רק כשהרשומה באמת **שתקה**, ולא כששדה
  * המחיר-אחרי-הטבה שלה פגום. `promoRise` מחזירה `null` לשני המצבים
  * האלה גם יחד, ו-`hasKnownAfterPrice` ב-`catalog.ts` היא זו שמבדילה:
@@ -489,7 +521,9 @@ function AfterPromoCell({ pkg }: { pkg: Package }) {
       {rise
         ? rise.kind === "amount"
           ? shekels(rise.amount)
-          : rise.note
+          : rise.kind === "note"
+            ? rise.note
+            : "יש תקופת מבצע — בדקו מה אחריה"
         : hasKnownAfterPrice(pkg)
           ? "לא דווח שינוי"
           : "—"}

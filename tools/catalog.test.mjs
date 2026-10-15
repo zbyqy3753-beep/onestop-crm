@@ -1345,9 +1345,26 @@ test("תצוגה: עליית מחיר פגומה אינה נקראת כמחיר,
     assert.equal(heroRiseLine(pkg), 'בתום ההטבה: לאחר שנה 59 ש"ח');
   }
 
-  // ובלי הערה — לא נאמר דבר, ולא "₪0".
-  assert.equal(promoRise({ ...real, priceAfterPromo: 0, priceAfterPromoNote: null }), null);
-  assert.equal(heroRiseLine({ ...real, priceAfterPromo: 0, priceAfterPromoNote: null }), null);
+  /*
+   * ובלי הערה — לא נאמר מספר, ולא "₪0". id 91 כן מצהירה בתיאור על
+   * תקופת מבצע ("לאחר שנה משתנה ל 5G ב 57.9"), ולכן היא נופלת לענף
+   * `period`: אמירה שיש תקופה, בלי מספר. ראה `PromoRise` ב-`format.ts`.
+   */
+  const silentField = { ...real, priceAfterPromo: 0, priceAfterPromoNote: null };
+  assert.deepEqual(promoRise(silentField), { kind: "period" });
+  assert.equal(heroRiseLine(silentField), "יש תקופת מבצע — בדקו מה המחיר אחריה");
+
+  // ורשומה ששתקה גם בטקסט אינה מקבלת שום שורה.
+  const trulySilent = {
+    ...real,
+    name: "בלי הצהרה",
+    description: "100GB",
+    benefits: null,
+    priceAfterPromo: 0,
+    priceAfterPromoNote: null,
+  };
+  assert.equal(promoRise(trulySilent), null);
+  assert.equal(heroRiseLine(trulySilent), null);
 
   // מסלול חשמל אינו נושא מחיר חודשי שיעלה.
   const elec = PACKAGES.find((p) => p.category === "electricity" && isListable(p));
@@ -1359,8 +1376,19 @@ test("תצוגה: עליית מחיר פגומה אינה נקראת כמחיר,
    * האמון של הדף" — סופרת בדיוק את החבילות שיש להן מה לומר כאן. שני
    * מונים לאותה עובדה שאינם מסכימים הם המלכודת שהקובץ הזה מגדר.
    */
+  /*
+   * ⚠️ נספרים שני הענפים שמוסרים **תוכן** (מספר או נוסח) ולא ענף
+   * `period`, שכל אמירתו היא "יש תקופת מבצע, בדקו". `disclosedRiseCount`
+   * מגודרת ב-`isMoney(priceAfterPromo) || hasRiseNote(p)` ובמכוון
+   * מנותקת מ-`promoRise`; הענף השלישי נוסף כדי שהכרטיס לא ישתוק ושטבלת
+   * ההשוואה לא תכריז "לא דווח שינוי" על 19 חבילות שכן דיווחו, והוא
+   * אינו גילוי של מחיר.
+   */
   assert.equal(
-    PACKAGES.filter(isListable).filter((p) => promoRise(p) != null).length,
+    PACKAGES.filter(isListable).filter((p) => {
+      const rise = promoRise(p);
+      return rise != null && rise.kind !== "period";
+    }).length,
     disclosedRiseCount(PACKAGES),
   );
 });

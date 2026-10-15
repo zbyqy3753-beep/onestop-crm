@@ -12,6 +12,7 @@ import {
   headlineValue,
   priceNote,
   promoRise,
+  PROMO_PERIOD_TEXT,
   shekels,
 } from "../catalog/format";
 import {
@@ -296,6 +297,16 @@ export function PackageCard({
           {rise?.kind === "note" && (
             <p className="crm-text mt-2 rounded-lg bg-lp-surface-2 px-3 py-2 text-xs text-lp-ink-2">
               <span className="font-semibold">בתום ההטבה:</span> {rise.note}
+            </p>
+          )}
+          {/*
+           * הכרטיס שתק לגמרי על 19 חבילות שהתיאור שלהן מצהיר על תקופת
+           * מבצע בלי שהמספר הגיע לשדה. הנוסח אינו מצהיר על עלייה —
+           * ראה `PromoRise` ב-`format.ts`.
+           */}
+          {rise?.kind === "period" && (
+            <p className="crm-text mt-2 rounded-lg bg-lp-surface-2 px-3 py-2 text-xs text-lp-ink-2">
+              {PROMO_PERIOD_TEXT}
             </p>
           )}
         </div>

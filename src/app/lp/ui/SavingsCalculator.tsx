@@ -250,11 +250,11 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 }`}
               >
                 <span className="block font-semibold text-lp-ink">{title}</span>
-                <span className="mt-0.5 block text-xs text-lp-ink-3">{sub}</span>
+                <span className="mt-0.5 block text-xs text-lp-ink-2">{sub}</span>
               </button>
             ))}
           </div>
-          <p className="mt-3 text-xs text-lp-ink-3">
+          <p className="mt-3 text-xs text-lp-ink-2">
             מחפשים הנחה בחשמל? הלשונית &quot;חשמל&quot; בקטלוג שמתחת מציגה את כל המסלולים.
           </p>
         </div>
@@ -513,7 +513,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             {overCap && (
               <>
                 {" "}
-                <span className="text-lp-ink-3">
+                <span className="text-lp-ink-2">
                   החישוב {worthwhile ? "למטה " : ""}נעשה לפי תקרת המחשבון,{" "}
                   <span className="nums">{shekels(MAX_SPEND)}</span>; נציג יבדוק את החשבון המלא ידנית.
                 </span>
@@ -564,10 +564,24 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             טלפון, בעוד כפתור המסלול מזמין במפורש בעלי טריפל. בלי
             המשפט הזה מוצג לבעל טריפל חיסכון מול מוצר שחסר בו שירות.
           */}
-          <p className="mt-4 text-xs leading-relaxed text-lp-ink-3">
+          {/*
+            ⚠️ `text-lp-ink-2` (#4a5b6d, 7.2:1) ולא `text-lp-ink-3`
+            (#7d8b99, 3.49:1 ב-12px — מתחת ל-4.5:1 של WCAG AA). ההערה על
+            פסקת הרמז למעלה מצאה בדיוק את המספר הזה ותיקנה שם את מצב
+            השגיאה בלבד; ההסתייגות הזו היא שמונה שורות של 12px, המסה
+            הגדולה בכרטיס, והיא נאמרת דווקא כדי להיקרא.
+          */}
+          <p className="mt-4 text-xs leading-relaxed text-lp-ink-2">
             {!noMatch && (
               <>
-                החישוב מבוסס על החבילה המשתלמת ביותר בקטלוג שלנו בקטגוריה הזו
+                {/*
+                  ⚠️ "מבין אלה שניתן להשוות" ולא "בקטלוג שלנו". `isComparable`
+                  פוסלת את הרוב המכריע של הקטלוג (31 מ-33 בבית), ובהן חבילות
+                  **זולות** מהנבחרת שנפסלו כי הטקסט שלהן מצהיר על תקופת מבצע.
+                  המספר אינו מנופח — אבל "המשתלמת ביותר בקטלוג" הוא לא מה
+                  שחושב, והמשפט הזה הוא בדיוק ההסתייגות שאמורה לומר אמת.
+                */}
+                החישוב מבוסס על החבילה המשתלמת ביותר מבין אלה שניתן להשוות בקטגוריה הזו
                 {/*
                   ⚠️ `saving.lines` ולא `units`. המנוע מגדר את מספר הקווים
                   ל-`MAX_LINES` ומחשב עליו, והמסך הדפיס את ה-`units` הלא
@@ -663,7 +677,8 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
               setBlurred(false);
               setStep(1);
             }}
-            className="-mx-1 mt-3 inline-flex min-h-11 items-center px-1 text-xs text-lp-ink-3 hover:underline"
+            /* ⚠️ פקד אינטראקטיבי — `lp-ink-2` ולא `lp-ink-3` שאינו עובר AA ב-12px. */
+            className="-mx-1 mt-3 inline-flex min-h-11 items-center px-1 text-xs text-lp-ink-2 hover:underline"
           >
             לשנות את הנתונים
           </button>
