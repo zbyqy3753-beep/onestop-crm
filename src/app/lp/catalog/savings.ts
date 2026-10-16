@@ -1,4 +1,4 @@
-import { afterPrice, hasKnownAfterPrice, logicName } from "./catalog";
+import { afterPrice, hasKnownAfterPrice, logicName, typeText } from "./catalog";
 import type { CellularSpec, HomeSpec, MonthlyPackage, Package } from "./types";
 
 /**
@@ -496,13 +496,26 @@ function hasSpec(p: Package): boolean {
  * (אין בהן `dataGb` ולא `unlimitedData`), ולכן זהו חיזוק של אותו שער
  * ולא פסילה נוספת.
  */
-function typeText(p: Package): string {
-  const type = typeof p.type === "string" ? p.type : "";
-  const badges = Array.isArray(p.badges)
-    ? p.badges.filter((b): b is string => typeof b === "string").join(" ")
-    : "";
-  return `${type} ${badges}`;
-}
+/*
+ * ⚠️ `badges` שאינו מערך **אינו** נקרא כסימן, וזו הכרעה ולא השמטה.
+ *
+ * `Array.isArray` לבדו הופך כל צורה אחרת ל-`""`, כלומר **מאבד** את
+ * הסימן במקום להחמיר — ולאיבוד הזה יש מחיר מדיד: id 4 (סטינג
+ * "החבילה המושלמת", ₪49, `hasInternet: true` בטעות מחלץ) עם
+ * `type: null` ו-`badges: "TV"` — אותה הצהרה בדיוק בצורה לא מנורמלת —
+ * עוברת את **כל** שערי `isComparable` ומייצרת לבעל טריפל ב-₪220
+ * כותרת של ₪1,452 בשנה מול שירות סטרימינג (אומת בהרצה).
+ *
+ * ובכל זאת הקריאה ההפוכה גרועה ממנה, ולכן היא לא נעשתה: רשומה
+ * **בריאה** ששדה ה-`badges` שלה התעוות (`"כשר"` כמחרוזת על
+ * `wecom300GB 5G`, ששתי הראיות הקריאות שלה — `spec.kosher === false`
+ * ו-`type: "5G"` — אומרות ההפך) הייתה נפסלת על הראיה הפגומה בלבד,
+ * והזולה בסלולר הייתה יוצאת מהבריכה ומקטינה את הכותרת בשקט.
+ * `tools/savings.test.mjs` מצהיר על ההכרעה הזו במפורש
+ * ("`badges` פגום אינו זורק ואינו פוסל"). שינוי הכיוון כאן הוא הכרעה
+ * של בעל המערכת ולא ניקיון שער, והיא מתועדת ב-`tools/round34-savings.test.mjs`.
+ */
+/* `typeText` אוחד ל-`./catalog` — ראה ההערה שם. */
 
 export function isComparable(p: Package, track: Track): p is MonthlyPackage {
   if (p.category !== track || p.priceModel !== "monthly") return false;

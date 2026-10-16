@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "./Card";
 import { LeadForm } from "./LeadForm";
 import { shekels, typedShekels } from "../catalog/format";
-import { catalog, providerName } from "../catalog/catalog";
+import { catalog, packageLabel, packageTitle, providerName } from "../catalog/catalog";
 import { crmCategory } from "../config";
 import { fieldClass } from "./field";
 import {
@@ -124,6 +124,30 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
    * יחסית" — והנציג קיבל הערה שהמחשבון בדק ולא מצא. שתי האמירות שקריות.
    */
   const noMatch = saving.pick == null;
+  /*
+   * ⚠️ `packageTitle` ולא `saving.pick.name` חשוף — ראה `catalog.ts`.
+   * זה המשטח החמישי שקרא את השדה הזה גולמי, אחרי הכרטיס, שבב מגש
+   * ההשוואה, כותרת העמודה בטבלה ו-`LeadForm`, ודווקא הוא **אינו**
+   * מדפיס את השם למסך אלא **שולח אותו ל-CRM**: שרשור מחרוזות אינו
+   * זורק, ולכן הנזק שקט וגרוע מחבילה חסרה — הליד נרשם, והנציג מקבל
+   * בעמודת `packageName` ובהערה מחרוזת שאינה שם של שום חבילה. אומת
+   * בפועל על הבחירה של הסלולר: `name: {}` נרשם
+   * `[object Object] · WeCom` וההערה יצאה "מול WeCom — [object Object],
+   * ₪34 לקו"; `name: null` נרשם `null · WeCom`.
+   *
+   * ⚠️ `hasReadableName` ב-`savings.ts` **אינו** מכסה את זה: הוא בודק
+   * את `logicName`, כלומר `rawName ?? name` — ושמונה רשומות בקטלוג
+   * **נושאות `rawName`** (הוא נוצר לכל שם שעבר ניקוי תצוגה). על אחת
+   * מהן `name` פגום משאיר `logicName` קריא, הרשומה עוברת את כל השערים
+   * ומגיעה לכאן. השער חייב לשבת בצד ששולח.
+   *
+   * ⚠️ בעמודת ה-CRM מצרפים את הספק רק כשיש שם, בדיוק כמו ב-`LeadForm`:
+   * `packageLabel` נופל לשם הספק, ו-"WeCom · WeCom" הוא עמודה שאומרת
+   * את אותו דבר פעמיים. בהערה לנציג דווקא כן נדרשת נפילה חזרה —
+   * "מול WeCom — , ₪34 לקו" הוא פסיק תלוי בלי מושא.
+   */
+  const pickProvider = saving.pick ? providerName(saving.pick) : "";
+  const pickTitle = saving.pick ? packageTitle(saving.pick) : "";
 
   /** מעבר לתוצאה — משותף ל-CTA ול-Enter בשדה, כדי ששניהם יתנהגו זהה. */
   function submitSpend() {
@@ -627,7 +651,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 שדחף חבילה אמיתית לתוך ההערה והשאיר את העמודה ריקה.
               */
               packageName={
-                saving.pick ? `${saving.pick.name} · ${providerName(saving.pick)}` : undefined
+                saving.pick ? (pickTitle ? `${pickTitle} · ${pickProvider}` : pickProvider) : undefined
               }
               note={[
                 /*
@@ -658,7 +682,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   לעמוד מאחוריו בשיחה.
                 */
                 saving.pick
-                  ? `מול ${providerName(saving.pick)} — ${saving.pick.name}, ${shekels(saving.perLine)} ${track === "cellular" ? "לקו" : "לחודש"}${CATALOG_DATE ? ` (קטלוג ${CATALOG_DATE})` : ""}`
+                  ? `מול ${pickProvider} — ${packageLabel(saving.pick, pickProvider)}, ${shekels(saving.perLine)} ${track === "cellular" ? "לקו" : "לחודש"}${CATALOG_DATE ? ` (קטלוג ${CATALOG_DATE})` : ""}`
                   : null,
               ]
                 .filter(Boolean)

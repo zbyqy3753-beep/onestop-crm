@@ -175,7 +175,29 @@ export function PackageCard({
             )}
           </div>
           <h3 className="text-sm leading-snug font-semibold text-lp-ink">{title}</h3>
-          <p className="text-xs text-lp-ink-3">{provider}</p>
+          {/*
+            ⚠️ `lp-ink-2` ולא `lp-ink-3` — וזה חל על **כל** הטקסט הקטן
+            בכרטיס, במגש ובעמודת המסננים.
+
+            `#7d8b99` על לבן הוא 3.49:1, ועל `lp-surface-2` 3.27:1 (חושב),
+            כלומר מתחת ל-AA (4.5:1) לכל טקסט שאינו "גדול" — ו-`lp-2xs`
+            הוא 11px ו-`text-xs` הוא 12px. ההכרעה הזאת כבר נעשתה בסבב
+            הקודם, אבל הוחלה על שני מופעים (ההסתייגות הארוכה במחשבון
+            והפקד "לשנות את הנתונים") ולא על האחים שלהם — אותו דפוס
+            שהקבצים האלה מתעדים שוב ושוב. מה שעבר כאן הוא דווקא הטקסט
+            שנושא את המידע: שם הספק, כיתובי האריחים (שהם המשמעות של
+            המספרים שמעליהם), תוויות שורות הפירוט, שורת התנאים המחייבים,
+            התווית של תיבת ההשוואה, מוני המסננים, קצות מחוון המחיר
+            ותוויות השורות בטבלת ההשוואה.
+
+            ⚠️ שני מופעים נשארו `lp-ink-3` בכוונה: החץ של "סינון"
+            (`aria-hidden`, קישוט) וה-✕ של חלון ההשוואה (24px, ולכן
+            תחת הסף של "טקסט גדול" — 3:1).
+
+            ⚠️ התיקון במקור היה אסימון אחד ב-`globals.css`; הוא לא כאן
+            (ראה הדיווח).
+          */}
+          <p className="text-xs text-lp-ink-2">{provider}</p>
         </div>
 
         {onCompareToggle && (
@@ -188,7 +210,7 @@ export function PackageCard({
           */
           <label
             className={`flex shrink-0 flex-col items-center gap-1 text-lp-2xs ${
-              compareFull && !compareChecked ? "cursor-not-allowed text-lp-ink-3 opacity-50" : "cursor-pointer text-lp-ink-3"
+              compareFull && !compareChecked ? "cursor-not-allowed text-lp-ink-3 opacity-50" : "cursor-pointer text-lp-ink-2"
             }`}
             title={compareFull && !compareChecked ? `ניתן להשוות עד ${compareMax} חבילות` : undefined}
           >
@@ -252,7 +274,7 @@ export function PackageCard({
             {stats.map((s) => (
               <li key={s.caption} className="min-w-0 rounded-lg bg-lp-surface-2 px-1 py-2">
                 <div className="nums text-sm font-bold text-lp-ink">{s.value}</div>
-                <div className="mt-0.5 text-lp-2xs leading-tight text-lp-ink-3">{s.caption}</div>
+                <div className="mt-0.5 text-lp-2xs leading-tight text-lp-ink-2">{s.caption}</div>
               </li>
             ))}
           </ul>
@@ -355,7 +377,7 @@ export function PackageCard({
                   <dl className="grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2">
                     {rows.map((r) => (
                       <div key={r.label} className="flex justify-between gap-2 border-b border-lp-line/60 pb-1">
-                        <dt className="min-w-0 text-lp-ink-3">{r.label}</dt>
+                        <dt className="min-w-0 text-lp-ink-2">{r.label}</dt>
                         <dd className="nums min-w-0 text-end font-medium text-lp-ink">{r.value}</dd>
                       </div>
                     ))}
@@ -370,7 +392,7 @@ export function PackageCard({
                     <div className="crm-text text-xs leading-relaxed text-lp-ink-2">{benefits}</div>
                   </div>
                 )}
-                <p className="text-lp-2xs text-lp-ink-3">
+                <p className="text-lp-2xs text-lp-ink-2">
                   התנאים המחייבים הם אלה של {provider}. ייתכנו שינויים ותנאי סף.
                 </p>
               </div>

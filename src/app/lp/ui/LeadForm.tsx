@@ -11,7 +11,7 @@ import { submitLandingLead, type LandingState } from "../actions";
 import { crmCategory } from "../config";
 import { btnPrimary } from "./button";
 import { fieldClass, labelClass } from "./field";
-import { providerName } from "../catalog/catalog";
+import { packageLabel, packageTitle, providerName } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
 
 /**
@@ -99,6 +99,32 @@ export function LeadForm({ pkg, compact = false, category, note, packageName }: 
   const autoId = useId();
 
   /*
+   * ⚠️ שם החבילה דרך `packageTitle`/`packageLabel` ולא `pkg.name` חשוף —
+   * ראה `catalog.ts`. הטופס היה **המשטח הרביעי** שקורא את השדה הזה
+   * גולמי, אחרי שהשער חובר לכרטיס, לשבב במגש ההשוואה ולכותרת העמודה
+   * בטבלה — ודווקא הוא יושב *בתוך* הכרטיס שכבר מגודר. אומת בפועל על
+   * `name: {}`:
+   *
+   * 1. הפסקה "נציג ONE STOP יחזור אליך לגבי …" (המסלול שאינו `compact`)
+   *    זרקה `Objects are not valid as a React child`. לענף הזה אין
+   *    קורא בדף היום — שני הקוראים מעבירים `compact` — ולכן זה שער
+   *    לקורא הבא ולא פגם מוצג; אבל זו בדיוק מחלקת הכשל שמחזירה את
+   *    `/lp` כולו ב-500 ברגע שהטופס יוצג מרכיב שרת.
+   * 2. השדה המוסתר `packageName` נשלח כ-`[object Object] · גולן טלקום`
+   *    (וב-`name: null` כ-`null · גולן טלקום`). זה גרוע מהראשון בצורה
+   *    אחרת: אין שגיאה, הליד **נרשם** — והנציג מקבל בעמודה הייעודית
+   *    מחרוזת שאינה שם של שום חבילה, בלי שום דרך לדעת על מה הפנייה.
+   * 3. אותו דבר בפאנל האישור שהמבקר רואה אחרי השליחה.
+   *
+   * ⚠️ בעמודת ה-CRM מצרפים את הספק רק כשיש שם: `packageLabel` נופל
+   * לשם הספק, ו-"גולן טלקום · גולן טלקום" הוא עמודה שאומרת את אותו
+   * דבר פעמיים. בשני הטקסטים שהמבקר רואה דווקא כן נדרשת נפילה חזרה —
+   * "לגבי " בלי מושא הוא משפט קטוע.
+   */
+  const provider = pkg ? providerName(pkg) : "";
+  const title = pkg ? packageTitle(pkg) : "";
+
+  /*
    * ⚠️ שתי נקודות שבהן הפוקוס נמחק: האחת בהצלחה (הטופס מוחלף
    * בפאנל אישור) והשנייה בשגיאה (ה-`key` מפרק ובונה מחדש את
    * אלמנט ה-`<form>`). בשתיהן הכפתור שנלחץ עליו יוצא מה-DOM,
@@ -137,7 +163,7 @@ export function LeadForm({ pkg, compact = false, category, note, packageName }: 
       >
         <p className="font-semibold text-lp-save">קיבלנו! נציג ONE STOP יחזור אליך בהקדם.</p>
         <p className="mt-1 text-sm text-lp-ink-2">
-          {pkg ? `לגבי ${pkg.name}` : "לגבי החבילה המשתלמת עבורך"}
+          {pkg ? `לגבי ${packageLabel(pkg, provider)}` : "לגבי החבילה המשתלמת עבורך"}
         </p>
       </div>
     );
@@ -180,7 +206,7 @@ export function LeadForm({ pkg, compact = false, category, note, packageName }: 
       {pkg && !compact && (
         <p className="text-sm text-lp-ink-2">
           נציג ONE STOP יחזור אליך לגבי{" "}
-          <span className="font-semibold text-lp-ink">{pkg.name}</span>
+          <span className="font-semibold text-lp-ink">{packageLabel(pkg, provider)}</span>
         </p>
       )}
 
@@ -287,7 +313,7 @@ export function LeadForm({ pkg, compact = false, category, note, packageName }: 
         <input
           type="hidden"
           name="packageName"
-          value={`${pkg.name} · ${providerName(pkg)}`}
+          value={title ? `${title} · ${provider}` : provider}
         />
       ) : packageName ? (
         <input type="hidden" name="packageName" value={packageName} />

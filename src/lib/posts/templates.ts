@@ -184,14 +184,116 @@ export function afterPromoPost(picked: StudioPackage[]): Post {
 
 /* ── חבילה בפוקוס ─────────────────────────────────────────────────── */
 
+/**
+ * המספר הגדול שבשקף הפתיח — עם ההסתייגויות שהרשומה עצמה מסרה עליו.
+ *
+ * ⚠️ `discountIsCapped` ו-`discountScope` חוברו לכרטיס וללוח ההשוואה
+ * ב-`/lp` ולא למשטח הזה, ולכן ids 135 ו-142 הדפיסו "10% הנחה" שטוח
+ * כשהרשומה אומרת "**עד** 10%" (הנחה מדורגת לפי גובה החשבון), ו-10
+ * מסלולי החשמל (134, 135, 136, 137, 140, 142, 146, 147, 149, 150)
+ * הדפיסו "20% הנחה" בלי אות אחת מההצהרה שההנחה חלה על **רכיב**
+ * בחשבון ולא על החשבון. בפוסט זה גרוע מבאתר: המספר מתפרסם בשם של
+ * אלירן.
+ *
+ * ⚠️ מוחזר נוסח הרשומה ובלי מקדם לחלקו של הרכיב בחשבון, כמו
+ * ב-`discountScope`: המקדם אינו בקטלוג וכל ניחוש היה הופך את
+ * ההסתייגות למספר שנראה מחושב.
+ */
+export function headlineText(p: StudioPackage): string {
+  if (p.category !== "electricity") return `${shekel(p.price!)} לחודש`;
+  const pct = `${p.discountIsCapped ? "עד " : ""}${p.discountPercent}% הנחה`;
+  return p.discountScope ? `${pct} על ${p.discountScope}` : pct;
+}
+
+/**
+ * השורה שמתחת לכותרת. ההסתייגות על המחיר נאמרת כאן, ולא נשארת
+ * לכרטיס פנימי: שקף הפתיח הוא ההצהרה שנראית ראשונה ולבדה.
+ */
+function hookSub(p: StudioPackage): string {
+  const tail = "כדאי לדעת מה באמת כלול.";
+  return p.priceNote ? `${p.priceNote}. ${tail}` : `לפני שמצטרפים, ${tail}`;
+}
+
+/*
+ * ⚠️ 22 תווים, ולא אורך הנוסח. `row.value` מצויר ב-`fillText` יחיד
+ * ב-`renderSlide.ts:464` — בלי `wrap` ובלי קיצור — בגופן 42 bold מול
+ * תווית שמצוירת מימין באותה שורה, כלומר נוסח ארוך היה **נדרס** על
+ * התווית ויוצא מהכרטיס. לכן השקף מקבל את העובדה ("יש תקופת מבצע")
+ * והכיתוב — שהוא טקסט ולא ציור — מקבל את הנוסח **כמות שהוא**. ids 42
+ * ("אחרי שנתיים 69.9") ו-83 נכנסים; ids 23, 58, 61, 81, 92, 108, 109,
+ * 132 ארוכים מזה.
+ */
+const PROMO_PERIOD_ROW = "יש תקופת מבצע";
+const ROW_VALUE_MAX = 22;
+
+/**
+ * מה שהרשומה מסרה על התקופה שאחרי ההטבה — מספר, נוסח, או עצם קיומה.
+ *
+ * ⚠️ הענף האמצעי מדפיס את **נוסח הרשומה** ולא ניסוח שלנו, והענף
+ * השלישי אינו אומר שהמחיר עולה. ראה `afterRises` ו-`promoPeriod`
+ * ב-`catalog.ts`: ב-8 מ-11 הנוסחים ה-`price` הוא כבר מחיר הקבע,
+ * ובשלושה מהם המחיר שאחרי אף **נמוך** ממנו.
+ */
+function afterRow(p: StudioPackage): Row | null {
+  const label = "אחרי תום ההטבה";
+  if (p.after != null) return { label, from: shekel(p.price!), value: shekel(p.after), tone: "red" };
+  if (p.afterNote) {
+    const fits = p.afterNote.length <= ROW_VALUE_MAX;
+    return {
+      label,
+      value: fits ? p.afterNote : PROMO_PERIOD_ROW,
+      tone: p.afterRises ? "red" : undefined,
+    };
+  }
+  if (p.promoPeriod) return { label, value: PROMO_PERIOD_ROW };
+  return null;
+}
+
+/**
+ * שורת הכיתוב על התקופה שאחרי ההטבה.
+ *
+ * ⚠️ "המחיר עולה" ייאמר רק כשיש מספר אמין (`after`) או כששער הכיוון
+ * `afterRises` דלוק. בלעדיו מודפס נוסח הרשומה בתוך מרכאות, כי הנוסח
+ * עצמו נושא את הכיוון — ואנחנו לא.
+ *
+ * ⚠️ ברירת המחדל הקודמת ("כדאי לבדוק מה קורה למחיר כשההטבה נגמרת")
+ * נשארת רק לרשומה ש**לא אמרה דבר**. היא הודפסה על 30 רשומות שכן
+ * אמרו, כלומר הכחישה את ההצהרה של הרשומה עצמה.
+ */
+function afterCaption(p: StudioPackage): string {
+  if (p.category === "electricity") {
+    /*
+     * ⚠️ "מה קורה למחיר כשההטבה נגמרת" נאמר כאן על מסלול הנחה שאין לו
+     * מחיר חודשי ואין לו תום הטבה — `promoRise` מחזירה `null` לחשמל
+     * במפורש. ההסתייגות שכן קיימת היא מה שההנחה חלה עליו.
+     */
+    if (p.discountScope) {
+      return `שימו לב: ההנחה חלה על ${p.discountScope} בחשבון בלבד, ולא על החשבון כולו.`;
+    }
+    return p.discountIsCapped
+      ? "שימו לב: זו תקרת הנחה ולא שיעור אחיד — בדקו איזו הנחה מגיעה לחשבון שלכם."
+      : "לפני שמצטרפים, כדאי לבדוק על מה בדיוק ההנחה חלה.";
+  }
+  if (p.after != null) {
+    return `שימו לב: אחרי תום ההטבה המחיר עולה ל-${shekel(p.after)}. את זה כדאי לדעת לפני שמצטרפים.`;
+  }
+  if (p.afterNote) {
+    const head = p.afterRises ? "שימו לב: אחרי תום ההטבה המחיר עולה" : "מה שהחבילה אומרת על התקופה שאחרי ההטבה";
+    return `${head} — "${p.afterNote}". את זה כדאי לדעת לפני שמצטרפים.`;
+  }
+  if (p.promoPeriod) {
+    return "שימו לב: החבילה מצהירה על תקופת מבצע. בדקו מה המחיר אחריה לפני שמצטרפים.";
+  }
+  return "לפני שמצטרפים, כדאי לבדוק מה קורה למחיר כשההטבה נגמרת.";
+}
+
 export function spotlightPost(p: StudioPackage): Post {
   const isElec = p.category === "electricity";
-  const priceText = isElec ? `${p.discountPercent}% הנחה` : `${shekel(p.price!)} לחודש`;
+  const priceText = headlineText(p);
   const rows: Row[] = [];
   if (p.stat) rows.push({ label: isElec ? "שעות ההנחה" : "מה כלול", value: p.stat });
-  if (p.after != null) {
-    rows.push({ label: "אחרי תום ההטבה", from: shekel(p.price!), value: shekel(p.after), tone: "red" });
-  }
+  const after = afterRow(p);
+  if (after) rows.push(after);
   if (p.installation != null) {
     rows.push({ label: "התקנה", value: p.installation === 0 ? "ללא עלות" : shekel(p.installation) });
   }
@@ -202,7 +304,7 @@ export function spotlightPost(p: StudioPackage): Post {
         kind: "hook",
         kicker: `${CATEGORY_HE[p.category]} · ${p.provider}`,
         title: { text: p.name, block: priceText },
-        sub: "לפני שמצטרפים, כדאי לדעת מה באמת כלול.",
+        sub: hookSub(p),
         underline: "מה באמת כלול.",
       },
       ...(rows.length
@@ -225,9 +327,7 @@ export function spotlightPost(p: StudioPackage): Post {
     caption: [
       `${p.provider}: ${p.name}, ${priceText}.`,
       "",
-      p.after != null
-        ? `שימו לב: אחרי תום ההטבה המחיר עולה ל-${shekel(p.after)}. את זה כדאי לדעת לפני שמצטרפים.`
-        : "לפני שמצטרפים, כדאי לבדוק מה קורה למחיר כשההטבה נגמרת.",
+      afterCaption(p),
       "",
       `רוצים לדעת אם זה משתלם לכם? ${WHATSAPP_LINE}`,
       "",
@@ -237,6 +337,17 @@ export function spotlightPost(p: StudioPackage): Post {
 }
 
 /* ── השוואת חבילות ────────────────────────────────────────────────── */
+
+/** שורת המשנה בטבלת ההשוואה: קצרה, ובלי לטעון כיוון שלא הוכח. */
+export function compareAfter(p: StudioPackage): string | null {
+  if (p.after != null) return `אחר כך ${shekel(p.after)}`;
+  if (p.afterNote || p.promoPeriod) return "יש תקופת מבצע";
+  return null;
+}
+
+function compareScope(p: StudioPackage): string | null {
+  return p.discountScope ? `על ${p.discountScope}` : null;
+}
 
 export function comparePost(picked: StudioPackage[]): Post {
   if (picked.length < 2) throw new Error("בחר לפחות שתי חבילות להשוואה.");
@@ -263,13 +374,20 @@ export function comparePost(picked: StudioPackage[]): Post {
         title: { text: isElec ? "ההנחה בכל מסלול" : "המחיר של כל חבילה", mark: isElec ? "ההנחה" : "המחיר" },
         pill: "ההשוואה",
         tag: isElec ? "מהגבוהה" : "מהזולה",
+        /*
+         * ⚠️ אותם שערים של שקף הפוקוס, באותה טבלה שכל תפקידה להשוות
+         * מספרים: בלעדיהם "10%" של ids 135/142 ישב ליד "20%" של id 150
+         * כאילו שניהם שיעור אחיד על החשבון, כששתי ההצהרות שונות גם
+         * בתקרה וגם במה שההנחה חלה עליו. ו-"אחר כך X" הופיע רק לרשומה
+         * עם מספר, כלומר רשומה שהצהירה בפרוזה נראתה כמי שלא הצהירה.
+         */
         rows: sorted.map((p) => ({
           label: p.provider,
-          sub: [p.stat, p.after != null ? `אחר כך ${shekel(p.after)}` : null].filter(Boolean).join(" · "),
-          value: isElec ? `${p.discountPercent}%` : shekel(p.price!),
+          sub: [p.stat, isElec ? compareScope(p) : compareAfter(p)].filter(Boolean).join(" · "),
+          value: isElec ? `${p.discountIsCapped ? "עד " : ""}${p.discountPercent}%` : shekel(p.price!),
           tone: "blue" as const,
         })),
-        note: `${isElec ? "אחוז הנחה מהחשבון." : "מחיר לחודש."} ${SOURCE_NOTE}`,
+        note: `${isElec ? "אחוז ההנחה כפי שהרשומה מצהירה עליו." : "מחיר לחודש."} ${SOURCE_NOTE}`,
       },
       cta(
         "לא בטוחים מה מתאים לכם?",
@@ -280,7 +398,9 @@ export function comparePost(picked: StudioPackage[]): Post {
     caption: [
       `השוויתי ${sorted.length} חבילות ${CATEGORY_HE[category]}, ${isElec ? "מההנחה הגבוהה לנמוכה" : "מהזולה ליקרה"}.`,
       "",
-      "המחיר בכותרת הוא רק חלק מהסיפור: כדאי לבדוק גם את המפרט ומה קורה כשההטבה נגמרת.",
+      isElec
+        ? "האחוז בכותרת הוא רק חלק מהסיפור: כדאי לבדוק על מה ההנחה חלה ואם יש לה תקרה."
+        : "המחיר בכותרת הוא רק חלק מהסיפור: כדאי לבדוק גם את המפרט ומה קורה כשההטבה נגמרת.",
       "",
       `לא בטוחים מה מתאים לכם? ${WHATSAPP_LINE}`,
       "",

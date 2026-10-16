@@ -15,6 +15,7 @@ import {
   highlights,
   isMoney,
   listable,
+  phoneCount,
   providers,
   serviceCounts,
 } from "./catalog/catalog";
@@ -75,24 +76,49 @@ function Glyph({ children }: { children: React.ReactNode }) {
   );
 }
 
-type ServiceCounts = ReturnType<typeof serviceCounts>;
+/*
+ * ⚠️ `phone` מורכב כאן ולא מוחזר מ-`serviceCounts`, כדי שהצורה שאותה
+ * פונקציה מחזירה תישאר כפי שהיא. `phoneCount` קורא את אותם שערים
+ * בדיוק — ראה ההערה שם.
+ */
+type ServiceCounts = ReturnType<typeof serviceCounts> & { phone: number };
 
 /**
- * חמשת השירותים, בסדר שבו הם מוצגים אחרי ההירו.
+ * ששת השירותים, בסדר שבו הם מוצגים אחרי ההירו.
  *
  * ⚠️ הכיתוב של החשמל הוא "הנחה בחשבון" ולא "חבילות חשמל", ולכן גם
  * המונה שלו סופר מסלולים ולא מחירים.
  *
- * ⚠️ שלושת הכרטיסים של הבית מובילים כולם לאותו עוגן (`#home`) — זה
+ * ⚠️ ארבעת הכרטיסים של הבית מובילים כולם לאותו עוגן (`#home`) — זה
  * אותו דלי בקטלוג, עם מסננים בצד הלקוח. אל תמציאו כאן עוגנים
  * (`#tv`, `#triple`) שהקטלוג אינו מכיר.
+ *
+ * ⚠️ "קו טלפון ביתי" הוא האריח הרביעי של הבית, ולא קישוט. חמשת
+ * האריחים הראשונים כיסו 105 מ-106 החבילות שהדף מציג: id 83 ("בזק
+ * טלפון - מדברים 50 דקות") אינה אינטרנט, אינה טלוויזיה ואינה משולבת,
+ * ולכן הופיעה בקטלוג בזמן שרצועת "מה אנחנו משווקים" לא הצהירה עליה
+ * באף מונה. אריח שמונה שלו 0 פשוט ייעלם ברענון הבא — ראה התנאי
+ * שמתחת — ולכן זו לא הבטחה לחבילה שאינה קיימת.
+ *
+ * ⚠️ שש כריכות ולא חמש, ולכן `lg:grid-cols-3` ולא `grid-cols-5`:
+ * שישה אריחים מתחלקים בדיוק לשתי שורות של שלוש בדסקטופ ולשלוש שורות
+ * של שתיים בנייד, ולכן ה-`max-lg:last:col-span-2` — שהיה שם רק כדי
+ * למלא את החור שמספר אי-זוגי משאיר — מיותר.
  */
 const SERVICES: {
   title: string;
   blurb: string;
   hash: string;
   icon: React.ReactNode;
-  count: (c: ServiceCounts) => string;
+  /*
+   * ⚠️ המונה מופרד לערך ולכיתוב, ולא מוחזר כמחרוזת אחת: רק כך הרצועה
+   * יכולה **להשמיט** אריח שאין מאחוריו חבילה. אריח עם "0 חבילות"
+   * שמקשר לקטלוג הוא בדיוק הסתירה בין מספר מוצהר לרשימה מוצגת שהדף
+   * הזה מתוקן ממנה שוב ושוב, רק בגודל 0 — ו-`highlights` בסקשן
+   * "חבילות נבחרות" כבר נוהג כך (`picks.length === 0` → `null`).
+   */
+  n: (c: ServiceCounts) => number;
+  caption: (n: number) => string;
 }[] = [
   {
     title: "קווי סלולר",
@@ -104,7 +130,8 @@ const SERVICES: {
         <path d="M10.5 5.5h3M12 18.5h.01" />
       </Glyph>
     ),
-    count: (c) => `${c.cellular} ${PACKAGES_CAPTION(c.cellular)}`,
+    n: (c) => c.cellular,
+    caption: PACKAGES_CAPTION,
   },
   {
     title: "אינטרנט וסיבים",
@@ -115,7 +142,8 @@ const SERVICES: {
         <path d="M2.5 8.5a14 14 0 0 1 19 0M5.5 12a10 10 0 0 1 13 0M8.5 15.5a6 6 0 0 1 7 0M12 19h.01" />
       </Glyph>
     ),
-    count: (c) => `${c.internet} ${PACKAGES_CAPTION(c.internet)}`,
+    n: (c) => c.internet,
+    caption: PACKAGES_CAPTION,
   },
   {
     title: "חבילות טלוויזיה",
@@ -127,7 +155,8 @@ const SERVICES: {
         <path d="M8.5 21.5h7M10 10.5l4 2.5-4 2.5z" />
       </Glyph>
     ),
-    count: (c) => `${c.tv} ${PACKAGES_CAPTION(c.tv)}`,
+    n: (c) => c.tv,
+    caption: PACKAGES_CAPTION,
   },
   {
     title: "טלוויזיה + אינטרנט",
@@ -139,7 +168,20 @@ const SERVICES: {
         <path d="M8.5 21.5h7M8.5 13.5a5 5 0 0 1 7 0M10.5 10.8a8.5 8.5 0 0 1 3 0M12 15.8h.01" />
       </Glyph>
     ),
-    count: (c) => `${c.bundle} ${PACKAGES_CAPTION(c.bundle)}`,
+    n: (c) => c.bundle,
+    caption: PACKAGES_CAPTION,
+  },
+  {
+    title: "קו טלפון ביתי",
+    blurb: "קו בזק או קו על גבי הסיבים — דקות שיחה, בנפרד או בתוך החבילה.",
+    hash: "#home",
+    icon: (
+      <Glyph>
+        <path d="M5.5 3.5h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a1.5 1.5 0 0 1-1.7 1.5C10.9 17.8 6.2 13.1 4 6.7A1.5 1.5 0 0 1 5.5 3.5z" />
+      </Glyph>
+    ),
+    n: (c) => c.phone,
+    caption: PACKAGES_CAPTION,
   },
   {
     title: "הנחה בחשמל",
@@ -150,13 +192,17 @@ const SERVICES: {
         <path d="M13.5 2.5 5 13.5h6l-.5 8L19 10.5h-6z" />
       </Glyph>
     ),
-    count: (c) => `${c.electricity} ${PLANS_CAPTION(c.electricity)}`,
+    n: (c) => c.electricity,
+    caption: PLANS_CAPTION,
   },
 ];
 
 export default function LandingPage() {
   const packages = listable(basePackages());
-  const services = serviceCounts(packages);
+  const services: ServiceCounts = { ...serviceCounts(packages), phone: phoneCount(packages) };
+  // ⚠️ ראה ההערה על `n`/`caption` ב-`SERVICES`: אריח בלי חבילה אחת
+  // מאחוריו נשמט, ולא מצהיר "0 חבילות" מעל קישור לקטלוג.
+  const shownServices = SERVICES.filter((s) => s.n(services) > 0);
   /*
    * החבילה שפס המחיר בהירו מצטט.
    *
@@ -363,9 +409,9 @@ export default function LandingPage() {
           <h2 id="services-heading" className="sr-only">
             מה אנחנו משווקים
           </h2>
-          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-5 lg:gap-4">
-            {SERVICES.map((s) => (
-              <li key={s.title} className="max-lg:last:col-span-2">
+          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
+            {shownServices.map((s) => (
+              <li key={s.title}>
                 <a
                   href={s.hash}
                   className="group flex h-full flex-col rounded-lp-card border border-lp-line bg-lp-surface p-4 shadow-lp-lift transition hover:-translate-y-0.5 hover:border-lp-brand hover:shadow-lp-pop sm:p-5"
@@ -380,7 +426,9 @@ export default function LandingPage() {
                     {s.blurb}
                   </span>
                   <span className="mt-4 flex items-center gap-1.5 text-sm font-bold text-lp-brand">
-                    <span className="nums">{s.count(services)}</span>
+                    <span className="nums">
+                      {s.n(services)} {s.caption(s.n(services))}
+                    </span>
                     <span aria-hidden className="transition group-hover:-translate-x-1">
                       ←
                     </span>

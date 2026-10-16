@@ -255,7 +255,27 @@ export function sortCatalog(packages: Package[], sort: SortKey): Package[] {
   if (sort === "price-asc") sorted.sort(byPrice);
   else if (sort === "price-desc") sorted.sort(byPriceDesc);
   else if (sort === "after-asc") sorted.sort(byAfterPrice);
-  else sorted.sort((a, b) => Number(b.recommended) - Number(a.recommended) || byPrice(a, b));
+  /*
+   * ⚠️ `!!p.recommended` ולא `Number(p.recommended)`.
+   *
+   * זה ציר המיון שהדף **נפתח** בו, והוא קרא את `recommended` אחרת
+   * משני הקוראים האחרים של אותו שדה: `PackageCard` מצייר את התג
+   * "מומלץ" על כל ערך טרות'י, ו-`highlights` ב-`catalog.ts` מדרג
+   * `p.recommended ? 1 : 2` — גם הוא טרות'י. `Number("false")` הוא
+   * `NaN` (אומת), ו-`NaN` נבלע ב-`||` ונופל למחיר: כלומר חבילה
+   * שהמחלץ העביר בה את הדגל כמחרוזת (`"false"`/`"yes"` — הצורה
+   * שהוא מייצר כשהוא קורא שדה טקסטואלי, ואותו פגם בדיוק שתוקן
+   * ב-`serviceCounts` על `hasInternet`) קיבלה תג "מומלץ" על
+   * הכרטיס, מקום ראשון ברצועת "חבילות נבחרות" — ובלשונית הקטלוג
+   * שמתחתיהן, תחת הכותרת "מומלצים תחילה", דורגה לפי מחיר ככל השאר.
+   * 109 הרשומות של היום נושאות `boolean` נקי; זה שער לרענון הבא.
+   *
+   * ⚠️ טרות'י ולא `=== true`, בכוונה: הבחירה כאן היא **להסכים** עם
+   * שני המשטחים שכבר מדפיסים, ולא להוסיף הגדרה שלישית. ההגדרה
+   * המצמצמת (`=== true`) שייכת ל-`catalog.ts`, שם `highlights` תקבע
+   * אותה לכל הקוראים בבת אחת — ראה הדיווח.
+   */
+  else sorted.sort((a, b) => Number(!!b.recommended) - Number(!!a.recommended) || byPrice(a, b));
   return sorted;
 }
 
@@ -423,6 +443,11 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
           </div>
 
           <div id="lp-filters" className={filtersOpen ? "mt-3" : "max-lg:hidden"}>
+            {/*
+              ⚠️ המונים, קצות המחוון ו-"מתוך N" הם `lp-ink-2` ולא
+              `lp-ink-3`: 11px/12px בצבע ההוא הם 3.27-3.49:1, מתחת
+              ל-AA — ראה את ההערה המלאה ב-`PackageCard`.
+            */}
             <fieldset className="mb-4">
               <legend className="mb-2 text-xs font-medium text-lp-ink-2">חברה</legend>
               <div className="space-y-1.5">
@@ -436,7 +461,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                       className="h-4 w-4 accent-lp-brand"
                     />
                     <span className="flex-1 text-lp-ink">{o.name}</span>
-                    <span className="nums text-xs text-lp-ink-3">{o.count}</span>
+                    <span className="nums text-xs text-lp-ink-2">{o.count}</span>
                   </label>
                 ))}
               </div>
@@ -499,7 +524,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                   className="w-full accent-lp-brand"
                   aria-label="מחיר מקסימלי"
                 />
-                <div className="nums mt-1 flex justify-between text-lp-2xs text-lp-ink-3">
+                <div className="nums mt-1 flex justify-between text-lp-2xs text-lp-ink-2">
                   <span>{shekels(priceBounds.min)}</span>
                   <span>{shekels(priceBounds.max)}</span>
                 </div>
@@ -533,10 +558,10 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
             <span className="nums font-semibold text-lp-ink">{results.length}</span>{" "}
             {(isElectric ? PLANS_CAPTION : PACKAGES_CAPTION)(results.length)}
             {hasFilters && (
-              <span className="nums text-lp-ink-3"> מתוך {packages.length}</span>
+              <span className="nums text-lp-ink-2"> מתוך {packages.length}</span>
             )}
             {hiddenCompare > 0 && (
-              <span className="nums text-lp-ink-3">
+              <span className="nums text-lp-ink-2">
                 {" "}
                 · {hiddenCompare} מההשוואה {hiddenCompare === 1 ? "מוסתרת" : "מוסתרות"} בסינון
               </span>

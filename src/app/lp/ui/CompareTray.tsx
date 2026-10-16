@@ -531,10 +531,15 @@ function AfterPromoCell({ pkg }: { pkg: Package }) {
   );
 }
 
+/*
+ * ⚠️ תווית השורה היא `lp-ink-2` ולא `lp-ink-3`: 12px בצבע הזה הוא
+ * 3.49:1, מתחת ל-AA — ראה את ההערה המלאה ב-`PackageCard`. דווקא כאן
+ * זה המקום שבו ההצמדה "איזה מספר שייך לאיזו עובדה" נשענת על התווית.
+ */
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <tr className="even:bg-lp-surface-2">
-      <th scope="row" className="p-2 text-start align-top text-xs font-medium text-lp-ink-3">
+      <th scope="row" className="p-2 text-start align-top text-xs font-medium text-lp-ink-2">
         {label}
       </th>
       {children}

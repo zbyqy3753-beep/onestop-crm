@@ -121,8 +121,19 @@ export function basePackages(): Package[] {
  * ולא הוחל על שתי הפונקציות כאן שקוראות מ-`spec` באותו רינדור —
  * `electricityRank` (דרך `byPrice`/`afterPrice`, כלומר כל מיון בעמוד)
  * ו-`serviceCounts` (השורה השנייה של `page.tsx`).
+ *
+ * ⚠️ מיוצאת כדי ש**גם `config.ts`** יקרא את אותה הגדרה. `crmCategory`
+ * קראה `pkg.spec as HomeSpec` — המרה בלבד, בלי שום בדיקה — ואז
+ * `spec && !spec.hasInternet`. `spec` פרימיטיבי (מחרוזת, מספר) או מערך
+ * הוא טרות'י שאין בו `hasInternet`, ולכן חבילת סיבים כזו קיבלה
+ * `"general"` במקום `"internet"` (אומת: `spec: "סיבים"` → `general`,
+ * `spec: []` → `general`). זה אותו דפוס שהקובץ הזה מתעד שוב ושוב —
+ * שער שחובר למשטח אחד ולא לאחיו — וכאן הוא נכתב **שלוש** פעמים
+ * (כאן, `format.ts:153`, `savings.ts:475`) וחסר דווקא ברביעי. `spec`
+ * שאינו קריא פירושו "אין מה לקרוא ממנו", כלומר נפילה לברירת המחדל
+ * הכתובה ולא להסקה מתוך `undefined`.
  */
-function hasSpec(p: Package): boolean {
+export function hasSpec(p: Package): boolean {
   return p.spec != null && typeof p.spec === "object" && !Array.isArray(p.spec);
 }
 
@@ -364,6 +375,11 @@ export function listableCounts(packages: Package[]) {
  * ⚠️ `internet`, `tv` ו-`bundle` **חופפים בכוונה**: חבילת טריפל נספרת
  * בשלושתם, כי כל אחד מהם עונה על שאלה אחרת שהמבקר שואל ("יש לכם
  * טלוויזיה?"). לכן אין לחבר אותם — הסכום גדול מ-`home`.
+ *
+ * ⚠️ מונה קו הטלפון יושב ב-`phoneCount` שמתחת ולא כשדה נוסף כאן, כדי
+ * שהצורה שהמשטחים והבדיקות הקיימות משוות אליה תישאר כפי שהיא. הוא
+ * קורא את אותם שערים בדיוק (`listable` → `isHomeSpec` → `hasSpec`),
+ * כלומר זה אח של השדות כאן ולא הגדרה שנייה.
  */
 export function serviceCounts(packages: Package[]) {
   const shown = listable(packages);
@@ -395,7 +411,9 @@ export function serviceCounts(packages: Package[]) {
    * המחשבון, שכן מגודר, היה סופר אחרת. שני מספרים סותרים לאותו נתון
    * הם בדיוק מה שהתיקון מ-e9fc39f (id 4) נכתב למנוע.
    */
-  const realInternet = home.filter((p) => p.spec.hasInternet === true && p.type !== "TV");
+  const realInternet = home.filter(
+    (p) => p.spec.hasInternet === true && !typeText(p).includes("TV"),
+  );
   return {
     cellular: shown.filter((p) => p.category === "cellular").length,
     internet: realInternet.length,
@@ -403,6 +421,34 @@ export function serviceCounts(packages: Package[]) {
     bundle: realInternet.filter((p) => p.spec.hasTv === true).length,
     electricity: shown.filter((p) => p.category === "electricity").length,
   };
+}
+
+/**
+ * כמה חבילות בית כוללות קו טלפון — המונה של האריח השישי בדף.
+ *
+ * ⚠️ קיים כי `hasPhone` היה **הדגל היחיד** ב-`HomeSpec` שאף משטח
+ * בקטלוג לא קרא, והחור לא היה תיאורטי: id 83 ("בזק טלפון - מדברים 50
+ * דקות", `hasPhone: true`, `hasInternet: false`, `hasTv: false`) נספר
+ * ב-`listableCounts.home` וב-`CatalogTabs`, ומוצג בקטלוג — אבל **באף
+ * אחד מחמשת אריחי "מה אנחנו משווקים"** (אומת: 55+29+16+13+18 כיסו 105
+ * מ-106 החבילות שהדף מציג). כלומר הדף מציג חבילה שהוא מצהיר שאינו
+ * משווק. זו אותה סתירה בין מספר מוצהר לרשימה מוצגת שהקובץ הזה מתוקן
+ * ממנה שוב ושוב, רק מהצד שבו המונה מצהיר **פחות** ולא יותר.
+ *
+ * ⚠️ חופף ל-`internet`/`tv`/`bundle` בכוונה, מאותו טעם שכתוב שם: שש
+ * מתוך שבע החבילות שנושאות קו הן טריפל, ו"יש לכם קו טלפון?" היא שאלה
+ * נפרדת שהמבקר שואל. אין לחבר את האריחים.
+ *
+ * ⚠️ אותם שערים בדיוק כמו `serviceCounts` — `listable`, `isHomeSpec`
+ * ואחריו `hasSpec` — ולא קריאה ישרה מ-`spec`, ו-`=== true` ולא הערך
+ * עצמו (`"false"` כמחרוזת הוא אמת ב-JS). שתי הגדרות לאותו שדה הן
+ * המלכודת שכל הקובץ הזה מתריע עליה.
+ */
+export function phoneCount(packages: Package[]): number {
+  return listable(packages)
+    .filter(isHomeSpec)
+    .filter(hasSpec)
+    .filter((p) => p.spec.hasPhone === true).length;
 }
 
 /**
@@ -449,7 +495,15 @@ export function cheapest(packages: Package[], limit = 3): Package[] {
  * יום אחד תיכנס לכאן שכבת עריכה — זו הפונקציה שצריכה להיעלם לטובתה.
  */
 export function highlights(packages: Package[], category: Category, limit = 3): Package[] {
-  const rank = (p: Package) => (p.editorial?.featured ? 0 : p.recommended ? 1 : 2);
+  /*
+   * ⚠️ `=== true` ולא טרות'יניס. `recommended: "false"` (הצורה שהמחלץ
+   * מייצר כשהוא קורא שדה טקסטואלי) הוא אמת ב-JS, ולכן רשומה שהדגל שלה
+   * דווקא **כבוי** הייתה מדורגת ראשונה ברצועת "חבילות נבחרות". אותו
+   * תיקון בדיוק שנעשה ל-`hasInternet` ב-`serviceCounts` ול-`recommended`
+   * בציר המיון של `CatalogBrowser` — וזה הקורא השלישי של אותו שדה,
+   * שנשאר מאחור.
+   */
+  const rank = (p: Package) => (p.editorial?.featured ? 0 : p.recommended === true ? 1 : 2);
   return listable(byCategory(packages, category))
     .slice()
     .sort((a, b) => rank(a) - rank(b) || byPrice(a, b))
@@ -706,6 +760,31 @@ export function hasKnownAfterPrice(p: Package): boolean {
  */
 export function freeText(value: unknown): string | null {
   return typeof value === "string" && value !== "" ? value : null;
+}
+
+/**
+ * ה-`type` של החבילה **יחד עם** ה-`badges` שלה, כמחרוזת אחת לחיפוש.
+ *
+ * ⚠️ חי כאן ולא ב-`savings.ts` כי **שני** צרכנים שואלים את אותה שאלה
+ * ("האם הרשומה הזאת היא טלוויזיה?") וענו עליה אחרת: `isComparable`
+ * דרך הפונקציה הזאת, ו-`serviceCounts` בהשוואה מדויקת `type !== "TV"`.
+ * התוצאה הייתה שתי אמירות סותרות על אותה רשומה באותו עמוד — רצועת
+ * השירותים סופרת חבילה כאינטרנט בעוד המחשבון פוסל אותה כטלוויזיה —
+ * וזו בדיוק הסתירה שהתיקון מ-e9fc39f (id 4) נכתב למנוע. העותק הכפול
+ * היה הפריט הפתוח מסבב 32; מאוחד כאן כדי שלא יסחף.
+ *
+ * ⚠️ `badges` שאינו מערך **אינו** נקרא כסימן, וזו הכרעה מתועדת ולא
+ * השמטה — ההנמקה המלאה ומחירה יושבים בהערה שמעל `isComparable`
+ * ב-`savings.ts` ובבדיקה ב-`tools/round34-savings.test.mjs`. אל
+ * תהפכו את הכיוון כאן בלי לקרוא אותן: פסילה על `badges` פגום מוציאה
+ * רשומה **בריאה** מבריכת ההשוואה ומקטינה את הכותרת בשקט.
+ */
+export function typeText(p: Package): string {
+  const type = typeof p.type === "string" ? p.type : "";
+  const badges = Array.isArray(p.badges)
+    ? p.badges.filter((b): b is string => typeof b === "string").join(" ")
+    : "";
+  return `${type} ${badges}`;
 }
 
 /**

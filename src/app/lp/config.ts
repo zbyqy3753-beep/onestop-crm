@@ -1,5 +1,5 @@
 import type { LeadCategoryKey } from "@/lib/domain/types";
-import { logicName } from "./catalog/catalog";
+import { hasSpec, logicName } from "./catalog/catalog";
 import type { HomeSpec, Package } from "./catalog/types";
 
 /**
@@ -52,7 +52,18 @@ export function crmCategory(pkg: Package): LeadCategoryKey {
    * לידי המחשבון לקטגוריה הלא-נכונה. הבדיקה הטקסטואלית נשארת ראשונה
    * כי היא מפורשת יותר מדגל שהמחלץ הסיק.
    */
-  const spec = pkg.category === "home" ? (pkg.spec as HomeSpec) : null;
+  /*
+   * ⚠️ `hasSpec` ולא המרה בלבד. `pkg.spec as HomeSpec` היא הצהרה
+   * לקומפיילר ולא בדיקה בזמן ריצה, והקטלוג נכנס דרך
+   * `as unknown as Catalog` — כלומר אין ולידציה בכלל. `spec` פרימיטיבי
+   * או מערך הוא טרות'י שאין בו `hasInternet`, ולכן השורה
+   * `spec && !spec.hasInternet` שמתחת שלחה חבילת **סיבים** ל-`"general"`
+   * (אומת: `spec: "סיבים"` ו-`spec: []` החזירו `general` במקום
+   * `internet`) — ליד שהנציג שמסנן לפי אינטרנט לא רואה, בשקט מלא.
+   * `hasSpec` הוא השער שכבר קיים ב-`catalog.ts` לאותה קריאה בדיוק;
+   * כאן הוא פשוט לא היה מחובר.
+   */
+  const spec = pkg.category === "home" && hasSpec(pkg) ? (pkg.spec as HomeSpec) : null;
   /*
    * ⚠️ `hasTv` לבדו, ולא `hasTv && hasInternet`.
    *

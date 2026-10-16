@@ -5,14 +5,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { StudioPackage } from "@/lib/posts/catalog";
 import {
   afterPromoPost,
+  compareAfter,
   comparePost,
-  shekel,
+  headlineText,
   spotlightPost,
   TEMPLATES,
   tipPost,
   type Post,
   type TemplateId,
 } from "@/lib/posts/templates";
+import { displayName } from "@/app/lp/catalog/catalog";
 import { Button, Field, inputClass } from "@/components/ui/primitives";
 import { drawSlide, loadLogos } from "./renderSlide";
 import { RequestPanel, type RequestView } from "./RequestPanel";
@@ -30,10 +32,19 @@ const CATEGORY_LABEL: Record<StudioPackage["category"], string> = {
   electricity: "חשמל",
 };
 
+/*
+ * ⚠️ דרך `headlineText` ו-`compareAfter` ולא חישוב מקומי.
+ *
+ * זו רשימת הבחירה שאלירן בוחר ממנה את החבילה לפוסט, והיא אמרה שני
+ * דברים שהפוסט עצמו כבר אינו אומר: אחוז הנחה **שטוח** על רשומה שכתבה
+ * "עד" (ids 135, 142) ובלי רכיב החשבון שההנחה חלה עליו (10 מסלולי
+ * חשמל), ו-`← ₪X` רק למי שמסרה **מספר** — כך שרשומה שהצהירה על
+ * תקופת מבצע בפרוזה נראתה כמי שלא הצהירה כלום. המשטח שבוחר חייב
+ * להראות את מה שהמשטח שמפרסם יראה, אחרת הבחירה נעשית על מידע אחר.
+ */
 function packageLine(p: StudioPackage) {
-  const price = p.category === "electricity" ? `${p.discountPercent}%` : shekel(p.price!);
-  const after = p.after != null ? ` ← ${shekel(p.after)}` : "";
-  return `${p.provider} · ${p.name} · ${price}${after}`;
+  const after = compareAfter(p);
+  return `${p.provider} · ${displayName(p.name) || p.provider} · ${headlineText(p)}${after ? ` ← ${after}` : ""}`;
 }
 
 export function PostStudio({
