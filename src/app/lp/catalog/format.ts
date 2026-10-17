@@ -92,19 +92,58 @@ export const PLANS_CAPTION = (n: number) => (n === 1 ? "מסלול" : "מסלו�
  * ⚠️ מספר שאחריו `%` או `:` נדחה. `%` הוא תחומה של `discountIsCapped`,
  * ו-`:` הוא שעה — "ההנחה חלה עד 7:00" אינה הצהרה על נפח או מהירות,
  * ובלי השער הזה כל שדה שערכו 7 היה נקרא ממנה כתקרה.
+ *
+ * ⚠️ ו' החיבור מותרת. ה-lookbehind נכתב כדי ש-"ועד בית" לא ייקרא
+ * כתקרה, והוא חסם גם את "**ו**עד 1500GB" — ניסוח לגיטימי לגמרי.
+ * id 27 אומר "ועד 1500GB גלישה לשלושת הקווים יחד" והאריח הדפיס
+ * `1,500GB` כעובדה, כלומר בדיוק ההבטחה המנופחת שהשער נבנה למנוע.
+ * "ועד בית" ממילא אינו נתפס: הדרישה למספר מיד אחרי המילה (בלבד
+ * עם יחידה לטינית ביניהם) פוסלת כל "ועד" שאחריו מילה עברית.
+ *
+ * ⚠️ והתקרה נקשרת ל**שדה**, לא למספר לבדו. ההשוואה לפי מספר בלבד
+ * אפשרה ל-"עד" של שדה אחד לזלוג לאריח של שדה אחר כשבמקרה מדובר
+ * באותה כמות: id 27 מוסר "3000 דקות שיחה לקו, **עד** 3000 SMS לקו"
+ * — ה-"עד" שייך ל-SMS, והאריח הדפיס "עד 3,000 דקות שיחה" על כמות
+ * שהרשומה מסרה שטוחה. לכן נקראת היחידה שצמודה למספר (לפניו או
+ * בחלון קצר אחריו) ומושווית למשפחה שנשאלה. יחידה שלא זוהתה —
+ * המספר נקרא כתקרה כבעבר, כי שם אין ראיה לשדה אחר.
  */
-function proseCapsAt(pkg: Package, value: number): boolean {
+type CapKind = "data" | "speed" | "minutes" | "sms" | "converters";
+
+/*
+ * ⚠️ `speed` לפני `data`, ו-`data` בלי `MB`. "עד 1000Mb" הוא מהירות
+ * ו-"עד 800GB" הוא נפח; השדה שמודפס כנפח הוא `dataGb`, ולכן `MB`
+ * אינו שייך לו ואין בין השניים דו-משמעות.
+ */
+const CAP_UNITS: [CapKind, RegExp][] = [
+  ["speed", /Mbps|Mb(?![a-z])|מהירות|הורדה|העלאה/i],
+  ["data", /GB|ג['׳]?יגה|גלישה|נפח/i],
+  ["sms", /SMS|הודעות|מסרונ/i],
+  ["minutes", /דק/],
+  ["converters", /ממיר/],
+];
+
+function proseCapsAt(pkg: Package, value: number, kind: CapKind): boolean {
   const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
-  for (const m of prose.matchAll(/(?<![א-ת])עד\s*(?:[A-Za-z]{1,5}\s*)?(\d[\d,]*(?:\.\d+)?)\s*(.?)/g)) {
-    if (m[2] === "%" || m[2] === ":") continue;
-    if (Number(String(m[1]).replace(/,/g, "")) === value) return true;
+  for (const m of prose.matchAll(
+    // ⚠️ חלון היחידה ב-lookahead, אחרת הוא **נבלע**: כשהוא נצרך
+    // כקבוצה רגילה, "עד 3000 SMS לקו ועד 1500GB" החזיר התאמה אחת —
+    // 14 התווים שאחרי 3000 כללו את "ועד 15", והסריקה המשיכה אחריהם.
+    /(?<![א-ת])ו?עד\s*(?:([A-Za-z]{1,5})\s*)?(\d[\d,]*(?:\.\d+)?)\s*(?=([\s\S]{0,14}))/g,
+  )) {
+    const window = m[3] ?? "";
+    if (window.startsWith("%") || window.startsWith(":")) continue;
+    if (Number(String(m[2]).replace(/,/g, "")) !== value) continue;
+    const unit = CAP_UNITS.find(([, re]) => re.test(`${m[1] ?? ""} ${window}`));
+    if (unit && unit[0] !== kind) continue;
+    return true;
   }
   return false;
 }
 
 /** `"עד "` כשהרשומה מצהירה על המספר הזה כתקרה, אחרת מחרוזת ריקה. */
-const upTo = (pkg: Package, ...values: (number | null | undefined)[]) =>
-  values.some((v) => typeof v === "number" && proseCapsAt(pkg, v)) ? "עד " : "";
+const upTo = (pkg: Package, kind: CapKind, ...values: (number | null | undefined)[]) =>
+  values.some((v) => typeof v === "number" && proseCapsAt(pkg, v, kind)) ? "עד " : "";
 
 /**
  * כמות שמותר להדפיס דרך `nf.format` — המקבילה של `isMoney` לשדות
@@ -169,7 +208,7 @@ export function dataLabel(pkg: Package, spec: CellularSpec | null | undefined): 
   if (spec.unlimitedData) return "גלישה חופשית";
   // ⚠️ `isCount` ולא `== null`: "750GB" הדפיס "NaNGB". ראה ההערה שם.
   if (!isCount(spec.dataGb) || spec.dataGb === 0) return null;
-  return `${upTo(pkg, spec.dataGb)}${nf.format(spec.dataGb)}GB`;
+  return `${upTo(pkg, "data", spec.dataGb)}${nf.format(spec.dataGb)}GB`;
 }
 
 /*
@@ -235,11 +274,18 @@ export function speedLabel(pkg: Package, spec: HomeSpec | null | undefined): str
   const unit = asGb ? "Gbps" : "Mbps";
   const value = (mbps: number) => nf.format(asGb ? mbps / 1000 : mbps);
   /*
-   * ⚠️ תחילית אחת לזוג כולו, ולא "עד" לכל מהירות בנפרד. הרשומות
-   * שמצהירות על תקרה מצהירות עליה על שתיהן (id 85: "עד 600 Mb"
-   * ו-"עד 100 Mb"), ו-"עד 600/עד 100" קורא כשתי עובדות ולא כזוג.
+   * ⚠️ תחילית אחת לזוג כולו, ולא "עד" לכל מהירות בנפרד: "עד 600/עד
+   * 100" קורא כשתי עובדות ולא כזוג, ואין דרך לקשור תחילית אחת לחצי
+   * אחד של "600/100".
+   *
+   * ⚠️ והנימוק שנכתב כאן קודם — "הרשומות שמצהירות על תקרה מצהירות
+   * עליה על שתיהן (id 85)" — נכון ל-id 85 **בלבד**. בשמונה מתוך תשע
+   * חבילות הבית שמסרו זוג (ids 73, 98, 99, 86, 124, 153, 154, 159)
+   * ה-"עד" נאמר על ההורדה לבדה ("אינטרנט סיבים עד 1000/100"), ולכן
+   * התחילית מסתייגת גם על מספר ההעלאה. זה הכיוון שמצמצם הבטחה
+   * ולא מרחיב אותה, וזו הסיבה שהוא נשאר — לא העובדה שלא קיים.
    */
-  const cap = upTo(pkg, spec.downloadMbps, upload);
+  const cap = upTo(pkg, "speed", spec.downloadMbps, upload);
   return upload != null
     ? `${cap}${value(spec.downloadMbps)}/${value(upload)}${unit}`
     : `${cap}${value(spec.downloadMbps)}${unit}`;
@@ -603,15 +649,15 @@ export function cardStats(pkg: Package): Stat[] {
     // ⚠️ `isCount` ולא `typeof === "number"`: `NaN` **הוא** number, ולכן
     // השער הקודם הדפיס אריח "NaN" מתחת ל-"דקות שיחה". ראה `isCount`.
     if (isCount(spec.minutes))
-      out.push({ value: `${upTo(pkg, spec.minutes)}${nf.format(spec.minutes)}`, caption: MINUTES_CAPTION(spec.minutes) });
+      out.push({ value: `${upTo(pkg, "minutes", spec.minutes)}${nf.format(spec.minutes)}`, caption: MINUTES_CAPTION(spec.minutes) });
     if (isCount(spec.sms))
-      out.push({ value: `${upTo(pkg, spec.sms)}${nf.format(spec.sms)}`, caption: SMS_CAPTION(spec.sms) });
+      out.push({ value: `${upTo(pkg, "sms", spec.sms)}${nf.format(spec.sms)}`, caption: SMS_CAPTION(spec.sms) });
     // ⚠️ גם דקות לחו״ל. זה היה השדה היחיד שנשאר בלי השער: id 110
     // אומר "עד 100 דקות שיחה מישראל ל-27 יעדים בחו\"ל (אופציונלי)"
     // והאריח הדפיס "100" כעובדה, וכך גם ids 42, 54, 64, 65, 66 ו-69.
     if (out.length < 3 && isCount(spec.intlMinutes)) {
       out.push({
-        value: `${upTo(pkg, spec.intlMinutes)}${nf.format(spec.intlMinutes)}`,
+        value: `${upTo(pkg, "minutes", spec.intlMinutes)}${nf.format(spec.intlMinutes)}`,
         caption: INTL_MINUTES_CAPTION(spec.intlMinutes),
       });
     }
@@ -636,7 +682,7 @@ export function cardStats(pkg: Package): Stat[] {
      * אומרת "כלולים" על מה שאינו כלול.
      */
     if (isCount(spec.converters)) {
-      const cap = upTo(pkg, spec.converters);
+      const cap = upTo(pkg, "converters", spec.converters);
       out.push({
         value: `${cap}${nf.format(spec.converters)}`,
         // ⚠️ רק הכיתוב משתנה, לא הערך: טבלת ההשוואה מיישרת לפי ה-`caption`,
@@ -736,7 +782,7 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     if (isCount(s.intlMinutes) && !tiled.has(INTL_MINUTES_CAPTION(s.intlMinutes))) {
       rows.push({
         label: INTL_MINUTES_CAPTION(s.intlMinutes),
-        value: `${upTo(pkg, s.intlMinutes)}${nf.format(s.intlMinutes)}`,
+        value: `${upTo(pkg, "minutes", s.intlMinutes)}${nf.format(s.intlMinutes)}`,
       });
     }
     fee("עלות SIM", s.simCost);

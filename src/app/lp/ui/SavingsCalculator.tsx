@@ -148,6 +148,18 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
    */
   const pickProvider = saving.pick ? providerName(saving.pick) : "";
   const pickTitle = saving.pick ? packageTitle(saving.pick) : "";
+  /*
+   * ⚠️ גם צד הספק מגודר, לא רק צד השם. `providerName` מחזירה `""`
+   * כש-`provider` אינו אובייקט וה-`slug` חסר, ו-`isComparable` אינה
+   * בודקת את `provider` בכלל — כלומר רשומה כזו עוברת את כל השערים
+   * ומגיעה לכאן. הנפילה חזרה שההערה למעלה מתארת ("`מול WeCom — ,
+   * ₪34 לקו` הוא פסיק תלוי") היא עצמה אל `pickProvider`, שיכול להיות
+   * ריק — ואז מתקבל "מול  — , ₪34 לקו", ועמודת ה-CRM יוצאת `"x · "`
+   * או `""` ונעלמת בשקט. לכן שתי המחרוזות נבנות ממה שבאמת קיים.
+   * לא ניתן להגעה עם הקטלוג של היום (0 רשומות) — זה שער לרענון הבא.
+   */
+  const pickLabel = saving.pick ? packageLabel(saving.pick, pickProvider) : "";
+  const pickTarget = [pickProvider, pickLabel].filter(Boolean).join(" — ");
 
   /** מעבר לתוצאה — משותף ל-CTA ול-Enter בשדה, כדי ששניהם יתנהגו זהה. */
   function submitSpend() {
@@ -412,8 +424,15 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   חזותי, ו-#7d8b99 על לבן הוא 3.49:1 ב-12px — מתחת
                   ל-4.5:1 של WCAG AA. `text-lp-rise` הוא 5.44:1, ואותו
                   צבע שגיאה שכבר משמש ב-`fieldErrorClass` וב-`LeadForm`.
+
+                  ⚠️ והמצב התקין הוא `lp-ink-2`, לא `lp-ink-3`. אותה פסקה
+                  מחזיקה גם את הסתייגות התקרה — ההודעה **היחידה** שאומרת
+                  לגולש שהסכום שהקליד נקטם — ו-#7d8b99 על לבן הוא 3.49:1
+                  ב-12px, מתחת ל-4.5:1 של WCAG AA. התיקון הוחל קודם על
+                  ענף השגיאה בלבד והשאיר את ההסתייגות אפורה; `lp-ink-3`
+                  נשמר ב-`/lp` לטקסט דקורטיבי בלבד (ראה `PackageCard`).
                 */
-                className={`mt-1.5 text-xs ${invalidSpend ? "font-medium text-lp-rise" : "text-lp-ink-3"} ${spendHint ? "" : "sr-only"}`}
+                className={`mt-1.5 text-xs ${invalidSpend ? "font-medium text-lp-rise" : "text-lp-ink-2"} ${spendHint ? "" : "sr-only"}`}
               >
                 {spendHint}
               </p>
@@ -427,6 +446,17 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   id="calc-units"
                   value={units}
                   onChange={(e) => setUnits(Number(e.target.value))}
+                  /*
+                    ⚠️ Enter גם כאן, מאותו נימוק שמחבר אותו לשדה הסכום:
+                    אין `<form>` עוטף וכל הכפתורים הם `type="button"`,
+                    ולכן מי שהגיע ב-Tab לבורר, בחר 3 והקיש Enter לא קיבל
+                    שום תגובה — בעוד אותה הקשה בשדה שלידו כן שולחת.
+                  */
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    submitSpend();
+                  }}
                   className={fieldClass.replace("py-2.5", "py-3")}
                 >
                   {/*
@@ -510,7 +540,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             {worthwhile
               ? `אפשר לחסוך עד ${shekels(yearlySaving)} בשנה, ${shekels(monthlySaving)} בחודש${overCap ? ` — לפי תקרת המחשבון ${shekels(MAX_SPEND)}` : ""}`
               : noMatch
-                ? "לא נמצאה בקטלוג חבילה להשוואה אוטומטית — נציג יבדוק ידנית"
+                ? `לא נמצאה בקטלוג חבילה להשוואה אוטומטית — נציג יבדוק ידנית${overCap ? `. המחשבון עוצר בתקרה של ${shekels(MAX_SPEND)}` : ""}`
                 : "לפי הסכום שהזנתם לא נמצא חיסכון בתשלום החודשי"}
           </h3>
           {/*
@@ -537,9 +567,25 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             {overCap && (
               <>
                 {" "}
+                {/*
+                  ⚠️ בענף `noMatch` לא נעשה שום חישוב, ולכן אי אפשר לומר
+                  "החישוב נעשה לפי". הנוסח המשותף הצהיר על חישוב בדיוק
+                  במסך שאומר מתחתיו "בקטגוריה הזו אין כרגע חבילה שאפשר
+                  להשוות אליה" — שתי אמירות סותרות באותה כרטיסייה.
+                */}
                 <span className="text-lp-ink-2">
-                  החישוב {worthwhile ? "למטה " : ""}נעשה לפי תקרת המחשבון,{" "}
-                  <span className="nums">{shekels(MAX_SPEND)}</span>; נציג יבדוק את החשבון המלא ידנית.
+                  {noMatch ? (
+                    <>
+                      המחשבון עוצר בתקרה של <span className="nums">{shekels(MAX_SPEND)}</span>; נציג
+                      יבדוק את החשבון המלא ידנית.
+                    </>
+                  ) : (
+                    <>
+                      החישוב {worthwhile ? "למטה " : ""}נעשה לפי תקרת המחשבון,{" "}
+                      <span className="nums">{shekels(MAX_SPEND)}</span>; נציג יבדוק את החשבון המלא
+                      ידנית.
+                    </>
+                  )}
                 </span>
               </>
             )}
@@ -651,7 +697,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 שדחף חבילה אמיתית לתוך ההערה והשאיר את העמודה ריקה.
               */
               packageName={
-                saving.pick ? (pickTitle ? `${pickTitle} · ${pickProvider}` : pickProvider) : undefined
+                saving.pick ? [pickTitle, pickProvider].filter(Boolean).join(" · ") || undefined : undefined
               }
               note={[
                 /*
@@ -660,8 +706,10 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   שהחישוב עצמו נעצר — אחרת הנציג משווה כותרת חיסכון
                   לסכום שאינו הבסיס שלה.
                 */
+                // ⚠️ וב-`noMatch` נאמר שהחישוב לא רץ, ולא "נעשה לפי" —
+                // ההערה לנציג חזרה על שתי האמירות הסותרות של המסך.
                 overCap
-                  ? `מהמחשבון: משלם היום ${typedShekels(typedSpend)} בחודש (מעל תקרת המחשבון — החישוב נעשה לפי ${shekels(MAX_SPEND)})`
+                  ? `מהמחשבון: משלם היום ${typedShekels(typedSpend)} בחודש (מעל תקרת המחשבון ${shekels(MAX_SPEND)}${noMatch ? " — לא בוצע חישוב" : " — החישוב נעשה לפיה"})`
                   : `מהמחשבון: משלם היום ${typedShekels(monthlySpend)} בחודש`,
                 // ⚠️ `saving.lines` ולא `units` — ראה ההערה בכיתוב שמעל.
                 // ההערה לנציג חייבת לתאר את החישוב שנעשה, לא את הקלט.
@@ -681,8 +729,8 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   הוא נמדד ולפי איזה קטלוג — כלומר מספר שהוא לא יכול
                   לעמוד מאחוריו בשיחה.
                 */
-                saving.pick
-                  ? `מול ${pickProvider} — ${packageLabel(saving.pick, pickProvider)}, ${shekels(saving.perLine)} ${track === "cellular" ? "לקו" : "לחודש"}${CATALOG_DATE ? ` (קטלוג ${CATALOG_DATE})` : ""}`
+                saving.pick && pickTarget
+                  ? `מול ${pickTarget}, ${shekels(saving.perLine)} ${track === "cellular" ? "לקו" : "לחודש"}${CATALOG_DATE ? ` (קטלוג ${CATALOG_DATE})` : ""}`
                   : null,
               ]
                 .filter(Boolean)

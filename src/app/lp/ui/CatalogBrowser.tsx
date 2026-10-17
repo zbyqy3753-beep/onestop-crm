@@ -12,6 +12,7 @@ import {
   freeText,
   hasKnownAfterPrice,
   isMoney,
+  isRecommended,
   providerName,
   providerSlug,
 } from "../catalog/catalog";
@@ -270,12 +271,16 @@ export function sortCatalog(packages: Package[], sort: SortKey): Package[] {
    * שמתחתיהן, תחת הכותרת "מומלצים תחילה", דורגה לפי מחיר ככל השאר.
    * 109 הרשומות של היום נושאות `boolean` נקי; זה שער לרענון הבא.
    *
-   * ⚠️ טרות'י ולא `=== true`, בכוונה: הבחירה כאן היא **להסכים** עם
-   * שני המשטחים שכבר מדפיסים, ולא להוסיף הגדרה שלישית. ההגדרה
-   * המצמצמת (`=== true`) שייכת ל-`catalog.ts`, שם `highlights` תקבע
-   * אותה לכל הקוראים בבת אחת — ראה הדיווח.
+   * ⚠️ ועכשיו דרך `isRecommended` ב-`catalog.ts` — ההגדרה שהערה זו
+   * הפנתה אליה ("שייכת ל-`catalog.ts`, שם `highlights` תקבע אותה לכל
+   * הקוראים בבת אחת"). ההסכמה בין המשטחים נשמרת, אבל במקום אחד:
+   * הטרות'יניס כאן דירג `recommended: "yes"` ראשון בעוד התג בכרטיס
+   * מעליו שתק (או הדפיס "0").
    */
-  else sorted.sort((a, b) => Number(!!b.recommended) - Number(!!a.recommended) || byPrice(a, b));
+  else
+    sorted.sort(
+      (a, b) => Number(isRecommended(b)) - Number(isRecommended(a)) || byPrice(a, b),
+    );
   return sorted;
 }
 

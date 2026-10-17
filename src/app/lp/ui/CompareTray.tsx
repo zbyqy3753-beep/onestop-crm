@@ -516,8 +516,16 @@ export function CompareSheet({
 function AfterPromoCell({ pkg }: { pkg: Package }) {
   if (pkg.category === "electricity") return <Cell>—</Cell>;
   const rise = promoRise(pkg);
+  /*
+   * ⚠️ טון ה-"עלייה" רק ל-`amount`, בדיוק כמו בכרטיס. `PackageCard`
+   * צובע `bg-lp-rise-soft text-lp-rise` על `amount` לבדו ומשאיר
+   * `note` ו-`period` נייטרליים — כי `PromoRise` ב-`format.ts` קובע
+   * ש-`period` **אינו** אומר שהמחיר עולה, ובעשר מ-19 הרשומות המחיר
+   * שבכרטיס הוא כבר מחיר הקבע וההצהרה היא על מבצע זול בהתחלה.
+   * הטון על שלושת הענפים אמר בצבע מה שהטיפוס אוסר לומר במילים.
+   */
   return (
-    <Cell tone={rise ? "rise" : undefined}>
+    <Cell tone={rise?.kind === "amount" ? "rise" : undefined}>
       {rise
         ? rise.kind === "amount"
           ? shekels(rise.amount)

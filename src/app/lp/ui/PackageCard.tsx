@@ -17,6 +17,7 @@ import {
 } from "../catalog/format";
 import {
   freeText,
+  isRecommended,
   packageLabel,
   packageTitle,
   providerLogo,
@@ -158,7 +159,14 @@ export function PackageCard({
         <ProviderLogo logo={providerLogo(pkg)} name={provider} size={34} className="shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap gap-1.5">
-            {pkg.recommended && (
+            {/*
+             * ⚠️ `isRecommended` ולא הדגל עצמו — ההגדרה המשותפת
+             * לכל ארבעת הקוראים (ראה `catalog.ts`). דווקא המשטח
+             * שמדפיס נשאר לא מגודר: `recommended: "false"` כמחרוזת
+             * הדליק את התג, ו-`recommended: 0` הדפיס "0" לשורת
+             * התגים (`0 && jsx` מחזיר `0`, ו-React מרנדר אותו).
+             */}
+            {isRecommended(pkg) && (
               <span className="rounded-full bg-lp-brand/10 px-2 py-0.5 text-lp-2xs font-semibold text-lp-brand">
                 מומלץ
               </span>

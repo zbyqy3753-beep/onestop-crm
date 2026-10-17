@@ -851,22 +851,39 @@ test("מחשבון: החיסכון קטן מהחשבון בכל כמות קוו�
 });
 
 /*
- * ⚠️ הגידור חייב להיות משני הצדדים. הוא נכתב מלמטה בלבד, מהנימוק
- * ש"הסלקטור מגיש 1..10 ולכן זה שער לקורא הבא" — נימוק שחל במדויק על
- * הצד הגבוה ולא יושם: `units: 1e6` החזיר `monthly` של 29,899,000-
- * ו-`yearly` של 358,788,000-. `worthwhile` היה `false` ולכן זה לא
- * הגיע למסך, אבל זה מספר חסר-פשר שיוצא מהמנוע.
+ * ⚠️ הגידור חייב להיות משני הצדדים — אבל `Math.min(units, MAX_LINES)`
+ * על **מכפיל העלות** היה הגידור הלא נכון: הוא הוריד את כמות הקווים
+ * והשאיר את החשבון המלא, כלומר הוריד את העלות וניפח את החיסכון
+ * (₪1,000 על 11 קווים הכריזו ₪8,412 בשנה במקום ₪8,052, ועל 20 קווים
+ * ₪8,412 במקום ₪4,824) — הכיוון ההפוך מכל שער אחר בקובץ. התקרה
+ * מגדרת מעתה את חיפוש **מדרגת המחיר** בלבד, העלות מוכפלת בכמות
+ * שנמסרה, ו-`monthly` נרצף ב-0 כדי שלא ייצא מהמנוע מספר חסר-פשר
+ * (`units: 1e6` החזיר 29,899,000-).
  */
-test("מחשבון: כמות קווים אבסורדית נחתכת לתקרה ולא מייצרת מספר חסר-פשר", () => {
+test("מחשבון: כמות קווים מעל התקרה אינה מנפחת את החיסכון", () => {
   for (const track of ["cellular", "home"]) {
     const top = computeSaving(PACKAGES, track, MAX_LINES, 1000);
     for (const units of [MAX_LINES + 1, 50, 1000, 1e6]) {
       const r = computeSaving(PACKAGES, track, units, 1000);
-      assert.equal(r.lines, MAX_LINES, `${track}/${units}: lines=${r.lines}`);
-      assert.equal(r.monthly, top.monthly, `${track}/${units}: monthly זז מעל התקרה`);
-      assert.ok(r.monthly > -1000, `${track}/${units}: monthly=${r.monthly}`);
+      assert.equal(r.lines, units, `${track}/${units}: lines=${r.lines}`);
+      // מדרגת המחיר נעצרת בתקרה, ולכן המחיר-לקו זהה לזה שבתקרה.
+      assert.equal(r.perLine, top.perLine, `${track}/${units}: perLine זז מעל התקרה`);
+      // והחיסכון לעולם אינו גדול מזה שבתקרה — יותר קווים, יותר עלות.
+      assert.ok(r.monthly <= top.monthly, `${track}/${units}: monthly=${r.monthly} > ${top.monthly}`);
+      // ⚠️ `Number.isFinite` ולא `> -1000`. רצפה ב-0 (או כל רצפה) נוסתה
+      // ונדחתה — היא מחזירה מספר **מעל** החיסכון האמיתי על כל חשבון
+      // שקטן מהעלות, כלומר שוברת את האינווריאנט של הבדיקה "החיסכון
+      // לעולם אינו גדול מהחיסכון האמיתי". מה שמגן על המסך הוא
+      // `worthwhile`, שחייב להיות כבוי בכל אחד מהמקרים האלה.
+      assert.ok(Number.isFinite(r.monthly), `${track}/${units}: monthly=${r.monthly}`);
+      assert.equal(r.worthwhile, r.monthly > 0, `${track}/${units}: worthwhile סותר את monthly`);
+      assert.equal(r.yearly, r.monthly * 12);
     }
   }
+  // 11 קווים עולים יותר מ-10, ולכן החיסכון קטן — ולא זהה.
+  const ten = computeSaving(PACKAGES, "cellular", MAX_LINES, 1000);
+  const eleven = computeSaving(PACKAGES, "cellular", MAX_LINES + 1, 1000);
+  assert.ok(eleven.monthly < ten.monthly, `11 קווים: ${eleven.monthly} מול ${ten.monthly}`);
 });
 
 /*
@@ -1340,6 +1357,10 @@ test("סלקטור הקווים במחשבון נגזר מ-`MAX_LINES` ולא מ
   const src = readFileSync(new URL("../src/app/lp/ui/SavingsCalculator.tsx", import.meta.url), "utf8");
   assert.match(src, /Array\.from\(\{ length: MAX_LINES \}/);
   assert.doesNotMatch(src, /\[1, 2, 3, 4, 5, 6, 7, 8, 9, 10\]/);
-  // והמנוע אינו מחשב מעל התקרה שהסלקטור מגיש.
-  assert.equal(computeSaving(PACKAGES, "cellular", MAX_LINES + 5, 5000).lines, MAX_LINES);
+  // והמנוע אינו **מנפח** מעל התקרה שהסלקטור מגיש: מדרגת המחיר נעצרת
+  // ב-`MAX_LINES`, אבל העלות מוכפלת בכמות שנמסרה (ראה הבדיקה למעלה).
+  const over = computeSaving(PACKAGES, "cellular", MAX_LINES + 5, 5000);
+  assert.equal(over.lines, MAX_LINES + 5);
+  assert.equal(over.perLine, computeSaving(PACKAGES, "cellular", MAX_LINES, 5000).perLine);
+  assert.ok(over.monthly < computeSaving(PACKAGES, "cellular", MAX_LINES, 5000).monthly);
 });

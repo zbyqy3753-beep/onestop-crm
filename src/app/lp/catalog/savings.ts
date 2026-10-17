@@ -659,6 +659,19 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
    * חוסר-דיוק ש-`isMoney` ו-`tierTable` נכתבו נגדו: `"true"` כמחרוזת
    * (הצורה שמחלץ מייצר כשהוא קורא שדה טקסטואלי) היה עובר כאן כאמת.
    */
+  /*
+   * ⚠️ והשער הזה **אינו** ניתן להחלפה ב-`hasInternet` לבדו, אף
+   * שהצירוף נראה סותר (הענף דורש `hasTv === true` ובאותה שורה פוסל
+   * טיפוס שמכיל `TV`). הסיבה היא נתון שגוי בקטלוג: id 4, "החבילה
+   * המושלמת" של יס, נושאת `hasInternet: true` אף שהיא שירות
+   * טלוויזיה. אומת בהרצה — בלי הפסילה לפי הטיפוס היא נכנסת לבריכה
+   * ב-₪99 ו**מחליפה** את הטריפל האמיתי (id 157, ₪149) כזולה שמולה
+   * נמדד כל חשבון. כלומר `type: "TV"` הוא הסימן היחיד שנותר שמבדיל
+   * אותה מטריפל, והוא נשאר עד שהרענון יתקן את הדגל.
+   * המחיר: רענון שיכתוב טיפוס שמכיל `TV` על טריפל אמיתי יוציא אותו
+   * מהבריכה — כיוון שמרני (מספר קטן יותר), ולכן זו העדיפות הנכונה
+   * בין השתיים. ראה `lp-catalog-data-defects`.
+   */
   return spec.hasInternet === true && spec.hasTv === true && !typeText(p).includes("TV");
 }
 
@@ -785,8 +798,20 @@ export function computeSaving(
    * `worthwhile: true` — הפרה של האינווריאנט היחיד שהקובץ הזה נבנה
    * סביבו. הסלקטור מגיש 1..10 ולכן זה שער לקורא הבא (ולמעבר מסלול,
    * שאינו מאפס את הבחירה) ולא באג מוצג.
+   *
+   * ⚠️ ו-`MAX_LINES` מגדר את **חיפוש המדרגה**, לא את מכפיל העלות.
+   * `Math.min(units, MAX_LINES)` על שניהם הוריד את כמות הקווים
+   * והשאיר את החשבון המלא — כלומר הוריד את העלות וניפח את החיסכון,
+   * הכיוון ההפוך מכל שער אחר בקובץ: ₪1,000 על 11 קווים הכריז
+   * ₪8,412 בשנה במקום ₪8,052, ועל 20 קווים ₪8,412 במקום ₪4,824.
+   * מדרגת הקווים אכן נעצרת ב-`MAX_LINES` (אין בקטלוג מדרגה מעליה),
+   * אבל העלות מוכפלת במספר הקווים שבאמת נמסר, ו-`lines` שמוחזר הוא
+   * המספר שהחישוב נעשה בו. מעל התקרה `monthly` יוצא שלילי
+   * ו-`worthwhile` כבוי — מספר שאין מאחוריו הבטחה, ולא כותרת.
    */
-  const lines = Number.isInteger(units) && units >= 1 ? Math.min(units, MAX_LINES) : 1;
+  const lines = Number.isInteger(units) && units >= 1 ? units : 1;
+  /** הכמות שמדרגות המחיר נקראות בה — ראה `perLinePrice`. */
+  const tierLines = Math.min(lines, MAX_LINES);
   /*
    * ⚠️ והסכום מגודר כאן באותה מידה, ומאותו נימוק מילה במילה.
    *
@@ -808,17 +833,18 @@ export function computeSaving(
   const pool = packages
     .filter((p): p is MonthlyPackage => isComparable(p, track))
     // ⚠️ תלוי-כמות, ולכן כאן ולא ב-`isComparable`. ראה `priceUnknownAtLines`.
-    .filter((p) => !priceUnknownAtLines(p, lines))
+    .filter((p) => !priceUnknownAtLines(p, tierLines))
     // ⚠️ מחיר "משפחתי" הוא מחיר לשני קווים ומעלה. ראה `familyPriceOnly`.
     .filter((p) => track !== "cellular" || lines >= 2 || !familyPriceOnly(p));
   const pick = pool.reduce<MonthlyPackage | null>(
-    (best, p) => (best == null || perLinePrice(p, lines) < perLinePrice(best, lines) ? p : best),
+    (best, p) =>
+      best == null || perLinePrice(p, tierLines) < perLinePrice(best, tierLines) ? p : best,
     null,
   );
   if (!pick) return { pick: null, monthly: 0, yearly: 0, worthwhile: false, lines, perLine: 0 };
 
   // Cellular is priced per line; a home package is one household bill.
-  const perLine = perLinePrice(pick, lines);
+  const perLine = perLinePrice(pick, tierLines);
   const unitCount = track === "cellular" ? lines : 1;
   /*
    * ⚠️ `Math.floor` ולא `Math.round`. הכותרת אומרת "אפשר לחסוך **עד**",
@@ -836,6 +862,15 @@ export function computeSaving(
    * אגורה (למשל ₪512.80–₪571.80 בשני קווים מול 29.9). עיגול כל אחד
    * מהאגפים לאגורה **לפני** החיסור מסיר גם את הסחף של `perLine * units`
    * (`29.9 * 10 === 299.00000000000006`).
+   */
+  /*
+   * ⚠️ ו**בלי** רצפה ב-0, אף שכמות קווים אבסורדית מחזירה מספר שלילי
+   * אבסורדי (`units: 1e6` → 29,899,000-). רצפה כזו נוסתה ונדחתה: היא
+   * שוברת את האינווריאנט החזק יותר של הקובץ — "החיסכון לעולם אינו
+   * גדול מהחיסכון האמיתי" — כי על חשבון של ₪30 מול חבילה של ₪34
+   * החיסכון האמיתי הוא 24- והרצפה הייתה מחזירה 0, כלומר **מעל** האמת.
+   * `worthwhile` כבוי בכל המקרים האלה ולכן אף מספר שלילי אינו מגיע
+   * למסך, ובכך `Saving` ממשיך לקיים `yearly === monthly * 12`.
    */
   const monthly = Math.floor(
     (Math.round(spend * 100) - Math.round(perLine * 100) * unitCount) / 100,

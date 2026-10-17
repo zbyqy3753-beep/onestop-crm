@@ -494,6 +494,22 @@ export function cheapest(packages: Package[], limit = 3): Package[] {
  * כאן אין מסד כזה, ולכן הסדר משוחזר מהשדות שקיימים בקטלוג עצמו. אם
  * יום אחד תיכנס לכאן שכבת עריכה — זו הפונקציה שצריכה להיעלם לטובתה.
  */
+/**
+ * האם הרשומה מסומנת כמומלצת — **ההגדרה היחידה**, לכל ארבעת הקוראים.
+ *
+ * ⚠️ `=== true` ולא טרות'יניס, ובמקום אחד. הדגל נקרא בארבעה משטחים
+ * (`highlights`, `serviceCounts`, `sortCatalog` ב-`CatalogBrowser`, והתג
+ * ב-`PackageCard`), ושלוש הגדרות שונות הסתדרו ביניהן רק כל עוד הנתון
+ * נקי: `recommended: "false"` — הצורה שהמחלץ מייצר לשדה טקסטואלי —
+ * הדליק את התג ודירג ראשון, ו-`recommended: 0` הדפיס "0" לשורת התגים
+ * (`0 && jsx` מחזיר `0`, ו-React מרנדר אותו). ההערה ב-`sortCatalog`
+ * הצהירה שההגדרה המצמצמת "שייכת ל-`catalog.ts`, שם `highlights` תקבע
+ * אותה לכל הקוראים בבת אחת" — זו השורה הזו.
+ */
+export function isRecommended(p: Package): boolean {
+  return p.recommended === true;
+}
+
 export function highlights(packages: Package[], category: Category, limit = 3): Package[] {
   /*
    * ⚠️ `=== true` ולא טרות'יניס. `recommended: "false"` (הצורה שהמחלץ
@@ -503,7 +519,7 @@ export function highlights(packages: Package[], category: Category, limit = 3): 
    * בציר המיון של `CatalogBrowser` — וזה הקורא השלישי של אותו שדה,
    * שנשאר מאחור.
    */
-  const rank = (p: Package) => (p.editorial?.featured ? 0 : p.recommended === true ? 1 : 2);
+  const rank = (p: Package) => (p.editorial?.featured ? 0 : isRecommended(p) ? 1 : 2);
   return listable(byCategory(packages, category))
     .slice()
     .sort((a, b) => rank(a) - rank(b) || byPrice(a, b))
