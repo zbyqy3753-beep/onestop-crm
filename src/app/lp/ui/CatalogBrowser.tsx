@@ -177,6 +177,9 @@ export function matchesFilters(
     if (slug == null || !f.providers.includes(slug)) return false;
   }
   /*
+   * ⚠️ `typeKey` ולא `freeText` לבדה — ראה שם למה סוג שאינו קריא
+   * מקבל מפתח ולא נפסל.
+   *
    * ⚠️ `freeText` ולא `p.type != null`. `type` הוא טקסט חופשי מאותו
    * מחלץ, והשבב שמתחת מדפיס אותו כילד של React: `type: {}` זרק
    * `Objects are not valid as a React child` בתוך רינדור השרת והחזיר
@@ -185,8 +188,7 @@ export function matchesFilters(
    * את אותו `type: 5`; השכבה שמדפיסה היא זו שנשכחה. ראה `text.ts`.
    */
   if (except !== "types" && f.types.length > 0) {
-    const type = freeText(p.type);
-    if (type == null || !f.types.includes(type)) return false;
+    if (!f.types.includes(typeKey(p))) return false;
   }
   if (except !== "maxPrice" && f.maxPrice != null && sliderPrice(p) > f.maxPrice) return false;
   return true;
@@ -236,14 +238,27 @@ export function providerFacets(packages: Package[], f: CatalogFilters) {
   return [...map.values()].sort((a, b) => b.count - a.count);
 }
 
+/**
+ * המפתח שהרשומה נכנסת בו לתפריט הסוג — גם כשלא הצהירה על סוג.
+ *
+ * ⚠️ `freeText(p.type) == null` החזיר `false` ב-`matchesFilters` ודילג
+ * ב-`typeFacets`, כלומר הרשומה נפלה ממסנן שאין לה בו פקד: id 147
+ * ("חוסכים בלילה 20%", HOT אנרגי, `type: null`) נעלם גם כששלושת שבבי
+ * החשמל דלוקים, ושורת התוצאות הכריזה "17 מסלולים מתוך 18" בלי שום
+ * דרך להחזיר אותו חוץ מכיבוי המסנן כולו. זהו אותו דפוס שתוקן למסנן
+ * החברה ולסוג — מסנן פעיל חייב להיות ניתן לביטול — רק מהכיוון ההפוך:
+ * ערך בלי פקד, במקום פקד שנעלם.
+ */
+const UNTYPED_LABEL = "אחר";
+function typeKey(p: Package): string {
+  return freeText(p.type) ?? UNTYPED_LABEL;
+}
+
 /* אותו דבר לשבבי הסוג: סוג מסומן נשאר ברשימה כדי שאפשר לבטל אותו. */
 export function typeFacets(packages: Package[], f: CatalogFilters): [string, number][] {
   const map = new Map<string, number>();
   for (const p of packages) {
-    // ⚠️ אותו שער משותף כמו ב-`matchesFilters`: סוג שאינו טקסט אינו
-    // יכול להיות אפשרות בתפריט — ראה `freeText`.
-    const type = freeText(p.type);
-    if (type == null) continue;
+    const type = typeKey(p);
     const passes = matchesFilters(p, f, "types");
     if (!passes && !f.types.includes(type)) continue;
     map.set(type, (map.get(type) ?? 0) + (passes ? 1 : 0));

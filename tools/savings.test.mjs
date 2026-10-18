@@ -773,7 +773,13 @@ test("ה״א הידיעה אינה מבריחה הצהרת מחיר לשנה ה�
    * כמות בפרוזה ("קו בודד 39.9שח ... 2 קווים 34.9 שח כל קו") בלי
    * `lineTiers`, והוא היחיד בקטלוג בצורה הזו. הנבחרת לא זזה.
    */
-  assert.equal(pool("cellular").length, 22, `סלולר: ${pool("cellular").length}`);
+  /*
+   * ⚠️ 14 ולא 22 מאז שער הטקסט הקטוע (סבב 37): שמונה רשומות בבריכה
+   * נשאו `description` שנחתך ב-~700 תווים וסיים ב-"…" (ids 52, 19, 21,
+   * 26, 37, 38, 39, 40), וכל הצהרת עלייה שאחרי הקטיעה הייתה בלתי-נראית
+   * לכל חמשת שערי הנוסח. הנבחרת לא זזה — אף אחת מהן לא הייתה הזולה.
+   */
+  assert.equal(pool("cellular").length, 14, `סלולר: ${pool("cellular").length}`);
   assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).pick?.price, 34);
 });
 
@@ -826,7 +832,7 @@ test("שערי הנוסח קוראים גם את `priceAfterPromoNote`", () => {
   // יושבות על חבילות שאין להן `priceAfterPromo` מספרי, ולכן
   // `hasKnownAfterPrice` פוסל אותן ממילא.
   // ⚠️ 22 — ראה ההערה על אותה בדיקה למעלה (ids 11, 68 נפסלו כמחיר לפי כמות).
-  assert.equal(pool("cellular").length, 22);
+  assert.equal(pool("cellular").length, 14);
   assert.equal(pool("home").length, 2);
   for (const p of PACKAGES) {
     if (p.priceAfterPromoNote == null) continue;
@@ -1176,7 +1182,7 @@ test("סלולר: מפרט הגלישה והדקות חייב להיות מספ�
 
 /* הבריכה של היום אינה מצטמצמת בעקבות ההקפדה שלמעלה. */
 test("סלולר: ההקפדה על המפרט לא הוציאה אף חבילה מהבריכה של היום", () => {
-  assert.equal(pool("cellular").length, 22, `בריכה: ${pool("cellular").length}`);
+  assert.equal(pool("cellular").length, 14, `בריכה: ${pool("cellular").length}`);
   for (const p of pool("cellular")) {
     assert.equal(p.spec.kosher, false, `${p.name}: דגל כשרות שאינו false`);
     assert.ok(!(p.type ?? "").includes("כשר"), `${p.name}: type=${p.type}`);
@@ -1267,7 +1273,7 @@ test("הרחבת שערי הנוסח לא הוציאה אף חבילה מהבר�
   // ⚠️ שני השערים שהורחבו (חודשים ב-`RISE_IN_TEXT`, `ויותר` ב-
   // `PRICED_BY_LINE_COUNT`) נכתבו כשער לרענון הבא, ואסור שישנו מספר
   // שמוצג כרגע. הבריכות והבחירות נשארות כפי שהן.
-  assert.equal(pool("cellular").length, 22);
+  assert.equal(pool("cellular").length, 14);
   assert.equal(pool("home").length, 2);
   assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).pick?.name, "wecom300GB 5G");
   assert.equal(computeSaving(PACKAGES, "cellular", 2, 500).pick?.name, "wecomFamily 4G");
@@ -1340,7 +1346,7 @@ test('"לא כולל נתב" הוא חיוב חודשי שהמחיר הגדול 
 test("שערי הטיפוס והנתב לא הזיזו אף מספר שמוצג היום", () => {
   // ⚠️ אותו קיבוע כמו הבדיקה שמעל: שלושת התיקונים הם שערים לרענון
   // הבא, ואסור שישנו בריכה או בחירה.
-  assert.equal(pool("cellular").length, 22);
+  assert.equal(pool("cellular").length, 14);
   assert.equal(pool("home").length, 2);
   assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).yearly, 2232);
   assert.equal(computeSaving(PACKAGES, "home", 1, 350).pick?.id, "157");

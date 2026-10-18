@@ -188,9 +188,26 @@ export function until(iso: string, now: number): string {
   return `בעוד ${days} ימים`;
 }
 
+/**
+ * הספרות שבמחרוזת — פונקציה אחת, ולא `\D` שמועתק לארבעה קוראים.
+ *
+ * ⚠️ ספרות ערביות-הודיות מתורגמות **לפני** `\D`. בלי הדגל `u`, `\D`
+ * רואה ב-`٠٥٠١٢٣٤٥٦٧` מחרוזת ללא ספרות כלל ומרוקן אותה: `isIsraeliPhone`
+ * ענה `false` ו-`normalizeIsraeliPhone` החזיר `null`, כלומר הטופס ב-`/lp`
+ * דחה מספר ישראלי תקין עם "מספר טלפון לא תקין" אחרי שהמבקר מילא את כל
+ * השדות, והליד אובד. שדה הסכום באותו כרטיס כבר מנרמל אותן ספרות
+ * (`parseSpendRaw` ב-`lp/catalog/savings.ts`) — זו הייתה השמטה ולא
+ * החלטה, ואיחוד הקוראים הוא מה שמונע את ההשמטה הבאה.
+ */
+function digitsOf(raw: string): string {
+  return raw
+    .replace(/[٠-٩۰-۹]/g, (d) => String((d.codePointAt(0)! - 0x0660) % 16))
+    .replace(/\D/g, "");
+}
+
 /** 0501234567 → 050-123-4567 */
 export function phone(raw: string): string {
-  const d = raw.replace(/\D/g, "");
+  const d = digitsOf(raw);
   if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
   if (d.length === 9) return `${d.slice(0, 2)}-${d.slice(2, 5)}-${d.slice(5)}`;
   return raw;
@@ -218,7 +235,7 @@ const WITH_LEADING_ZERO = /^0(?:[57]\d{8}|[23489]\d{7})$/;
  * מוחזר כ-null במקום להשלים לו אפס ולהמציא מספר שלא קיים.
  */
 export function normalizeIsraeliPhone(raw: string): string | null {
-  const digits = raw.replace(/\D/g, "");
+  const digits = digitsOf(raw);
   if (!digits) return null;
 
   // +972 / 00972 — הצורה שמגיעה מיצוא של אנשי קשר או מוואטסאפ
@@ -243,7 +260,7 @@ export function normalizeIsraeliPhone(raw: string): string | null {
 
 /** טלפון ישראלי תקין — אותה בדיקה שהייבוא משתמש בה. */
 export function isIsraeliPhone(raw: string): boolean {
-  return WITH_LEADING_ZERO.test(raw.replace(/\D/g, ""));
+  return WITH_LEADING_ZERO.test(digitsOf(raw));
 }
 
 /**
@@ -253,7 +270,7 @@ export function isIsraeliPhone(raw: string): boolean {
  * מזהה נמען לפי המספר הזה בדיוק.
  */
 export function toE164(raw: string): string {
-  const d = raw.replace(/\D/g, "");
+  const d = digitsOf(raw);
   return d.startsWith("0") ? `972${d.slice(1)}` : d;
 }
 

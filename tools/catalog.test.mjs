@@ -30,6 +30,7 @@ import {
   headlineValue,
   heroRiseLine,
   priceNote,
+  PROMO_PERIOD_TEXT,
   promoRise,
   shekels,
   speedLabel,
@@ -1359,7 +1360,7 @@ test("תצוגה: עליית מחיר פגומה אינה נקראת כמחיר,
    */
   const silentField = { ...real, priceAfterPromo: 0, priceAfterPromoNote: null };
   assert.deepEqual(promoRise(silentField), { kind: "period" });
-  assert.equal(heroRiseLine(silentField), "יש תקופת מבצע — בדקו מה המחיר אחריה");
+  assert.equal(heroRiseLine(silentField), PROMO_PERIOD_TEXT);
 
   // ורשומה ששתקה גם בטקסט אינה מקבלת שום שורה.
   const trulySilent = {
@@ -1543,10 +1544,15 @@ test("תצוגה: מדרגות קווים שאינן מערך אינן מפיל�
   // ⚠️ **למחרוזת יש `length`**, ולכן `s.lineTiers?.length` נתן לה לעבור
   // אל `.map`. זו הצורה שהמחלץ מייצר כשהוא קורא את המדרגות מהשם.
   const cellular = PACKAGES.find((p) => p.category === "cellular");
+  // ⚠️ הפרוזה מנוטרלת: `tierLines` קורא ממנה את הכמות שהמדרגה חלה
+  // עליה ("3 קווים ומעלה"), והבדיקה הזו היא על ולידציית המערך בלבד.
   const tiersRow = (lineTiers) =>
-    detailRows({ ...cellular, spec: { ...cellular.spec, lineTiers } }).find(
-      (r) => r.label === "מחיר לפי מספר קווים",
-    );
+    detailRows({
+      ...cellular,
+      description: "100GB",
+      benefits: null,
+      spec: { ...cellular.spec, lineTiers },
+    }).find((r) => r.label === "מחיר לפי מספר קווים");
 
   assert.equal(tiersRow("3 קווים ב99"), undefined, "מחרוזת הודפסה כמדרגות");
   assert.equal(tiersRow({ lines: 2, price: 35 }), undefined, "אובייקט בודד אינו מערך מדרגות");

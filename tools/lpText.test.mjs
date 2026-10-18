@@ -114,15 +114,25 @@ test("טקסט: שדה הסוג הפגום אינו מפיל את הכרטיס �
   }
 });
 
-test("טקסט: סוג שאינו תווית אינו מצייר שבב ואינו נכנס לתפריט", () => {
+/*
+ * ⚠️ סוג שאינו תווית אינו מודפס אבל כן מקבל פקד: `typeKey` ממפה אותו
+ * לדלי "אחר", כי רשומה שנפלה ממסנן שאין לה בו פקד נעלמה גם כששלושת
+ * השבבים דלוקים (id 147 בחשמל). הערך הגולמי עצמו לא מגיע למסך.
+ */
+test("טקסט: סוג שאינו תווית נכנס לדלי 'אחר' ואינו מודפס כמו שהוא", () => {
   for (const type of [{}, 5, ""]) {
     const pkg = { ...BASE, type };
     const html = Object.values(renderAll(pkg)).join("\n");
     assert.ok(!html.includes("[object Object]"), `type: ${JSON.stringify(type)}`);
     assert.deepEqual(
       typeFacets([pkg], NONE),
-      [],
-      `type: ${JSON.stringify(type)} — סוג פגום אינו אפשרות בתפריט`,
+      [["אחר", 1]],
+      `type: ${JSON.stringify(type)} — חייב פקד שמחזיר את הרשומה`,
+    );
+    assert.equal(
+      matchesFilters(pkg, { ...NONE, types: ["אחר"] }),
+      true,
+      `type: ${JSON.stringify(type)} — השבב חייב להחזיר אותה`,
     );
   }
 });

@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderLogo } from "./ProviderLogo";
-import { compareRows, discountIsCapped, headlineValue, promoRise, shekels } from "../catalog/format";
+import {
+  compareRows,
+  discountIsCapped,
+  headlineValue,
+  PROMO_PERIOD_TEXT,
+  promoRise,
+  shekels,
+} from "../catalog/format";
 import {
   hasKnownAfterPrice,
   packageLabel,
@@ -437,7 +444,14 @@ export function CompareSheet({
                 (`CatalogBrowser` מרונדר מחדש עם `key={category}`),
                 ולכן התווית אחת לכל הטבלה.
               */}
-              <Row label={allElectric ? "הנחה בחשבון" : "מחיר לחודש"}>
+              {/*
+                ⚠️ "שיעור ההנחה" ולא "הנחה בחשבון": עשרה מתוך 19 מסלולי
+                החשמל מצהירים במפורש שההנחה חלה על רכיב התשלום המשתנה
+                בחשבון בלבד, והשורה `מה ההנחה כוללת` שמתחת נושאת את
+                ההסתייגות. תווית שאינה נגזרת מאף רשומה הכריזה הנחה על
+                החשבון כולו שורה אחת מעל ההסתייגות ששוללת אותה.
+              */}
+              <Row label={allElectric ? "שיעור ההנחה" : "מחיר לחודש"}>
                 {items.map((p) => (
                   <Cell key={p.id}>
                     {/*
@@ -531,7 +545,7 @@ function AfterPromoCell({ pkg }: { pkg: Package }) {
           ? shekels(rise.amount)
           : rise.kind === "note"
             ? rise.note
-            : "יש תקופת מבצע — בדקו מה אחריה"
+            : PROMO_PERIOD_TEXT
         : hasKnownAfterPrice(pkg)
           ? "לא דווח שינוי"
           : "—"}

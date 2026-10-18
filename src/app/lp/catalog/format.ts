@@ -417,6 +417,56 @@ function installationDetail(pkg: Package, cost: number): string {
 }
 
 /**
+ * מחיר הנתב כפי שהרשומה מסרה אותו, או `null` כשלא מסרה.
+ *
+ * ⚠️ אותו פגם שתוקן להתקנה, על השדה שלידה. `routerIncluded: false` הודפס
+ * "אינו כלול במחיר" בשלוש הרשומות היחידות שמחזיקות אותו — ובכל שלושתן
+ * הפרוזה **כן** מסרה את המחיר: id 81 אומרת "עלות נתב 0 ש"ח", כלומר
+ * השלילה גבתה תוספת על נתב שהרשומה נותנת בחינם, ו-ids 158, 104 אומרות
+ * "עלות נתב אינטרנט 20שח (יש הטבה על הנתב למשך שנה ללא עלות)" — תנאי
+ * שהוצג בלי המספר ובלי התנאי, בזמן ששורת ההתקנה על אותו כרטיס מדפיסה
+ * את שני הצדדים. "אינו כלול במחיר" נשאר רק כשאין מספר לקרוא.
+ */
+function routerDetail(pkg: Package): string | null {
+  const prose = installationProse(pkg);
+  const cost = prose.match(/עלות\s*נתב[^.|\n\d]{0,24}?(\d[\d,]*(?:\.\d+)?)\s*(?:ש"ח|שח|₪)/);
+  if (!cost) return null;
+  const amount = Number(cost[1].replace(/,/g, ""));
+  if (!Number.isFinite(amount)) return null;
+  const flat = amount === 0 ? "ללא עלות" : `${shekels(amount)} בתוספת למחיר`;
+  const waived = prose.match(/הטבה\s*על\s*הנתב\s*למשך\s*(שנה|\d+\s*חודשים?)\s*ללא\s*עלות/);
+  return waived ? `${flat} · ללא עלות למשך ${waived[1]}` : flat;
+}
+
+/**
+ * הכמות שמדרגת הקווים חלה עליה, כפי שהרשומה ניסחה אותה.
+ *
+ * ⚠️ `lineTiers` מחזיק סקלר אחד למדרגה, והשורה הדפיסה אותו כשוויון —
+ * בזמן שכל ארבע הרשומות שמחזיקות מדרגות מוסרות **טווח**. id 57 אומרת
+ * "למצרפים 2-3 מנויים – 33 ₪, למצרפים 4 מנויים ויותר 30 ₪", והשורה
+ * הכריזה "3 קווים ₪33 · 4 קווים ₪30": לקוח עם שני קווים הסיק שעליו חל
+ * ₪39.9 בזמן שהרשומה מעניקה לו ₪33, ולקוח עם חמישה לא ידע ש-₪30 חל גם
+ * עליו. אותו דבר ב-ids 36, 37 ("עד 2 מנויים כולל", "3 ומעלה") וב-68.
+ *
+ * התנאי נקרא **מהטקסט עצמו** ולא מושלם: מדרגה שאין בפרוזה שלה אחת
+ * משלוש התבניות נשארת בשוויון שהיתה.
+ */
+function tierLines(pkg: Package, lines: number): string {
+  const plain = lines === 1 ? "קו אחד" : `${lines} קווים`;
+  const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
+  // ⚠️ קו בודד נכתב בפרוזה גם במילים ("קו אחד ומעלה") ולא רק בספרה.
+  const n = lines === 1 ? "(?:(?<!\\d)1(?!\\d)|קו\\s*אחד)" : `(?<!\\d)${lines}(?!\\d)`;
+  const unit = "\\s*(?:מנויים|מנוי|קווים|קו)?\\s*";
+  if (new RegExp(`${n}${unit}(?:ומעלה|ויותר)`).test(prose)) return `${plain} ומעלה`;
+  const range = prose.match(
+    new RegExp(`(?<!\\d)(\\d+)\\s*[-–]\\s*${lines}(?!\\d)\\s*(?:מנויים|מנוי|קווים|קו)`),
+  );
+  if (range) return `${range[1]}–${lines} קווים`;
+  if (new RegExp(`עד${unit}${n}`).test(prose)) return `עד ${plain}`;
+  return plain;
+}
+
+/**
  * האם הרשומה מצהירה על המחיר הזה כעל **רצפה** ("מ-100 ₪ לחודש").
  *
  * ⚠️ המקבילה של `proseCapsAt` בכיוון ההפוך, וזו שחסרה דווקא לשדה
@@ -539,7 +589,7 @@ export function heroRiseLine(pkg: Package): string | null {
   if (!rise) return null;
   if (rise.kind === "amount") return `ואחרי ההטבה ${shekels(rise.amount)}`;
   if (rise.kind === "note") return `בתום ההטבה: ${rise.note}`;
-  return "יש תקופת מבצע — בדקו מה המחיר אחריה";
+  return PROMO_PERIOD_TEXT;
 }
 
 /**
@@ -829,7 +879,7 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
             (t) =>
               t && isCount(t.lines) && Number.isInteger(t.lines) && t.lines >= 1 && isMoney(t.price),
           )
-          .map((t) => `${t.lines === 1 ? "קו אחד" : `${t.lines} קווים`} ${shekels(t.price)}`)
+          .map((t) => `${tierLines(pkg, t.lines)} ${shekels(t.price)}`)
       : [];
     if (tiers.length) {
       rows.push({ label: "מחיר לפי מספר קווים", value: tiers.join(" · ") });
@@ -876,7 +926,16 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
       if (v == null) return;
       rows.push({ label, value: v ? "כלול במחיר" : "אינו כלול במחיר" });
     };
-    included("נתב", s.routerIncluded);
+    /*
+     * ⚠️ הנתב עובר דרך `routerDetail` מאותו טעם שההתקנה עוברת דרך
+     * `installationDetail`: השלילה הגורפת סותרת את מה שהרשומה מסרה.
+     */
+    const router = s.routerIncluded === false ? routerDetail(pkg) : null;
+    if (router) {
+      rows.push({ label: "נתב", value: router });
+    } else {
+      included("נתב", s.routerIncluded);
+    }
     included("מגדיל טווח", s.extenderIncluded);
     fee("ממיר נוסף", s.extraConverterCost);
     fee("מגדיל טווח נוסף", s.extraExtenderCost);

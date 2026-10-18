@@ -218,7 +218,7 @@ test("השוואה: מסלול חשמל אינו מקבל הסתייגות על 
     assert.ok(!v.includes("מנויים"), `id ${p.id}: ${v}`);
   }
   const html = sheetMarkup(e.slice(0, 2));
-  assert.ok(html.includes("הנחה בחשבון"));
+  assert.ok(html.includes("שיעור ההנחה"));
   assert.ok(!html.includes("מותנה בכמות המנויים"));
 });
 
@@ -530,23 +530,29 @@ test("מסננים: בלי מסננים סכום מוני החברות הוא מ
 });
 
 /*
- * ⚠️ `type: null` אינו נספר באף שבב (id 147 בחשמל), וזה ממצא פתוח
- * שמחכה להכרעה — אין דלי "אחר". הבדיקה מקבעת את הפער בגודלו הנוכחי
- * כדי שרענון שמגדיל אותו לא יעבור בשקט.
+ * ⚠️ הפער נסגר: רשומה בלי סוג קריא נכנסת לדלי "אחר" (`typeKey`), ולכן
+ * סכום השבבים הוא בדיוק מספר התוצאות בכל קטגוריה. לפני זה id 147
+ * בחשמל נעלם גם כששלושת השבבים דלוקים — מסנן שאין לו בו פקד.
  */
-test("מסננים: הפער בין סכום שבבי הסוג לתוצאות הוא בדיוק רשומות בלי סוג", () => {
+test("מסננים: סכום שבבי הסוג הוא בדיוק מספר התוצאות", () => {
   for (const cat of ["cellular", "home", "electricity"]) {
     const pkgs = byCategory(ALL, cat);
     const sum = typeFacets(pkgs, NONE).reduce((a, [, n]) => a + n, 0);
-    const noType = pkgs.filter((p) => !p.type).map((p) => p.id);
-    assert.equal(sum + noType.length, pkgs.length, `${cat}: ללא סוג — ${noType.join(", ")}`);
+    assert.equal(sum, pkgs.length, cat);
   }
-  assert.deepEqual(
-    byCategory(ALL, "electricity")
-      .filter((p) => !p.type)
-      .map((p) => p.id),
-    ["147"],
-    "רשומות בלי סוג בחשמל — חוב ידוע",
+});
+
+test("מסננים: סימון כל שבבי הסוג אינו מסתיר אף תוצאה", () => {
+  for (const cat of ["cellular", "home", "electricity"]) {
+    const pkgs = byCategory(ALL, cat);
+    const types = typeFacets(pkgs, NONE).map(([t]) => t);
+    const shown = pkgs.filter((p) => matchesFilters(p, { ...NONE, types }));
+    assert.equal(shown.length, pkgs.length, `${cat}: ${types.join(", ")}`);
+  }
+  const elec = byCategory(ALL, "electricity");
+  assert.ok(
+    typeFacets(elec, NONE).some(([t]) => t === "אחר"),
+    "מסלול בלי סוג קריא (id 147) חייב פקד שמחזיר אותו",
   );
 });
 
