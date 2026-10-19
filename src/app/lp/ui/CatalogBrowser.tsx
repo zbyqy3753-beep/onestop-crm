@@ -468,6 +468,22 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
               `lp-ink-3`: 11px/12px בצבע ההוא הם 3.27-3.49:1, מתחת
               ל-AA — ראה את ההערה המלאה ב-`PackageCard`.
             */}
+            {/*
+              ⚠️ ה-fieldset יורד כשאין בו אף אפשרות. הרשימה נגזרת
+              מהחבילות שנמסרו, ולכן קטגוריה ריקה (או כזו שכל חבילותיה
+              נפלו ב-`isListable`) ציירה קבוצה מסומנת "חברה" שאין בתוכה
+              פקד אחד — תווית שמבטיחה מסנן שאינו קיים, ולקורא מסך
+              "קבוצה, חברה" ואחריה כלום. זה הצד ההפוך של השער על
+              `typeOptions` שמתחת: שם פקד פעיל נעלם, כאן תווית נשארת
+              בלי פקד.
+
+              ⚠️ והתנאי בודק גם `selectedProviders`, באותה צורה בדיוק
+              כמו שבב הסוג. היום חברה מסומנת נשארת ברשימה גם כשהמונה
+              שלה 0 (ראה ה-memo למעלה), ולכן הענף השני אינו ניתן
+              להגעה — אבל שתי הגדרות שונות ל"מתי אזור מסנן מרונדר" הן
+              בדיוק המלכודת שהעלימה כאן מסנן פעיל פעמיים.
+            */}
+            {(providerOptions.length > 0 || selectedProviders.length > 0) && (
             <fieldset className="mb-4">
               <legend className="mb-2 text-xs font-medium text-lp-ink-2">חברה</legend>
               <div className="space-y-1.5">
@@ -486,6 +502,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                 ))}
               </div>
             </fieldset>
+            )}
 
             {/*
               ⚠️ התנאי בודק גם `selectedTypes` ולא רק את מספר האפשרויות.
@@ -603,10 +620,27 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
           </label>
         </div>
 
+        {/*
+          ⚠️ "נסו להסיר חלק מהמסננים" נאמר רק כשיש מסנן להסיר.
+          המסך הזה מוצג על **כל** רשימה ריקה, כולל קטגוריה שאין בה
+          חבילה אחת גלויה (`packages` ריק — קטגוריה שכל חבילותיה
+          נפלו ב-`isListable`, או שהרענון הבא לא יחזיר בה דבר).
+          הגולש קיבל אז הוראה לבטל מסננים שהוא לא הפעיל, ליד תג
+          סינון שאינו קיים ופאנל שאין בו פקד — כלומר המסך תלה את
+          הריקנות באשמתו. `hasFilters` הוא בדיוק ההבחנה הזאת, והוא
+          כבר קובע את התג ואת "נקה הכל" באותו רכיב.
+
+          ⚠️ שתי צורות בכל ענף, כמו בכל מונה בדף: בחשמל אלה
+          **מסלולים** — ראה את ההערה על `PLANS_CAPTION` בשורת
+          התוצאות שמעל.
+        */}
         {results.length === 0 ? (
           <p className="rounded-lp-card border border-lp-line bg-lp-surface p-8 text-center text-sm text-lp-ink-2">
-            {isElectric ? "אין מסלולים שמתאימים לסינון." : "אין חבילות שמתאימות לסינון."} נסו
-            להסיר חלק מהמסננים.
+            {hasFilters
+              ? `${isElectric ? "אין מסלולים שמתאימים לסינון." : "אין חבילות שמתאימות לסינון."} נסו להסיר חלק מהמסננים.`
+              : isElectric
+                ? "אין כאן מסלולים להצגה כרגע."
+                : "אין כאן חבילות להצגה כרגע."}
           </p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

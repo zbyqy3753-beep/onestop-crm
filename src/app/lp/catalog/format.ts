@@ -108,7 +108,7 @@ export const PLANS_CAPTION = (n: number) => (n === 1 ? "מסלול" : "מסלו�
  * בחלון קצר אחריו) ומושווית למשפחה שנשאלה. יחידה שלא זוהתה —
  * המספר נקרא כתקרה כבעבר, כי שם אין ראיה לשדה אחר.
  */
-type CapKind = "data" | "speed" | "minutes" | "sms" | "converters";
+type CapKind = "data" | "speed" | "minutes" | "sms" | "converters" | "channels";
 
 /*
  * ⚠️ `speed` לפני `data`, ו-`data` בלי `MB`. "עד 1000Mb" הוא מהירות
@@ -121,6 +121,14 @@ const CAP_UNITS: [CapKind, RegExp][] = [
   ["sms", /SMS|הודעות|מסרונ/i],
   ["minutes", /דק/],
   ["converters", /ממיר/],
+  /*
+   * ⚠️ `ערוצ` כאן ולא רק כ-`CapKind`: בלי יחידה מזוהה כל "עד N" שבמקרה
+   * נושא את מספר הערוצים היה נקרא כתקרה שלהם, וזה בדיוק מה שההערה על
+   * `proseCapsAt` ("התקרה נקשרת ל**שדה**") נבנתה למנוע. עם היחידה
+   * השער הדוק לשני הכיוונים: "עד 60 ערוצים" נתפס, ו-"עד 60 דקות" על
+   * חבילה עם 60 ערוצים נדחה.
+   */
+  ["channels", /ערוצ/],
 ];
 
 function proseCapsAt(pkg: Package, value: number, kind: CapKind): boolean {
@@ -439,6 +447,42 @@ function routerDetail(pkg: Package): string | null {
 }
 
 /**
+ * התוספת החודשית שהרשומה תולה דווקא ב**הכללת** הנתב במחיר.
+ *
+ * ⚠️ הצד החיובי של אותו שדה, והוא נשאר פתוח אחרי `routerDetail`.
+ * `routerIncluded: true` הודפס "כלול במחיר" כעובדה גורפת על חמש
+ * רשומות שהפרוזה שלהן מתנה בדיוק את המצב הזה: ids 92, 102, 107, 108
+ * ו-109 כותבות "בתוכניות שבהן הנתב כלול במחיר החבילה , תתווסף עלות
+ * על הנתב על סך 4.9 ₪ לחודש בנוסף לעלות התוכנית". כלומר הרשומה
+ * מוסרת **שני** דברים — הנתב בתוך המחיר, ותוספת חודשית עליו — והשורה
+ * הדפיסה את הנדיב מהם לבדו.
+ *
+ * ⚠️ והמנוע כבר הכריע את המשפט הזה לכיוון ההפוך: `ROUTER_PRICED_SEPARATELY`
+ * ב-`savings.ts` מונה אותו במפורש ("אותה הצהרה בדיוק, בניסוח שלא
+ * 'בתוספת' ולא 'עלות נתב'") ו-`isComparable` פוסלת בגללו את חמשתן
+ * מהמחשבון. כלומר הכרטיס הבטיח ציוד ללא עלות על אותן רשומות שהמנוע
+ * מסרב להשוות **בגלל** אותה עלות — בדיוק הפער שההערה על `lineTiers`
+ * מתארת, רק שכאן הכרטיס הוא הנדיב מהשניים.
+ *
+ * התנאי נקרא **מהטקסט עצמו** ולא מושלם, כמו ב-`housingQualifiers`
+ * וב-`tierLines`: רשומה שאין בה את ההתניה נשארת עם "כלול במחיר"
+ * כשהיתה. דרושה ספרה — "תתווסף עלות" בלי סכום אינו מספר שמותר להדפיס.
+ *
+ * ⚠️ `\n` **אינו** גבול, רק `.` ו-`•` — כמו ב-`ROUTER_PRICED_SEPARATELY`.
+ * המחלץ שותל שורה ריקה בתוך המשפט ("תתווסף עלות\n\nעל הנתב על סך 4.9 ₪"),
+ * ולכן מחלקת תו שפוסלת ירידת שורה לא תפסה אף אחת מחמש הרשומות — שער
+ * שנראה עובד ואינו עובד גרוע משער שאינו קיים.
+ */
+function includedRouterSurcharge(pkg: Package): number | null {
+  const m = installationProse(pkg).match(
+    /שבהן\s*ה?נתב\s*כלול\s*במחיר[^.•]{0,40}?תתווסף\s*עלות[^.•\d]{0,30}?(\d[\d,]*(?:\.\d+)?)\s*(?:ש"ח|שח|₪)/,
+  );
+  if (!m) return null;
+  const amount = Number(m[1].replace(/,/g, ""));
+  return Number.isFinite(amount) && amount > 0 ? amount : null;
+}
+
+/**
  * הכמות שמדרגת הקווים חלה עליה, כפי שהרשומה ניסחה אותה.
  *
  * ⚠️ `lineTiers` מחזיק סקלר אחד למדרגה, והשורה הדפיסה אותו כשוויון —
@@ -719,7 +763,26 @@ export function cardStats(pkg: Package): Stat[] {
     const out: Stat[] = [];
     const speed = speedLabel(pkg, spec);
     if (speed) out.push({ value: speed, caption: "מהירות גלישה" });
-    if (isCount(spec.channels)) out.push({ value: nf.format(spec.channels), caption: CHANNELS_CAPTION(spec.channels) });
+    /*
+     * ⚠️ אותו שער "עד" גם על הערוצים — השדה האחרון בכרטיס שנותר מודפס
+     * כעובדה שטוחה. הנפח, המהירות, הדקות, ה-SMS, דקות חו״ל והממירים
+     * כולם עברו דרך `upTo` בסבבים קודמים, וערוצים נשארו מחוץ ל-`CapKind`
+     * בלבד מפני שאף רשומה חיה אינה כותבת "עד N ערוצים" (ids 70 ו-71,
+     * שתי הרשומות שמסרו ערוצים, אומרות "ערוצים 60"/"ערוצים 180" שטוח).
+     * זה שער לרענון הבא, כמו צורות היחיד ב-`MINUTES_CAPTION`: המחלץ
+     * שכבר מייצר "עד GB800" ו-"מקסימום עד 7 ממירים" יייצר גם את הצורה
+     * הזו, והכרטיס היה מבטיח 60 ערוצים על רשומה שמוכרת "עד 60".
+     *
+     * ⚠️ הכיתוב **אינו** משתנה, בשונה מהממירים. שם המילה "כלולים" היא
+     * שהפכה שגויה על מקסימום; "ערוצים" אינו מבטיח דבר, והערך עצמו
+     * ("עד 60") נושא את ההסתייגות — ולכן אין צורך בתווית שלישית
+     * ב-`SAME_FACT`.
+     */
+    if (isCount(spec.channels))
+      out.push({
+        value: `${upTo(pkg, "channels", spec.channels)}${nf.format(spec.channels)}`,
+        caption: CHANNELS_CAPTION(spec.channels),
+      });
     // ⚠️ אותה שגיאה שהערה על `lineTiers` מזהירה מפניה, רק שכאן היא
     // **חיה**: id 70 הוא ממיר אחד, והכרטיס הכריז "1 ממירים".
     /*
@@ -929,10 +992,17 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     /*
      * ⚠️ הנתב עובר דרך `routerDetail` מאותו טעם שההתקנה עוברת דרך
      * `installationDetail`: השלילה הגורפת סותרת את מה שהרשומה מסרה.
+     *
+     * ⚠️ ו**שתי** הצהרות היסוד נבדקות, לא רק השלילית. ראה
+     * `includedRouterSurcharge`: "כלול במחיר" בלי התוספת שהרשומה תלתה
+     * בהכללה עצמה הוא אותו ויתור על תנאי, בכיוון ההפוך.
      */
     const router = s.routerIncluded === false ? routerDetail(pkg) : null;
+    const surcharge = s.routerIncluded === true ? includedRouterSurcharge(pkg) : null;
     if (router) {
       rows.push({ label: "נתב", value: router });
+    } else if (surcharge != null) {
+      rows.push({ label: "נתב", value: `כלול במחיר · בתוספת ${shekels(surcharge)} לחודש` });
     } else {
       included("נתב", s.routerIncluded);
     }
