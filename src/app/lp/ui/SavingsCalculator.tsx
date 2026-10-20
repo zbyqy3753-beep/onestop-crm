@@ -519,7 +519,21 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
               */
               aria-describedby="calc-spend-hint calc-spend-note"
               onClick={submitSpend}
-              className={`inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-lp-brand px-4 py-2.5 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright ${monthlySpend <= 0 ? "opacity-40" : ""}`}
+              /*
+                ⚠️ מצב מושבת בטוקנים ולא ב-`opacity-40`. העמעום מצייר
+                את הכפתור כולו — רקע **וטקסט** — ב-40% מעל הכרטיס
+                הלבן: הטקסט נשאר לבן בדיוק, הרקע מתבהר ל-#9dc6d8,
+                והתוצאה היא 1.7:1 על ה-CTA הראשי של המחשבון, בדיוק
+                במצב שבו הוא צריך להיראות ולהסביר שחסר סכום.
+                `aria-disabled` פוטר אותו מ-1.4.3 פורמלית, אבל 1.7:1
+                אינו ניתן לקריאה בשמש על טלפון. `lp-surface-3` עם
+                `lp-ink-2` הוא 5.4:1, נקרא כמושבת, ובלי צבע חדש.
+              */
+              className={`inline-flex min-h-11 flex-1 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
+                monthlySpend <= 0
+                  ? "cursor-not-allowed bg-lp-surface-3 text-lp-ink-2"
+                  : "bg-lp-brand text-lp-ink-invert hover:bg-lp-brand-bright"
+              }`}
             >
               חשבו לי את החיסכון
             </button>

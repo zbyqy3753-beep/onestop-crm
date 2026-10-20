@@ -174,7 +174,16 @@ export function CatalogTabs({ packages }: { packages: Package[] }) {
               }`}
             >
               {CATEGORY_META[key].he}
-              <span className="nums ms-1.5 opacity-70">{count}</span>
+              {/*
+                ⚠️ בלי `opacity-70`. העמעום נתן 3.9:1 בשני המצבים —
+                לבן ב-70% על המותג בלשונית הפעילה, `lp-ink-2` ב-70%
+                על לבן בכבויה — על ספרות של 14px, מתחת ל-4.5:1 של
+                WCAG AA. וזה אותו נתון בדיוק שה-`aria-label` שמעל
+                טורח להכריז במילים ("סלולר — 55 חבילות"): המסך עמעם
+                דווקא את מה שהוכרז כמידע. ההיררכיה נשמרת בגודל
+                (`text-xs` מול `text-sm` של התווית) ולא באלפא.
+              */}
+              <span className="nums ms-1.5 text-xs">{count}</span>
             </button>
           );
         })}

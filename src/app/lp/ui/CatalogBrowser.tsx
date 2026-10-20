@@ -454,8 +454,18 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                 setSelectedTypes([]);
                 setMaxPrice(null);
               }}
-              className={`-my-2 flex min-h-11 items-center py-2 text-xs text-lp-brand hover:underline lg:my-0 lg:min-h-0 lg:py-0 ${
-                hasFilters ? "" : "cursor-not-allowed opacity-40 hover:no-underline"
+              /*
+                ⚠️ מצב מושבת בטוקן ולא ב-`opacity-40`. `lp-brand` ב-40%
+                על לבן הוא #9dc6d8 — 1.8:1 על טקסט של 12px, כלומר
+                הכיתוב "נקה הכל" כמעט נעלם מהמסך בדיוק במצב שבו הוא
+                אמור להסביר שאין מה לנקות (והכפתור נשאר ב-DOM בכוונה,
+                ראה ההערה למעלה). `lp-ink-2` הוא 7.2:1 ואפור במקום
+                כחול — ההבדל מהמצב הפעיל נשאר מיידי, בלי צבע חדש.
+              */
+              className={`-my-2 flex min-h-11 items-center py-2 text-xs hover:underline lg:my-0 lg:min-h-0 lg:py-0 ${
+                hasFilters
+                  ? "text-lp-brand"
+                  : "cursor-not-allowed text-lp-ink-2 hover:no-underline"
               }`}
             >
               נקה הכל
@@ -532,7 +542,15 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                             : "border-lp-line bg-lp-surface text-lp-ink-2 hover:border-lp-brand"
                         }`}
                       >
-                        {type} <span className="nums opacity-70">{count}</span>
+                        {/*
+                          ⚠️ בלי `opacity-70` — אותו חשב כמו על המונה
+                          בלשונית (ראה `CatalogTabs`): 3.9:1 על ספרות
+                          של 12px, בשני מצבי השבב. השבב כולו כבר
+                          `text-xs`, ולכן אין כאן גודל להוריד —
+                          והמונה פשוט נקרא, כמו המונה שליד תיבת
+                          החברה שמעליו (שמעולם לא עומעם).
+                        */}
+                        {type} <span className="nums">{count}</span>
                       </button>
                     );
                   })}
@@ -560,6 +578,17 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                   }}
                   className="w-full accent-lp-brand"
                   aria-label="מחיר מקסימלי"
+                  /*
+                    ⚠️ הערך מוכרז ביחידה שלו. פקד `range` מכריז את
+                    `value` כמספר עירום — "מחיר מקסימלי, 250" — בעוד
+                    **כל** התצוגה הוויזואלית של אותו פקד (הכותרת שמעל
+                    ושני הקצוות שמתחת) מדפיסה ₪ דרך `shekels`. בפקד
+                    שכל תפקידו הוא סכום, מספר בלי יחידה הוא בדיוק
+                    ההפרש בין "250 שקל" ל-"250 מגהביט". `aria-valuetext`
+                    הוא השדה היחיד שמחליף את ההכרזה המספרית, והוא נגזר
+                    מאותו `shekels` כדי שהנאמר והנראה לא ייפרדו.
+                  */
+                  aria-valuetext={shekels(maxPrice ?? priceBounds.max)}
                 />
                 <div className="nums mt-1 flex justify-between text-lp-2xs text-lp-ink-2">
                   <span>{shekels(priceBounds.min)}</span>

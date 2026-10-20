@@ -6,7 +6,10 @@ import {
   compareRows,
   discountIsCapped,
   headlineValue,
+  PROMO_NOTE_QUOTE_LABEL,
   PROMO_PERIOD_TEXT,
+  promoNoteRises,
+  promoNoteText,
   promoRise,
   shekels,
 } from "../catalog/format";
@@ -229,10 +232,31 @@ export function CompareTray({
     return () => document.body.classList.remove("lp-tray-open");
   }, [items.length]);
 
-  if (items.length === 0) return null;
-
   return (
     <>
+      {/*
+        ⚠️ המונה מוכרז, ולא רק נראה.
+
+        הכיתוב "להשוואה (n/4)" הוא המקום **היחיד** שמאשר שסימון תיבה
+        בכרטיס נקלט בכלל: הפוקוס נשאר על התיבה, הרשת שמתחתיה אינה
+        משתנה, והמגש עולה בתחתית המסך — מחוץ לשדה הראייה של מי שמנווט
+        בקורא מסך. שורת התוצאות ב-`CatalogBrowser` כבר `aria-live`
+        מאותו נימוק בדיוק; המונה של ההשוואה נשאר מאחור.
+
+        ⚠️ והאזור החי יושב **מחוץ** לתנאי, ולכן הרכיב אינו מחזיר יותר
+        `null` כשאין פריטים. אזור חי שנכנס ל-DOM יחד עם התוכן שלו אינו
+        מוכרז (ה-AT רושם אותו רק מהשינוי הבא), כלומר דווקא ההוספה
+        הראשונה — זו שבונה את המגש כולו — הייתה נשארת שקטה. פסקה ריקה
+        אינה הכרזה, ולכן המגש הריק עדיין אינו אומר דבר.
+
+        ⚠️ הכיתוב הנראה מסומן `aria-hidden`: שני הניסוחים אומרים את
+        אותו נתון, וקורא מסך שהגיע למגש ב-Tab היה שומע את המונה פעמיים
+        ברצף.
+      */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {items.length > 0 ? `להשוואה: ${items.length} מתוך ${max}` : ""}
+      </p>
+      {items.length > 0 && (
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-lp-line bg-lp-surface/95 backdrop-blur">
         {/*
           ⚠️ בנייד השבבים יורדים לשורה משלהם (`order-last w-full`)
@@ -241,7 +265,8 @@ export function CompareTray({
           שמרחף מעל הקטלוג. מ-`sm` ומעלה ההתנהגות המקורית חוזרת.
         */}
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <span className="flex-1 text-sm font-medium text-lp-ink sm:flex-none">
+          {/* ⚠️ `aria-hidden` — האזור החי שמעל אומר את אותו נתון, ראה שם. */}
+          <span aria-hidden="true" className="flex-1 text-sm font-medium text-lp-ink sm:flex-none">
             להשוואה ({items.length}/{max})
           </span>
           <ul
@@ -315,14 +340,27 @@ export function CompareTray({
               setOpen(true);
             }}
             aria-disabled={items.length < 2}
-            className={`inline-flex min-h-11 items-center rounded-lg bg-lp-brand px-4 py-2 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright ${
-              items.length < 2 ? "opacity-40" : ""
+            /*
+              ⚠️ מצב מושבת בטוקנים ולא ב-`opacity-40`. העמעום מצייר את
+              הכפתור כולו — רקע **וטקסט** — ב-40% מעל הדף הלבן: הטקסט
+              נשאר לבן בדיוק, הרקע מתבהר ל-#9dc6d8, והתוצאה היא 1.7:1
+              על הכיתוב שהוא **עצמו** ההסבר ("בחרו עוד חבילה"). ההערה
+              שמעל מתעדת למה הכיתוב הזה הוא כל מה שאומר למשתמש מקלדת
+              למה אי אפשר להשוות — ואז הוא הודפס בצבע שאי אפשר לקרוא.
+              `lp-surface-3` עם `lp-ink-2` הוא 5.4:1, אפור שנקרא
+              כמושבת, ובלי שום צבע חדש.
+            */
+            className={`inline-flex min-h-11 items-center rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              items.length < 2
+                ? "cursor-not-allowed bg-lp-surface-3 text-lp-ink-2"
+                : "bg-lp-brand text-lp-ink-invert hover:bg-lp-brand-bright"
             }`}
           >
             {items.length < 2 ? "בחרו עוד חבילה" : "השוו"}
           </button>
         </div>
       </div>
+      )}
 
       {open && <CompareSheet items={items} panelRef={panelRef} onClose={close} />}
     </>
@@ -527,6 +565,21 @@ export function CompareSheet({
  * מחיר חודשי בכלל. השורה כולה ממילא יורדת בלשונית החשמל; זה השער
  * לצירוף מעורב.
  */
+/**
+ * הנוסח כפי שהתא אומר אותו — **אותו** שער של הכרטיס ושל פס ההירו.
+ *
+ * ⚠️ זה היה המשטח השלישי שהדפיס את `rise.note` גולמי, ודווקא
+ * מתחת לכותרת שורה שאומרת "אחרי ההטבה": על שמונה מ-11 הרשומות
+ * הנוסח פותח במחיר **המבצע** (id 81: "39 ש\"ח למשך 3 חודשים"
+ * בשורה של חבילה ב-₪99), כלומר הטבלה הודיעה שהמחיר יורד. התווית
+ * נאמרת בתוך התא ולא נשענת על כותרת השורה, מפני שכותרת השורה היא
+ * בדיוק הייחוס שאסור כאן.
+ */
+export function afterPromoNote(pkg: Package, note: string): string {
+  if (promoNoteRises(pkg, note)) return note;
+  return `${PROMO_NOTE_QUOTE_LABEL} ${promoNoteText(pkg, note)}`;
+}
+
 function AfterPromoCell({ pkg }: { pkg: Package }) {
   if (pkg.category === "electricity") return <Cell>—</Cell>;
   const rise = promoRise(pkg);
@@ -544,7 +597,7 @@ function AfterPromoCell({ pkg }: { pkg: Package }) {
         ? rise.kind === "amount"
           ? shekels(rise.amount)
           : rise.kind === "note"
-            ? rise.note
+            ? afterPromoNote(pkg, rise.note)
             : PROMO_PERIOD_TEXT
         : hasKnownAfterPrice(pkg)
           ? "לא דווח שינוי"

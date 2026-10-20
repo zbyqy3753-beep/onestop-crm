@@ -261,7 +261,17 @@ export function discountIsCapped(p: Package): boolean {
    * שמשפט התקרה שלה נופל אחרי הסימן הייתה מפסיקה להיזהות כתקרה
    * והכרטיס היה מבטיח שיעור קבוע במקום "עד".
    */
-  const prose = [logicName(p), p.description, p.benefits].filter(Boolean).join(" ");
+  /*
+   * ⚠️ וגם `priceAfterPromoNote` — השדה **הרביעי**, זה שקיים כדי להחזיק
+   * את המשפט של הספק על מה שקורה להטבה. חמשת שערי הנוסח ב-`savings.ts`
+   * קוראים את ארבעת השדות דרך `gateText`, והשער הזה נעצר על שלושה.
+   * הקטלוג של היום משאיר את השדה ריק בכל 19 רשומות החשמל, ולכן אין כאן
+   * שינוי במספר מוצג — אבל "עד 10% בהתאם לגובה החשבון" שייכתב דווקא
+   * שם הוא תקרה שהכרטיס היה מבטיח כשיעור קבוע.
+   */
+  const prose = [logicName(p), p.description, p.benefits, p.priceAfterPromoNote]
+    .filter(Boolean)
+    .join(" ");
   /*
    * ⚠️ `עד` כמילה ולא כתת-מחרוזת: שתיים מ-19 רשומות החשמל הן מסלולי
    * **ועד בית** (142, 145), ו-"ועד 10%" אינו הצהרת תקרה.
@@ -328,7 +338,29 @@ export function electricityRank(p: Package): number {
    * רשומה בלי `spec` שמיש אינה מצהירה דבר על שעות, ולכן היא נקראת
    * כמי ש**שתק** — אותה קריאה בדיוק שההערה למעלה מנמקת.
    */
-  const partialHours = hasSpec(p) && !p.spec.allHours && p.spec.hoursText != null;
+  /*
+   * ⚠️ מחרוזת **לא ריקה**, ולא `!= null`. `cardStats` — האחות שההערה
+   * למעלה מצטטת כהצדקה לקנס ("אינה מדפיסה להן אריח שעות כלל, ולכן אין
+   * על המסך דבר שמסביר את ההורדה") — בודקת
+   * `typeof spec.hoursText === "string" && spec.hoursText`, כלומר
+   * `hoursText: ""` אינו מצייר אריח. השער כאן קרא `""` כהצהרה על שעות
+   * חלקיות והוריד את המסלול **קבוצה שלמה** בלי שום דבר על המסך שמסביר
+   * זאת — בדיוק ה-regression שההערה מעל השורה הזו מתעדת, עד לאותו
+   * מיון "הנחה: מהגבוהה לנמוכה" שחוזר להיות לא-מונוטוני.
+   *
+   * ⚠️ ו-`allHours !== true` ולא `!p.spec.allHours`: `"false"` כמחרוזת
+   * — הצורה שהמחלץ מייצר כשהוא קורא שדה טקסטואלי, והצורה ש-`=== true`
+   * נכתב נגדה ב-`serviceCounts`, ב-`isRecommended` ובענף הבית של
+   * `isComparable` — הוא **אמת** ב-JS, ולכן מסלול שהצהיר "23:00 עד
+   * 7:00" חמק מהקנס וחזר לראש הדף עם 20% על צריכת לילה. ההצהרה שהקנס
+   * נשען עליה היא `hoursText`; הדגל רק מבטל אותה, ולכן הוא מבטל רק
+   * כשהוא בוליאן אמת ולא כשהוא ערך שאי אפשר לקרוא.
+   */
+  const partialHours =
+    hasSpec(p) &&
+    p.spec.allHours !== true &&
+    typeof p.spec.hoursText === "string" &&
+    p.spec.hoursText !== "";
   return (
     (partialHours ? PARTIAL_HOURS_GROUP : 0) - p.discountPercent + (discountIsCapped(p) ? 0.5 : 0)
   );

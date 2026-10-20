@@ -1330,11 +1330,20 @@ test("תצוגה: עליית מחיר פגומה אינה נקראת כמחיר,
   assert.deepEqual(promoRise(real), { kind: "amount", amount: 57.9 });
   assert.equal(heroRiseLine(real), "ואחרי ההטבה ₪57.9");
 
-  // והצהרה מילולית בלבד (11 רשומות בקטלוג) נאמרת כמו שהיא.
+/*
+   * והצהרה מילולית בלבד (11 רשומות בקטלוג) נאמרת כמו שהיא.
+   *
+   * ⚠️ התווית אינה מקובעת כאן יותר, והנוסח הוא מה שמקובע: id 23
+   * פותחת במחיר **המבצע** ("25 ש"ח ... לאחר מכן 59 ₪" כש-`price` 25),
+   * ולכן מסבב 39 היא מצוטטת תחת "נוסח המבצע:" ולא מיוחסת תחת "בתום
+   * ההטבה:" — הצהרה שהמחיר יורד. השער עצמו נבדק ב-`lpPromoNote39`;
+   * מה שהבדיקה הזו שומרת הוא שההערה שהרשומה מסרה **אינה נבלעת**.
+   */
   const spoken = PACKAGES.find((p) => p.id === "23");
   assert.equal(spoken.priceAfterPromo, null);
   assert.equal(promoRise(spoken).kind, "note");
-  assert.match(heroRiseLine(spoken), /^בתום ההטבה: /);
+  assert.ok(heroRiseLine(spoken).includes(spoken.priceAfterPromoNote));
+  assert.match(heroRiseLine(spoken), /^(בתום ההטבה|נוסח המבצע): /);
 
   /*
    * ⚠️ הלב: `0` הוא הצורה שהמחלץ כותב כשלא קרא מספר (ids 18, 22

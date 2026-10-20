@@ -11,6 +11,8 @@ import {
   discountIsCapped,
   headlineValue,
   priceNote,
+  promoNoteLabel,
+  promoNoteText,
   promoRise,
   PROMO_PERIOD_TEXT,
   shekels,
@@ -324,9 +326,19 @@ export function PackageCard({
               <span className="font-semibold">אחרי תום ההטבה: {shekels(rise.amount)} לחודש</span>
             </p>
           )}
+          {/*
+           * ⚠️ התווית והנוסח מגיעים מ-`format.ts` ולא נכתבים כאן:
+           * "בתום ההטבה: <נוסח>" הוא הצהרה שלנו על המחיר שאחרי, ועל
+           * שמונה מ-11 הרשומות הנוסח פותח במחיר **המבצע** (id 81:
+           * "39 ש"ח למשך 3 חודשים" מתחת למחיר ₪99), כלומר הכרטיס
+           * הודיע שהמחיר יורד. פס המחיר בהירו הדפיס את אותה תווית
+           * מנוסח משלו — שתי אמירות על אותו מספר — ולכן השער והנוסח
+           * יושבים ב-`promoNoteText`, מקום אחד לשני המשטחים.
+           */}
           {rise?.kind === "note" && (
             <p className="crm-text mt-2 rounded-lg bg-lp-surface-2 px-3 py-2 text-xs text-lp-ink-2">
-              <span className="font-semibold">בתום ההטבה:</span> {rise.note}
+              <span className="font-semibold">{promoNoteLabel(pkg, rise.note)}</span>{" "}
+              {promoNoteText(pkg, rise.note)}
             </p>
           )}
           {/*
