@@ -868,13 +868,57 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
  * פלוס" היא המקרה: 39.9 היום, 59.9 אחר כך, ומדרגות שמתומחרות מול
  * 39.9. 59.9 לכל כמות הוא המספר השמרני, ולכן הנבחר.)
  */
+/**
+ * האם המדרגה שהוצהרה בכמות הזו היא **תקרה** ("עד 2 מנויים כולל")
+ * ולא רצפה ("3 ומעלה").
+ *
+ * ⚠️ `tierLines` ב-`format.ts` כבר קראה את ההצהרה הזו ומדפיסה בשבילה
+ * "עד 2 קווים" על האריח — והמנוע לא קיבל את אותה ידיעה. בחירת המדרגה
+ * (`t.lines <= lines`, הגבוהה שבהן) מניחה שכל מדרגה היא "N ומעלה",
+ * ולכן מדרגת-תקרה הוחלה גם על כמויות שהרשומה מעולם לא תמחרה: רשומה
+ * שאומרת "עד 2 מנויים כולל – 30 ₪ למנוי" על בסיס 39.9 החזירה 30 גם
+ * בחמישה קווים, כלומר ₪50 בחודש של חיסכון שלא הוצהר — בזמן שהאריח
+ * שלידה מדפיס "עד 2 קווים". ids 36 ו-37 מנסחות כך, ורק מפני שהמדרגה
+ * ה**גבוהה** שלהן נגמרת ב-"ומעלה" אף אחת מהן אינה מגיעה למסך היום.
+ * זו המחצית שלא תוקנה יחד עם האריח, והיא תתעורר ברענון הבא.
+ *
+ * הקריאה יושבת כאן ולא ב-`format.ts` כדי ששני הקוראים — המנוע
+ * והאריח — יחלקו מקור אחד; `format.ts` כבר מייבא מכאן שלושה שערים.
+ */
+export function tierCapsAt(pkg: Package, lines: number): boolean {
+  const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
+  const n = lines === 1 ? "(?:(?<!\\d)1(?!\\d)|קו\\s*אחד)" : `(?<!\\d)${lines}(?!\\d)`;
+  const unit = "\\s*(?:מנויים|מנוי|קווים|קו)?\\s*";
+  // סדר הקריאה זהה ל-`tierLines`: "ומעלה" ואז טווח גוברים על "עד".
+  if (new RegExp(`${n}${unit}(?:ומעלה|ויותר)`).test(prose)) return false;
+  if (new RegExp(`(?<!\\d)(\\d+)\\s*[-–]\\s*${lines}(?!\\d)\\s*(?:מנויים|מנוי|קווים|קו)`).test(prose)) return false;
+  return new RegExp(`עד${unit}${n}`).test(prose);
+}
+
+
+/**
+ * המדרגה שחלה על הכמות המבוקשת, או `null` כשאין כזו.
+ *
+ * ⚠️ מדרגת-תקרה שהכמות המבוקשת **מעליה** אינה חלה. ראה `tierCapsAt`.
+ */
+function tierFor(
+  p: MonthlyPackage,
+  tiers: { lines: number; price: number }[],
+  lines: number,
+): { lines: number; price: number } | null {
+  const tier = tiers.filter((t) => t != null && t.lines <= lines).sort((a, b) => b.lines - a.lines)[0];
+  if (tier == null) return null;
+  if (tier.lines < lines && tierCapsAt(p, tier.lines)) return null;
+  return tier;
+}
+
 export function perLinePrice(p: MonthlyPackage, lines: number): number {
   const base = afterPrice(p);
   if (p.priceAfterPromo != null) return base;
   // ⚠️ `tierTable` ולא `tiers?.length`. ראה `tierTable`.
   const tiers = tierTable(p.spec as Partial<CellularSpec>);
   if (!tiers) return base;
-  const tier = tiers.filter((t) => t != null && t.lines <= lines).sort((a, b) => b.lines - a.lines)[0];
+  const tier = tierFor(p, tiers, lines);
   /*
    * ⚠️ `tier.price` כפי שהוא, ובלי `Math.min` מול המחיר הבסיסי.
    *
@@ -912,7 +956,12 @@ export function priceUnknownAtLines(p: MonthlyPackage, lines: number): boolean {
   // ⚠️ `tierTable` ולא `tiers?.length`. ראה `tierTable`.
   const tiers = tierTable(p.spec as Partial<CellularSpec>);
   if (!tiers) return false;
-  if (tiers.some((t) => t != null && t.lines <= lines)) return false;
+  /*
+   * ⚠️ `tierFor` ולא `some(t.lines <= lines)`: מדרגת-תקרה שהכמות
+   * המבוקשת מעליה אינה מכסה אותה, והרשומה לא תמחרה את הכמות הזו
+   * בשום מקום — "לא יודעים, לא מבטיחים" חל גם כאן.
+   */
+  if (tierFor(p, tiers, lines) != null) return false;
   const smallest = tiers.filter((t) => t != null).sort((a, b) => a.lines - b.lines)[0];
   if (smallest == null) return false;
   return afterPrice(p) < smallest.price;

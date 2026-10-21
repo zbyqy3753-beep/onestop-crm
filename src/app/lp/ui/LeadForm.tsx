@@ -86,9 +86,19 @@ interface Props {
    * ראה אותו.
    */
   packageName?: string;
+  /**
+   * נקרא פעם אחת כשהפנייה נקלטה.
+   *
+   * ⚠️ מצב "נשלח" חי בתוך `useActionState`, כלומר בתוך הרכיב הזה
+   * בלבד. קורא שמרנדר אותו מאחורי מתג פתיחה מוחק אותו כשהוא סוגר
+   * את הפאנל, ובפתיחה הבאה הטופס חוזר ריק ובלי שום סימן שכבר
+   * נשלחה פנייה — הזמנה לכפילות. הקולבאק מאפשר לקורא להחזיק את
+   * העובדה בעצמו.
+   */
+  onSent?: () => void;
 }
 
-export function LeadForm({ pkg, compact = false, category, note, packageName }: Props) {
+export function LeadForm({ pkg, compact = false, category, note, packageName, onSent }: Props) {
   const [state, action] = useActionState(submitLandingLead, INITIAL);
   /*
    * ⚠️ `useId` ולא הקבוע `"general"`. שני טפסים ללא `pkg` חיים על אותו
@@ -134,8 +144,20 @@ export function LeadForm({ pkg, compact = false, category, note, packageName }: 
   const sentRef = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
 
+  /*
+   * ⚠️ ב-ref ולא בתלות: קוראים מעבירים פונקציה אנונימית חדשה בכל
+   * רינדור, והכנסתה למערך התלויות הייתה מריצה את האפקט שוב ושוב
+   * (ואיתו גם גניבת הפוקוס).
+   */
+  const onSentRef = useRef(onSent);
   useEffect(() => {
-    if (state.status === "sent") sentRef.current?.focus();
+    onSentRef.current = onSent;
+  });
+
+  useEffect(() => {
+    if (state.status !== "sent") return;
+    sentRef.current?.focus();
+    onSentRef.current?.();
   }, [state.status]);
 
   /*

@@ -1,5 +1,5 @@
 import { isMoney, logicName } from "./catalog";
-import { declaresRiseInText, familyPriceOnly, requiresMultipleLines } from "./savings";
+import { declaresRiseInText, familyPriceOnly, requiresMultipleLines, tierCapsAt } from "./savings";
 import type { CellularSpec, ElectricitySpec, HomeSpec, Package } from "./types";
 
 const nf = new Intl.NumberFormat("he-IL");
@@ -506,7 +506,8 @@ function tierLines(pkg: Package, lines: number): string {
     new RegExp(`(?<!\\d)(\\d+)\\s*[-–]\\s*${lines}(?!\\d)\\s*(?:מנויים|מנוי|קווים|קו)`),
   );
   if (range) return `${range[1]}–${lines} קווים`;
-  if (new RegExp(`עד${unit}${n}`).test(prose)) return `עד ${plain}`;
+  // ⚠️ אותה קריאה שהמנוע עושה, ממקום אחד. ראה `tierCapsAt`.
+  if (tierCapsAt(pkg, lines)) return `עד ${plain}`;
   return plain;
 }
 

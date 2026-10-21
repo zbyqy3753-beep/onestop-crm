@@ -65,6 +65,15 @@ export function PackageCard({
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const [formOpen, setFormOpen] = useState(false);
+  /*
+   * ⚠️ המצב הזה חי בכרטיס ולא בטופס. `LeadForm` מחזיק את "נשלח"
+   * ב-`useActionState`, והטופס מרונדר מאחורי `formOpen` — כלומר
+   * לחיצה על "סגירה" מפרקת אותו ומוחקת את העובדה שהפנייה נשלחה.
+   * מי שלחץ "שיחזרו אליי", שלח, סגר ופתח שוב קיבל טופס ריק בלי
+   * שום סימן, ושלח שוב; השרת רק מצרף את הכפילות כהערה. מרגע
+   * שנשלחה פנייה הכרטיס מחזיק את פאנל האישור ואינו מציע טופס נוסף.
+   */
+  const [sent, setSent] = useState(false);
 
   const stats = cardStats(pkg);
   const rows = detailRows(pkg);
@@ -353,20 +362,22 @@ export function PackageCard({
           )}
         </div>
 
-        <div className="mt-4">
-          <button
-            type="button"
-            onClick={() => setFormOpen((v) => !v)}
-            aria-expanded={formOpen}
-            className="min-h-11 w-full rounded-lg bg-lp-brand px-3 py-2.5 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright"
-          >
-            {formOpen ? "סגירה" : "שיחזרו אליי"}
-          </button>
-        </div>
+        {!sent && (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => setFormOpen((v) => !v)}
+              aria-expanded={formOpen}
+              className="min-h-11 w-full rounded-lg bg-lp-brand px-3 py-2.5 text-sm font-semibold text-lp-ink-invert transition hover:bg-lp-brand-bright"
+            >
+              {formOpen ? "סגירה" : "שיחזרו אליי"}
+            </button>
+          </div>
+        )}
 
-        {formOpen && (
+        {(formOpen || sent) && (
           <div className="animate-lp-rise mt-3 rounded-lp-card bg-lp-surface-2 p-3">
-            <LeadForm pkg={pkg} compact />
+            <LeadForm pkg={pkg} compact onSent={() => setSent(true)} />
           </div>
         )}
 
