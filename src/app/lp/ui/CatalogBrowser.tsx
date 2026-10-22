@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Card } from "./Card";
 import { PackageCard } from "./PackageCard";
 import { CompareTray, MAX_COMPARE } from "./CompareTray";
-import { PACKAGES_CAPTION, PLANS_CAPTION, shekels } from "../catalog/format";
+import { PACKAGES_CAPTION, PLANS_CAPTION, promoRise, shekels } from "../catalog/format";
 import {
   afterPrice,
   byPrice,
@@ -127,9 +127,34 @@ function byPriceDesc(a: Package, b: Package): number {
  * כזו יורדת לסוף הרשימה, שם היא מדורגת לפי המחיר של היום; הכרטיס
  * עצמו ממילא מדפיס את ההערה, ולכן הקורא רואה למה.
  */
+/*
+ * ⚠️ `promoRise` ולא `hasKnownAfterPrice` לבדו — אותה הכרעה בדיוק,
+ * על הענף השני.
+ *
+ * `hasKnownAfterPrice` מגדרת רק את מי שמילא `priceAfterPromoNote`
+ * והשאיר את המספר ריק (11 רשומות). אבל `promoRise` — הפונקציה
+ * ש**הכרטיס עצמו** קורא — מחזירה ענף שלישי, `period`: 20 רשומות
+ * שמצהירות על תקופת מבצע בטקסט חופשי בלבד, ו-`hasKnownAfterPrice`
+ * אומרת עליהן `true` מפני ששני השדות ריקים. כלומר הן דורגו לפי מחיר
+ * ההטבה תחת תווית שמבטיחה את ההפוך, בזמן שאותו כרטיס מדפיס מתחת
+ * לפקד המיון את `PROMO_PERIOD_TEXT` ("התיאור מצהיר על תקופת מבצע —
+ * בדקו מה המחיר אחריה"). בלשונית הסלולר של היום: id 57 ("Partner
+ * Star", 39.9 ₪ "למשך שנה") במקום 13, id 17 ("Partner Golden 5G",
+ * "מהחודש ה-13 והלאה- 59.9 ₪") במקום 15 — ב-59.9 מקומו סביב 30 —
+ * ו-id 27 ("לאחר 24 חודשים … 98 ₪ לחודש לקו"). המיון היחיד בדף
+ * שמבוסס על הנתון הזה היה המשטח היחיד שהתעלם ממנו.
+ *
+ * ⚠️ `promoRise` ולא `declaresRiseInText` ישירות: הציר חייב להיות
+ * אותו ציר שהכרטיס, פס ההירו ושורת "אחרי ההטבה" מדפיסים ממנו, כדי
+ * שהסדר והנוסח לא יוכלו להתפצל שוב.
+ */
+function afterPriceIsKnown(p: Package): boolean {
+  return hasKnownAfterPrice(p) && promoRise(p)?.kind !== "period";
+}
+
 function byAfterPrice(a: Package, b: Package): number {
-  const ka = hasKnownAfterPrice(a);
-  const kb = hasKnownAfterPrice(b);
+  const ka = afterPriceIsKnown(a);
+  const kb = afterPriceIsKnown(b);
   if (ka !== kb) return ka ? -1 : 1;
   // ⚠️ השוואה ולא חיסור, מאותו טעם שכתוב ב-`byPrice`: `afterPrice`
   // מחזירה `Infinity` לרשומה בלי מחיר שמיש, ו-`Infinity - Infinity`

@@ -51,7 +51,20 @@ function Submit({ label }: { label: string }) {
         onClick={(e) => {
           if (pending) e.preventDefault();
         }}
-        className={`${btnPrimary} w-full py-3 ${pending ? "cursor-not-allowed opacity-40" : ""}`}
+        /*
+         * ⚠️ מצב השליחה בטוקנים ולא ב-`opacity-40` — אותו תיקון בדיוק
+         * שנעשה ל-CTA של המחשבון (ראה ההערה ב-`SavingsCalculator`).
+         * העמעום מצייר רקע **וטקסט** ב-40%: הטקסט נשאר לבן, הרקע
+         * מתבהר ל-#97c2d5, והתוצאה היא 1.85:1 על הכיתוב "שולח…" —
+         * בדיוק בחלון ה-pending הארוך ביותר בדף (בדיקת כפילות, כתיבה
+         * למסד, שתי התראות), כלומר בדיוק כשהגולש צריך לקרוא שהלחיצה
+         * נקלטה. בלי מילה קריאה הוא מניח שכלום לא קרה ולוחץ שוב.
+         * `lp-surface-3` עם `lp-ink-2` הוא 5.4:1 ונקרא כמושבת.
+         * `hover:` נדרס במפורש — `btnPrimary` נושא אותו.
+         */
+        className={`${btnPrimary} w-full py-3 ${
+          pending ? "cursor-not-allowed bg-lp-surface-3 text-lp-ink-2 hover:bg-lp-surface-3" : ""
+        }`}
       >
         {pending ? "שולח…" : label}
       </button>
@@ -270,7 +283,16 @@ export function LeadForm({ pkg, compact = false, category, note, packageName, on
             id={`lp-phone-${uid}`}
             name="phone"
             type="tel"
-            inputMode="numeric"
+            /*
+             * ⚠️ `tel` ולא `numeric`. ההערה שמתחת מנמקת את `dir="ltr"`
+             * דווקא ב-`+972` — "צורה שהאימות בשרת מקבל במפורש" — אבל
+             * `inputMode="numeric"` מחליף באייפון את מקלדת הטלפון
+             * במקלדת ספרות בלבד, שאין בה `+`. כלומר מי שמקליד בנייד
+             * את המספר בצורה הבינלאומית אינו יכול להקליד את התו הראשון
+             * של הצורה שהקוד כאן טורח לתמוך בה. `tel` נותנת את אותה
+             * מקלדת ספרות-תחילה, עם `+` ועם המקף.
+             */
+            inputMode="tel"
             /*
              * ⚠️ `dir="ltr"` כמו בשדה הטלפון הציבורי השני (`/form/[token]`).
              * בלעדיו השדה יורש `rtl` מה-`<html>`, וה-`+` המוביל ב-`+972`

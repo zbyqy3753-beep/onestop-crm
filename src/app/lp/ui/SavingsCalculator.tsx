@@ -10,6 +10,7 @@ import { fieldClass } from "./field";
 import {
   MAX_LINES,
   MAX_SPEND,
+  MAX_TYPED_SPEND,
   MIN_SPEND,
   computeSaving,
   parseSpend,
@@ -106,11 +107,34 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
   const typedSpend = parseSpendRaw(spend);
   const overCap = typedSpend > MAX_SPEND;
   /*
+   * ⚠️ קלט אבסורדי אינו "מעל התקרה" — ראה `MAX_TYPED_SPEND`.
+   * מסלול `overCap` מצהיר על הסכום שהוקלד כעובדה ("אתם משלמים X
+   * בחודש") ומעביר אותו לנציג; הוא נכון ל-₪5,200 ושגוי לשלוש-עשרה
+   * ספרות, שעוברות את `maxLength={13}` במדויק. לכן מעל התקרה הזו
+   * הקלט נפסל — בדיוק כמו מתחת ל-`MIN_SPEND` — ולא "מועבר לבדיקה".
+   */
+  const absurdSpend = typedSpend > MAX_TYPED_SPEND;
+  /*
    * ⚠️ נדלק רק אחרי לחיצה על ה-CTA. שדה ריק בכניסה לשלב אינו שגיאה,
    * אבל לחיצה על "חשבו לי את החיסכון" בשדה ריק **הייתה** לא עושה כלום
    * ובלי מילה אחת של הסבר — הכפתור נראה שבור.
    */
   const [attempted, setAttempted] = useState(false);
+  /*
+   * ⚠️ העובדה "פנייה מהמחשבון כבר נשלחה" חייבת לחיות **כאן** ולא
+   * בתוך `LeadForm`: שם היא יושבת ב-`useActionState`, כלומר נמחקת
+   * ברגע שהרכיב נפרק. והוא נפרק בלחיצה היחידה שהמסך מציע אחרי
+   * השליחה — "לשנות את הנתונים" מחזיר לשלב 1, ובחזרה לשלב 3 הטופס
+   * נבנה מחדש ריק, עם הכיתוב "רוצים שנבדוק את החשבון שלכם לעומק?"
+   * ובלי שום סימן שהפנייה כבר בדרך. כלומר המסך מבקש טלפון פעמיים
+   * מאותו אדם. `onSent` הוא הקולבאק ש-`LeadForm` חושף בדיוק בשביל
+   * זה, ו-`PackageCard` כבר מחזיק את העובדה באותו אופן.
+   *
+   * ⚠️ והטופס **נשאר** זמין: `actions.ts` מזהה פנייה כפולה בחלון 24
+   * שעות ומצרף את ההערה החדשה לליד הקיים, ולכן מי שתיקן את הסכום
+   * וישלח שוב דווקא מעדכן את הנציג. מה שהיה חסר הוא האמירה, לא החסימה.
+   */
+  const [sent, setSent] = useState(false);
 
   const saving = useMemo(
     () => computeSaving(packages, track, units, monthlySpend),
@@ -164,7 +188,9 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
   /** מעבר לתוצאה — משותף ל-CTA ול-Enter בשדה, כדי ששניהם יתנהגו זהה. */
   function submitSpend() {
     setAttempted(true);
-    if (monthlySpend <= 0) return;
+    // ⚠️ `absurdSpend` גם כאן, ולא רק על הכפתור: ה-Enter בשדה עובר
+    // דרך אותה פונקציה, וזו כל הסיבה שהיא משותפת.
+    if (monthlySpend <= 0 || absurdSpend) return;
     setStep(2);
   }
 
@@ -205,8 +231,19 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
    * אחרי שליחה, כלומר אחרי ש-`attempted` כבר דלוק.
    */
   const overCapHint = overCap && (attempted || blurred);
-  const spendHint = invalidSpend
-    ? // ⚠️ הנוסח הקודם ("ספרות בלבד") היה שגוי עובדתית: פסיק, רווח
+  /*
+   * ⚠️ אותו גידור, ולפני `overCapHint` בשרשרת: סכום אבסורדי הוא גם
+   * `overCap`, ובלי הקדימות המסך היה מבטיח עליו "הסכום המלא יעבור
+   * לנציג" — ההבטחה שבדיוק אסור לתת על 13 ספרות.
+   */
+  const absurdHint = absurdSpend && (attempted || blurred);
+  const spendHint = absurdHint
+    ? // ⚠️ אומר שהמספר נראה שגוי, ולא חוזר על הטווח: מי שהקליד
+      // ₪9,999,999,999,999 לא צריך לשמוע "בין ₪10 ל-₪5,000" — הוא
+      // צריך להבין שהמסך לא מקבל את המספר הזה בכלל.
+      `הסכום שהזנתם אינו נראה כחשבון חודשי — בדקו את המספר ונסו שוב.`
+    : invalidSpend
+      ? // ⚠️ הנוסח הקודם ("ספרות בלבד") היה שגוי עובדתית: פסיק, רווח
       // ו-₪ מתקבלים היטב, ולכן מי שהקליד `2,20` וקרא "ספרות בלבד"
       // מחק את הפסיק במקום לתקן את מיקומו. ההודעה מתארת עכשיו את
       // הטווח ואת הפורמטים שמתקבלים בפועל.
@@ -388,7 +425,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 dir="ltr"
                 className={`ltr-num text-end ${fieldClass.replace("text-sm", "text-lg")}`}
                 /* קורא מסך שמע את ההודעה אבל לא ידע שהשדה עצמו שגוי. */
-                aria-invalid={invalidSpend || undefined}
+                aria-invalid={invalidSpend || absurdHint || undefined}
                 aria-describedby="calc-spend-hint calc-spend-note"
               />
               {/*
@@ -508,7 +545,13 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 את ה-CTA ובלי לדעת שחסר סכום. כך הוא נשאר בר-מיקוד,
                 מכריז על עצמו כמושבת, ומצביע להסבר שליד השדה.
               */
-              aria-disabled={monthlySpend <= 0}
+              /*
+                ⚠️ גם `absurdSpend`: הכפתור חייב להכריז על עצמו כמושבת
+                על אותו קלט שבו `submitSpend` חוזר בלי לעשות כלום,
+                אחרת הוא נראה שבור — בדיוק מה שההערה מעל `attempted`
+                מתעדת כמצב שנאסר.
+              */
+              aria-disabled={monthlySpend <= 0 || absurdSpend}
               /*
                 ⚠️ הקישור קבוע ולא מותנה ב-`spendHint`. בכניסה לשלב
                 הכפתור כבר מכריז על עצמו כמושבת אבל ההסבר עוד לא נכתב,
@@ -530,7 +573,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 `lp-ink-2` הוא 5.4:1, נקרא כמושבת, ובלי צבע חדש.
               */
               className={`inline-flex min-h-11 flex-1 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
-                monthlySpend <= 0
+                monthlySpend <= 0 || absurdSpend
                   ? "cursor-not-allowed bg-lp-surface-3 text-lp-ink-2"
                   : "bg-lp-brand text-lp-ink-invert hover:bg-lp-brand-bright"
               }`}
@@ -690,10 +733,17 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
 
           <div className="mt-5 rounded-lp-card bg-lp-surface-2 p-4">
             <p className="mb-3 text-sm font-semibold text-lp-ink">
-              רוצים שנבדוק את החשבון שלכם לעומק?
+              {sent ? "לשלוח את הנתונים המעודכנים?" : "רוצים שנבדוק את החשבון שלכם לעומק?"}
             </p>
+            {sent && (
+              <p className="crm-text mb-3 rounded-lg bg-lp-surface px-3 py-2 text-xs text-lp-ink-2">
+                פנייה מהמחשבון כבר נשלחה ונציג יחזור אליכם. אם שיניתם את הנתונים, שליחה נוספת
+                תעדכן את אותה פנייה.
+              </p>
+            )}
             <LeadForm
               compact
+              onSent={() => setSent(true)}
               /*
                 ⚠️ לפי החבילה שנמדדה, ולא "internet" קבוע. ההשוואה הביתית
                 דורשת טלוויזיה, והחבילה שנבחרת היא טריפל — הכרטיס שלה מגיש

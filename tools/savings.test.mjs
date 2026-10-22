@@ -782,7 +782,10 @@ test("ה״א הידיעה אינה מבריחה הצהרת מחיר לשנה ה�
   // ⚠️ 14 → 12 בסבב 39: ids 7 ו-10 יצאו על `monthlySurchargePerLine`
   // ("תשלום חודשי 8 שקלים לרשומה" — חיוב שהמחיר אינו מכיל). אף כותרת לא זזה:
   // הזולות בבריכה הן 121 (₪34) ו-117 (₪29.9), ו-7/10 היו ₪69.9/₪59.9.
-  assert.equal(pool("cellular").length, 12, `סלולר: ${pool("cellular").length}`);
+  // ⚠️ 11 ולא 12 מאז שהמחיר שמותנה ב-`ללקוחות קיימים` נפסל (סבב 40):
+  // id 69 יצא מהבריכה. הוא היה היקר בה (₪109.9) ולעולם לא ה-argmin,
+  // ולכן אף מספר שמוצג לא זז — ראה `priceForExistingCustomers`.
+  assert.equal(pool("cellular").length, 11, `סלולר: ${pool("cellular").length}`);
   assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).pick?.price, 34);
 });
 
@@ -838,7 +841,10 @@ test("שערי הנוסח קוראים גם את `priceAfterPromoNote`", () => {
   // ⚠️ 14 → 12 בסבב 39: ids 7 ו-10 יצאו על `monthlySurchargePerLine`
   // ("תשלום חודשי 8 שקלים לרשומה" — חיוב שהמחיר אינו מכיל). אף כותרת לא זזה:
   // הזולות בבריכה הן 121 (₪34) ו-117 (₪29.9), ו-7/10 היו ₪69.9/₪59.9.
-  assert.equal(pool("cellular").length, 12);
+  // ⚠️ 11 ולא 12 מאז שהמחיר שמותנה ב-`ללקוחות קיימים` נפסל (סבב 40):
+  // id 69 יצא מהבריכה. הוא היה היקר בה (₪109.9) ולעולם לא ה-argmin,
+  // ולכן אף מספר שמוצג לא זז — ראה `priceForExistingCustomers`.
+  assert.equal(pool("cellular").length, 11);
   assert.equal(pool("home").length, 2);
   for (const p of PACKAGES) {
     if (p.priceAfterPromoNote == null) continue;
@@ -1191,7 +1197,10 @@ test("סלולר: ההקפדה על המפרט לא הוציאה אף חבילה
   // ⚠️ 14 → 12 בסבב 39: ids 7 ו-10 יצאו על `monthlySurchargePerLine`
   // ("תשלום חודשי 8 שקלים לרשומה" — חיוב שהמחיר אינו מכיל). אף כותרת לא זזה:
   // הזולות בבריכה הן 121 (₪34) ו-117 (₪29.9), ו-7/10 היו ₪69.9/₪59.9.
-  assert.equal(pool("cellular").length, 12, `בריכה: ${pool("cellular").length}`);
+  // ⚠️ 11 ולא 12 מאז שהמחיר שמותנה ב-`ללקוחות קיימים` נפסל (סבב 40):
+  // id 69 יצא מהבריכה. הוא היה היקר בה (₪109.9) ולעולם לא ה-argmin,
+  // ולכן אף מספר שמוצג לא זז — ראה `priceForExistingCustomers`.
+  assert.equal(pool("cellular").length, 11, `בריכה: ${pool("cellular").length}`);
   for (const p of pool("cellular")) {
     assert.equal(p.spec.kosher, false, `${p.name}: דגל כשרות שאינו false`);
     assert.ok(!(p.type ?? "").includes("כשר"), `${p.name}: type=${p.type}`);
@@ -1285,7 +1294,10 @@ test("הרחבת שערי הנוסח לא הוציאה אף חבילה מהבר�
   // ⚠️ 14 → 12 בסבב 39: ids 7 ו-10 יצאו על `monthlySurchargePerLine`
   // ("תשלום חודשי 8 שקלים לרשומה" — חיוב שהמחיר אינו מכיל). אף כותרת לא זזה:
   // הזולות בבריכה הן 121 (₪34) ו-117 (₪29.9), ו-7/10 היו ₪69.9/₪59.9.
-  assert.equal(pool("cellular").length, 12);
+  // ⚠️ 11 ולא 12 מאז שהמחיר שמותנה ב-`ללקוחות קיימים` נפסל (סבב 40):
+  // id 69 יצא מהבריכה. הוא היה היקר בה (₪109.9) ולעולם לא ה-argmin,
+  // ולכן אף מספר שמוצג לא זז — ראה `priceForExistingCustomers`.
+  assert.equal(pool("cellular").length, 11);
   assert.equal(pool("home").length, 2);
   assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).pick?.name, "wecom300GB 5G");
   assert.equal(computeSaving(PACKAGES, "cellular", 2, 500).pick?.name, "wecomFamily 4G");
@@ -1361,7 +1373,10 @@ test("שערי הטיפוס והנתב לא הזיזו אף מספר שמוצג 
   // ⚠️ 14 → 12 בסבב 39: ids 7 ו-10 יצאו על `monthlySurchargePerLine`
   // ("תשלום חודשי 8 שקלים לרשומה" — חיוב שהמחיר אינו מכיל). אף כותרת לא זזה:
   // הזולות בבריכה הן 121 (₪34) ו-117 (₪29.9), ו-7/10 היו ₪69.9/₪59.9.
-  assert.equal(pool("cellular").length, 12);
+  // ⚠️ 11 ולא 12 מאז שהמחיר שמותנה ב-`ללקוחות קיימים` נפסל (סבב 40):
+  // id 69 יצא מהבריכה. הוא היה היקר בה (₪109.9) ולעולם לא ה-argmin,
+  // ולכן אף מספר שמוצג לא זז — ראה `priceForExistingCustomers`.
+  assert.equal(pool("cellular").length, 11);
   assert.equal(pool("home").length, 2);
   assert.equal(computeSaving(PACKAGES, "cellular", 1, 220).yearly, 2232);
   assert.equal(computeSaving(PACKAGES, "home", 1, 350).pick?.id, "157");

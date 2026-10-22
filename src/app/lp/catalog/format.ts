@@ -483,6 +483,22 @@ function includedRouterSurcharge(pkg: Package): number | null {
 }
 
 /**
+ * מדרגות הכמות שהרשומה מסרה ושניתן להדפיס.
+ *
+ * ⚠️ פונקציה אחת לשני הקוראים — שורת הפירוט `מחיר לפי מספר קווים`
+ * ו-`priceNote` — ולא עותק של אותו `filter`. ההיסטוריה של הקובץ היא
+ * שכל שער שהוחזק בשני עותקים התיישן באחד מהם.
+ */
+export function usableLineTiers(pkg: Package): { lines: number; price: number }[] {
+  const raw = specOf<Partial<CellularSpec>>(pkg).lineTiers;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (t): t is { lines: number; price: number } =>
+      Boolean(t) && isCount(t.lines) && Number.isInteger(t.lines) && t.lines >= 1 && isMoney(t.price),
+  );
+}
+
+/**
  * הכמות שמדרגת הקווים חלה עליה, כפי שהרשומה ניסחה אותה.
  *
  * ⚠️ `lineTiers` מחזיק סקלר אחד למדרגה, והשורה הדפיסה אותו כשוויון —
@@ -777,7 +793,24 @@ export function priceNote(pkg: Package): PriceNote | null {
    * הסתייגות שהרשומה לא מסרה. רדום בקטלוג של היום (אפס התאמות בבית),
    * ולכן זה שער לרענון הבא ולא תיקון של מספר מוצג.
    */
-  if (pkg.category === "cellular" && familyPriceOnly(pkg)) {
+  /*
+   * ⚠️ ורק כשהרשומה **לא** מסרה מדרגות כמות. `familyPriceOnly` נתפס
+   * על המילה "משפחתי" שבשם, וההערה עליו ב-`savings.ts` מצהירה במפורש
+   * שהבדיקה "תלוית-כמות ויושבת ב-`computeSaving` לצד
+   * `priceUnknownAtLines`" — ואילו כאן היא הוחלה כהצהרה שטוחה, בלי
+   * כמות. id 36 ("סלקום משפחתי פלוס", `lineTiers: [{2, 39.9}, {3, 34.9}]`)
+   * קיבלה על אותו כרטיס שתי שורות שאומרות הפוך: "מחיר למנוי במסלול
+   * משפחתי — משני מנויים ומעלה" לצד "מחיר לפי מספר קווים: עד 2 קווים
+   * ₪39.9 · 3 קווים ומעלה ₪34.9" — כלומר קו **אחד** משלם 39.9 בדיוק
+   * כמו שניים, וזה מה שהפרוזה אומרת ("עד 2 מנויים כולל - 39.9 ₪ למנוי").
+   *
+   * ⚠️ והראיה שזו השמטה ולא החלטה: id 37 ("סלקום 5G PRO") נושאת מבנה
+   * מדרגות זהה לחלוטין ואינה מקבלת שום הסתייגות — כי בשמה אין את המילה
+   * "משפחתי". אותה עובדה, שני ניסוחים, לפי מילה בשם ולא לפי הנתון.
+   * id 117 (`wecomFamily 4G`), שבשבילה השער נכתב, נשארת מסויגת בצדק:
+   * שם אין מדרגות ואין מחיר לקו בודד.
+   */
+  if (pkg.category === "cellular" && familyPriceOnly(pkg) && usableLineTiers(pkg).length === 0) {
     return { label: "תנאי המחיר", value: "מחיר למנוי במסלול משפחתי — משני מנויים ומעלה" };
   }
   if (proseFloorsAt(pkg, pkg.price)) {
@@ -1013,14 +1046,9 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
      *
      * מדרגה בלי מחיר שמיש אינה מדרגה, בדיוק כמו מדרגה בלי כמות שמישה.
      */
-    const tiers = Array.isArray(s.lineTiers)
-      ? s.lineTiers
-          .filter(
-            (t) =>
-              t && isCount(t.lines) && Number.isInteger(t.lines) && t.lines >= 1 && isMoney(t.price),
-          )
-          .map((t) => `${tierLines(pkg, t.lines)} ${shekels(t.price)}`)
-      : [];
+    const tiers = usableLineTiers(pkg).map(
+      (t) => `${tierLines(pkg, t.lines)} ${shekels(t.price)}`,
+    );
     if (tiers.length) {
       rows.push({ label: "מחיר לפי מספר קווים", value: tiers.join(" · ") });
     }

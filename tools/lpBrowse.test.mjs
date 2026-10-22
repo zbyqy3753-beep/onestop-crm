@@ -17,6 +17,8 @@ import {
   discountScope,
   headlineValue,
   priceNote,
+  promoRise,
+  usableLineTiers,
 } from "../src/app/lp/catalog/format.ts";
 
 /*
@@ -154,8 +156,20 @@ function fakeElectricity(id, discountPercent, extra = {}) {
  * `priceNote` יכולה להיות נכונה בזמן שהטבלה אינה מדפיסה אותה בכלל.
  * תשע חבילות בקטלוג של היום נושאות הסתייגות כזו.
  */
+/*
+ * ⚠️ ובלי מי שמסרה מדרגות כמות (סבב 40). `familyPriceOnly` נתפס על
+ * המילה "משפחתי" שבשם, ו-id 36 (`lineTiers: [{2, 39.9}, {3, 34.9}]`)
+ * קיבלה הסתייגות שטוחה — "משני מנויים ומעלה" — לצד שורת מדרגות על
+ * אותו כרטיס שאומרת שקו אחד משלם 39.9 בדיוק כמו שניים. הרשומה
+ * שמסרה מדרגות אומרת את המחיר שלה במספרים, וזו הסיבה שאין לה
+ * הסתייגות לבדוק. ראה `priceNote` ב-`format.ts`.
+ */
 const CONDITIONED = ALL.filter(
-  (p) => p.category !== "electricity" && p.price != null && (requiresMultipleLines(p) || familyPriceOnly(p)),
+  (p) =>
+    p.category !== "electricity" &&
+    p.price != null &&
+    usableLineTiers(p).length === 0 &&
+    (requiresMultipleLines(p) || familyPriceOnly(p)),
 );
 
 function sheetMarkup(items) {
@@ -416,7 +430,15 @@ test("מיון: 'אחרי ההטבה' לא מדרג חבילה שלא ידוע �
     const sorted = sortCatalog(byCategory(ALL, cat), "after-asc");
     let seenUnknown = false;
     for (const p of sorted) {
-      const known = !(p.priceAfterPromoNote && p.priceAfterPromo == null);
+      /*
+       * ⚠️ גם ענף ה-`period` (סבב 40): 20 רשומות מצהירות על תקופת מבצע
+       * בטקסט חופשי בלבד, ושני שדות המחיר שלהן ריקים — כלומר הבדיקה
+       * הקודמת אמרה עליהן "ידוע" בזמן שהכרטיס שלהן מדפיס "בדקו מה
+       * המחיר אחריה". הציר הוא `promoRise`, זה שהכרטיס קורא.
+       */
+      const known =
+        !(p.priceAfterPromoNote && p.priceAfterPromo == null) &&
+        promoRise(p)?.kind !== "period";
       if (!known) seenUnknown = true;
       else assert.ok(!seenUnknown, `${cat}: ${p.id} ידוע אך מופיע אחרי לא-ידוע`);
     }
