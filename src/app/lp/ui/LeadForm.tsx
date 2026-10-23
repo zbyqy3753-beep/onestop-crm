@@ -100,6 +100,22 @@ interface Props {
    */
   packageName?: string;
   /**
+   * השורה השנייה בפאנל האישור כשאין `pkg` — מה הפנייה נוגעת בו.
+   *
+   * ⚠️ קיים כי הנפילה הקבועה ("לגבי החבילה המשתלמת עבורך") הבטיחה
+   * חבילה משתלמת גם כשהמסך עצמו אמר את ההפך. המחשבון אינו מעביר
+   * `pkg` אף פעם (הוא בוחר חבילה אבל לא מרנדר את הכרטיס שלה), ולכן
+   * כל פנייה ממנו קיבלה את המשפט הזה — כולל אחרי "לפי הסכום שהזנתם
+   * **לא נוכל להבטיח חיסכון**". אומת בקלט רגיל לגמרי: סלולר, קו
+   * אחד, ₪30 → id 121 ב-₪34, `monthly: -4`, `worthwhile: false`;
+   * וגם ב-₪34 / ביתי ב-₪149 / 5 קווים ב-₪150 (`monthly: 0`).
+   * ההערה לנציג כבר אמרה במפורש "המחשבון לא מצא חיסכון" — כלומר
+   * המסך היה פחות כנה מההערה שנשלחה עליו.
+   *
+   * `LeadForm` אינו רואה את `worthwhile`, ולכן המשפט בא מהקורא.
+   */
+  sentSubject?: string;
+  /**
    * נקרא פעם אחת כשהפנייה נקלטה.
    *
    * ⚠️ מצב "נשלח" חי בתוך `useActionState`, כלומר בתוך הרכיב הזה
@@ -111,7 +127,15 @@ interface Props {
   onSent?: () => void;
 }
 
-export function LeadForm({ pkg, compact = false, category, note, packageName, onSent }: Props) {
+export function LeadForm({
+  pkg,
+  compact = false,
+  category,
+  note,
+  packageName,
+  sentSubject,
+  onSent,
+}: Props) {
   const [state, action] = useActionState(submitLandingLead, INITIAL);
   /*
    * ⚠️ `useId` ולא הקבוע `"general"`. שני טפסים ללא `pkg` חיים על אותו
@@ -198,7 +222,8 @@ export function LeadForm({ pkg, compact = false, category, note, packageName, on
       >
         <p className="font-semibold text-lp-save">קיבלנו! נציג ONE STOP יחזור אליך בהקדם.</p>
         <p className="mt-1 text-sm text-lp-ink-2">
-          {pkg ? `לגבי ${packageLabel(pkg, provider)}` : "לגבי החבילה המשתלמת עבורך"}
+          {/* ⚠️ `sentSubject` לפני הנפילה הקבועה — ראה ההערה על הפרופ. */}
+          {pkg ? `לגבי ${packageLabel(pkg, provider)}` : (sentSubject ?? "לגבי החבילה המשתלמת עבורך")}
         </p>
       </div>
     );

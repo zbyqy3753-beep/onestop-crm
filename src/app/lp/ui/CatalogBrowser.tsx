@@ -339,7 +339,23 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
-  const [sort, setSort] = useState<SortKey>("recommended");
+  /*
+   * ⚠️ בחשמל ברירת המחדל היא `price-asc`, כי `recommended` יורדת שם
+   * מהתפריט — ראה ההערה על `SORTS` ועל השורה שמסננת אותה. בלי זה
+   * הלשונית נפתחה על ערך שאינו ברשימה, כלומר `<select>` עם `value`
+   * שאין לו `<option>`: הדפדפן מציג את האפשרות הראשונה ("הנחה: בכל
+   * השעות תחילה") בזמן שה-state הוא `"recommended"` — תווית אחת
+   * ומיון אחר.
+   *
+   * ⚠️ והסדר על המסך אינו זז: בקטלוג של היום אפס מ-18 מסלולי החשמל
+   * נושאים `recommended: true`, ולכן הקומפרטור של `recommended` נופל
+   * כולו ל-`byPrice` ומחזיר את אותם 18 מסלולים באותו סדר בדיוק
+   * (142,135,139,151,148,140,138,152,141,150,147,137,136,149,146,145,
+   * 134,143). מה שמשתנה הוא מה שכתוב על המיון, לא מה שמוצג תחתיו.
+   */
+  const [sort, setSort] = useState<SortKey>(
+    category === "electricity" ? "price-asc" : "recommended",
+  );
   const [compare, setCompare] = useState<Package[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -665,7 +681,19 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="max-w-full min-w-0 rounded-lg border border-lp-line bg-lp-surface px-2 py-1.5 text-sm transition focus:border-lp-brand"
             >
-              {SORTS.filter((s) => !(isElectric && s.key === "after-asc")).map((s) => (
+              {/*
+                ⚠️ `recommended` יורדת בחשמל כמו `after-asc`, ומאותו
+                נימוק בדיוק: אין נתון שהתווית מבטיחה. אפס מ-18 מסלולי
+                החשמל נושאים `recommended: true`, ולכן הקומפרטור נופל
+                כולו ל-`byPrice` — והסדר שהאפשרות החזירה היה זהה
+                פריט-פריט לסדר של האפשרות שמתחתיה, כלומר תפריט שמציע
+                כפילות ומכנה אותה "המלצה" על שני המסלולים שדווקא
+                מסייגים את ההנחה לרכיב אחד בחשבון (ids 142, 135).
+                ברירת המחדל של הלשונית עוברת יחד איתה — ראה `useState`.
+              */}
+              {SORTS.filter(
+                (s) => !(isElectric && (s.key === "after-asc" || s.key === "recommended")),
+              ).map((s) => (
                 <option key={s.key} value={s.key}>
                   {isElectric ? (s.electricLabel ?? s.label) : s.label}
                 </option>

@@ -15,12 +15,53 @@ import {
 } from "../catalog/format";
 import {
   hasKnownAfterPrice,
-  packageLabel,
   packageTitle,
   providerLogo,
   providerName,
 } from "../catalog/catalog";
 import type { Package } from "../catalog/types";
+
+/**
+ * כותרת שמבדילה בין שתי רשומות שונות שנראות זהות במגש ובטבלה.
+ *
+ * ⚠️ המגש והטבלה מזהים עמודה לפי `providerLogo` + `packageTitle` בלבד,
+ * ושלושה זוגות בקטלוג מתנגשים בשניהם: ids 50/51 (גולן, "Valentine's",
+ * שניהם ₪60), ids 28/29 ("4 ב 130", ₪34 מול ₪32) ו-ids 23/24 ("כשר",
+ * ₪25 מול ₪27.9). הזוג הראשון הוא החמור: אותו לוגו, אותה כותרת, אותו
+ * מחיר — ואז הטבלה מצהירה על "אותה חבילה" גם `4,000` הודעות SMS וגם
+ * `—`, וגם "המחיר מותנה בכמות המנויים" וגם `—`. לגולש לא הייתה שום
+ * דרך לדעת איזו עמודה היא איזה כרטיס, ושני כפתורי ה-✕ הכריזו את אותו
+ * שם נגיש בדיוק ("הסר את Valentine's מההשוואה").
+ *
+ * ⚠️ והרשומה **כן** מסרה את ההבדל: `rawName` של id 51 הוא
+ * `"Valentine's *2*"` ושל id 29 `"4 ב 130 *2*"`. `displayName` מנקה את
+ * `*2*` לתצוגה (ראה ההערה שם — סימון פנימי של גרסה שנייה), ו-`rawName`
+ * נשמר בדיוק כדי שהגזירות יוכלו לקרוא אותו. כלומר הסימן נמחק דווקא
+ * במשטח שכל תפקידו להבדיל.
+ *
+ * ⚠️ רק כשיש התנגשות בפועל בתוך הבחירה: "גרסה 2" על עמודה בודדת היא
+ * רעש שאינו אומר לגולש דבר. ids 23/24 אינם נושאים `*2*` כלל (אותו שם
+ * גולמי בדיוק) — זה פגם נתונים שאינו בר-תיקון כאן, ולכן הם נופלים
+ * למחיר, שהוא ההבדל היחיד שהרשומה מסרה עליהם.
+ */
+export function compareLabel(p: Package, items: Package[]): string {
+  /*
+   * ⚠️ נפילה לשם הספק, בדיוק כמו `packageLabel` — ולא `packageTitle`
+   * חשוף. רשומה שה-`name` שלה אינו מחרוזת מחזירה `""` מ-`packageTitle`
+   * (`basePackages` משאירה שם כזה כמות שהוא במכוון), ואז השבב וה-✕
+   * הכריזו פעולה בלי לומר על מה — השם הנגיש הריק שמתועד ב-
+   * `tools/lpText.test.mjs`. בלי ההתנגשות הזו הפונקציה מחזירה בדיוק
+   * את מה ש-`packageLabel` החזירה.
+   */
+  const title = packageTitle(p) || providerName(p);
+  const twins = items.filter(
+    (o) => (packageTitle(o) || providerName(o)) === title && providerName(o) === providerName(p),
+  );
+  if (twins.length < 2) return title;
+  const variant = (p.rawName ?? "").match(/\*(\d+)\*/);
+  if (variant) return `${title} · גרסה ${variant[1]}`;
+  return typeof p.price === "number" && Number.isFinite(p.price) ? `${title} · ${shekels(p.price)}` : title;
+}
 
 /**
  * התא בשורת המחיר — **אותו** מספר שהכרטיס מדפיס בגודל 3xl.
@@ -290,8 +331,9 @@ export function CompareTray({
                   שנפתחים ב-"TRA" בזמן שהמותג הוא מה שנעלם. `auto` נותן
                   לשם הלטיני LTR ולשם העברי RTL, וכל אחד נחתך בסופו.
                 */}
+                {/* ⚠️ `compareLabel` ולא `packageTitle` — ראה ההערה שם. */}
                 <span dir="auto" className="max-w-[10rem] truncate text-lp-ink">
-                  {packageTitle(p)}
+                  {compareLabel(p, items)}
                 </span>
                 <button
                   type="button"
@@ -301,7 +343,11 @@ export function CompareTray({
                     removedBoxId.current = compareCheckboxId(p);
                     onRemove(p);
                   }}
-                  aria-label={`הסר את ${packageLabel(p, providerName(p))} מההשוואה`}
+                  /* ⚠️ גם השם הנגיש מבדיל: שני ✕ שמכריזים אותו שם הם שני
+                     כפתורים שגולש קורא-מסך אינו יכול לבחור ביניהם.
+                     `compareLabel` נופלת לשם הספק בדיוק כמו `packageLabel`
+                     שהייתה כאן, ולכן השם הנגיש אינו מתרוקן על שם פגום. */
+                  aria-label={`הסר את ${compareLabel(p, items)} מההשוואה`}
                   /* ⚠️ 44×44 ולא 36×36: ארבעה ✕ ו-"נקה" צמודים בשורה אחת שנגללת. */
                   className="-my-1 inline-flex min-h-11 min-w-11 items-center justify-center text-lp-ink-2 hover:text-lp-rise"
                 >
@@ -467,8 +513,12 @@ export function CompareSheet({
                     className="border-b border-lp-line p-2 text-start align-top"
                   >
                     <ProviderLogo logo={providerLogo(p)} name={providerName(p)} size={26} />
-                    {/* ⚠️ `packageTitle` ולא `p.name` — אותו שער כמו בשבב ובכרטיס. */}
-                    <div className="mt-1 text-xs font-semibold text-lp-ink">{packageTitle(p)}</div>
+                    {/* ⚠️ `packageTitle` ולא `p.name` — אותו שער כמו בשבב ובכרטיס.
+                        ⚠️ ודרך `compareLabel`, כדי ששתי עמודות של רשומות
+                        שונות לא תיקראנה כאותה חבילה — ראה ההערה שם. */}
+                    <div className="mt-1 text-xs font-semibold text-lp-ink">
+                      {compareLabel(p, items)}
+                    </div>
                   </th>
                 ))}
               </tr>

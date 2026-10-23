@@ -435,11 +435,44 @@ function installationDetail(pkg: Package, cost: number): string {
  * שהוצג בלי המספר ובלי התנאי, בזמן ששורת ההתקנה על אותו כרטיס מדפיסה
  * את שני הצדדים. "אינו כלול במחיר" נשאר רק כשאין מספר לקרוא.
  */
+/*
+ * ⚠️ שלוש צורות, ולא "עלות נתב" לבדה — ובכל שדות הפרוזה.
+ *
+ * זה אותו דפוס שהקובץ הזה מתעד שוב ושוב: שער שמכיר הצהרה בצורה אחת
+ * ומפספס את השכנה. שתי רשומות חיות ומוצגות מסרו תוספת חודשית על הנתב
+ * וקיבלו **אפס** שורות עליה:
+ *   • id 85 (`Partner Fiber`, ₪100) — "נתב פייבר בהשכרה בתוספת 25 ₪
+ *     לחודש": סדר מילים הפוך (`נתב … בתוספת`) במקום `עלות נתב`.
+ *   • id 124 (`All in 1000/250 פרטנר TV`, ₪235) — "ראווטר בעלות 20 שח
+ *     לחודש": איות אחר של "ראוטר", ו-"בעלות" במקום "עלות".
+ *
+ * ⚠️ והראיה שזו אסימטריה ולא החלטה: `ROUTER_PRICED_SEPARATELY`
+ * ב-`savings.ts` **כן** קוראת את id 85 ופוסלת אותה מההשוואה — כלומר
+ * המנוע יודע שהנתב נגבה בנפרד בדיוק באותו רגע שהכרטיס שותק על זה.
+ * הכרטיס היה מאחורי המנוע על אותה רשומה.
+ *
+ * ⚠️ `ראווטר` חסרה גם מאוצר המילים של המנוע, ולכן id 124 אינה נפסלת
+ * שם — היא אינה בבריכת ההשוואה הביתית ({3, 157}) ולכן אינה מתמחרת
+ * שום כותרת היום, אבל זה החור שנותר.
+ */
+const ROUTER_WORD = String.raw`(?:נתב|ראוטר|ראווטר)`;
+const ROUTER_MONEY = String.raw`(\d[\d,]*(?:\.\d+)?)\s*(?:ש"ח|ש״ח|שח|₪)`;
+const ROUTER_COST = new RegExp(
+  String.raw`(?:עלות|בעלות|בתוספת|בתשלום|דמי\s*שכירות(?:\s*של)?)\s*(?:ה)?${ROUTER_WORD}[^.|\n\d]{0,24}?${ROUTER_MONEY}` +
+    "|" +
+    String.raw`${ROUTER_WORD}[^.|\n\d]{0,30}?(?:עלות|בעלות|בתוספת|בתשלום|דמי\s*שכירות(?:\s*של)?)\s*(?:של\s*)?${ROUTER_MONEY}`,
+);
+
 function routerDetail(pkg: Package): string | null {
   const prose = installationProse(pkg);
-  const cost = prose.match(/עלות\s*נתב[^.|\n\d]{0,24}?(\d[\d,]*(?:\.\d+)?)\s*(?:ש"ח|שח|₪)/);
-  if (!cost) return null;
-  const amount = Number(cost[1].replace(/,/g, ""));
+  const cost = prose.match(ROUTER_COST);
+  // ⚠️ שתי קבוצות לוכדות — אחת לכל סדר מילים — והנתפסת היא זו שאינה
+  // `undefined`. בלי הנפילה הזו הסדר ההפוך החזיר `Number(undefined)`,
+  // כלומר `NaN`, והשער שמתחת היה מפיל את השורה בשקט דווקא על הצורה
+  // שנוספה כאן.
+  const raw = cost ? (cost[1] ?? cost[2]) : null;
+  if (raw == null) return null;
+  const amount = Number(raw.replace(/,/g, ""));
   if (!Number.isFinite(amount)) return null;
   const flat = amount === 0 ? "ללא עלות" : `${shekels(amount)} בתוספת למחיר`;
   const waived = prose.match(/הטבה\s*על\s*הנתב\s*למשך\s*(שנה|\d+\s*חודשים?)\s*ללא\s*עלות/);
@@ -1102,7 +1135,16 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
      * `includedRouterSurcharge`: "כלול במחיר" בלי התוספת שהרשומה תלתה
      * בהכללה עצמה הוא אותו ויתור על תנאי, בכיוון ההפוך.
      */
-    const router = s.routerIncluded === false ? routerDetail(pkg) : null;
+    /*
+     * ⚠️ `!== true` ולא `=== false`: הדגל הוא `null` בשתי הרשומות
+     * שהפרוזה שלהן כן מסרה תוספת חודשית על הנתב (ids 85, 124), ולכן
+     * הקורא לא רץ עליהן בכלל והשורה נעלמה. "הרשומה לא הצהירה שהנתב
+     * כלול" אינו "אין מה לקרוא" — ראה `routerDetail`. נמדד על 106
+     * הרשומות המוצגות: שתי שורות נוספות (85 ו-124), שלוש השורות
+     * הקיימות (81, 158, 104) ללא שינוי בטקסט ובמספר, ואף שורה לא
+     * נעלמה.
+     */
+    const router = s.routerIncluded !== true ? routerDetail(pkg) : null;
     const surcharge = s.routerIncluded === true ? includedRouterSurcharge(pkg) : null;
     if (router) {
       rows.push({ label: "נתב", value: router });
