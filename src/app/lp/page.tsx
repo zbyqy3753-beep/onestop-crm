@@ -330,7 +330,8 @@ export default function LandingPage() {
           {/*
             ⚠️ הלוגו של "אלירן תקשורת" ולא ONE STOP: הדף מוגש כאתר של אלירן
             (ראה `proxy.ts`). ONE STOP נשאר רק במקומות שמזהים את הגוף
-            המשפטי — הגילוי הנאות, השאלות והסכמת הטופס — ואין להחליף אותם.
+            המשפטי — הגילוי הנאות והשאלות. הסכמת הטופס היא לפנייה של
+            אלירן (החלטת בעל המערכת, 24.10.2026).
             הסמל הוא `public/brand/eliran/icon.png` (מקור: `Desktop\eliran-instagram\logo`).
           */}
           <div className="mb-7 flex items-center gap-3">
