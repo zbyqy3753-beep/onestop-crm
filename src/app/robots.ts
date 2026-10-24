@@ -13,7 +13,10 @@ import { headers } from "next/headers";
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const host = (await headers()).get("host")?.split(":")[0];
   if (host === "eliran.onestopil.co.il") {
-    return { rules: { userAgent: "*", allow: "/" } };
+    return {
+      rules: { userAgent: "*", allow: "/" },
+      sitemap: "https://eliran.onestopil.co.il/sitemap.xml",
+    };
   }
   return {
     rules: { userAgent: "*", disallow: "/" },

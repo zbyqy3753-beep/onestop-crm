@@ -175,7 +175,7 @@ const LEGACY_HOST = "onestop-crm.vercel.app";
  * מה שדף הנחיתה מושך כמשאבים: ה-JS של Next, הלוגואים, תמונות המותג,
  * וה-API. כל השאר בכתובת של אלירן מוחזר לדף הבית.
  */
-const ELIRAN_ASSETS = ["/_next", "/providers", "/brand", "/api", "/robots.txt"];
+const ELIRAN_ASSETS = ["/_next", "/providers", "/brand", "/api", "/robots.txt", "/sitemap.xml"];
 
 /** הסמל של "אלירן תקשורת" (`public/brand/eliran`), במקום האייקונים של המערכת. */
 const ELIRAN_ICONS: Record<string, string> = {

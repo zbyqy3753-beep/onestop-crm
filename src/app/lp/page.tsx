@@ -56,6 +56,9 @@ export const metadata: Metadata = {
   // ⚠️ דורס במפורש את `index: false` של `app/layout.tsx` — בלי השורה הזו הדף יורש אותו.
   robots: { index: true, follow: true },
   alternates: { canonical: "https://eliran.onestopil.co.il/" },
+  // ⚠️ אימות הבעלות ב-Google Search Console (נכס `https://eliran.onestopil.co.il/`).
+  // הסרת התג מבטלת את האימות — גם אחרי שעבר.
+  verification: { google: "KQ3F3qhgUXCR1MfVdJ8DkuK1kPzQDo_JvNvWBCwa8hg" },
 };
 
 /**
