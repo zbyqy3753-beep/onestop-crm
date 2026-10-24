@@ -47,7 +47,8 @@ import "./lp.css";
  */
 
 export const metadata: Metadata = {
-  title: "ONE STOP | השוואת חבילות סלולר, סיבים, טלוויזיה וחשמל",
+  // הדף מוגש ב-eliran.onestopil.co.il (ראה `proxy.ts`), ולכן הלשונית נושאת את השם של אלירן.
+  title: "אלירן תקשורת | השוואת חבילות סלולר, סיבים, טלוויזיה וחשמל",
   description:
     "כל החבילות של כל החברות במקום אחד — כולל המחיר אחרי תום ההטבה. משאירים פרטים ומקבלים הצעה אישית.",
   robots: { index: false, follow: false },
