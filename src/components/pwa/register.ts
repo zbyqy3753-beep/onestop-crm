@@ -31,9 +31,13 @@ window.addEventListener("beforeinstallprompt", function (e) {
  * הרישום נכשל בשקט אם אין `serviceWorker` (ספארי בגלישה פרטית),
  * וזה תקין — האפליקציה עובדת גם בלעדיו; רק ההתקנה באנדרואיד לא
  * תוצע.
+ *
+ * ⚠️ לא נרשם באתר של אלירן (`eliran.onestopil.co.il`): שם מוגש רק דף
+ * הנחיתה, וה-worker של המערכת היה מציע ללקוח "להתקין" את ה-CRM ומגיש
+ * לו את דף ה-offline שלה. `proxy.ts` גם מפנה שם את `/sw.js` לדף הבית.
  */
 export const SW_REGISTER_SCRIPT = `
-if ("serviceWorker" in navigator) {
+if ("serviceWorker" in navigator && location.hostname !== "eliran.onestopil.co.il") {
   window.addEventListener("load", function () {
     navigator.serviceWorker.register("/sw.js").catch(function () {});
   });
