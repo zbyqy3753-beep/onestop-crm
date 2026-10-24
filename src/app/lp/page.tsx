@@ -299,7 +299,28 @@ export default function LandingPage() {
         <div aria-hidden className="lp-hero-scrim absolute inset-0" />
 
         <div className="relative mx-auto max-w-6xl px-4 pt-12 pb-14 sm:pt-16 lg:min-h-[34rem] lg:pt-24 lg:pb-24">
-          <div className="mb-6 text-sm font-extrabold tracking-[0.3em] text-white">ONE STOP</div>
+          {/*
+            ⚠️ הלוגו של "אלירן תקשורת" ולא ONE STOP: הדף מוגש כאתר של אלירן
+            (ראה `proxy.ts`). ONE STOP נשאר רק במקומות שמזהים את הגוף
+            המשפטי — הגילוי הנאות, השאלות והסכמת הטופס — ואין להחליף אותם.
+            הסמל הוא `public/brand/eliran/icon.png` (מקור: `Desktop\eliran-instagram\logo`).
+          */}
+          <div className="mb-7 flex items-center gap-3">
+            <Image
+              src="/brand/eliran/icon.png"
+              alt=""
+              width={48}
+              height={48}
+              priority
+              className="size-12 drop-shadow-[0_4px_12px_rgb(3_8_16/0.45)]"
+            />
+            <div className="leading-none [text-shadow:0_2px_12px_rgb(3_8_16/0.6)]">
+              <div className="text-2xl font-extrabold text-white">
+                אלירן <span className="text-lp-brand-bright">תקשורת</span>
+              </div>
+              <div className="mt-1.5 text-xs font-semibold text-white/80">ייעוץ תקשורת סלולרית וביתית</div>
+            </div>
+          </div>
 
           <div className="max-w-xl">
             <h1 className="text-lp-hero font-extrabold text-white [text-shadow:0_2px_18px_rgb(3_8_16/0.6)]">
