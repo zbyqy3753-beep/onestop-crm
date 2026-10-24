@@ -25,11 +25,18 @@ const nextConfig: NextConfig = {
   /**
    * הפריסה פרטית — גרסת בדיקה שנגישה בקישור סודי בלבד.
    * הכותרת חלה על כל תשובה, גם היכן ש-robots.txt לא מספיק.
+   *
+   * ⚠️ חוץ מהאתר של אלירן (`eliran.onestopil.co.il`), שפתוח לאינדוקס
+   * מ-24.10.2026 — יש לו פרופיל עסק בגוגל שמקשר אליו. הכתובת הזו מגישה
+   * רק את דף הנחיתה (ראה `eliranSite` ב-`proxy.ts`), ולכן הפטור לא
+   * חושף אף מסך של המערכת. ההחלטה בשלושה מקומות: כאן, `robots.ts`
+   * ו-`metadata` ב-`lp/page.tsx`.
    */
   async headers() {
     return [
       {
         source: "/:path*",
+        missing: [{ type: "host", value: "eliran.onestopil.co.il" }],
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
     ];

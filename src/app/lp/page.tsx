@@ -21,6 +21,7 @@ import {
 } from "./catalog/catalog";
 import { heroRiseLine, PACKAGES_CAPTION, PLANS_CAPTION, priceNote, shekels } from "./catalog/format";
 import { isComparable } from "./catalog/savings";
+import { GOOGLE_BUSINESS } from "./config";
 import "./lp.css";
 
 /**
@@ -30,8 +31,9 @@ import "./lp.css";
  * תחתון או בדיקת סשן — זה עמוד ללקוחות, לא מסך של המערכת. הנתיב פתוח
  * בשער הגישה (`src/proxy.ts`).
  *
- * ⚠️ **לא מאונדקס.** הכותרת `X-Robots-Tag: noindex` מ-`next.config.ts`
- * חלה על כל הנתיבים, וכאן זה מכוון: הדף מופץ בקישור ישיר בלבד.
+ * ⚠️ **מאונדקס רק ב-eliran.onestopil.co.il** (מ-24.10.2026, יחד עם פרופיל
+ * העסק בגוגל). בשאר הכתובות `X-Robots-Tag: noindex` מ-`next.config.ts`
+ * עדיין חל, ו-`canonical` שלמטה מפנה את גוגל לכתובת של אלירן.
  *
  * ⚠️ **הקוד הועתק מ-`onestop-site`,** ומכאן שיש שני עותקים שיכולים
  * להיפרד: קטלוג (`catalog/packages.json`), קומפוננטות (`ui/`) ופלטה
@@ -51,7 +53,9 @@ export const metadata: Metadata = {
   title: "אלירן תקשורת | השוואת חבילות סלולר, סיבים, טלוויזיה וחשמל",
   description:
     "כל החבילות של כל החברות במקום אחד — כולל המחיר אחרי תום ההטבה. משאירים פרטים ומקבלים הצעה אישית.",
-  robots: { index: false, follow: false },
+  // ⚠️ דורס במפורש את `index: false` של `app/layout.tsx` — בלי השורה הזו הדף יורש אותו.
+  robots: { index: true, follow: true },
+  alternates: { canonical: "https://eliran.onestopil.co.il/" },
 };
 
 /**
@@ -271,8 +275,27 @@ export default function LandingPage() {
    */
   const leadNote = lead ? priceNote(lead) : null;
 
+  /*
+   * סימון מובנה לגוגל — אותם פרטים כמו בפרופיל העסק (`GOOGLE_BUSINESS`),
+   * כדי שגוגל תקשר בין האתר לפרופיל.
+   */
+  const businessJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    name: GOOGLE_BUSINESS.name,
+    url: GOOGLE_BUSINESS.url,
+    telephone: GOOGLE_BUSINESS.phone,
+    image: `${GOOGLE_BUSINESS.url}/brand/eliran/icon.png`,
+    areaServed: { "@type": "Country", name: "ישראל" },
+    sameAs: [GOOGLE_BUSINESS.instagramUrl],
+  };
+
   return (
     <main className="lp-root">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(businessJsonLd) }}
+      />
       {/* ── הירו ──────────────────────────────────────────────────── */}
       {/*
         ⚠️ הרקע כאן הוא **תצלום אמיתי**, ולא גרפיקה שנוצרה בקוד. אותו
@@ -596,6 +619,26 @@ export default function LandingPage() {
       {/* ── פוטר ──────────────────────────────────────────────────── */}
       <footer className="bg-lp-navy py-8 text-center text-lp-on-navy-3">
         <div className="mx-auto max-w-2xl px-4">
+          {/* ⚠️ כפתור הדירוג מוצג רק כשיש קישור — ראה `GOOGLE_BUSINESS.reviewUrl`. */}
+          {GOOGLE_BUSINESS.reviewUrl && (
+            <a
+              href={GOOGLE_BUSINESS.reviewUrl}
+              target="_blank"
+              rel="noopener"
+              className="mb-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-lp-navy"
+            >
+              <span aria-hidden className="text-amber-500">★★★★★</span>
+              דרגו אותנו בגוגל
+            </a>
+          )}
+          <p className="mb-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-lp-on-navy">
+            <a href={GOOGLE_BUSINESS.whatsappUrl} target="_blank" rel="noopener" className="underline">
+              וואטסאפ
+            </a>
+            <a href={GOOGLE_BUSINESS.instagramUrl} target="_blank" rel="noopener" className="underline">
+              אינסטגרם
+            </a>
+          </p>
           {/*
             ⚠️ הגילוי הזה אינו קישוט. ONE STOP הוא משווק מורשה שמקבל
             עמלה, והצגת האתר כ"משווה אובייקטיבי" בלי לומר זאת היא בדיוק
