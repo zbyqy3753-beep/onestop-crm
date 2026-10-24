@@ -467,9 +467,20 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   לגולש שהסכום שהקליד נקטם — ו-#7d8b99 על לבן הוא 3.49:1
                   ב-12px, מתחת ל-4.5:1 של WCAG AA. התיקון הוחל קודם על
                   ענף השגיאה בלבד והשאיר את ההסתייגות אפורה; `lp-ink-3`
-                  נשמר ב-`/lp` לטקסט דקורטיבי בלבד (ראה `PackageCard`).
+                  נשמר ב-`/lp` לטקסט דקורטיבי בלבד (ראה `PackageCard`).                  
+                  ⚠️ ו-`absurdHint` גם כאן, בדיוק כמו ב-`aria-invalid` של
+                  השדה עצמו. שתי הפסקות שמעל מתעדות את התיקון הזה
+                  כמוחל — והוא הוחל על ענף `invalidSpend` בלבד, בזמן
+                  ש-`aria-invalid` ב-`:428` הוא `invalidSpend || absurdHint`. כלומר
+                  המצב השני מתוך שניים שמכריזים "שדה שגוי" לקורא מסך
+                  הגיע לגולש הרואה בדיוק בצבע ובמשקל של הסתייגות
+                  הניטרלית — וזה המצב שבו ה-CTA מת: `aria-disabled` ב-`:554`
+                  וה-`return` ב-`:193` שניהם קוראים `absurdSpend`. מי שהדביק
+                  13 ספרות (בדיוק מה ש-`maxLength` מתיר) ראה כפתור שאינו
+                  מגיב ורמז אפור — כלומר מסך שנראה שבור במקום שיאמר
+                  לו שהמספר נפסל. שלושת המשטחים אומרים עכשו את אותו דבר.
                 */
-                className={`mt-1.5 text-xs ${invalidSpend ? "font-medium text-lp-rise" : "text-lp-ink-2"} ${spendHint ? "" : "sr-only"}`}
+                className={`mt-1.5 text-xs ${invalidSpend || absurdHint ? "font-medium text-lp-rise" : "text-lp-ink-2"} ${spendHint ? "" : "sr-only"}`}
               >
                 {spendHint}
               </p>

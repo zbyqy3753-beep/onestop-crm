@@ -219,7 +219,9 @@ export function matchesFilters(
   return true;
 }
 
-export function priceBoundsOf(packages: Package[]): { min: number; max: number } | null {
+export function priceBoundsOf(
+  packages: Package[],
+): { min: number; max: number; lowest: number; highest: number } | null {
   const values = packages.map(sliderPrice).filter((v) => Number.isFinite(v));
   if (!values.length) return null;
   /*
@@ -232,7 +234,22 @@ export function priceBoundsOf(packages: Package[]): { min: number; max: number }
    * במקום שבו הדף ריק תמיד. עיגול למעלה מגיע ל-22 ול-20, שם
    * החבילה הזולה באמת נמצאת.
    */
-  return { min: Math.ceil(Math.min(...values)), max: Math.ceil(Math.max(...values)) };
+  /*
+   * ⚠️ ושני הקצוות ה**לא-מעוגלים** לידם, לתוויות שמתחת למחוון.
+   *
+   * העיגול שמעל הוא של ה**מחוון** והנימוק שלו נכון כמות שהוא —
+   * אבל אותו מספר הודפס גם כתווית הקצה, ושם הוא הצהרה על
+   * מחיר שאין אף חבילה שעומדת בו: הלשונית הסלולרית הציגה
+   * "₪22" בזמן שהכרטיס הראשון מתחתיה (id 91) אומר ₪21.9, והביתית
+   * "₪20" מול ₪19.9 של id 83. שתי התוויות אומרות "זה הטווח
+   * שבקטלוג", ולכן הן חייבות לצטט מחירים שקיימים.
+   */
+  return {
+    min: Math.ceil(Math.min(...values)),
+    max: Math.ceil(Math.max(...values)),
+    lowest: Math.min(...values),
+    highest: Math.max(...values),
+  };
 }
 
 /**
@@ -632,8 +649,13 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                   aria-valuetext={shekels(maxPrice ?? priceBounds.max)}
                 />
                 <div className="nums mt-1 flex justify-between text-lp-2xs text-lp-ink-2">
-                  <span>{shekels(priceBounds.min)}</span>
-                  <span>{shekels(priceBounds.max)}</span>
+                  {/*
+                    ⚠️ הקצוות המדויקים ולא המעוגלים של המחוון —
+                    ראה `priceBoundsOf`. המחוון חייב קצה שאפשר לעמוד בו,
+                    והתווית חייבת מחיר שחבילה אחת באמת נושאת.
+                  */}
+                  <span>{shekels(priceBounds.lowest)}</span>
+                  <span>{shekels(priceBounds.highest)}</span>
                 </div>
               </fieldset>
             )}

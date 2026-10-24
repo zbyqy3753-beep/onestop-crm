@@ -17,6 +17,7 @@ import {
   DEFAULT_SOURCE_DETAIL,
   LANDING_CATEGORIES,
 } from "./config";
+import { resubmissionNotes } from "./resubmission";
 
 /**
  * שליחת דף הנחיתה הציבורי (`/lp`).
@@ -312,14 +313,16 @@ export async function submitLandingLead(
        * "קיבלנו!" בזמן ששם החבילה שהוא באמת בחר נזרק בלי שום עקבה.
        * שם חבילה שונה מזה שרשום על הליד הוא בדיוק המידע שהנציג צריך.
        */
-      const notes: string[] = [];
-      if (message && !duplicate.notes.some((n) => n.body === message)) {
-        notes.push(message);
-      }
-      if (packageName && packageName !== duplicate.packageName) {
-        const line = `התעניין גם ב: ${packageName}`;
-        if (!duplicate.notes.some((n) => n.body === line)) notes.push(line);
-      }
+      /*
+       * ⚠️ הכללים יושבים ב-`./resubmission` ולא כאן, כדי שאפשר לבדוק
+       * אותם: המודול הזה הוא `"use server"`, כלומר כל ייצוא ממנו חייב
+       * להיות פונקציה אסינכרונית והוא אינו ניתן לקמפול ב-tsx. ראה שם
+       * את הנימוק לכל אחד מארבעת השדות ולבחירה בהערה על דריסה.
+       */
+      const notes = resubmissionNotes(
+        { message, packageName, name, currentProvider },
+        duplicate,
+      );
       if (notes.length > 0) {
         /*
          * בולעת חריגות: הגולש כבר נחשב "נשלח", ואסור שכשל בהוספת הערה

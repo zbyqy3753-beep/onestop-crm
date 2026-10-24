@@ -1,5 +1,11 @@
 import { isMoney, logicName } from "./catalog";
-import { declaresRiseInText, familyPriceOnly, requiresMultipleLines, tierCapsAt } from "./savings";
+import {
+  addonFreeThenPaid,
+  declaresRiseInText,
+  familyPriceOnly,
+  requiresMultipleLines,
+  tierCapsAt,
+} from "./savings";
 import type { CellularSpec, ElectricitySpec, HomeSpec, Package } from "./types";
 
 const nf = new Intl.NumberFormat("he-IL");
@@ -463,6 +469,38 @@ const ROUTER_COST = new RegExp(
     String.raw`${ROUTER_WORD}[^.|\n\d]{0,30}?(?:עלות|בעלות|בתוספת|בתשלום|דמי\s*שכירות(?:\s*של)?)\s*(?:של\s*)?${ROUTER_MONEY}`,
 );
 
+/**
+ * המחיר שהרשומה מסרה ל**אותה חבילה עם נתב**, כשהמחיר שליד אינו כולל אותו.
+ *
+ * ⚠️ הצורה השלילית — "199 ש״ח לא כולל נתב … 220 שח כולל נתב" — אינה
+ * נוקבת באף אחת מהמילים ש-`ROUTER_COST` מחפש (עלות / בתוספת / דמי
+ * שכירות); היא מוסרת את אותה עובדה בדיוק כהפרש בין שני מחירים.
+ *
+ * ⚠️ והמנוע **כבר יודע**: `ROUTER_PRICED_SEPARATELY` ב-`savings.ts` נושא
+ * בדיוק את החלופה השלילית הזו, ו-`tools/savings.test.mjs` מקבע אותה על
+ * id 114 בשם. כלומר המנוע פוסל את הרשומה מהמחשבון בגלל עלות
+ * הנתב, והכרטיס לא הדפיס עליה ולו שורה אחת. זה אותו פער ש-
+ * `includedRouterSurcharge` נכתב לו, רק בכיוון השני.
+ *
+ * המבקר שמשווה id 113 (₪179, "179ש״ח כולל נתב") מול id 114 (₪199) ראה
+ * פער של ₪20 בלי שאף אחד מהכרטיסים אומר מילה על נתב — בזמן
+ * שהפער האמיתי, כששניהם עם נתב, הוא ₪41 (179 מול 220).
+ *
+ * ⚠️ מוחזר המחיר שהרשומה מסרה, ולא ההפרש שחישבנו (₪21): זה אותו
+ * כלל של `discountScope` ושל `promoNoteText` — מחזירים את מה שהרשומה
+ * אמרה, בלי להמציא ממנו מספר שהיא לא מסרה.
+ *
+ * ⚠️ `[sS]` ולא מחלקת תו שפוסלת ירידת שורה — כמו ב-
+ * `includedRouterSurcharge` ומאותו טעם: המחלץ שותל שורה ריקה בדיוק
+ * בין שתי ההצהרות של id 114 ("לא כולל נתב
+
+220 שח כולל נתב").
+ */
+const ROUTER_EXCLUDED_PRICE = new RegExp(
+  String.raw`(?:לא|אינו|אינה|אינם)\s*כולל(?:ת|ים)?\s*(?:ה)?${ROUTER_WORD}` +
+    String.raw`[\s\S]{0,40}?${ROUTER_MONEY}\s*כולל\s*(?:ה)?${ROUTER_WORD}`,
+);
+
 function routerDetail(pkg: Package): string | null {
   const prose = installationProse(pkg);
   const cost = prose.match(ROUTER_COST);
@@ -471,7 +509,15 @@ function routerDetail(pkg: Package): string | null {
   // כלומר `NaN`, והשער שמתחת היה מפיל את השורה בשקט דווקא על הצורה
   // שנוספה כאן.
   const raw = cost ? (cost[1] ?? cost[2]) : null;
-  if (raw == null) return null;
+  if (raw == null) {
+    // ⚠️ הצורה השלילית רק אחרי ש-`ROUTER_COST` לא מצא: רשומה שמסרה
+    // סכום מפורש לנתב הוא המדויק מבין השניים. ראה `ROUTER_EXCLUDED_PRICE`.
+    const withRouter = prose.match(ROUTER_EXCLUDED_PRICE);
+    if (!withRouter) return null;
+    const total = Number(withRouter[1].replace(/,/g, ""));
+    if (!Number.isFinite(total) || total <= 0) return null;
+    return `המחיר אינו כולל נתב · ${shekels(total)} לחודש עם נתב`;
+  }
   const amount = Number(raw.replace(/,/g, ""));
   if (!Number.isFinite(amount)) return null;
   const flat = amount === 0 ? "ללא עלות" : `${shekels(amount)} בתוספת למחיר`;
@@ -712,6 +758,25 @@ export const PROMO_NOTE_QUOTE_LABEL = "נוסח המבצע:";
  */
 export function promoNoteRises(pkg: Package, note: string): boolean {
   if (!isMoney(pkg.price)) return false;
+  /*
+   * ⚠️ נוסח שמתאר **תוסף** שנכנס בחינם ומתחיל להיות מחוייב
+   * אינו הצהרה על מה שיקרה למחיר החבילה בתום ההטבה.
+   *
+   * השער שמתחת מסנן `>= 10` כדי להשליך מספרים שאינם כסף —
+   * וכמות דקות עוברת את הסף בקלות. id 83 (`price: 19.9`) נושאת
+   * את הנוסח על 200 דקות שנכנסות חינם לשלושה חודשים ואז 20 ₪:
+   * `nums` יוצא [200, 20], וה-200 — מספר הדקות של התוסף — הוא מה
+   * שמעביר את `every(n > price)`. הכרטיס הדפיס "בתום ההטבה" —
+   * ההצהרה שלנו על מה שהמחיר הופך להיות — על נוסח שמדבר על
+   * חבילת דקות אופציונלית. מדרגות הרשומה עצמה (50 דקות = 19.90,
+   * 300 דקות = 27.70) אומרות שהמחיר אינו עולה ל-20.
+   *
+   * ⚠️ והמנוע כבר מסווג את הנוסח הזה נכון: `addonFreeThenPaid` הוא
+   * `true` עליה, וזו הסיבה ש-`isComparable` פוסלת אותה. המידע אינו
+   * נמחק מהמסך — `promoNoteText` ממשיך להדפיס אותו במלואו, אבל
+   * כציטוט של תנאי המבצע ולא כהצהרה שלנו על המחיר.
+   */
+  if (addonFreeThenPaid(pkg)) return false;
   const price = pkg.price;
   const nums = (note.match(/\d+(?:\.\d+)?/g) ?? []).map(Number).filter((n) => n >= 10);
   return nums.length > 0 && nums.every((n) => n > price);
@@ -803,6 +868,22 @@ export function discountScope(pkg: Package): string | null {
  * ⚠️ `requiresMultipleLines` קודם: id 16 נושא את שתי ההצהרות, והמחמירה
  * מהן — מינימום חוזי ולא מחיר למנוי — היא זו שצריכה להיאמר.
  */
+/**
+ * המחיר שעל הכרטיס הוא המחיר שהרשומה ייחסה למנוי/קו **בודד**.
+ *
+ * ⚠️ נקרא מהטקסט עצמו ולא מושלם, כמו `tierLines` ו-`housingQualifiers`:
+ * רשומה שלא מסרה מחיר לבודד מחזירה `false`, כלומר ההסתייגות
+ * נשארת כשהיתה — "לא יודעים, לא מבטיחים", הכיוון של כל הקבוצה.
+ */
+function headlinePriceIsSingleUnit(pkg: Package): boolean {
+  if (!isMoney(pkg.price)) return false;
+  const m = installationProse(pkg).match(
+    /(?:מנוי|קו)\s*בודד\s*[–—:-]?\s*(\d[\d,]*(?:\.\d+)?)/,
+  );
+  if (!m) return false;
+  const single = Number(m[1].replace(/,/g, ""));
+  return Number.isFinite(single) && Math.abs(single - pkg.price) < 0.005;
+}
 export interface PriceNote {
   label: string;
   value: string;
@@ -814,7 +895,32 @@ export function priceNote(pkg: Package): PriceNote | null {
     return scope ? { label: "מה ההנחה כוללת", value: `הנחה על ${scope} בחשבון בלבד` } : null;
   }
   if (!isMoney(pkg.price)) return null;
-  if (requiresMultipleLines(pkg)) {
+  /*
+   * ⚠️ ולא כשהרשומה מסרה שהמחיר המוצג הוא דווקא מחיר המנוי הבודד.
+   *
+   * זה אותו תיקון בדיוק שענף `familyPriceOnly` שמתחת כבר קיבל
+   * (`usableLineTiers(pkg).length === 0`, שנוסד אחרי ש-id 36 קיבלה הסתייגות
+   * שהמדרגות שלה סתרו) — והענף החמור משניהם, שרץ ראשון,
+   * לא נבדק מול שום נתון כמותי.
+   *
+   * id 42 (`TOP 400 GB 2025`, `price: 39.9`) מוסרת במפורש "לרוכשים 3 מנויים
+   * ואילך, עבור מנוי בודד 39.90 ₪" — כלומר ה-39.9 שעל הכרטיס הוא
+   * המחיר של **מנוי אחד**, והמחיר המותנה בכמות הוא ₪30. הכרטיס
+   * וטבלת ההשוואה הדפיסו עליו "המחיר מותנה בכמות המנויים",
+   * הסתייגות על תנאי שאינו חל על המספר שלידו.
+   *
+   * id 110 (`price: 35`) מנסחת את אותו דבר ("עבור מנוי בודד 39.90 ₪")
+   * ושם ההסתייגות **נכונה**, כי ₪35 הוא דווקא המחיר המותנה.
+   * אותה הצהרה, שני מחירים — והשאלה היחידה שמבדילה היא איזה
+   * מהם הוא `pkg.price`. גם id 68 נשאר מסוייג בצדק (הבודד שלו הוא
+   * 49.90, ו-`price` הוא 39.9 — מחיר שלושה קווים ומעלה).
+   *
+   * ⚠️ השער הוא **תצוגה בלבד**. `requiresMultipleLines` ממשיך לפסול
+   * את id 42 מבריכת ההשוואה ב-`isComparable` — שם הכיוון השמרני הוא
+   * בריכה קטנה יותר, והרשומה אכן מתמחרת לפי כמות בחלק מהמדרגות.
+   * בריכת ההשוואה אינה זזה מהתיקון הזה.
+   */
+  if (requiresMultipleLines(pkg) && !headlinePriceIsSingleUnit(pkg)) {
     return { label: "תנאי המחיר", value: "המחיר מותנה בכמות המנויים בחבילה" };
   }
   /*

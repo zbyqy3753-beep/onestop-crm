@@ -15,6 +15,7 @@ import {
   promoNoteText,
   promoRise,
 } from "../src/app/lp/catalog/format.ts";
+import { addonFreeThenPaid } from "../src/app/lp/catalog/savings.ts";
 
 /*
  * ⚠️ הפגם: התווית "בתום ההטבה:" מייחסת לרשומה אמירה שהיא לא מסרה.
@@ -82,17 +83,33 @@ test("נוסח: 11 הרשומות עם הצהרה מילולית, וחלוקתן
 
   // רק שלוש מוסרות נוסח שכל מספר בו גבוה מהמחיר המוצג.
   assert.deepEqual(
+  /*
+   * ⚠️ סבב 42: id 83 ירד מהרשימה במכוון. הנוסח שלו מדבר על
+   * חבילת 200 דקות אופציונלית ("3 חודשים חינם, לאחר מכן 20 ₪"),
+   * ולא על מה שהמחיר הופך להיות — ה-200 הוא מספר דקות שעבר את
+   * סף ה-`>= 10` והתחזה לכסף. `addonFreeThenPaid` ב-`savings.ts` כבר מסווג
+   * אותו כתוסף, ו-`promoNoteRises` מכבד את זה עכשיו. הנוסח עודנו
+   * מודפס במלואו — כציטוט ולא כהצהרה שלנו על המחיר.
+   */
     notePkgs.filter((p) => promoNoteRises(p, promoRise(p).note)).map((p) => p.id).sort(),
-    ["42", "61", "83"],
+    ["42", "61"],
   );
 
-  // והשער נגזר מהמספרים ולא מרשימה קשיחה.
+  /*
+   * והשער נגזר מהנתון ולא מרשימה קשיחה.
+   *
+   * ⚠️ סבב 42 הוסיף להגדרה איבר שני: נוסח שמתאר **תוסף**
+   * שנכנס בחינם ומתחיל להיות מחוייב אינו הצהרה על מחיר החבילה,
+   * והמנוע כבר מסווג אותו כך. מספרי הנוסח לבדם אינם מבדילים
+   * בין ₪20 שהמחיר הופך להיות לבין ₪20 של תוסף — ולכן השאלה
+   * השנייה נשאלת מאותו מקור שהמנוע שואל ממנו.
+   */
   for (const p of notePkgs) {
     const note = promoRise(p).note;
     const nums = notePrices(note);
     assert.equal(
       promoNoteRises(p, note),
-      nums.length > 0 && nums.every((n) => n > p.price),
+      nums.length > 0 && nums.every((n) => n > p.price) && !addonFreeThenPaid(p),
       `id ${p.id}: ${note}`,
     );
   }
@@ -171,7 +188,7 @@ test("לפני/אחרי: ארבע הרשומות שהצהירו על ירידת 
   }
 
   // ומה שכן עולה ממשיך להיאמר בדיוק כפי שנאמר עד היום.
-  for (const id of ["42", "61", "83"]) {
+  for (const id of ["42", "61"]) {
     const p = byId(id);
     assert.equal(heroRiseLine(p), `${PROMO_NOTE_LABEL} ${promoRise(p).note}`);
     assert.equal(cardHtml(p).includes(esc(PROMO_NOTE_QUOTE_LABEL)), false, `id ${id}`);
