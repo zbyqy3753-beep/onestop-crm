@@ -6,6 +6,7 @@ import { LeadForm } from "./ui/LeadForm";
 import { PackageCard } from "./ui/PackageCard";
 import { ProviderLogo } from "./ui/ProviderLogo";
 import { SavingsCalculator } from "./ui/SavingsCalculator";
+import { SiteFooter } from "./ui/SiteFooter";
 import {
   basePackages,
   byCategory,
@@ -22,6 +23,7 @@ import {
 import { heroRiseLine, PACKAGES_CAPTION, PLANS_CAPTION, priceNote, shekels } from "./catalog/format";
 import { isComparable } from "./catalog/savings";
 import { GOOGLE_BUSINESS } from "./config";
+import { servicePath } from "./site";
 import "./lp.css";
 
 /**
@@ -546,7 +548,7 @@ export default function LandingPage() {
                 <p className="mt-1 text-sm text-lp-ink-2">{meta.blurb}</p>
               </div>
               <a
-                href={meta.hash}
+                href={servicePath(category)}
                 className="rounded-lg border border-lp-line bg-lp-surface px-4 py-2 text-sm font-medium text-lp-brand transition hover:border-lp-brand"
               >
                 לכל החבילות ←
@@ -620,44 +622,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── פוטר ──────────────────────────────────────────────────── */}
-      <footer className="bg-lp-navy py-8 text-center text-lp-on-navy-3">
-        <div className="mx-auto max-w-2xl px-4">
-          {/* ⚠️ כפתור הדירוג מוצג רק כשיש קישור — ראה `GOOGLE_BUSINESS.reviewUrl`. */}
-          {GOOGLE_BUSINESS.reviewUrl && (
-            <a
-              href={GOOGLE_BUSINESS.reviewUrl}
-              target="_blank"
-              rel="noopener"
-              className="mb-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-lp-navy"
-            >
-              <span aria-hidden className="text-amber-500">★★★★★</span>
-              דרגו אותנו בגוגל
-            </a>
-          )}
-          <p className="mb-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-lp-on-navy">
-            <a href={GOOGLE_BUSINESS.whatsappUrl} target="_blank" rel="noopener" className="underline">
-              וואטסאפ
-            </a>
-            <a href={GOOGLE_BUSINESS.instagramUrl} target="_blank" rel="noopener" className="underline">
-              אינסטגרם
-            </a>
-          </p>
-          {/*
-            ⚠️ הגילוי הזה אינו קישוט. ONE STOP הוא משווק מורשה שמקבל
-            עמלה, והצגת האתר כ"משווה אובייקטיבי" בלי לומר זאת היא בדיוק
-            מה שהרגולציה בתחום אוסרת. אותו נוסח מופיע באתר הציבורי.
-          */}
-          <p className="text-lp-2xs leading-relaxed">
-            ONE STOP הוא משווק מורשה של חברות התקשורת והחשמל ומקבל מהן עמלה. המחירים והתנאים
-            המחייבים הם אלה של החברה המפעילה, וייתכנו שינויים ותנאי סף.
-          </p>
-          <p className="mt-3 text-lp-2xs">
-            <a href="/privacy" className="underline">
-              מדיניות הפרטיות
-            </a>
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }

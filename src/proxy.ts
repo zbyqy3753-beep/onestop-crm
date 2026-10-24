@@ -6,6 +6,7 @@ import {
   SESSION_COOKIE_OPTIONS,
 } from "@/lib/gate";
 import { NEXT_PARAM } from "@/lib/returnTo";
+import { isContentPath } from "@/app/lp/site";
 
 /**
  * שער הגישה לגרסת הבדיקה — שתי שכבות.
@@ -201,6 +202,16 @@ function eliranSite(req: NextRequest): NextResponse | null {
     const lp = req.nextUrl.clone();
     lp.pathname = "/lp";
     return NextResponse.rewrite(lp);
+  }
+  /*
+   * עמודי התוכן (שירות וחברה) יושבים תחת `/lp/` ומוגשים בלי הקידומת —
+   * `/cellular` ← `/lp/cellular`. הרשימה הסגורה ב-`site.ts`, כדי שנתיב
+   * שאינו עמוד ימשיך ליפול להפניה לדף הבית שבסוף הפונקציה.
+   */
+  if (isContentPath(pathname)) {
+    const page = req.nextUrl.clone();
+    page.pathname = `/lp${pathname}`;
+    return NextResponse.rewrite(page);
   }
   /*
    * האייקונים של המערכת הם של ה-CRM (ו-`favicon.ico` שלה הוא עדיין
