@@ -162,8 +162,50 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+/**
+ * הכתובת של האתר של אלירן. כל מה שמגיע אליה הוא דף הנחיתה ותו לא:
+ * `/` מוגש מ-`/lp` בלי לשנות את הכתובת, ושום נתיב של המערכת לא נפתח
+ * דרכה — מבקר שמנחש `/leads` מקבל את דף הבית ולא מסך התחברות.
+ */
+const ELIRAN_HOST = "eliran.onestopil.co.il";
+/** הכתובת הישנה. `/lp` בה מפנה לכתובת החדשה, כדי שקישורים ישנים בוואטסאפ ובביו ימשיכו לעבוד. */
+const LEGACY_HOST = "onestop-crm.vercel.app";
+
+/**
+ * מה שדף הנחיתה מושך כמשאבים: ה-JS של Next, הלוגואים, תמונות המותג,
+ * וה-API. כל השאר בכתובת של אלירן מוחזר לדף הבית.
+ */
+const ELIRAN_ASSETS = ["/_next", "/providers", "/brand", "/api", "/favicon.ico", "/robots.txt"];
+
+function eliranSite(req: NextRequest): NextResponse | null {
+  const host = req.headers.get("host")?.split(":")[0];
+  const { pathname } = req.nextUrl;
+
+  if (host === LEGACY_HOST && (pathname === "/lp" || pathname.startsWith("/lp/"))) {
+    const to = new URL(`https://${ELIRAN_HOST}/`);
+    to.search = req.nextUrl.search;
+    return NextResponse.redirect(to, 308);
+  }
+
+  if (host !== ELIRAN_HOST) return null;
+
+  if (pathname === "/") {
+    const lp = req.nextUrl.clone();
+    lp.pathname = "/lp";
+    return NextResponse.rewrite(lp);
+  }
+  if (ELIRAN_ASSETS.some((p) => pathname.startsWith(p))) return NextResponse.next();
+
+  const home = req.nextUrl.clone();
+  home.pathname = "/";
+  return NextResponse.redirect(home, pathname.startsWith("/lp") ? 308 : 307);
+}
+
 export function proxy(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
+
+  const eliran = eliranSite(req);
+  if (eliran) return eliran;
 
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
