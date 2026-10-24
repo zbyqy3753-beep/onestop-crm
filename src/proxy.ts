@@ -175,7 +175,15 @@ const LEGACY_HOST = "onestop-crm.vercel.app";
  * מה שדף הנחיתה מושך כמשאבים: ה-JS של Next, הלוגואים, תמונות המותג,
  * וה-API. כל השאר בכתובת של אלירן מוחזר לדף הבית.
  */
-const ELIRAN_ASSETS = ["/_next", "/providers", "/brand", "/api", "/favicon.ico", "/robots.txt"];
+const ELIRAN_ASSETS = ["/_next", "/providers", "/brand", "/api", "/robots.txt"];
+
+/** הסמל של "אלירן תקשורת" (`public/brand/eliran`), במקום האייקונים של המערכת. */
+const ELIRAN_ICONS: Record<string, string> = {
+  "/favicon.ico": "/brand/eliran/favicon.ico",
+  "/icon.png": "/brand/eliran/icon.png",
+  "/apple-icon.png": "/brand/eliran/apple-icon.png",
+  "/manifest.webmanifest": "/brand/eliran/manifest.webmanifest",
+};
 
 function eliranSite(req: NextRequest): NextResponse | null {
   const host = req.headers.get("host")?.split(":")[0];
@@ -193,6 +201,18 @@ function eliranSite(req: NextRequest): NextResponse | null {
     const lp = req.nextUrl.clone();
     lp.pathname = "/lp";
     return NextResponse.rewrite(lp);
+  }
+  /*
+   * האייקונים של המערכת הם של ה-CRM (ו-`favicon.ico` שלה הוא עדיין
+   * המשולש של Vercel), ולכן באתר של אלירן מגישים את הסמל שלו מאותן
+   * כתובות. הדפדפן מבקש אותן עם `?<hash>`, ולכן ההשוואה היא על הנתיב.
+   */
+  const icon = ELIRAN_ICONS[pathname];
+  if (icon) {
+    const to = req.nextUrl.clone();
+    to.pathname = icon;
+    to.search = "";
+    return NextResponse.rewrite(to);
   }
   if (ELIRAN_ASSETS.some((p) => pathname.startsWith(p))) return NextResponse.next();
 

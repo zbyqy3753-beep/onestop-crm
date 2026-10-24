@@ -1,0 +1,14 @@
+{
+  "name": "אלירן תקשורת",
+  "short_name": "אלירן תקשורת",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#EEF7FD",
+  "theme_color": "#1E6FD9",
+  "icons": [
+    { "src": "/brand/eliran/icon.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/brand/eliran/apple-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
