@@ -137,8 +137,36 @@ const CAP_UNITS: [CapKind, RegExp][] = [
   ["channels", /ערוצ/],
 ];
 
+/*
+ * טווח מהירות מוצהר (`0.01-1000Mbps`) הוא הצהרת תקרה על הקצה העליון.
+ *
+ * ⚠️ זו הצורה ה**מספרית** של אותה הצהרה ש-`proseCapsAt` קורא במילה
+ * "עד", וזה הניסוח הרגולטורי שבו ספק מוסר את טווח המהירות שלו. בלי
+ * הקורא הזה ההתנהגות לא רק חסרה — היא **לא עקבית** בין רשומות של
+ * אותו ספק בדיוק, הכשל שההערה על `עד GB800` מתעדת: שבע רשומות HOT
+ * נושאות את אותו `0.01-1000Mbps`, וארבע מהן (ids 73, 153, 154, 159)
+ * כותבות **גם** "עד 1000/100" בפרוזה ולכן הודפסו עם "עד", בעוד
+ * שלוש (ids 70, 71, 72) כותבות את הטווח לבדו והדפיסו
+ * `1,000/100Mbps` כעובדה שטוחה — על רשומה שמוכרת "בין 0.01
+ * ל-1000". המספר הזה מודפס בשלושה משטחים (האריח, `detailRows`
+ * ו-`compareRows`), כלומר שלוש הצהרות לגולש על כל כרטיס.
+ *
+ * ⚠️ מהירות בלבד. סרקתי את הקטלוג על אותה צורת טווח מול נפח, דקות
+ * ו-SMS — היא מופיעה על המהירות ולא על שום שדה אחר, ולכן הקורא
+ * מוגבל ליחידת המהירות ואינו שער כללי לטווחים.
+ */
+const SPEED_RANGE = /(?:\d+(?:\.\d+)?)\s*[-–]\s*(\d[\d,]*(?:\.\d+)?)\s*(?:Mbps|Mb)(?![a-z])/gi;
+
+function rangeCapsAtSpeed(prose: string, value: number): boolean {
+  for (const m of prose.matchAll(SPEED_RANGE)) {
+    if (Number(String(m[1]).replace(/,/g, "")) === value) return true;
+  }
+  return false;
+}
+
 function proseCapsAt(pkg: Package, value: number, kind: CapKind): boolean {
   const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
+  if (kind === "speed" && rangeCapsAtSpeed(prose, value)) return true;
   for (const m of prose.matchAll(
     // ⚠️ חלון היחידה ב-lookahead, אחרת הוא **נבלע**: כשהוא נצרך
     // כקבוצה רגילה, "עד 3000 SMS לקו ועד 1500GB" החזיר התאמה אחת —
@@ -335,6 +363,24 @@ function installationProse(pkg: Package): string {
   return [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
 }
 
+/**
+ * מחיר ההתקנה **בבניין** כפי שהרשומה הצהירה אותו במילה ולא בספרה.
+ *
+ * ⚠️ אותה הצהרה, נוסח שכן — הדפוס החוזר בקובץ הזה. id 82 כותבת
+ * "עלות התקנה : בבנין **חינם** שח בית פרטי 499שח", ושתי אחיותיה
+ * (ids 113 ו-115) כותבות את אותו דבר בדיוק בספרה ("בבנין 0שח" /
+ * "בבנין0 שח") ולכן מדפיסות "ללא עלות בבניין · ₪499 לבית פרטי".
+ * ב-id 82 המחלץ שתל את המספר של ה**בית הפרטי** ב-`installationCost`
+ * (499) דווקא מפני שצד הבניין אינו ספרה, ואז `priv !== cost` יצא
+ * false וצד הבניין לא הודפס כלל: השורה הצטמקה ל-"₪499 לבית פרטי"
+ * והכרטיס לא אמר מילה על כך שבבניין ההתקנה חינם. זו הסתרה של
+ * הטבה, לא של עלות — ולכן התיקון קורא את המילה ואינו נוגע ב-`spec`.
+ */
+function buildingInstallation(pkg: Package): number | null {
+  const m = installationProse(pkg).match(/בבנין\s*(חינם|ללא עלות|בחינם)/);
+  return m ? 0 : null;
+}
+
 function privateHomeInstallation(pkg: Package): number | null {
   const prose = installationProse(pkg);
   const before = prose.match(/(\d[\d,]*(?:\.\d+)?)\s*(?:ש"ח|שח|₪)\s*לבית\s*פרטי/);
@@ -425,7 +471,15 @@ function installationDetail(pkg: Package, cost: number): string {
   }
   const qualifiers = housingQualifiers(pkg);
   const parts: string[] = [];
-  if (priv !== cost) parts.push(`${flat} ${qualifiers.building}`);
+  /*
+   * ⚠️ מחיר הבניין מהצהרה מילולית **גובר** על `cost` כשהשניים זהים.
+   * ראה `buildingInstallation`: ב-id 82 `cost` הוא דווקא המספר של
+   * הבית הפרטי, ולכן `priv !== cost` השתיק את צד הבניין לגמרי.
+   */
+  const building = buildingInstallation(pkg);
+  if (building != null && priv === cost) {
+    parts.push(`ללא עלות ${qualifiers.building}`);
+  } else if (priv !== cost) parts.push(`${flat} ${qualifiers.building}`);
   if (priv != null) parts.push(`${shekels(priv)} ${qualifiers.privateHome}`);
   return parts.join(" · ");
 }

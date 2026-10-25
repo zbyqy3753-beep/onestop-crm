@@ -118,6 +118,13 @@ export function compareCheckboxId(pkg: Package): string {
 }
 
 /**
+ * כמה מגשים נראים כרגע בדף — ראה ההערה על `lp-tray-open` מתחת.
+ *
+ * ⚠️ מצב משותף בין מופעים, ולכן ברמת המודול. אין לו צרכן אחר.
+ */
+let openTrays = 0;
+
+/**
  * A sticky tray that fills as you tick packages, then opens a side-by-side
  * sheet. Comparison only becomes useful at two items, so the button stays
  * disabled until then rather than opening an empty table.
@@ -266,11 +273,31 @@ export function CompareTray({
    * ⚠️ הניקוי ב-cleanup חובה: הרכיב מחזיר `null` כשאין פריטים, אבל
    * ה-class יושב על `document.body` ולא על ה-DOM שלו — בלי זה הוא
    * היה שורד את ניקוי ההשוואה ומשאיר חור בתחתית הדף.
+   *
+   * ⚠️ ומונה־התייחסויות ולא דגל, כי הרכיב הזה **אינו** יחיד בדף.
+   * `CatalogTabs` מרנדר אותו פעם אחת (`key={category}`), אבל
+   * `provider/[slug]/page.tsx` מרנדר `CatalogBrowser` אחד לכל
+   * קטגוריה בתוך `sections.map` — כלומר שלושה מגשים ב-
+   * `/lp/provider/cellcom` ושניים ב-`/lp/provider/partner`.
+   * `classList.remove` של מגש אחד הפיל את ה-class בזמן שמגש אחר
+   * עוד על המסך: ההרווחה ב-`lp.css` חדלה לחול, והמגש שנשאר כיסה
+   * את ~8rem התחתונים של הדף — בדיוק החור שההערה מעל נכתבה
+   * למנוע, מהכיוון ההפוך. ה-class יורד רק כשהמגש ה**אחרון** נסגר.
+   *
+   * ⚠️ מונה ברמת המודול ולא `useRef`: הוא נספר **בין** מופעים,
+   * וזו כל הנקודה.
    */
   useEffect(() => {
     if (items.length === 0) return;
+    openTrays += 1;
     document.body.classList.add("lp-tray-open");
-    return () => document.body.classList.remove("lp-tray-open");
+    return () => {
+      openTrays -= 1;
+      if (openTrays <= 0) {
+        openTrays = 0;
+        document.body.classList.remove("lp-tray-open");
+      }
+    };
   }, [items.length]);
 
   return (
