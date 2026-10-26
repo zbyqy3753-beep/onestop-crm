@@ -943,7 +943,20 @@ test("מיון: תווית החשמל אינה מבטיחה הנחה על כל �
     options.every((o) => !o.includes("כל החשבון")),
     `תפריט המיון מבטיח הנחה על כל החשבון: ${JSON.stringify(options)}`,
   );
-  assert.ok(options.includes("הנחה: בכל השעות תחילה"), JSON.stringify(options));
+  /*
+   * ⚠️ סבב 44 שינה את התווית הזו מ-"הנחה: בכל השעות תחילה". אותה
+   * בדיקה בדיוק, פעם שנייה ועל ציר שני: "בכל השעות" הבטיחה
+   * `allHours`, בזמן שהדירוג מקבץ לפי **היעדר הצהרה** על שעות —
+   * והשורה שמתחת כאן היא בעצמה ההגדרה המדויקת של מה שהדירוג עושה
+   * ("מי שאינו מצהיר על שעות חלקיות"). חמש רשומות נושאות
+   * `allHours: false` וגם `hoursText: null`, ושלוש מהן יושבות מעל
+   * כל ארבע הרשומות שהכרטיס שלהן כן מדפיס "כל השעות".
+   */
+  assert.ok(options.includes("הנחה: ללא חלון שעות תחילה"), JSON.stringify(options));
+  assert.ok(
+    options.every((o) => !o.includes("בכל השעות")),
+    `תפריט המיון מבטיח הנחה בכל השעות: ${JSON.stringify(options)}`,
+  );
   // ומה שהדירוג כן עושה: הקבוצה הראשונה היא מי שאינו מצהיר על שעות חלקיות.
   const partial = (p) => !p.spec.allHours && p.spec.hoursText != null;
   let seenPartial = false;

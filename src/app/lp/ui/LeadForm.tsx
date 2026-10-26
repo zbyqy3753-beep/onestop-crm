@@ -152,7 +152,7 @@ export function LeadForm({
    * בטבלה — ודווקא הוא יושב *בתוך* הכרטיס שכבר מגודר. אומת בפועל על
    * `name: {}`:
    *
-   * 1. הפסקה "נציג ONE STOP יחזור אליך לגבי …" (המסלול שאינו `compact`)
+   * 1. הפסקה "אלירן יחזור אליך לגבי …" (המסלול שאינו `compact`)
    *    זרקה `Objects are not valid as a React child`. לענף הזה אין
    *    קורא בדף היום — שני הקוראים מעבירים `compact` — ולכן זה שער
    *    לקורא הבא ולא פגם מוצג; אבל זו בדיוק מחלקת הכשל שמחזירה את
@@ -220,7 +220,17 @@ export function LeadForm({
         role="status"
         className="rounded-lp-card bg-lp-save/10 p-4 text-center"
       >
-        <p className="font-semibold text-lp-save">קיבלנו! נציג ONE STOP יחזור אליך בהקדם.</p>
+        {/*
+          ⚠️ "אלירן" ולא "נציג ONE STOP" — זה הגוף שהגולש **אישר**.
+          תיבת ההסכמה שמעל הכפתור אומרת "אני מאשר/ת שאלירן קליין
+          מאלירן תקשורת יצור איתי קשר", והאישור שאחרי הלחיצה הכריז
+          על גוף משפטי אחר. הכלל של בעל המערכת כתוב ב-`page.tsx`:
+          "ONE STOP נשאר רק במקומות שמזהים את הגוף המשפטי — הגילוי
+          הנאות והשאלות. הסכמת הטופס היא לפנייה של אלירן". פאנל
+          האישור אינו אף אחד מהשניים, והליד גם מנותב לאלירן בפועל
+          (`DEFAULT_ASSIGNEE_EMAIL` ב-`config.ts`).
+        */}
+        <p className="font-semibold text-lp-save">קיבלנו! אלירן יחזור אליך בהקדם.</p>
         <p className="mt-1 text-sm text-lp-ink-2">
           {/* ⚠️ `sentSubject` לפני הנפילה הקבועה — ראה ההערה על הפרופ. */}
           {pkg ? `לגבי ${packageLabel(pkg, provider)}` : (sentSubject ?? "לגבי החבילה המשתלמת עבורך")}
@@ -265,7 +275,8 @@ export function LeadForm({
     <form key={formKey} action={action} className="space-y-3" noValidate>
       {pkg && !compact && (
         <p className="text-sm text-lp-ink-2">
-          נציג ONE STOP יחזור אליך לגבי{" "}
+          {/* ⚠️ אותו תיקון כמו בפאנל האישור — ראה ההערה שם. */}
+          אלירן יחזור אליך לגבי{" "}
           <span className="font-semibold text-lp-ink">{packageLabel(pkg, provider)}</span>
         </p>
       )}

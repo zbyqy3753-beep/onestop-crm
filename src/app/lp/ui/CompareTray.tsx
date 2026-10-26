@@ -54,10 +54,33 @@ export function compareLabel(p: Package, items: Package[]): string {
    * את מה ש-`packageLabel` החזירה.
    */
   const title = packageTitle(p) || providerName(p);
-  const twins = items.filter(
-    (o) => (packageTitle(o) || providerName(o)) === title && providerName(o) === providerName(p),
-  );
-  if (twins.length < 2) return title;
+  const sameTitle = items.filter((o) => (packageTitle(o) || providerName(o)) === title);
+  if (sameTitle.length < 2) return title;
+  const twins = sameTitle.filter((o) => providerName(o) === providerName(p));
+  /*
+   * ⚠️ התנגשות בין **ספקים שונים** נפרדת בשם הספק, ולא נופלת
+   * לכותרת חשופה. התנאי דרש `providerName(o) === providerName(p)`,
+   * כלומר כל מנגנון ההבדלה למטה פעל רק בתוך אותו ספק — ושתי
+   * רשומות של ספקים שונים שחולקות כותרת חזרו שתיהן כ-title חשוף.
+   * זה קורה בפועל: ids 147 (`HOT אנרגי`) ו-150 (`בזק אנרג'י`)
+   * חולקות את הכותרת "חוסכים בלילה 20%". במגש אין לוגו — השבב
+   * מדפיס את `compareLabel` לבדה — ולכן שני השבבים היו זהים ושני
+   * כפתורי ה-✕ הכריזו את אותו שם נגיש בדיוק
+   * ("הסר את חוסכים בלילה 20% מההשוואה"), בלי שום דרך לדעת איזה
+   * הוא איזה. זו אותה מחלקת כשל שההערה למעלה מתארת על 50/51,
+   * רק שהציר שנשכח הוא הספק ולא הגרסה.
+   *
+   * ⚠️ ובקטגוריית החשמל נפילת-המחיר למטה מושתקת לחלוטין (`price`
+   * הוא `null` בכל 19 הרשומות), ולכן בלי השורה הזו לא היה **שום**
+   * מבדיל לזוג הזה.
+   *
+   * ⚠️ ולא כשהכותרת היא כבר שם הספק (הנפילה למעלה) — שם זו הייתה
+   * הכפלה של אותה מילה.
+   */
+  if (twins.length < 2) {
+    const provider = providerName(p);
+    return provider && provider !== title ? `${title} · ${provider}` : title;
+  }
   const variant = (p.rawName ?? "").match(/\*(\d+)\*/);
   if (variant) return `${title} · גרסה ${variant[1]}`;
   return typeof p.price === "number" && Number.isFinite(p.price) ? `${title} · ${shekels(p.price)}` : title;

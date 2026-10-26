@@ -555,6 +555,38 @@ const ROUTER_EXCLUDED_PRICE = new RegExp(
     String.raw`[\s\S]{0,40}?${ROUTER_MONEY}\s*כולל\s*(?:ה)?${ROUTER_WORD}`,
 );
 
+/**
+ * המחיר שהרשומה מסרה כ**כולל** את הנתב, כשהוא המחיר שבכותרת.
+ *
+ * ⚠️ הצד החיובי של `ROUTER_EXCLUDED_PRICE`, והוא נשאר פתוח. אותה
+ * הערה שמעל השער התאום מתארת את הפער על id 113 מול id 114 ("פער של
+ * ₪20 בלי שאף אחד מהכרטיסים אומר מילה על נתב") — הצד השלילי נסגר,
+ * והחיובי לא. התוצאה היא שחמש רשומות (ids 82, 98, 112, 113, 115)
+ * מצהירות במפורש `<מחיר> ש"ח כולל נתב` ולא מדפיסות על הנתב ולו
+ * שורה אחת, בזמן ש-id 114 — היחידה שניסחה זאת בשלילה — מדפיסה
+ * שורה מלאה.
+ *
+ * ⚠️ וזה אינו חוסר-גילוי בלבד אלא **השוואה מטעה**: בטבלה שורת
+ * `נתב` נותנת ל-112 את המחרוזת `"—"` ול-114 את
+ * `"המחיר אינו כולל נתב · ₪220 לחודש עם נתב"`. עלות ההתקנה ועלות
+ * המגדיל זהות בשתיהן, ולכן הגולש שמשווה ₪169 מול ₪199 קורא פער של
+ * ₪30 — בזמן שהפער כששתיהן עם נתב הוא ₪51 (169 מול 220). ה-`—`
+ * מכחיש עובדה שהרשומה כן מסרה.
+ *
+ * ⚠️ הסכום חייב להיות **המחיר שבכותרת**, ולא כל סכום שליד המילה.
+ * id 114 נושאת את שתי הצורות גם יחד (`כולל נתב` בשורת השירות,
+ * ו-`199 ש"ח לא כולל נתב` אחריה), ו-`220 שח כולל נתב` שלה הוא מחיר
+ * **אחר** מהכותרת. בלי התנאי הזה הייתה מודפסת עליה "כלול במחיר"
+ * על ₪220 שאינו המחיר שהכרטיס מציג. `ROUTER_EXCLUDED_PRICE` נבדק
+ * ממילא לפני כאן, אבל שער שצודק משתי סיבות עדיף על אחד.
+ *
+ * ⚠️ ולא מודפס מספר משלנו — רק "כלול במחיר", כמו `included`. הרשומה
+ * מסרה שהמחיר כולל את הנתב, ולא מסרה מה הנתב שווה בנפרד.
+ */
+const ROUTER_INCLUDED_PRICE = new RegExp(
+  String.raw`${ROUTER_MONEY}\s*כולל\s*(?:ה)?${ROUTER_WORD}`,
+);
+
 function routerDetail(pkg: Package): string | null {
   const prose = installationProse(pkg);
   const cost = prose.match(ROUTER_COST);
@@ -567,10 +599,18 @@ function routerDetail(pkg: Package): string | null {
     // ⚠️ הצורה השלילית רק אחרי ש-`ROUTER_COST` לא מצא: רשומה שמסרה
     // סכום מפורש לנתב הוא המדויק מבין השניים. ראה `ROUTER_EXCLUDED_PRICE`.
     const withRouter = prose.match(ROUTER_EXCLUDED_PRICE);
-    if (!withRouter) return null;
-    const total = Number(withRouter[1].replace(/,/g, ""));
-    if (!Number.isFinite(total) || total <= 0) return null;
-    return `המחיר אינו כולל נתב · ${shekels(total)} לחודש עם נתב`;
+    if (withRouter) {
+      const total = Number(withRouter[1].replace(/,/g, ""));
+      if (!Number.isFinite(total) || total <= 0) return null;
+      return `המחיר אינו כולל נתב · ${shekels(total)} לחודש עם נתב`;
+    }
+    // ⚠️ ואחרי שגם השלילית לא מצאה — הצורה החיובית. ראה
+    // `ROUTER_INCLUDED_PRICE`: רק כשהסכום הוא המחיר שבכותרת.
+    const included = prose.match(ROUTER_INCLUDED_PRICE);
+    if (!included) return null;
+    const stated = Number(included[1].replace(/,/g, ""));
+    if (!Number.isFinite(stated) || stated <= 0) return null;
+    return stated === pkg.price ? "כלול במחיר" : null;
   }
   const amount = Number(raw.replace(/,/g, ""));
   if (!Number.isFinite(amount)) return null;
