@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/server/db/client";
-import { STATUS_CONFIG } from "@/lib/domain/types";
+import { STATUS_CONFIG, STATUS_ORDER } from "@/lib/domain/types";
 import { isIsraeliPhone } from "@/lib/format";
 import { followUpReminder } from "@/lib/domain/whatsapp";
 import { MAX_ATTEMPTS, retryDecision } from "@/lib/domain/waOutage";
@@ -17,7 +17,8 @@ import { leadFromPrisma } from "@/server/repositories/prisma/mappers";
 import { israelHourMinute, startOfDay } from "@/lib/tz";
 import { reminderTiming } from "@/lib/domain/reminderTiming";
 import { readSettings, type BotSettingsView } from "./settings";
-import { enqueueForUser } from "./recipients";
+import { enqueueForUser, phoneTargets } from "./recipients";
+import { shouldReviveRow } from "@/lib/domain/requeue";
 import { markOpenerSent } from "@/server/renewals/campaign";
 
 /**
@@ -36,6 +37,8 @@ import { markOpenerSent } from "@/server/renewals/campaign";
  * בתקתוק, ולכן תקתוק גס אוכל מההקדמה שהובטחה. ראה `reminderTiming`
  * ואת ההערה ב-`route.ts` של ה-cron.
  */
+
+const OPEN_STATUSES = STATUS_ORDER.filter((s) => !STATUS_CONFIG[s].terminal);
 
 /** שורה שנתבעה ולא דווחה — הבוט קרס באמצע. משוחררת אחרי זה. */
 const CLAIM_TIMEOUT_MS = 5 * 60_000;
@@ -166,33 +169,85 @@ async function enqueueDueFollowUps(
   await enqueueDealWonAlerts(win);
   await enqueueOverdueAlerts(win);
 
+  /*
+   * ⚠️⚠️ **שני שלבים, בכוונה — זה היה הצרכן הגדול של ה-egress.**
+   *
+   * ליד שמועד החזרה שלו עבר נשאר בתנאי הזה לתמיד, וקודם כל תקתוק טען
+   * את כולם עם כל ההערות, ההיסטוריה והפעילות — רק כדי לגלות ב-`create`
+   * שהתזכורת כבר בתור. 3.5 מיליון ניסיונות כאלה בשלושה חודשים הם מה
+   * שהפיל את הפרויקט במכסת התעבורה של Supabase.
+   *
+   * עכשיו: שליפה רזה, בדיקה אחת מול התור, וטעינה מלאה רק ללידים שבאמת
+   * צריכים שורה חדשה או החייאה. הסטטוס הסופי מסונן במסד ולא בקוד.
+   */
   const due = await prisma.lead.findMany({
     where: {
       followUpAt: { not: null, lte: new Date(Date.now() + leadMs) },
+      status: { in: OPEN_STATUSES },
       assigneeId: { not: null },
       assignee: { active: true, phone: { not: null } },
     },
-    include: {
-      notes: true,
-      history: { orderBy: { createdAt: "asc" } },
-      activity: { orderBy: { createdAt: "asc" } },
-      assignee: true,
+    select: {
+      id: true,
+      followUpAt: true,
+      assignee: { select: { phone: true, extraPhones: true } },
     },
   });
 
-  let created = 0;
-  for (const row of due) {
-    if (STATUS_CONFIG[row.status].terminal) continue;
+  const candidates = due.flatMap((row) => {
     const recipient = row.assignee;
-    if (!recipient?.phone || !isIsraeliPhone(recipient.phone)) continue;
-
+    if (!recipient?.phone || !isIsraeliPhone(recipient.phone)) return [];
     const scheduled = row.followUpAt!;
-    const key = dedupeKeyFor(row.id, scheduled);
-
     // מתי ההודעה אמורה לצאת — מוקדם ממועד החזרה, ומוסט קדימה אם
     // ההקדמה הוציאה אותה מחוץ לחלון (חזרה ב-08:05 פחות 10 דקות)
-    const sendAt = new Date(scheduled.getTime() - leadMs);
-    const plannedSend = nextSendableInstant(sendAt, win);
+    const plannedSend = nextSendableInstant(
+      new Date(scheduled.getTime() - leadMs),
+      win,
+    );
+    const key = dedupeKeyFor(row.id, scheduled);
+    const keys = phoneTargets(recipient).map((t) => `${key}${t.keySuffix}`);
+    return [{ id: row.id, scheduled, plannedSend, key, keys }];
+  });
+
+  const queued = new Map(
+    (
+      await prisma.whatsAppMessage.findMany({
+        where: { dedupeKey: { in: candidates.flatMap((c) => c.keys) } },
+        select: { dedupeKey: true, status: true },
+      })
+    ).map((m) => [m.dedupeKey, m.status]),
+  );
+
+  // אותו כלל כמו ב-`enqueueForUser`: מפתח חסר = ליצור, שורה מתה
+  // בחלון ההחייאה = להחיות. כל השאר הוא ה-no-op של הדדופ.
+  const now = Date.now();
+  const pending = candidates.filter((c) =>
+    c.keys.some((k) => {
+      const status = queued.get(k);
+      return (
+        status === undefined ||
+        shouldReviveRow({
+          status,
+          scheduledFor: c.plannedSend.getTime(),
+          now,
+        })
+      );
+    }),
+  );
+
+  let created = 0;
+  for (const { id, scheduled, plannedSend, key } of pending) {
+    const row = await prisma.lead.findUnique({
+      where: { id },
+      include: {
+        notes: true,
+        history: { orderBy: { createdAt: "asc" } },
+        activity: { orderBy: { createdAt: "asc" } },
+        assignee: true,
+      },
+    });
+    const recipient = row?.assignee;
+    if (!row || !recipient) continue;
 
     /*
      * ⚠️ הרגע שבו ההודעה תצא **בפועל**, ולא הרגע המתוכנן.
