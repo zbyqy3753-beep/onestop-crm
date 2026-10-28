@@ -136,6 +136,28 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
    * וישלח שוב דווקא מעדכן את הנציג. מה שהיה חסר הוא האמירה, לא החסימה.
    */
   const [sent, setSent] = useState(false);
+  /*
+   * ⚠️ `confirming` נפרד מ-`sent`, כי שני המצבים אינם אותו דבר.
+   *
+   * `sent` הוא עובדה שנשארת ("פנייה כבר נשלחה") ומכתיבה את הנוסח;
+   * `confirming` הוא מצב רגעי — `LeadForm` מציג כרגע את פאנל האישור
+   * שלו במקום את הטופס — ולכן הוא מתאפס בכל מעבר שלב, שבו `LeadForm`
+   * מתפרק וחוזר עם טופס נקי.
+   */
+  const [confirming, setConfirming] = useState(false);
+  /*
+   * ⚠️ האיפוס נעשה ב**כניסה** לשלב 2, ולא ביציאה ממנו.
+   *
+   * זה המקום היחיד שצריך אותו: `setStep(2)` נקרא ממקום אחד בלבד
+   * (`submitSpend`, שמשרת גם את ה-CTA וגם את Enter בשדה), ולכן כל
+   * חזרה לשלב 2 — אחרי מעבר מסלול, "חזרה" או "חזרה לעריכה" — עוברת
+   * דרכו. הכותרת והפסקה מרונדרות בתוך `step === 2` לבדו, ולכן דגל
+   * שנשאר דלוק מחוץ לשלב אינו נראה.
+   *
+   * ⚠️ ולא `useEffect` על `step`. קריאת `setState` מתוך אפקט היא מה
+   * ש-`react-hooks/set-state-in-effect` פוסל, וכאן אין בה צורך:
+   * המצב נגזר ממעבר שהמשתמש עשה, ולא מסינכרון עם מצב חיצוני.
+   */
 
   const saving = useMemo(
     () => computeSaving(packages, track, units, monthlySpend),
@@ -149,6 +171,29 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
    * יחסית" — והנציג קיבל הערה שהמחשבון בדק ולא מצא. שתי האמירות שקריות.
    */
   const noMatch = saving.pick == null;
+  /*
+   * ⚠️ גילוי קו הטלפון — **נגזרת אחת** שגם המסך וגם ההערה לנציג קוראים.
+   *
+   * שני המשטחים החזיקו שני תנאים שלא הסכימו: המסך הציג את ההסתייגות
+   * על `hasPhone !== true` **או** `phoneLineCostsExtra`, וההערה לנציג
+   * נוספה רק על `phoneLineCostsExtra`. כלומר על חבילה ביתית שאין בה
+   * קו טלפון כלל ושאינה מצהירה על תוספת, הגולש קיבל את ההבטחה
+   * "הנציג יתמחר אותו בנפרד" — והנציג, שההערה היא **כל** מה שהוא
+   * רואה, לא קיבל זכר לכך. זו הפרה של הכלל שההערה על ההערה מצהירה
+   * עליו במילים "כל אמירה של המסך שמשנה את המספר חייבת להופיע גם כאן".
+   *
+   * אומת על בריכת הבית בפועל (שתי רשומות): id 157 (`hasPhone: true`,
+   * תוספת ₪20) → המסך והנציג הסכימו; id 3 (`STING פייבר`,
+   * `hasPhone: false`, בלי תוספת) → המסך הצהיר והנציג שתק.
+   *
+   * רדום היום: 157 זולה (149 מול 174) ולכן נבחרת בכל מקרה ביתי — זו
+   * הגנה על הרענון הבא, כמו רוב השערים ב-`savings.ts`. הנוסח נפרד
+   * לשני המצבים, כי "קו בתוספת לפי הרשומה" ו"אין קו בחבילה" הם שתי
+   * עובדות שונות שהנציג צריך להבדיל ביניהן.
+   */
+  const phoneExtra = saving.pick != null && phoneLineCostsExtra(saving.pick);
+  const phoneMissing = (saving.pick?.spec as HomeSpec | undefined)?.hasPhone !== true;
+  const phoneDisclosure = track === "home" && !noMatch && (phoneMissing || phoneExtra);
   /*
    * ⚠️ `packageTitle` ולא `saving.pick.name` חשוף — ראה `catalog.ts`.
    * זה המשטח החמישי שקרא את השדה הזה גולמי, אחרי הכרטיס, שבב מגש
@@ -192,6 +237,9 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
     // ⚠️ `absurdSpend` גם כאן, ולא רק על הכפתור: ה-Enter בשדה עובר
     // דרך אותה פונקציה, וזו כל הסיבה שהיא משותפת.
     if (monthlySpend <= 0 || absurdSpend) return;
+    // ⚠️ `LeadForm` מתפרק וחוזר עם טופס נקי, ולכן פאנל האישור אינו
+    // מוצג עוד — ראה ההערה על `confirming`.
+    setConfirming(false);
     setStep(2);
   }
 
@@ -772,10 +820,8 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
               שרוצה אינטרנט וטלוויזיה בלבד. פסילת 157 הייתה מזיזה כל
               מספר ביתי בדף בגלל תוספת שהגולש אינו חייב לקחת.
             */}
-            {track === "home" &&
-            !noMatch &&
-            ((saving.pick?.spec as HomeSpec | undefined)?.hasPhone !== true ||
-              (saving.pick != null && phoneLineCostsExtra(saving.pick)))
+            {/* ⚠️ `phoneDisclosure` — אותה נגזרת שההערה לנציג קוראת. */}
+            {phoneDisclosure
               ? "ההשוואה נעשית מול חבילה שכוללת אינטרנט וטלוויזיה; קו טלפון אינו נדרש בה ואינו בהכרח כלול — אם יש קו בחשבון שלכם, הנציג יתמחר אותו בנפרד. "
               : ""}
             עלויות חד-פעמיות (מעבר, חיבור, התקנה) אינן נכללות, והסכום המדויק תלוי בזמינות, בתנאי
@@ -784,18 +830,39 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
           </p>
 
           <div className="mt-5 rounded-lp-card bg-lp-surface-2 p-4">
-            <p className="mb-3 text-sm font-semibold text-lp-ink">
-              {sent ? "לשלוח את הנתונים המעודכנים?" : "רוצים שנבדוק את החשבון שלכם לעומק?"}
-            </p>
-            {sent && (
-              <p className="crm-text mb-3 rounded-lg bg-lp-surface px-3 py-2 text-xs text-lp-ink-2">
-                פנייה מהמחשבון כבר נשלחה ונציג יחזור אליכם. אם שיניתם את הנתונים, שליחה נוספת
-                תעדכן את אותה פנייה.
-              </p>
+            {/*
+              ⚠️ `!confirming` על שתי השורות: מיד אחרי שליחה אין מתחתיהן טופס.
+              `LeadForm` מחליף את ה-`<form>` כולו בפאנל האישור שלו ונשאר
+              באותו מאונט, ולכן הכותרת שאלה "לשלוח את הנתונים
+              המעודכנים?" והפסקה הזמינה לשליחה נוספת — מעל פאנל שאין בו
+              שדה אחד, שאומר "קיבלנו! אלירן יחזור אליך בהקדם.". שאלה
+              והזמנה לפעולה שאין לה פקד הן בדיוק מה שהדף מבטיח ואין
+              מאחוריו מסך.
+
+              המסלול שבשבילו הנוסח הזה נכתב — יציאה לשלב 1 וחזרה, שמפרקת
+              את `LeadForm` ומחזירה טופס נקי — ממשיך לעבוד: `confirming`
+              מתאפס בשני הכפתורים שמשנים שלב, ו-`sent` נשאר דלוק ולכן
+              הנוסח המעודכן מופיע בדיוק שם.
+            */}
+            {!confirming && (
+              <>
+                <p className="mb-3 text-sm font-semibold text-lp-ink">
+                  {sent ? "לשלוח את הנתונים המעודכנים?" : "רוצים שנבדוק את החשבון שלכם לעומק?"}
+                </p>
+                {sent && (
+                  <p className="crm-text mb-3 rounded-lg bg-lp-surface px-3 py-2 text-xs text-lp-ink-2">
+                    פנייה מהמחשבון כבר נשלחה ונציג יחזור אליכם. אם שיניתם את הנתונים, שליחה נוספת
+                    תעדכן את אותה פנייה.
+                  </p>
+                )}
+              </>
             )}
             <LeadForm
               compact
-              onSent={() => setSent(true)}
+              onSent={() => {
+                setSent(true);
+                setConfirming(true);
+              }}
               /*
                 ⚠️ לפי החבילה שנמדדה, ולא "internet" קבוע. ההשוואה הביתית
                 דורשת טלוויזיה, והחבילה שנבחרת היא טריפל — הכרטיס שלה מגיש
@@ -876,8 +943,16 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                   זה אותו כלל של שתי ההערות מעל (`overCap`, `noMatch`):
                   כל אמירה של המסך שמשנה את המספר חייבת להופיע גם כאן.
                 */
-                track === "home" && saving.pick != null && phoneLineCostsExtra(saving.pick)
-                  ? "החבילה היא אינטרנט וטלוויזיה — קו טלפון בתוספת לפי הרשומה; לתמחר בנפרד"
+                /*
+                  ⚠️ `phoneDisclosure` ולא `phoneLineCostsExtra` לבדו — ראה
+                  ההערה על הנגזרת. התנאי כאן היה צר מזה של המסך, ולכן
+                  ההבטחה "הנציג יתמחר אותו בנפרד" יצאה לגולש בלי שהנציג
+                  ידע עליה. שני הנוסחים נפרדים כי אלה שתי עובדות שונות.
+                */
+                phoneDisclosure
+                  ? phoneExtra
+                    ? "החבילה היא אינטרנט וטלוויזיה — קו טלפון בתוספת לפי הרשומה; לתמחר בנפרד"
+                    : "החבילה היא אינטרנט וטלוויזיה — אינה כוללת קו טלפון; לתמחר בנפרד"
                   : null,
               ]
                 .filter(Boolean)

@@ -57,9 +57,17 @@ test("format: התיקון רק מוסיף — חמש שורות חדשות וא
    * ואף רשומה לא יצאה מהרשימה. זו המחצית שהקובץ הזה מקבע: תיקון
    * גילוי אינו אמור לכבות גילוי קיים.
    */
+  /*
+   * ⚠️ וסבב 45 הוסיף שלוש נוספות — 3, 86, 99 — בצורה האחרונה של
+   * אותה הצהרה: "כולל נתב" בלי סכום. המספר כאן עלה מ-20 ל-23,
+   * והמחצית שהמבחן מקבע לא השתנתה: אף שורה לא נעלמה, כולל
+   * `added` של סבב 44 שממשיכות להודפס. ראה
+   * `tools/round45-format.test.mjs`.
+   */
   const withRow = live.filter((p) => routerRow(p) != null).map((p) => String(p.id));
   const before = ["102", "104", "107", "108", "109", "114", "124", "157", "158", "70", "71", "72", "81", "85", "92"];
   const added = ["82", "98", "112", "113", "115"];
-  assert.deepEqual([...withRow].sort(), [...before, ...added].sort());
-  for (const id of before) assert.ok(withRow.includes(id), `id ${id} נעלם`);
+  const added45 = ["3", "86", "99"];
+  assert.deepEqual([...withRow].sort(), [...before, ...added, ...added45].sort());
+  for (const id of [...before, ...added]) assert.ok(withRow.includes(id), `id ${id} נעלם`);
 });

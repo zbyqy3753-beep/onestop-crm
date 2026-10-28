@@ -587,7 +587,36 @@ const ROUTER_INCLUDED_PRICE = new RegExp(
   String.raw`${ROUTER_MONEY}\s*כולל\s*(?:ה)?${ROUTER_WORD}`,
 );
 
-function routerDetail(pkg: Package): string | null {
+/**
+ * אותה הצהרה — "המחיר כולל נתב" — **בלי שהרשומה נוקבת בסכום**.
+ *
+ * ⚠️ הדפוס החוזר בקובץ הזה: שער שמכיר הצהרה בצורה אחת ומפספס את
+ * השכנה. ההערה על `ROUTER_INCLUDED_PRICE` מצהירה על הכלל במילים
+ * "הרשומה מסרה שהמחיר כולל את הנתב, ולא מסרה מה הנתב שווה בנפרד" —
+ * והנימוק הזה אינו תלוי בכך שצמוד לה מספר. שלוש רשומות חיות מצהירות
+ * בדיוק את זה בלי סכום (id 3 "המחיר כולל נתב ", ids 99 ו-86
+ * "*כולל נתב") ולא קיבלו שורה כלל.
+ *
+ * ההוכחה החדה היא ש-ids 86 ו-98 הן אותה רשומה של Partner
+ * (DIRECT FIBER, אותו boilerplate, אותה שורת "*כולל נתב", אותה
+ * מהירות): 98 נתפסה רק מפני שבמקרה היא כותבת גם "139 שח כולל נתב",
+ * ו-86 לא — ולכן טבלת ההשוואה הציגה "נתב: — ‖ כלול במחיר" על שתי
+ * רשומות שמסרו את אותה עובדה. זה בדיוק מה שההערה על
+ * `ROUTER_EXCLUDED_PRICE` מגדירה כהשוואה מטעה ("ה-`—` מכחיש עובדה
+ * שהרשומה כן מסרה"), מהצד שלא נסגר.
+ *
+ * ⚠️ ולוויין שלילי על השלילה. id 114 כותבת "199 ש״ח **לא** כולל נתב"
+ * לצד "220 שח כולל נתב", ובלי הלוויין הצורה חסרת-הסכום הייתה קוראת
+ * את ההצהרה השלילית כחיובית ומדפיסה "כלול במחיר" על רשומה שאומרת
+ * את ההפך. `ROUTER_EXCLUDED_PRICE` נבדק ממילא לפני כאן ולכן id 114
+ * אינה מגיעה לשער הזה — אבל שער שצודק משתי סיבות עדיף על אחד, וזה
+ * מה שההערה על `ROUTER_INCLUDED_PRICE` עצמה אומרת.
+ */
+const ROUTER_INCLUDED_BARE = new RegExp(
+  String.raw`(?<!(?:לא|אינו|אינה|אינם|ללא)\s{0,3})כולל(?:ת|ים)?\s*(?:ה)?${ROUTER_WORD}`,
+);
+
+export function routerDetail(pkg: Package): string | null {
   const prose = installationProse(pkg);
   const cost = prose.match(ROUTER_COST);
   // ⚠️ שתי קבוצות לוכדות — אחת לכל סדר מילים — והנתפסת היא זו שאינה
@@ -607,10 +636,19 @@ function routerDetail(pkg: Package): string | null {
     // ⚠️ ואחרי שגם השלילית לא מצאה — הצורה החיובית. ראה
     // `ROUTER_INCLUDED_PRICE`: רק כשהסכום הוא המחיר שבכותרת.
     const included = prose.match(ROUTER_INCLUDED_PRICE);
-    if (!included) return null;
-    const stated = Number(included[1].replace(/,/g, ""));
-    if (!Number.isFinite(stated) || stated <= 0) return null;
-    return stated === pkg.price ? "כלול במחיר" : null;
+    if (included) {
+      const stated = Number(included[1].replace(/,/g, ""));
+      if (!Number.isFinite(stated) || stated <= 0) return null;
+      return stated === pkg.price ? "כלול במחיר" : null;
+    }
+    /*
+     * ⚠️ ואחרונה — אותה הצהרה **בלי סכום**. ראה `ROUTER_INCLUDED_BARE`.
+     *
+     * הנפילה הזו באה רק אחרי ששלוש הצורות המדויקות שתקו, ולא במקום
+     * אחת מהן: רשומה שנקבה בסכום נמסרת דרך הענף שמעל, כולל ההכרעה
+     * שסכום שאינו המחיר שבכותרת אינו מדפיס שורה.
+     */
+    return ROUTER_INCLUDED_BARE.test(prose) ? "כלול במחיר" : null;
   }
   const amount = Number(raw.replace(/,/g, ""));
   if (!Number.isFinite(amount)) return null;

@@ -66,5 +66,14 @@ test("סבב 43: lp-tray-open מנוהל במונה ולא בדגל", () => {
 test("סבב 43: ההסתייגות על קו הטלפון קוראת גם את הצהרת התוספת", () => {
   const calc = src("ui/SavingsCalculator.tsx");
   assert.match(calc, /phoneLineCostsExtra,/);
-  assert.match(calc, /hasPhone !== true \|\|[\s\S]{0,120}?phoneLineCostsExtra\(saving\.pick\)/);
+  /*
+   * ⚠️ הניסוח השתנה בסבב 45, הדרישה לא. שתי הזרועות שהמבחן הזה
+   * קיבע (`hasPhone !== true` **או** `phoneLineCostsExtra`) חיו
+   * בתוך ה-JSX — ובמשטח השני, ההערה לנציג, היה תנאי **צר** מהן.
+   * לכן הן חולצו לנגזרת אחת שגם המסך וגם ההערה קוראים, וזו הצורה
+   * שמקובעת כאן: אותן שתי זרועות, במקום אחד.
+   */
+  assert.match(calc, /const phoneMissing =[\s\S]{0,120}?hasPhone !== true/);
+  assert.match(calc, /const phoneExtra =[\s\S]{0,80}?phoneLineCostsExtra\(saving\.pick\)/);
+  assert.match(calc, /const phoneDisclosure =[\s\S]{0,120}?phoneMissing \|\| phoneExtra/);
 });
