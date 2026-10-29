@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Card } from "./Card";
 import { PackageCard } from "./PackageCard";
 import { CompareTray, MAX_COMPARE } from "./CompareTray";
@@ -321,6 +321,42 @@ function typeKey(p: Package): string {
 }
 
 /* אותו דבר לשבבי הסוג: סוג מסומן נשאר ברשימה כדי שאפשר לבטל אותו. */
+/**
+ * האם לסקשן הזה יש בכלל **פקד** סינון אחד.
+ *
+ * ⚠️ שלושת הבלוקים בתוך `div#lp-filters` מגודרים כל אחד בנפרד, אבל
+ * הכרטיס שעוטף אותם, כפתור "סינון" עם `aria-expanded`/`aria-controls`,
+ * כותרת הדסקטופ וכפתור "נקה הכל" לא היו מגודרים בכלום — ולכן כשכל
+ * שלושת התנאים כבויים נפרסה קבוצת פקדים שאין בתוכה פקד אחד.
+ *
+ * זה מצב ההרצה ב-`/lp/provider/bezeq-energy`, שהוא עמוד סטטי אמיתי
+ * (`generateStaticParams` נגזר מ-`providers(basePackages())`): שלוש
+ * רשומות חשמל של אותו ספק, כלומר ספק אחד (`providerFacets.length === 1`),
+ * סוג אחד (`typeFacets` = `[["חשמל", 3]]`) ו-`priceBoundsOf === null`.
+ * על המסך נשארו "סינון" ו-"נקה הכל" מעל `div` ריק; בנייד כפתור
+ * בר-מיקוד שמכריז `aria-expanded` ופותח וסוגר כלום, ולקורא מסך
+ * "לחצן, סינון, מכיל את lp-filters" ואחריו שתיקה.
+ *
+ * ⚠️ זו בדיוק המחלקה שההערה על ה-fieldset מצהירה שתוקנה — "תווית
+ * שמבטיחה מסנן שאינו קיים, ולקורא מסך 'קבוצה, חברה' ואחריה כלום" —
+ * רק שהשער הוחל על ה-fieldsets ולא על המכולה שמעליהם. התנאים כאן הם
+ * **אותם** שלושה תנאים, ממקום אחד, כדי שלא יתיישנו בנפרד.
+ *
+ * `hot-energy`, החשמלי השני, נושא `typeFacets` באורך 2 ולכן ניצל;
+ * `bezeq-energy` הוא המקרה היחיד בנתוני הקטלוג של היום.
+ */
+export function hasAnyFilterControl(packages: Package[], f: CatalogFilters): boolean {
+  const isElectric = packages[0]?.category === "electricity";
+  const bounds = priceBoundsOf(packages);
+  return (
+    providerFacets(packages, f).length > 1 ||
+    f.providers.length > 0 ||
+    typeFacets(packages, f).length > 1 ||
+    f.types.length > 0 ||
+    (bounds != null && !isElectric)
+  );
+}
+
 export function typeFacets(packages: Package[], f: CatalogFilters): [string, number][] {
   const map = new Map<string, number>();
   for (const p of packages) {
@@ -440,6 +476,25 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
   const activeFilters =
     selectedProviders.length + selectedTypes.length + (maxPrice != null ? 1 : 0);
   const hasFilters = activeFilters > 0;
+  /*
+   * ⚠️ `useId` ולא המחרוזת `"lp-filters"`. `provider/[slug]/page.tsx`
+   * מרנדר `CatalogBrowser` אחד **לכל קטגוריה** בתוך `sections.map`,
+   * ולכן ב-`/lp/provider/cellcom` (sections=3) היו שלושה
+   * `<div id="lp-filters">` ושלושה כפתורי "סינון" שכולם מצביעים
+   * `aria-controls={panelId}`. מימוש `aria-controls` לוקח את
+   * הראשון: כפתור הסינון של סקשן החשמל הכריז שהוא מפעיל את הפאנל של
+   * סקשן הסלולר, וה-`aria-expanded` שלו התייחס לפאנל אחר מזה שנפתח
+   * ויזואלית. `compareCheckboxId` כבר נגזר מה-`id` של החבילה; הפאנל
+   * הוא הפקד שנשאר עם מחרוזת כתובה.
+   */
+  const panelId = useId();
+  /*
+   * ⚠️ הכרטיס כולו יורד כשאין בו אף פקד. ראה `hasAnyFilterControl`.
+   */
+  const showFilterCard = useMemo(
+    () => hasAnyFilterControl(packages, filters),
+    [packages, filters],
+  );
 
   /*
    * ⚠️ המונה שעל כל אפשרות נאמר בשם הנגיש במפורש, ולא נשאר כ-`<span>`
@@ -459,6 +514,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
   return (
     <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
       <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+        {showFilterCard && (
         <Card className="p-4">
           <div className="flex items-center justify-between gap-2 lg:mb-3">
             {/*
@@ -554,7 +610,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
             </button>
           </div>
 
-          <div id="lp-filters" className={filtersOpen ? "mt-3" : "max-lg:hidden"}>
+          <div id={panelId} className={filtersOpen ? "mt-3" : "max-lg:hidden"}>
             {/*
               ⚠️ המונים, קצות המחוון ו-"מתוך N" הם `lp-ink-2` ולא
               `lp-ink-3`: 11px/12px בצבע ההוא הם 3.27-3.49:1, מתחת
@@ -697,6 +753,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
             )}
           </div>
         </Card>
+        )}
       </aside>
 
       {/*
