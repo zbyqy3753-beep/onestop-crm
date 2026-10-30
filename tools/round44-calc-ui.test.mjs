@@ -89,7 +89,17 @@ test("calc: ההערה לנציג נושאת את ההסתייגות על קו �
   assert.match(calcSrc, /הנציג יתמחר אותו בנפרד/);
   assert.match(calcSrc, /const phoneDisclosure =/);
   // ההערה לנציג נתלית בנגזרת המשותפת, לא בתנאי צר משלה.
-  assert.match(calcSrc, /phoneDisclosure\s*\n?\s*\? phoneExtra/);
+  /*
+   * ⚠️ סבב 47 הפך את סדר הענפים ל-`phoneMissing` תהילה, והקיבוע כאן
+   * עבר אתו. שני התנאים אינם מוציאים זה את זה (`phoneMissing` הוא
+   * `hasPhone !== true`), ורשומה שנושאת גם `hasPhone: false` וגם
+   * הצהרת תוספת קיבלה את הנוסח שאומר שהקו **כלול** — הכחשה
+   * של מה שהרשומה מסרה. **שום נוסח חי לא זז:** שתי רשומות
+   * בריכת הבית נופלות לאותו ענף כמו קודם (157: `missing=false`
+   * → ענף התוספת; 3: `missing=true` → ענף ההיעדר), וזה
+   * מקובע בבדיקת סבב 47.
+   */
+  assert.match(calcSrc, /phoneDisclosure\s*\n?\s*\? phoneMissing/);
   assert.match(calcSrc, /קו טלפון בתוספת לפי הרשומה; לתמחר בנפרד/);
   assert.match(calcSrc, /אינה כוללת קו טלפון; לתמחר בנפרד/);
 });

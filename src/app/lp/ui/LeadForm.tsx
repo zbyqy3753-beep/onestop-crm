@@ -412,7 +412,16 @@ export function LeadForm({
         <input
           type="hidden"
           name="packageName"
-          value={title ? `${title} · ${provider}` : provider}
+          /*
+            ⚠️ שני האופרנדים מגודרים, ולא ה-`title` לבדו. `providerName`
+            נופל ל-`providerSlug` ומשם למחרוזת ריקה, והקטלוג נכנס דרך
+            `as unknown as Catalog` בלי ולידציה — כלומר `provider` ריק
+            הוא מצב אפשרי, ואז הצורה הזו כתבה `"<שם> · "` לתוך עמודה
+            ייעודית ב-CRM: מפריד תלוי בלי מה שאחריו. המחשבון כבר מגדר
+            את שני הצדדים (`[pickTitle, pickProvider].filter(Boolean)`),
+            וזה המשטח השני שקורא את אותם שני שדות.
+          */
+          value={[title, provider].filter(Boolean).join(" · ")}
         />
       ) : packageName ? (
         <input type="hidden" name="packageName" value={packageName} />

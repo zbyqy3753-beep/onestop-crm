@@ -547,7 +547,7 @@ const ROUTER_EQUIP = String.raw`(?:נתב|ראווטר|ראוטר)`;
 const ROUTER_PRICED_SEPARATELY = new RegExp(
   [
     `הטבה על ה${ROUTER_EQUIP}`,
-    `${ROUTER_EQUIP}[^.•]{0,25}?בתוספת`,
+    `${ROUTER_EQUIP}[^.•]{0,25}?ב?תוספת`,
     /*
      * ⚠️ `<ציוד> בעלות <מספר>` — הצורה שחיה ב-id 124, והאסימטריה
      * שנשארה פתוחה אחרי שתוקנה בדיוק אותה אסימטריה עבור `בתוספת`.

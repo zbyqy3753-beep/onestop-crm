@@ -692,7 +692,21 @@ function AfterPromoCell({ pkg }: { pkg: Package }) {
    * הטון על שלושת הענפים אמר בצבע מה שהטיפוס אוסר לומר במילים.
    */
   return (
-    <Cell tone={rise?.kind === "amount" ? "rise" : undefined}>
+    <Cell
+      /*
+       * ⚠️ ול-`note` שמצהיר על עלייה. הנימוק שמעל נכון ל-`period`
+       * (שאינו אומר דבר על כיוון) ולתשע מ-11 רשומות ה-`note` שבהן
+       * המחיר שבכרטיס הוא כבר מחיר הקבע — אבל לא לשתיים שבהן הפרוזה
+       * כן מצהירה על עלייה (ids 42, 61). `promoNoteRises` הוא השער
+       * שמבדיל ביניהן, והוא זה שבוחר כאן את הטון: בשורה שכל תפקידה
+       * הוא "למי מאלה המחיר עולה", id 42 הייתה העמודה הנקייה.
+       */
+      tone={
+        rise?.kind === "amount" || (rise?.kind === "note" && promoNoteRises(pkg, rise.note))
+          ? "rise"
+          : undefined
+      }
+    >
       {rise
         ? rise.kind === "amount"
           ? shekels(rise.amount)

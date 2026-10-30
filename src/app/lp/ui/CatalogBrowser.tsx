@@ -544,7 +544,16 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
               type="button"
               onClick={() => setFiltersOpen((v) => !v)}
               aria-expanded={filtersOpen}
-              aria-controls="lp-filters"
+              /*
+                ⚠️ `panelId` ולא המחרוזת `"lp-filters"`. ההערה על
+                `useId` שמעל מתעדת בדיוק את התקלה הזו — שלושה כפתורי
+                "סינון" בעמוד ספק שכולם מצביעים על אותו `id` — אבל
+                `useId` הוחל על ה-`<div>` לבדו, והמחרוזת נשארה כאן.
+                אין באפליקציה שום אלמנט עם `id="lp-filters"`, כלומר
+                זה ייחוס תלוי שאינו נפתר: קורא-מסך שומע "מכיל את
+                lp-filters" ואין קישור בין הכפתור לפאנל שהוא פותח.
+              */
+              aria-controls={panelId}
               className="-my-2 flex min-h-11 items-center gap-2 py-2 text-sm font-semibold text-lp-ink lg:hidden"
             >
               סינון

@@ -12,6 +12,7 @@ import {
   headlineValue,
   priceNote,
   promoNoteLabel,
+  promoNoteRises,
   promoNoteText,
   promoRise,
   PROMO_PERIOD_TEXT,
@@ -344,8 +345,30 @@ export function PackageCard({
            * מנוסח משלו — שתי אמירות על אותו מספר — ולכן השער והנוסח
            * יושבים ב-`promoNoteText`, מקום אחד לשני המשטחים.
            */}
+          {/*
+           * ⚠️ והטון נקרא מ-`promoNoteRises` ולא מ-`rise.kind` לבדו.
+           * ההערה שמעל מנמקת את הנייטרליות בכך שעל שמונה מ-11 הרשומות
+           * הנוסח פותח במחיר **המבצע** — נימוק שנכון לשמונה ולא לשתיים
+           * הנותרות: ids 42 ("אחרי שנתיים 69.9" מעל ₪39.9) ו-61
+           * ("מחיר לאחר פקיעה 44.9" מעל ₪29.9) מצהירות על עלייה
+           * מפורשת, ובדיוק בשבילן נכתב שער הכיוון `promoNoteRises` —
+           * שעד כאן נקרא רק כדי לבחור את ה**תווית**, לא את הצבע.
+           *
+           * התוצאה הייתה id 42 ו-id 87 זו לצד זו באותה רשת: אותו ₪39.9
+           * היום, אותו ₪69.9 אחרי — האחת בקופסה אדומה כי המספר הגיע
+           * לשדה, השנייה בקופסה האפורה של הסתייגויות המבצע כי אותה
+           * הצהרה נמסרה בפרוזה. גולש שלמד "אדום = המחיר עולה" קרא את
+           * ההכפלה של 42 כהערת שוליים. הצבע קורא עכשיו את אותו שער
+           * שהתווית קוראת, ושמונה הרשומות שאינן עולות נשארות אפורות.
+           */}
           {rise?.kind === "note" && (
-            <p className="crm-text mt-2 rounded-lg bg-lp-surface-2 px-3 py-2 text-xs text-lp-ink-2">
+            <p
+              className={`crm-text mt-2 rounded-lg px-3 py-2 text-xs ${
+                promoNoteRises(pkg, rise.note)
+                  ? "bg-lp-rise-soft text-lp-rise"
+                  : "bg-lp-surface-2 text-lp-ink-2"
+              }`}
+            >
               <span className="font-semibold">{promoNoteLabel(pkg, rise.note)}</span>{" "}
               {promoNoteText(pkg, rise.note)}
             </p>
