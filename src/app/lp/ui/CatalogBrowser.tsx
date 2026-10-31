@@ -719,10 +719,25 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
 
             {priceBounds && !isElectric && (
               <fieldset>
+                {/*
+                  ⚠️ `highest` ולא `max` — אותו נימוק שהתוויות שמתחת
+                  למחוון כבר נושאות ("התווית חייבת מחיר שחבילה אחת
+                  באמת נושאת"), בשתי התצוגות שלא קיבלו אותו: הכותרת
+                  הזו ו-`aria-valuetext`. `max` הוא הקצה ה**מעוגל** של
+                  הפקד, והנימוק שלו נכון כמות שהוא — אבל כשהמחוון יושב
+                  בקצהו הוא הודפס כהצהרה על מחיר שאף חבילה אינה נושאת:
+                  ב-`/lp/provider/cellcom` הכותרת אמרה "מחיר עד ₪120"
+                  בזמן שתווית הקצה 30 פיקסלים מתחתיה אומרת ₪119.9, ואין
+                  לסלקום חבילה סלולרית ב-₪120. אותה סתירה בארבעה עמודי
+                  ספק (cellcom סלולר ובית, partner, hot-mobile); שלוש
+                  הלשוניות הראשיות הסתירו אותה כי הקצה שלהן שלם במקרה.
+                  ברגע שהגולש מזיז את המחוון `maxPrice` הוא מספר שלם
+                  בטווח והוא הנכון להדפסה, ולכן הנפילה היא רק בקצה.
+                */}
                 <legend className="mb-2 text-xs font-medium text-lp-ink-2">
                   מחיר עד{" "}
                   <span className="nums font-semibold text-lp-ink">
-                    {shekels(maxPrice ?? priceBounds.max)}
+                    {shekels(maxPrice ?? priceBounds.highest)}
                   </span>
                 </legend>
                 <input
@@ -747,7 +762,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                     הוא השדה היחיד שמחליף את ההכרזה המספרית, והוא נגזר
                     מאותו `shekels` כדי שהנאמר והנראה לא ייפרדו.
                   */
-                  aria-valuetext={shekels(maxPrice ?? priceBounds.max)}
+                  aria-valuetext={shekels(maxPrice ?? priceBounds.highest)}
                 />
                 <div className="nums mt-1 flex justify-between text-lp-2xs text-lp-ink-2">
                   {/*
