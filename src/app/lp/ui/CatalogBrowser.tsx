@@ -412,6 +412,46 @@ export function catalogResults(
   );
 }
 
+/**
+ * האם הנתון שהתווית מבטיחה קיים **ברשימה הזו**.
+ *
+ * ⚠️ שני השערים האלה היו `category === "electricity"`, בזמן שהנימוק
+ * שכתוב עליהם הוא נימוק **נתונים**: "אין נתון שהתווית מבטיחה", "אפס
+ * מ-18 … נושאים `recommended: true`". התנאי מתקיים גם מחוץ לחשמל,
+ * והשער לא ראה אותו: `/lp/provider/partner` (סלולר ובית),
+ * `/lp/provider/wecom` (סלולר) ו-`/lp/provider/sting-tv` (בית) הם
+ * ארבעה עמודים סטטיים שאין בהם **אף** רשומה עם `recommended: true`,
+ * ולכן הקומפרטור נפל כולו ל-`byPrice` — כלומר הם נפתחו תחת "מומלצים
+ * תחילה" והגישו את סדר המחיר, בלי תג "מומלץ" על אף כרטיס מתחת. על
+ * `wecom` זה היה חמור מזה: כל שש הרשומות שם חסרות הצהרת עלייה, ולכן
+ * `after-asc` נפל ל-`price` גם הוא — תפריט בן ארבע תוויות ששתיים
+ * מהן כפילות של השלישית.
+ *
+ * מהנתון ולא מהקטגוריה, ולכן החשמל נשאר מגודר כשהיה (אפס `recommended`
+ * ואפס הצהרות עלייה ב-18 מסלוליו) בלי לקרוא את שמו.
+ */
+export function sortsFor(packages: Package[]): typeof SORTS {
+  const hasRecommended = packages.some((p) => isRecommended(p));
+  /*
+   * ⚠️ `promoRise` ולא `afterPriceIsKnown`: זו הפונקציה שמחליטה אם
+   * **הכרטיס מדפיס** משהו על המחיר אחרי ההטבה, כלומר אם קיים הנתון
+   * שהתווית מבטיחה. `afterPriceIsKnown` נופלת ל-`price` כשאין
+   * הצהרה, ולכן היא `true` גם על 18 מסלולי החשמל — ואיתה הציר היה
+   * **חוזר** לתפריט החשמל שהשער הקודם הוציא אותו ממנו.
+   */
+  const hasRise = packages.some((p) => promoRise(p) !== null);
+  return SORTS.filter(
+    (s) =>
+      !(s.key === "recommended" && !hasRecommended) &&
+      !(s.key === "after-asc" && !hasRise),
+  );
+}
+
+/** ברירת המחדל היא האפשרות הראשונה שהתפריט באמת מציע. */
+export function defaultSortFor(packages: Package[]): SortKey {
+  return sortsFor(packages)[0]?.key ?? "price-asc";
+}
+
 export function CatalogBrowser({ packages, category }: { packages: Package[]; category: string }) {
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
@@ -430,9 +470,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
    * (142,135,139,151,148,140,138,152,141,150,147,137,136,149,146,145,
    * 134,143). מה שמשתנה הוא מה שכתוב על המיון, לא מה שמוצג תחתיו.
    */
-  const [sort, setSort] = useState<SortKey>(
-    category === "electricity" ? "price-asc" : "recommended",
-  );
+  const [sort, setSort] = useState<SortKey>(() => defaultSortFor(packages));
   const [compare, setCompare] = useState<Package[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -830,9 +868,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                 מסייגים את ההנחה לרכיב אחד בחשבון (ids 142, 135).
                 ברירת המחדל של הלשונית עוברת יחד איתה — ראה `useState`.
               */}
-              {SORTS.filter(
-                (s) => !(isElectric && (s.key === "after-asc" || s.key === "recommended")),
-              ).map((s) => (
+              {sortsFor(packages).map((s) => (
                 <option key={s.key} value={s.key}>
                   {isElectric ? (s.electricLabel ?? s.label) : s.label}
                 </option>

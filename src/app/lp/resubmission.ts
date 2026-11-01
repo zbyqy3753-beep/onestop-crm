@@ -1,13 +1,24 @@
 import { PROVIDER_CONFIG, type ProviderKey } from "@/lib/domain/types";
+import { LANDING_CATEGORIES } from "./config";
+import type { LeadCategoryKey } from "@/lib/domain/types";
 
 /**
  * השדות שפנייה חוזרת של אותו אדם נושאת איתה.
+ *
+ * ⚠️ `category` הוא החמישי, ולא נשא איתו עקבה. ארבעה מחמשת השדות
+ * שהטופס מאמת הגיעו לכאן, והיחיד שנשאר בחוץ הוא דווקא **מפתח הסינון
+ * של הנציג** — אותו משטח שסבב 47 גידר עבור `packageName`. מבקר
+ * שהשאיר פרטים על כרטיס סלולר ואז מילא את המחשבון במסלול הבית קיבל
+ * "קיבלנו!", ועמודת הקטגוריה נשארה "סלולר" בזמן שהבקשה הנוכחית שלו
+ * היא "אינטרנט וטלוויזיה". זו בדיוק ההבטחה שהמחשבון מדפיס במלים
+ * ("שליחה נוספת תעדכן את אותה פנייה").
  */
 export interface Resubmission {
   message: string;
   packageName: string;
   name: string;
   currentProvider: ProviderKey | undefined;
+  category: LeadCategoryKey | undefined;
 }
 
 /** הליד הקיים, במידה שהכרעה הזו צריכה. */
@@ -15,6 +26,7 @@ export interface ExistingLead {
   name: string;
   packageName?: string | null;
   currentProvider?: ProviderKey | null;
+  category?: LeadCategoryKey | null;
   notes: { body: string }[];
 }
 
@@ -49,6 +61,16 @@ export function resubmissionNotes(input: Resubmission, lead: ExistingLead): stri
   }
   if (input.currentProvider && input.currentProvider !== lead.currentProvider) {
     fresh(`הספק שנמסר בפנייה החוזרת: ${PROVIDER_CONFIG[input.currentProvider].label}`);
+  }
+  /*
+   * ⚠️ והתווית מ-`LANDING_CATEGORIES`, הרשימה שהטופס עצמו מציג —
+   * ולא `LEAD_CATEGORY_CONFIG` הגדולה ממנה. `parseCategory` מצמצם
+   * את הקלט לחמשת המפתחות האלה, ולכן זו הרשימה שתמיד תחזיק תווית;
+   * מפתח שאינו בה נשאר בלי שורה במקום להדפיס `undefined`.
+   */
+  if (input.category && input.category !== lead.category) {
+    const label = LANDING_CATEGORIES.find((c) => c.key === input.category)?.label;
+    if (label) fresh(`מה שמעניין אותו בפנייה החוזרת: ${label}`);
   }
   return notes;
 }

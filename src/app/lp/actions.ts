@@ -320,7 +320,7 @@ export async function submitLandingLead(
        * את הנימוק לכל אחד מארבעת השדות ולבחירה בהערה על דריסה.
        */
       const notes = resubmissionNotes(
-        { message, packageName, name, currentProvider },
+        { message, packageName, name, currentProvider, category },
         duplicate,
       );
       if (notes.length > 0) {
