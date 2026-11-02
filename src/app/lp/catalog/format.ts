@@ -183,6 +183,51 @@ function proseCapsAt(pkg: Package, value: number, kind: CapKind): boolean {
   return false;
 }
 
+/**
+ * האם הרשומה מוכרת את דקות חו״ל כ**תוסף בתשלום** ולא כתכולת החבילה.
+ *
+ * ⚠️ חצי התנאי שנשאר בלי שער. ההערה על אריח דקות חו״ל ב-`cardStats`
+ * מצטטת את המשפט של id 110 **כולל** המילה `(אופציונלי)` — ותיקנה
+ * ממנו רק את חצי ה-"עד". אותו משפט אחד נושא שתי הסתייגויות: ש-100
+ * הדקות הן תקרה (`עד`), ושהן תוסף אופציונלי בתוספת ₪5.90 לחודש.
+ * הראשונה הודפסה, השנייה נעלמה.
+ *
+ * שבע רשומות חיות מצהירות על זה: ids 110 (`בתוספת עלות של 5.90`),
+ * 42, 54 (`8.9 ש"ח`), 64, 65, 66 (`9.90`) ו-69 (`מותנה בשימוש
+ * בקידומת 017 … בתוספת עלות של 9.90 ₪`). `compareRows([110, 28])`
+ * החזיר שורה אחת — `דקות לחו״ל | "עד 100" ‖ "100"` — ששתי העובדות
+ * בה נראות זהות, בזמן שב-id 28 (₪34) הדקות באמת כלולות וב-id 110
+ * (₪35) הן תוסף של ₪5.90 לחודש. זו בדיוק אמת-המידה שההערה על
+ * `ROUTER_EXCLUDED_PRICE` מגדירה כ"השוואה מטעה".
+ *
+ * ⚠️ `אופציונלי` ו-`מותנה בשימוש` בלבד, ולא `בתוספת עלות` לבדה:
+ * השנייה חיה בקטלוג גם על נתב ועל דמי שימוש לקו, ובחלון של 140 תווים
+ * היא הייתה נתלית בדקות שאינן שלה. שני הנוסחים האלה נאמרים **על**
+ * הדקות, ולכן גם נדרש שהחלון נוקב בחו״ל — אותו מבנה חלון בדיוק
+ * ש-`proseCapsAt` קורא בו את מגדיר היחידה.
+ */
+function intlMinutesAreOptional(pkg: Package, value: number): boolean {
+  const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
+  for (const m of prose.matchAll(/(\d[\d,]*)\s*(?=([\s\S]{0,140}))/g)) {
+    if (Number(String(m[1]).replace(/,/g, "")) !== value) continue;
+    const window = m[2] ?? "";
+    if (!/חו["״']?\s*ל/.test(window)) continue;
+    if (/אופציונלי|מותנה בשימוש/.test(window)) return true;
+  }
+  return false;
+}
+
+/**
+ * הסיומת שמסייגת את דקות חו״ל — `" · בתוספת תשלום"` או מחרוזת ריקה.
+ *
+ * ⚠️ נגזרת אחת לשני המשטחים. חמש הערות בקובץ הזה מתארות שער שנוסף
+ * לכרטיס ולא לטבלה; כאן השורה היא זו שמדפיסה, והאריח הוא הרדום
+ * (`out.length < 3` אינו מתקיים באף אחת משבע הרשומות) — ולכן שניהם
+ * קוראים את אותה פונקציה מעצם הבנייה.
+ */
+const intlExtra = (pkg: Package, value: number) =>
+  intlMinutesAreOptional(pkg, value) ? " · בתוספת תשלום" : "";
+
 /** `"עד "` כשהרשומה מצהירה על המספר הזה כתקרה, אחרת מחרוזת ריקה. */
 const upTo = (pkg: Package, kind: CapKind, ...values: (number | null | undefined)[]) =>
   values.some((v) => typeof v === "number" && proseCapsAt(pkg, v, kind)) ? "עד " : "";
@@ -245,6 +290,52 @@ export const specOf = <T>(pkg: Package): T =>
  * וקורא שני (`src/lib/posts/catalog.ts`, סטודיו הפוסטים) מעביר לה את
  * `p.spec` כמות שהוא. שם הנפילה הייתה מפילה את רינדור הסטודיו.
  */
+/**
+ * האם הנפח שהרשומה מסרה הוא **לכל הקווים יחד** ולא לקו.
+ *
+ * ⚠️ מגדיר ה**יחידה** נשמט בזמן שמגדיר ה**תקרה** שיושב באותו משפט
+ * עצמו הודפס. id 27 (`3 קווים ב99`, ₪99, `dataGb: 1500`) אומרת
+ * "3000 דקות שיחה לקו, עד 3000 SMS לקו ועד 1500GB גלישה לשלושת
+ * הקווים יחד" — שלוש יחידות שונות במשפט אחד: דקות **לקו**, SMS
+ * **לקו**, נפח **לשלושת הקווים יחד** (כלומר 500GB לקו). `proseCapsAt`
+ * תפס את ה-`עד` והאריח הדפיס "עד 1,500GB"; `לשלושת הקווים יחד`
+ * נעלם.
+ *
+ * `compareRows([27, 37])` החזיר `גלישה בישראל | "עד 1,500GB" ‖
+ * "1,500GB"`, בזמן שב-id 37 (`סלקום 5G PRO`, ₪59.9) אותם 1500GB הם
+ * **לכל קו** ("חבילת גלישה בנפח 1500GB לכל קו במחזור חיוב"). הגולש
+ * קרא שתי חבילות עם אותו נפח כששליש ממנו מגיע לקו באחת מהן.
+ * `priceNote` כבר מסייגת את ה**מחיר** של id 27 ("המחיר מותנה בכמות
+ * המנויים") — כלומר השער לקריאת הכמות מהפרוזה קיים בקובץ, והנפח
+ * נשאר מחוץ לו.
+ *
+ * ⚠️ נדרש שהחלון נוקב ב-`גלישה`, כי המשפט נושא גם דקות וגם SMS
+ * ושתיהן **לקו**: בלי זה המגדיר היה נתלה בשדה הלא נכון.
+ *
+ * ⚠️ והמגדיר מוצמד ב-`cardStats` ולא ב-`dataLabel` עצמה. `dataLabel`
+ * מוזנת גם לסטודיו הפוסטים (`src/lib/posts/catalog.ts`), ושם
+ * `renderSlide` מצייר את הערך ב-`fillText` יחיד בגופן 42 bold בלי
+ * `wrap` ובלי קיצור — אינווריאנט של 22 תווים ש-`round34-format`
+ * אוכף. `"עד 1,500GB · לכל הקווים יחד"` הוא 27 תווים, כלומר נוסח
+ * שהיה נדרס על התווית ויוצא מהכרטיס בשקף. הפונקציה נשארת לכן
+ * המספר החשוף, ושני המשטחים של `/lp` (האריח וטבלת ההשוואה, שנבנית
+ * מה-`caption` שלו) מוסיפים את ההסתייגות.
+ *
+ * ⚠️ ולא דרך ה-`caption`: `compareRows` מיישר שורות **לפי שם**, ולכן
+ * תווית אחרת ל-id 27 הייתה מייצרת בדיוק את הכשל שמתועד שם — שתי
+ * שורות סותרות זו לצד זו, "—" באחת והנתון בשנייה, לאותה חבילה.
+ */
+function dataSharedAcrossLines(pkg: Package, value: number): boolean {
+  const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
+  for (const m of prose.matchAll(/(\d[\d,]*)\s*(?=([\s\S]{0,60}))/g)) {
+    if (Number(String(m[1]).replace(/,/g, "")) !== value) continue;
+    const window = m[2] ?? "";
+    if (!/גלישה/.test(window)) continue;
+    if (/(?:הקווים|המנויים|הקווים)\s*(?:יחד|במשותף)|יחד\s*לכל הקווים/.test(window)) return true;
+  }
+  return false;
+}
+
 export function dataLabel(pkg: Package, spec: CellularSpec | null | undefined): string | null {
   if (!spec) return null;
   if (spec.unlimitedData) return "גלישה חופשית";
@@ -1255,7 +1346,11 @@ export function cardStats(pkg: Package): Stat[] {
    * `isListable`. אין היום אף `0` באף אחד מהשדות האלה — זה שער לרענון.
    */
     const data = dataLabel(pkg, spec);
-    if (data) out.push({ value: data, caption: "גלישה בישראל" });
+    if (data)
+      out.push({
+        value: `${data}${isCount(spec.dataGb) && dataSharedAcrossLines(pkg, spec.dataGb) ? " · לכל הקווים יחד" : ""}`,
+        caption: "גלישה בישראל",
+      });
     // ⚠️ אותו שער "עד" גם על דקות ו-SMS: ids 26, 27 ו-69 מבטיחים
     // "עד 5,000 דקות" בפרוזה, והאריח הדפיס 5,000 כעובדה.
     // ⚠️ `isCount` ולא `typeof === "number"`: `NaN` **הוא** number, ולכן
@@ -1269,7 +1364,7 @@ export function cardStats(pkg: Package): Stat[] {
     // והאריח הדפיס "100" כעובדה, וכך גם ids 42, 54, 64, 65, 66 ו-69.
     if (out.length < 3 && isCount(spec.intlMinutes)) {
       out.push({
-        value: `${upTo(pkg, "minutes", spec.intlMinutes)}${nf.format(spec.intlMinutes)}`,
+        value: `${upTo(pkg, "minutes", spec.intlMinutes)}${nf.format(spec.intlMinutes)}${intlExtra(pkg, spec.intlMinutes)}`,
         caption: INTL_MINUTES_CAPTION(spec.intlMinutes),
       });
     }
@@ -1348,7 +1443,21 @@ export function cardStats(pkg: Package): Stat[] {
 
   const spec = specOf<ElectricitySpec>(pkg);
   const out: Stat[] = [];
-  if (spec.allHours) out.push({ value: "כל השעות", caption: "מתי ההנחה חלה" });
+  /*
+   * ⚠️ `allHours === true` ולא טרות'יני. זו האחות ש-`electricityRank`
+   * מצביע עליה במפורש ("`allHours !== true` ולא `!p.spec.allHours`:
+   * `"false"` כמחרוזת … הוא **אמת** ב-JS"), ושלא קיבלה את אותו שער.
+   * שתי הקוראות של אותו שדה אמרו עליו שני דברים סותרים: על רשומה
+   * בתצורת id 150 (`חוסכים בלילה 20%`, `hoursText: "23:00 עד 7:00"`)
+   * עם `allHours: "false"`, הכרטיס הכריז "ההנחה חלה כל השעות" בזמן
+   * ש-`electricityRank` המשיך לקנוס אותה כמסלול חלקי-שעות — ובנוסף
+   * המחרוזת שהרשומה **כן** מסרה נעלמה משני המשטחים, כי `hoursTiled`
+   * חוסם את שורת הפירוט כשהאריח נדלק.
+   *
+   * רדום בקטלוג של היום (כל 19 רשומות החשמל נושאות בוליאנים
+   * אמיתיים) — שער לרענון הבא, בדיוק כמו התאום שלו.
+   */
+  if (spec.allHours === true) out.push({ value: "כל השעות", caption: "מתי ההנחה חלה" });
   /*
    * ⚠️ `typeof === "string"` ולא טרות'יניס. זה השדה היחיד בקטלוג שמודפס
    * **כמות שהוא**, בלי `nf.format` ובלי `shekels` שידרדרו ערך פגום — ולכן
@@ -1413,7 +1522,7 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     if (isCount(s.intlMinutes) && !tiled.has(INTL_MINUTES_CAPTION(s.intlMinutes))) {
       rows.push({
         label: INTL_MINUTES_CAPTION(s.intlMinutes),
-        value: `${upTo(pkg, "minutes", s.intlMinutes)}${nf.format(s.intlMinutes)}`,
+        value: `${upTo(pkg, "minutes", s.intlMinutes)}${nf.format(s.intlMinutes)}${intlExtra(pkg, s.intlMinutes)}`,
       });
     }
     fee("עלות SIM", s.simCost);

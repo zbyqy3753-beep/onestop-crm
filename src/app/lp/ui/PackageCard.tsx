@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card } from "./Card";
 import { ProviderLogo } from "./ProviderLogo";
 import { LeadForm } from "./LeadForm";
-import { compareCheckboxId, MAX_COMPARE } from "./CompareTray";
+import { compareCheckboxId, compareLabel, MAX_COMPARE } from "./CompareTray";
 import {
   cardStats,
   detailRows,
@@ -21,7 +21,6 @@ import {
 import {
   freeText,
   isRecommended,
-  packageLabel,
   packageTitle,
   providerLogo,
   providerName,
@@ -54,6 +53,24 @@ interface Props {
    * מסדר ה-Tab — שני המספרים חייבים לבוא מאותו מקור.
    */
   compareMax?: number;
+  /**
+   * הרשומות שמרונדרות לצד הזו — הציר שהשם הנגיש של תיבת ההשוואה
+   * נבדל בו.
+   *
+   * ⚠️ `compareLabel` הוחלה על השבב במגש, על ה-✕ ועל כותרת העמודה,
+   * ולא על הפקד שבו הבחירה **נעשית**. ארבעה זוגות בקטלוג מחזירים
+   * `packageLabel` זהה באותה קטגוריה — ids 51/50 (`Valentine's`,
+   * שניהם ₪60), 29/28 (`4 ב 130`), 24/23 (`כשר`) ו-150/147
+   * (`חוסכים בלילה 20%`, שני ספקים שונים) — ולכן שתי תיבות ההשוואה
+   * הכריזו מילה במילה את אותו שם ("הוסף את Valentine's להשוואה"),
+   * בזמן שהמגש שמתחתיהן כבר מכנה אותן `· גרסה 2` ו-`· ₪60`. גולש
+   * קורא-מסך לא יכול היה לבחור ביניהן.
+   *
+   * בלי הרשימה הזו הפונקציה מחזירה בדיוק את מה ש-`packageLabel`
+   * החזירה (`packageTitle(pkg) || providerName(pkg)`), ולכן עמודי
+   * הפירוט שמרנדרים כרטיס בודד אינם זזים.
+   */
+  siblings?: Package[];
 }
 
 export function PackageCard({
@@ -63,6 +80,7 @@ export function PackageCard({
   onCompareToggle,
   defaultOpen = false,
   compareMax = MAX_COMPARE,
+  siblings,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const [formOpen, setFormOpen] = useState(false);
@@ -156,7 +174,7 @@ export function PackageCard({
    */
   const provider = providerName(pkg);
   const title = packageTitle(pkg);
-  const label = packageLabel(pkg, provider);
+  const label = compareLabel(pkg, siblings ?? [pkg]);
 
   return (
     /*

@@ -484,7 +484,32 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
   const priceBounds = useMemo(() => priceBoundsOf(packages), [packages]);
   const providerOptions = useMemo(() => providerFacets(packages, filters), [packages, filters]);
   const typeOptions = useMemo(() => typeFacets(packages, filters), [packages, filters]);
-  const results = useMemo(() => catalogResults(packages, filters, sort), [packages, filters, sort]);
+  /*
+   * ⚠️ הרשימה המסוננת נגזרת לפני המיון, כי תפריט המיון נשאל עליה.
+   * `sortsFor` הוצהרה כשער על "האם הנתון שהתווית מבטיחה קיים
+   * **ברשימה הזו**", אבל "הרשימה הזו" מומשה כ-`packages` — כלומר
+   * המסננים בעמודה הצדדית עקפו אותה לגמרי, והפגם שתוקן לעמודי
+   * הספק הסטטיים נשאר נגיש בלשונית הראשית בלחיצה אחת על שבב חברה.
+   * סימון "WeCom" בסלולר משאיר שש רשומות שאף אחת מהן אינה
+   * `recommended` ואף אחת אינה מצהירה על עלייה (ids 117, 121, 116,
+   * 93, 19, 21), ובכל זאת התפריט המשיך להציע ארבע תוויות ששלוש
+   * מהן מחזירות את אותה רשימה פריט-פריט — בראשן "מומלצים תחילה",
+   * בלי תג "מומלץ" על אף כרטיס מתחת.
+   */
+  const matched = useMemo(() => packages.filter((p) => matchesFilters(p, filters)), [packages, filters]);
+  const sortOptions = useMemo(() => sortsFor(matched), [matched]);
+  /*
+   * ⚠️ והסדר שמופעל הוא הסדר שכתוב על התפריט. ברגע שהתפריט נגזר
+   * מהרשימה המסוננת הוא יכול לאבד את האפשרות שה-state מחזיק, וזה
+   * בדיוק ה-`<select>` עם `value` שאין לו `<option>` שההערה על
+   * `useState` מתארת: הדפדפן מציג את האפשרות הראשונה בזמן שהמיון
+   * שמופעל הוא אחר. `sort` נשמר כפי שהוא (ביטול המסנן מחזיר את
+   * הבחירה), וההפעלה נופלת לאפשרות שהתפריט באמת מציע.
+   */
+  const effectiveSort = sortOptions.some((s) => s.key === sort)
+    ? sort
+    : (sortOptions[0]?.key ?? "price-asc");
+  const results = useMemo(() => sortCatalog(matched, effectiveSort), [matched, effectiveSort]);
 
   const toggle = (list: string[], value: string, set: (v: string[]) => void) =>
     set(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -854,7 +879,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
           <label className="flex min-w-0 items-center gap-2 text-sm">
             <span className="text-lp-ink-2">מיון</span>
             <select
-              value={sort}
+              value={effectiveSort}
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="max-w-full min-w-0 rounded-lg border border-lp-line bg-lp-surface px-2 py-1.5 text-sm transition focus:border-lp-brand"
             >
@@ -868,7 +893,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                 מסייגים את ההנחה לרכיב אחד בחשבון (ids 142, 135).
                 ברירת המחדל של הלשונית עוברת יחד איתה — ראה `useState`.
               */}
-              {sortsFor(packages).map((s) => (
+              {sortOptions.map((s) => (
                 <option key={s.key} value={s.key}>
                   {isElectric ? (s.electricLabel ?? s.label) : s.label}
                 </option>
@@ -908,6 +933,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                 compareChecked={compare.some((p) => p.id === pkg.id)}
                 compareFull={compare.length >= MAX_COMPARE}
                 onCompareToggle={toggleCompare}
+                siblings={results}
               />
             ))}
           </div>
