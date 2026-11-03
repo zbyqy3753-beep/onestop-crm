@@ -338,7 +338,17 @@ function dataSharedAcrossLines(pkg: Package, value: number): boolean {
 
 export function dataLabel(pkg: Package, spec: CellularSpec | null | undefined): string | null {
   if (!spec) return null;
-  if (spec.unlimitedData) return "גלישה חופשית";
+  /*
+   * ⚠️ `=== true` ולא בדיקה טרות'ית. זה המתג הדרמטי מכולם: הוא
+   * **מחליף את מספר הנפח** בטקסט. המחלץ מייצר `"false"` כמחרוזת
+   * לשדה טקסטואלי, והיא אמת ב-JS — ולכן `unlimitedData: "false"` על
+   * רשומה עם `dataGb: 300` היה מדפיס "גלישה חופשית" במקום "300GB".
+   * אותו נימוק מחזיק את `allHours === true`, `hasInternet === true`,
+   * `hasPhone === true` ו-`recommended === true`; כאן הוא נשאר פתוח.
+   * כל 55 רשומות הסלולר נושאות היום בוליאן אמיתי, ולכן אין שינוי
+   * במספר מוצג — זה שער לרענון הבא.
+   */
+  if (spec.unlimitedData === true) return "גלישה חופשית";
   // ⚠️ `isCount` ולא `== null`: "750GB" הדפיס "NaNGB". ראה ההערה שם.
   if (!isCount(spec.dataGb) || spec.dataGb === 0) return null;
   return `${upTo(pkg, "data", spec.dataGb)}${nf.format(spec.dataGb)}GB`;
@@ -1528,7 +1538,24 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     fee("עלות SIM", s.simCost);
     fee("דמי חיבור", s.connectionFee);
     fee("דמי מעבר", s.transferFee);
-    if (s.esim) rows.push({ label: "eSIM", value: "נתמך" });
+    /*
+     * ⚠️ `esim: false` הוא **נתון** ולכן נאמר, בדיוק מאותו טעם שההערה
+     * על `included` מתעדת 90 שורות מתחת. שם השדות הם `boolean | null`
+     * ולכן `null` נשאר שתיקה; כאן הטיפוס הוא `esim: boolean` חשוף
+     * (`types.ts:29`), כלומר `false` הוא ודאות ולא היעדר — והשורה
+     * שדחפה רק את המצב החיובי הפכה את הוודאות ל-"—" בטבלת ההשוואה,
+     * כלומר ל-"אין לנו נתון". 5 רשומות סלולר נושאות `true` ו-50
+     * נושאות `false`, ו-250 מזוגות ההשוואה הדפיסו את השורה עם "—"
+     * בצד אחד: מי שהשווה את id 93 ל-id 129 כדי להחליט על eSIM קיבל
+     * "נתמך" מול "לא ידוע", כשהתשובה יושבת בקטלוג.
+     *
+     * ⚠️ `typeof` ולא `!= null`: המחלץ מייצר `"false"` כמחרוזת לשדה
+     * טקסטואלי, והיא **אמת** ב-JS — אותו נימוק שמחזיק את `=== true`
+     * בכל השערים הבוליאניים האחרים בקובץ.
+     */
+    if (typeof s.esim === "boolean") {
+      rows.push({ label: "eSIM", value: s.esim ? "נתמך" : "אינו נתמך" });
+    }
     /*
      * ⚠️ `Array.isArray` ולא `?.length`. **למחרוזת יש `length`**, ולכן
      * `lineTiers: "3 קווים ב99"` — בדיוק הצורה שהמחלץ מייצר כשהוא

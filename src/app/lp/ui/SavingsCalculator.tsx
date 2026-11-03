@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "./Card";
 import { LeadForm } from "./LeadForm";
 import { shekels, typedShekels } from "../catalog/format";
-import { catalog, packageLabel, packageTitle, providerName } from "../catalog/catalog";
+import { catalog, isMoney, packageLabel, packageTitle, providerName } from "../catalog/catalog";
 import { crmCategory } from "../config";
 import { fieldClass } from "./field";
 import {
@@ -195,6 +195,27 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
   const phoneMissing = (saving.pick?.spec as HomeSpec | undefined)?.hasPhone !== true;
   const phoneDisclosure = track === "home" && !noMatch && (phoneMissing || phoneExtra);
   /*
+   * ⚠️ והתוספת החודשית השנייה שהרשומה מצהירה עליה — **בשדה** ולא
+   * בפרוזה. `extraConverterCost` ו-`extraExtenderCost` הם שדות מובנים
+   * ששתי רשומות בריכת הבית נושאות (id 157: ממיר נוסף ₪15, מגדיל טווח
+   * ₪14.90; id 3: ממיר נוסף ₪15), ו-`format.ts` כבר מדפיס אותם בכרטיס
+   * (`fee("ממיר נוסף", …)`) — המחשבון הוא המשטח שאינו מרנדר כרטיס.
+   *
+   * הגולש הביתי נשאל על "הסכום החודשי הכולל", כלומר על חשבון שבמשק
+   * בית עם שני מקלטים כבר כולל את הממיר הנוסף, והגידור היחיד שהיה
+   * שם מדבר על "עלויות חד-פעמיות (מעבר, חיבור, התקנה)" — שאינו מכסה
+   * חיוב חודשי. מי שמשלם ₪350 קרא כותרת של ₪2,412 בשנה שנבנתה על
+   * ₪149, בזמן שהחבילה המקבילה עבורו היא ₪164.
+   *
+   * ⚠️ ובלי לנקוב בסכום, בדיוק כמו גילוי הקו: המסך מוסר שהתוספת
+   * מוצהרת והנציג נוקב בה.
+   */
+  const homeSpec = saving.pick?.spec as HomeSpec | undefined;
+  const equipExtra =
+    track === "home" &&
+    !noMatch &&
+    (isMoney(homeSpec?.extraConverterCost) || isMoney(homeSpec?.extraExtenderCost));
+  /*
    * ⚠️ `packageTitle` ולא `saving.pick.name` חשוף — ראה `catalog.ts`.
    * זה המשטח החמישי שקרא את השדה הזה גולמי, אחרי הכרטיס, שבב מגש
    * ההשוואה, כותרת העמודה בטבלה ו-`LeadForm`, ודווקא הוא **אינו**
@@ -285,7 +306,18 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
    * `overCap`, ובלי הקדימות המסך היה מבטיח עליו "הסכום המלא יעבור
    * לנציג" — ההבטחה שבדיוק אסור לתת על 13 ספרות.
    */
-  const absurdHint = absurdSpend && (attempted || blurred);
+  /*
+   * ⚠️ ו**בלי** `attempted || blurred`. הגידור הועתק מ-`overCapHint`,
+   * שם הוא נחוץ מפני שלסכום תקין יש מצבי ביניים (`1,` `1,2` `6,000.`)
+   * — ועל `absurdSpend` הוא מיותר: כל רישא של סכום בטווח קטנה או
+   * שווה לסכום עצמו, ולכן קלט בטווח אינו יכול להיות אבסורדי באופן
+   * חולף (הרישות של 100,000 הן 0,10,100,1000,10000,100000). מי
+   * שהדביק 13 ספרות — בדיוק מה ש-`maxLength` מתיר — ראה כפתור מת,
+   * `aria-invalid` ריק ורמז ב-`sr-only`, כלומר שלושת המשטחים שתקו
+   * יחד עד הלחיצה הבאה. זה המצב שההערה על `aria-invalid` מצהירה
+   * שתוקן ("שלושת המשטחים אומרים עכשיו את אותו דבר").
+   */
+  const absurdHint = absurdSpend;
   const spendHint = absurdHint
     ? // ⚠️ אומר שהמספר נראה שגוי, ולא חוזר על הטווח: מי שהקליד
       // ₪9,999,999,999,999 לא צריך לשמוע "בין ₪10 ל-₪5,000" — הוא
@@ -355,7 +387,24 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             {(
               [
                 ["cellular", "סלולר", "חבילות לכל הקווים במשפחה"],
-                ["home", "אינטרנט וטלוויזיה", "סיבים, טריפל וטלוויזיה"],
+                /*
+                  ⚠️ ובלי "סיבים". הבריכה הביתית של המחשבון היא חבילות
+                  שכוללות טלוויזיה (`isComparable` דורש `hasTv`), ובקטלוג
+                  של היום היא **שתי** רשומות — שתיהן טריפל. שבע חבילות
+                  סיבים-בלבד נפסלות ממנה על דרישת הטלוויזיה בלבד
+                  (154 ב-₪114, 86/100 ב-₪129, 82 ב-₪139, 115 ב-₪144,
+                  99 ב-₪159, 113 ב-₪179), ולכן מי שמשלם על סיבים בלבד
+                  נכנס לפי התת-כיתוב, מקליד ₪139 ומקבל "אתם כבר משלמים
+                  מעט יחסית" — בזמן שהקטלוג מחזיק לו ₪114. התת-כיתוב
+                  הוא המקום להגיד מול מה משווים; ההסתייגות שמונה שורות
+                  אחרי פסק הדין מגיעה מאוחר מדי.
+
+                  ⚠️ מה שנשאר פתוח ואינו תיקון נוסח: הכותרת
+                  "אתם כבר משלמים מעט יחסית" בענף `!worthwhile` פוסקת
+                  על **המחיר** גם כשהפסילה היא על **מוצר אחר**. שינוי
+                  שלה הוא הכרעה על מה המסלול הביתי מבטיח, ולא ניסוח.
+                */
+                ["home", "אינטרנט וטלוויזיה", "חבילות שכוללות אינטרנט וטלוויזיה (טריפל)"],
               ] as const
             ).map(([key, title, sub]) => (
               <button
@@ -875,6 +924,9 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
               id 3 היא `hasPhone: false` בלי תוספת) — שער לרענון הבא,
               כמו שאר השערים כאן.
             */}
+            {equipExtra
+              ? "ממיר נוסף מעל זה שכלול, ומגדיל טווח, הם תוספת חודשית שהרשומה מצהירה עליה ואינה נכללת במחיר שמופיע כאן — הנציג יתמחר אותה בנפרד. "
+              : ""}
             {phoneDisclosure
               ? phoneMissing
                 ? "ההשוואה נעשית מול חבילה שכוללת אינטרנט וטלוויזיה; קו טלפון אינו נדרש בה ואינו כלול בה — אם יש קו בחשבון שלכם, הנציג יתמחר אותו בנפרד. "
@@ -1043,6 +1095,8 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                     ? "החבילה היא אינטרנט וטלוויזיה — אינה כוללת קו טלפון; לתמחר בנפרד"
                     : "החבילה היא אינטרנט וטלוויזיה — קו טלפון בתוספת לפי הרשומה; לתמחר בנפרד"
                   : null,
+                // ⚠️ אותה אמירה שעל המסך — ראה `equipExtra`.
+                equipExtra ? "ממיר נוסף/מגדיל טווח בתוספת חודשית לפי הרשומה; לתמחר בנפרד" : null,
               ]
                 .filter(Boolean)
                 .join(" · ")}
