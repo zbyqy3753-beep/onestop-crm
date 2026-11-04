@@ -19,6 +19,7 @@ const { sortsFor, catalogResults, sortCatalog, matchesFilters } = await import(
   "../src/app/lp/ui/CatalogBrowser.tsx"
 );
 const { compareLabel } = await import("../src/app/lp/ui/CompareTray.tsx");
+const { promoRise } = await import("../src/app/lp/catalog/format.ts");
 const { basePackages, listable, providerSlug, packageLabel, providerName } = await import(
   "../src/app/lp/catalog/catalog.ts"
 );
@@ -65,6 +66,7 @@ test("הסדר שעל המסך אינו זז באף מסנן — רק התווי
    * מציע — והקומפרטור שלה מחזיר את אותו סדר בדיוק.
    */
   let narrowed = 0;
+  let droppedDishonest = 0;
   for (const cat of ["cellular", "home", "electricity"]) {
     const pk = ALL.filter((p) => p.category === cat);
     const combos = [
@@ -85,8 +87,26 @@ test("הסדר שעל המסך אינו זז באף מסנן — רק התווי
       const before = sortsFor(pk);
       const after = sortsFor(matched);
       if (after.length < before.length && matched.length) narrowed++;
+      /*
+       * ⚠️ חריג אחד, מסבב 52: `after-asc` שהוסר מרשימה שאין בה אף
+       * מחיר-אחרי-הטבה **שמיש**. עד סבב 52 השער פתח את התווית גם שם
+       * (הוא בדק "יש הצהרה" ו-"יש רשומה שמישה" כשני `some` נפרדים,
+       * והשני נדלק על רשומה שלא הצהירה כלום), והסדר שיצא ממנה היה
+       * מחיר **היום** עם מצהירות-העלייה בסוף — סדר שאין בו שום מידע
+       * על המחיר שאחרי, תחת תווית שמבטיחה אותו. עכשיו התווית אינה
+       * מוצעת שם, ולכן דווקא **כן** צפוי שהנפילה תחזיר סדר אחר:
+       * ההבטחה הייתה הפגם, לא הסדר שמחליף אותה. בכל שאר ההצטמצמויות
+       * האינווריאנטה נשמרת כמו שהייתה.
+       */
+      const unrankable =
+        matched.filter((p) => promoRise(p)?.kind === "amount").length === 0;
       for (const key of before.map((s) => s.key)) {
-        const eff = after.some((s) => s.key === key) ? key : (after[0]?.key ?? "price-asc");
+        const dropped = !after.some((s) => s.key === key);
+        if (dropped && key === "after-asc" && unrankable) {
+          droppedDishonest++;
+          continue;
+        }
+        const eff = dropped ? (after[0]?.key ?? "price-asc") : key;
         assert.equal(
           sortCatalog(matched, eff).map((p) => p.id).join(","),
           catalogResults(pk, f, key).map((p) => p.id).join(","),
@@ -95,7 +115,25 @@ test("הסדר שעל המסך אינו זז באף מסנן — רק התווי
       }
     }
   }
-  assert.equal(narrowed, 9, "מספר התפריטים שהצטמצמו השתנה");
+  /*
+   * ⚠️ 10 ולא 9, מסבב 52: צירוף אחד נוסף מאבד תווית — הרשימה שבה
+   * `after-asc` היה הלייבל היחיד שהוסר, ולכן עד עכשיו היא לא נחשבה
+   * "מצטמצמת" כלל.
+   */
+  assert.equal(narrowed, 10, "מספר התפריטים שהצטמצמו השתנה");
+  /*
+   * ⚠️ וחמש רשימות שבהן ההצטמצמות היא התיקון עצמו ולא כפילות. בצירופי
+   * השבב ה**בודד** שהבדיקה הזו סורקת (חברה או סוג, לא שילוב ביניהם)
+   * זהו המספר; `round52-browse` מודדת את כל 10 הרשימות שהדף מגיש
+   * בפועל, כולל שילובי חברה×סוג.
+   */
+  assert.equal(droppedDishonest, 5, "מספר הרשימות שאיבדו את התווית הלא-מדויקת השתנה");
+  /*
+   * ⚠️ ושש הרשימות שבהן ההצטמצמות היא התיקון עצמו ולא כפילות. בצירופי
+   * השבב הבודד שהבדיקה הזו סורקת (חברה או סוג, לא שילוב ביניהם) זהו
+   * המספר; `round52-browse` מודדת את כל 10 הרשימות שהדף מגיש בפועל.
+   */
+
 });
 
 test("שתי תיבות השוואה אינן מכריזות את אותו שם נגיש", () => {

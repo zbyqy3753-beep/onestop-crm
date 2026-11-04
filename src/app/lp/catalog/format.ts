@@ -1254,6 +1254,39 @@ function headlinePriceIsSingleUnit(pkg: Package): boolean {
   const single = Number(m[1].replace(/,/g, ""));
   return Number.isFinite(single) && Math.abs(single - pkg.price) < 0.005;
 }
+
+/**
+ * אותה שאלה, מהראיה ה**כמותית** — ולא מניסוח.
+ *
+ * ⚠️ ההערה מתחת מצהירה שהענף החמור "לא נבדק מול שום נתון כמותי",
+ * והשער הטקסטואלי שנוסף לו קורא צורה אחת בלבד
+ * (`מנוי|קו בודד – N`). id 57 (`Partner Star`, `price: 39.9`) מוסרת
+ * את אותה עובדה בדיוק בניסוח השכן — "39.9 ₪ למנוי למשך שנה.
+ * למצרפים 2-3 מנויים – 33 ₪ …, למצרפים 4 מנויים ויותר 30 ₪" —
+ * ולכן השער החזיר `false`, `requiresMultipleLines` (שנדלק על
+ * "למצרפים") גבר, והכרטיס הדפיס "המחיר מותנה בכמות המנויים בחבילה"
+ * על ₪39.9 בזמן ש-`usableLineTiers` שלידו, על אותו כרטיס ובאותה
+ * טבלה, מדפיס `2–3 קווים ₪33 · 4 קווים ומעלה ₪30`. שתי אמירות
+ * סותרות על אותה רשומה: ההסתייגות אומרת שהמספר דורש כמות,
+ * והמדרגות מראות שהכמות דווקא **מורידה** אותו.
+ *
+ * ולכן הראיה כאן אינה מילים: אם **כל** מדרגת כמות שהרשומה מסרה
+ * זולה מהמספר שעל הכרטיס, המספר הזה אינו יכול להיות המחיר המותנה
+ * בכמות — הוא המחיר לפני המדרגות, כלומר ליחידה אחת. זו אריתמטיקה
+ * ולא פירסור, ולכן היא עובדת על כל ניסוח.
+ *
+ * ⚠️ `<` חזק ולא `<=`, וזה מה שמשאיר את שתי הרשומות שההערה מתחת
+ * מגנה עליהן מסויגות בצדק: ב-id 110 המחיר המותנה **הוא** ₪35
+ * שעל הכרטיס, וב-id 68 הוא ₪39.9 — בשתיהן המדרגה שווה ל-`price`
+ * ולא נמוכה ממנו. סריקה על כל 109 הרשומות: id 57 היא היחידה
+ * שהשער הזה מזיז, ולכן אין תזוזה בשום מספר אחר על המסך.
+ */
+function tiersAreAllCheaperThanHeadline(pkg: Package): boolean {
+  if (!isMoney(pkg.price)) return false;
+  const tiers = usableLineTiers(pkg);
+  const price = pkg.price;
+  return tiers.length > 0 && tiers.every((t) => t.price < price);
+}
 export interface PriceNote {
   label: string;
   value: string;
@@ -1290,7 +1323,11 @@ export function priceNote(pkg: Package): PriceNote | null {
    * בריכה קטנה יותר, והרשומה אכן מתמחרת לפי כמות בחלק מהמדרגות.
    * בריכת ההשוואה אינה זזה מהתיקון הזה.
    */
-  if (requiresMultipleLines(pkg) && !headlinePriceIsSingleUnit(pkg)) {
+  if (
+    requiresMultipleLines(pkg) &&
+    !headlinePriceIsSingleUnit(pkg) &&
+    !tiersAreAllCheaperThanHeadline(pkg)
+  ) {
     return { label: "תנאי המחיר", value: "המחיר מותנה בכמות המנויים בחבילה" };
   }
   /*
