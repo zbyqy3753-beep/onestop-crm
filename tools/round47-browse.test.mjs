@@ -71,7 +71,13 @@ test("נוסח מבצע שאינו מצהיר על עלייה נשאר נייט�
     const rise = promoRise(p);
     return rise?.kind === "note" && !promoNoteRises(p, rise.note);
   });
-  assert.equal(neutral.length, 9, "מספר הרשומות הנייטרליות בענף `note` זז");
+  /*
+   * ⚠️ סבב 53: 9 → 8. id 23 עברה לצד המצהיר — הרשומה מוסרת עלייה
+   * 25 → 59, ושני המספרים שחסמו את השער היו המחיר שהכרטיס עצמו
+   * מדפיס (25) ומספר חודשים (12). היא נצבעת כעלייה מעכשיו, וזה
+   * בדיוק מה שהיא אומרת במילים.
+   */
+  assert.equal(neutral.length, 8, "מספר הרשומות הנייטרליות בענף `note` זז");
 
   for (const pkg of neutral) {
     const html = cardHtml(pkg);

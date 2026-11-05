@@ -61,7 +61,18 @@ const byId = (id) => {
 };
 
 /** המספרים שהנוסח מוסר, בסינון של `afterRises`: רק מה שיכול להיות מחיר. */
-const notePrices = (note) => (note.match(/\d+(?:\.\d+)?/g) ?? []).map(Number).filter((n) => n >= 10);
+/*
+ * ⚠️ סבב 53: שני סוגי מספרים נושרים כאן, כמו ב-`promoNoteRises` עצמו —
+ * מספר חודשים צמוד למילה, והמחיר שהכרטיס עצמו מדפיס כשהנוסח פותח בו.
+ * שניהם אינם הצהרה על המחיר שאחרי ההטבה, וסף ה-`>= 10` (שנכתב כדי
+ * להשליך מספרים שאינם כסף) לא עצר אף אחד מהם. העזר הזה הוא הנוסחה
+ * שהבדיקה מצליבה מול המנוע, ולכן הוא חייב לנשור יחד איתו.
+ */
+const notePrices = (note, price) =>
+  (note.match(/\d+(?:\.\d+)?(?:\s*(?:חודשים?|מחזורי\s+חיוב|שנים))?/g) ?? [])
+    .filter((raw) => !/(?:חודשים?|מחזורי|שנים)\s*$/.test(raw))
+    .map(Number)
+    .filter((n) => n >= 10 && (price === undefined || Math.abs(n - price) >= 0.005));
 
 /** בריחת תווים בטקסט, כפי ש-React כותב אותה. */
 const esc = (s) =>
@@ -92,7 +103,15 @@ test("נוסח: 11 הרשומות עם הצהרה מילולית, וחלוקתן
    * מודפס במלואו — כציטוט ולא כהצהרה שלנו על המחיר.
    */
     notePkgs.filter((p) => promoNoteRises(p, promoRise(p).note)).map((p) => p.id).sort(),
-    ["42", "61"],
+    /*
+     * ⚠️ סבב 53: id 23 נוספה לרשימה. הרשומה מוסרת עלייה חד-משמעית
+     * 25 → 59 ("לאחר מכן התשלום על החבילה יהיה 59 ₪"), ושני המספרים
+     * שהפילו את ה-`every` היו המחיר שהכרטיס עצמו מדפיס (25) ומספר
+     * חודשים (12) — אינם הצהרה על המחיר שאחרי. ההערה שמנתה אותה יחד
+     * עם ids 58/81/132 היתה שגויה: בשלושתן `price` הוא כבר מחיר הקבע,
+     * וכאן הוא מחיר המבצע. המספר על המסך לא זז — התווית מעליו זזה.
+     */
+    ["23", "42", "61"],
   );
 
   /*
@@ -106,7 +125,7 @@ test("נוסח: 11 הרשומות עם הצהרה מילולית, וחלוקתן
    */
   for (const p of notePkgs) {
     const note = promoRise(p).note;
-    const nums = notePrices(note);
+    const nums = notePrices(note, p.price);
     assert.equal(
       promoNoteRises(p, note),
       nums.length > 0 && nums.every((n) => n > p.price) && !addonFreeThenPaid(p),
@@ -129,7 +148,7 @@ const label = promoNoteLabel(p, note);
     const said = line.slice(label.length).trim();
     if (label === PROMO_NOTE_LABEL) {
       assert.equal(said, note, `id ${p.id}: ייחוס ישיר חייב לומר את הנוסח כפי שהוא`);
-      for (const n of notePrices(note)) {
+      for (const n of notePrices(note, p.price)) {
         assert.ok(
           n > p.price,
           `id ${p.id}: "בתום ההטבה: ${note}" מתחת למחיר ${p.price} — ${n} אינו גבוה ממנו`,
@@ -177,7 +196,8 @@ test("לפני/אחרי: ארבע הרשומות שהצהירו על ירידת 
   assert.equal(heroRiseLine(p81).startsWith(`${PROMO_NOTE_LABEL} *מחיר החבילה 39`), false);
   assert.ok(heroRiseLine(p81).includes("לאחר מכן 99"));
 
-  for (const id of ["23", "58", "81", "85", "92", "108", "109", "132"]) {
+  /* ⚠️ סבב 53: id 23 ירדה מהרשימה — הרשומה מצהירה עלייה 25 → 59 ולא ירידה. */
+  for (const id of ["58", "81", "85", "92", "108", "109", "132"]) {
     const p = byId(id);
     assert.ok(
       heroRiseLine(p).startsWith(PROMO_NOTE_QUOTE_LABEL),
@@ -188,7 +208,7 @@ test("לפני/אחרי: ארבע הרשומות שהצהירו על ירידת 
   }
 
   // ומה שכן עולה ממשיך להיאמר בדיוק כפי שנאמר עד היום.
-  for (const id of ["42", "61"]) {
+  for (const id of ["23", "42", "61"]) {
     const p = byId(id);
     assert.equal(heroRiseLine(p), `${PROMO_NOTE_LABEL} ${promoRise(p).note}`);
     assert.equal(cardHtml(p).includes(esc(PROMO_NOTE_QUOTE_LABEL)), false, `id ${id}`);
