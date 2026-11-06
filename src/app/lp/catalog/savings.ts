@@ -982,8 +982,48 @@ const ADDON_FREE_THEN_PAID = new RegExp(
   ].join("|"),
 );
 
+/*
+ * ⚠️ ו**שני סדרי המילים**, כמו בשני השערים התאומים. שתי החלופות
+ * שמעל דורשות את סימן החינם קודם ואת הסכום אחריו, והקטלוג כותב גם את
+ * הסדר ההפוך: id 54 — "HOT moblie Cyber שירות - בעלות 7.90 ש"ח (הטבה
+ * של חודש ראשון ללא עלות)". זו בדיוק ההצהרה שהפונקציה הזו נכתבה
+ * עליה — שירות שנכנס לחבילה, חינם לתקופה, ומחויב חודשית אחריה — רק
+ * שהסכום נכתב לפני תקופת החינם ולא אחריה. `addonFreeThenPaid(54)`
+ * החזירה `false`, ואותן מילים עצמן עם הסדר הפוך מחזירות `true`.
+ *
+ * זה אותו חור ששני התאומים כבר סוגרים במפורש: ל-`ROUTER_PRICED_SEPARATELY`
+ * יש גם `נתב…בתוספת` וגם `בתוספת…נתב` ("זה חור בסדר המילים"),
+ * ול-`PHONE_LINE_SURCHARGE` שלושה סדרים. כאן הלקח לא הוחל.
+ *
+ * ⚠️ הסכום **נלכד ומושווה לכותרת**, כמו ב-`monthlySurchargePerLine`
+ * ולא כמו בשתי החלופות שמעל: `ב?עלות` הוא גם הנוסח שבו הקטלוג מציג את
+ * מחיר החבילה עצמו (id 157 — "בעלות של 149 ש"ח"), ובלי ההשוואה משפט
+ * שמצרף למחיר הזה חודש ראשון חינם היה נקרא כתוספת חודשית. סכום ששווה
+ * ל-`price` או ל-`priceAfterPromo` הוא החשבון ולא תוסף עליו.
+ *
+ * ⚠️ ודרוש סימן חינם **אחרי** מילת תקופה, ולא סמיכות בלבד — מאותו
+ * נימוק שההערה שמעל מנמקת בו את אי-הרחבת החלופה השנייה: "מחיר מוזל של
+ * 39.90 לחודשיים ראשונים ולאחר מכן 49.90" (id 58) הוא עליית מחיר, ולזה
+ * יש `priceAfterPromo`. אומת על הקטלוג המלא: id 54 היא הרשומה היחידה
+ * שהחלופה הזו מוסיפה, והיא נפסלת כבר היום ב-`declaresRiseInText` —
+ * כלומר הבריכה והבחירה בכל מסלול וכמות אינן זזות. השער הוא לרענון
+ * הבא, שבו `priceAfterPromo` מספרי משתיק את שער העלייה.
+ */
+const ADDON_PAID_THEN_FREE = new RegExp(
+  String.raw`(?:ב?עלות|ב?תוספת|תמורת)\s*(?:של\s*)?${SHEKEL}?\s*(\d[\d.,]*)\s*${SHEKEL}?` +
+    String.raw`[^.•\n]{0,25}?(?:חודש(?:ים|יים)?|שנה|שנתיים)[^.•\n]{0,12}?(?:חינם|ללא עלות|במתנה)`,
+  "g",
+);
+
 export function addonFreeThenPaid(p: Package): boolean {
-  return ADDON_FREE_THEN_PAID.test(gateText(p));
+  if (ADDON_FREE_THEN_PAID.test(gateText(p))) return true;
+  for (const m of gateText(p).matchAll(ADDON_PAID_THEN_FREE)) {
+    const amount = Number(String(m[1] ?? "").replace(/,/g, ""));
+    if (!Number.isFinite(amount) || amount <= 0) continue;
+    if (amount === p.price || amount === p.priceAfterPromo) continue;
+    return true;
+  }
+  return false;
 }
 
 /**
