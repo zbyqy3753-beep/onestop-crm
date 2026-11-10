@@ -16,6 +16,8 @@ import {
   parseInterest,
 } from "@/lib/domain/interest";
 import { notifyHotLeadAssigned } from "@/server/leads/hotLeadAlert";
+import { branchByCode, branchSourceDetail } from "@/lib/domain/branches";
+import { notifyBranchLead } from "@/server/leads/branchLeadAlert";
 
 /**
  * `POST /api/leads` — קליטת לידים משותפים חיצוניים.
@@ -51,6 +53,8 @@ interface LeadPayload {
   plan?: unknown;
   providerName?: unknown;
   price?: unknown;
+  /** קוד סניף מוביסל מ-QR — ראה `lib/domain/branches.ts` */
+  branch?: unknown;
 }
 
 /** קטגוריות החוזה החיצוני → מפתחות הדומיין. */
@@ -130,6 +134,8 @@ const KNOWN_FIELDS: ReadonlySet<string> = new Set([
   "plan",
   "providerName",
   "price",
+  // קוד סניף מוביסל מסריקת QR באתר — ראה `lib/domain/branches.ts`
+  "branch",
   /*
    * ⚠️⚠️ `api_key` כאן **לא** בגלל שהוא שדה תוכן, אלא כדי שלא ייחשב
    * "לא זוהה". `unknownFields` (למטה) כותב כל שדה לא מוכר אל תוך
@@ -407,7 +413,23 @@ export async function POST(request: NextRequest): Promise<Response> {
   // כשנשלחה חבילה מפורשת משאירים אותו כמו שהוא — אז הוא לא נצרך.
   const consumedSource =
     Boolean(fromSource.category ?? fromSource.packageName) && !explicitPackage;
-  const sourceDetail = consumedSource ? partner.name : rawSource || partner.name;
+  /*
+   * ⚠️ סניף נשלח בשדה משלו ולא בתוך `source`: `parseInterest` היה בולע
+   * שם סניף שמכיל מילת שירות ("מוביסל בר סלולר גן שמואל") ומוחק אותו
+   * מהמקור. קוד לא מוכר אינו סיבה לדחות ליד — הוא פשוט נקלט בלי סניף.
+   */
+  const branch = branchByCode(body.branch);
+  const sourceDetail = branch
+    ? branchSourceDetail(partner.name, branch)
+    : consumedSource
+      ? partner.name
+      : rawSource || partner.name;
+  const note = [
+    buildNote(body, currentProvider),
+    branch ? `הגיע מסריקת QR בסניף ${branch.name}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const assigneeId = await nextAssignee(partner);
 
@@ -425,7 +447,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     source: "campaign",
     sourceDetail,
     packageName: packageName || undefined,
-    note: buildNote(body, currentProvider) || undefined,
+    note: note || undefined,
     assigneeId,
     createdById,
   });
@@ -436,6 +458,13 @@ export async function POST(request: NextRequest): Promise<Response> {
     lead: { id: lead.id, name: lead.name, phone: lead.phone, kind: lead.kind },
     assigneeId,
   });
+
+  if (branch) {
+    await notifyBranchLead({
+      branch,
+      lead: { id: lead.id, name: lead.name, phone: lead.phone },
+    });
+  }
 
   revalidatePath("/leads");
   return Response.json({ success: true, id: lead.id }, { status: 201 });

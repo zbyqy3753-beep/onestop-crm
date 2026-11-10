@@ -151,6 +151,12 @@ export const NAV: NavGroup[] = [
         icon: "upload",
       },
       {
+        href: "/branches",
+        label: "סניפי מוביסל",
+        hint: "QR לכל סניף והלידים שהגיעו ממנו",
+        icon: "star",
+      },
+      {
         href: "/team",
         label: "ניהול הצוות",
         hint: "צירוף עובדים, העובדים המשויכים אליך והלידים שלהם",

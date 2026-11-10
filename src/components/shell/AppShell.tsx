@@ -251,6 +251,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/my-deals": "העסקאות שלי",
   "/deals-dashboard": "דשבורד עסקאות",
   "/registrations": "טפסי רישום",
+  "/branches": "סניפי מוביסל",
   "/admin": "ניהול מערכת",
   "/feedback": "משוב",
 };
