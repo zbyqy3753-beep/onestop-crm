@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import type { Lead, LeadStatus } from "@/lib/domain/types";
 import {
   KIND_CONFIG,
+  SOURCE_CONFIG,
   STATUS_CONFIG,
   whatsappGreeting,
   PICKABLE_STATUSES,
@@ -51,7 +52,7 @@ export function safeTime(iso: string | null | undefined): number | null {
  */
 export function latestNote(
   notes: readonly { body: string; createdAt: string; authorId: string }[],
-): { body: string; count: number; authorId: string } | null {
+): { body: string; count: number; authorId: string; t: number } | null {
   let best: { body: string; t: number; authorId: string } | null = null;
   let count = 0;
   for (const n of notes) {
@@ -61,7 +62,31 @@ export function latestNote(
     const t = safeTime(n.createdAt) ?? 0;
     if (!best || t >= best.t) best = { body, t, authorId: n.authorId };
   }
-  return best ? { body: best.body, count, authorId: best.authorId } : null;
+  return best ? { ...best, count } : null;
+}
+
+/**
+ * מי כתב את ההערה, כפי שמוצג ברשימה.
+ *
+ * ⚠️⚠️ **הערת הקליטה אינה של אדם.** ליד שנכנס מקמפיין, מטופס או מייבוא
+ * נוצר עם ההערה שהגיעה איתו, והיא נרשמת על שם יוצר הליד — בפועל
+ * הבעלים שהמפתח שלו מזין את ה-API. הצגת "אורחן:" על כל ליד מקמפיין
+ * הייתה שקר: הוא לא כתב אף אחת מהן. לכן הערה שנוצרה יחד עם ליד
+ * שאינו ידני מסומנת במקור שלו ("קמפיין:"), ורק הערה שאדם הוסיף
+ * אחר כך מקבלת שם.
+ */
+export function noteAuthorLabel(
+  lead: Pick<Lead, "source" | "createdAt" | "createdById">,
+  note: { authorId: string; t: number },
+  nameOf: (id: string) => string | undefined,
+): string | undefined {
+  const created = safeTime(lead.createdAt);
+  const intake =
+    lead.source !== "manual" &&
+    note.authorId === lead.createdById &&
+    created !== null &&
+    Math.abs(note.t - created) < 60_000;
+  return intake ? SOURCE_CONFIG[lead.source].label : nameOf(note.authorId);
 }
 
 /**

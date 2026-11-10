@@ -32,6 +32,7 @@ import {
   StarToggle,
   StatusPicker,
   latestNote,
+  noteAuthorLabel,
   safeTime,
 } from "./cells";
 import { buildTimeline } from "./ActivityFeed";
@@ -197,7 +198,11 @@ export function LeadRow({
             {note && note.body !== lastDetail && (
               <LatestNoteLine
                 note={note}
-                author={userById.get(note.authorId)?.name}
+                author={noteAuthorLabel(
+                  lead,
+                  note,
+                  (id) => userById.get(id)?.name,
+                )}
                 className="mt-1 max-w-[320px] text-xs"
               />
             )}

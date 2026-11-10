@@ -29,6 +29,7 @@ import {
   StatusPicker,
   dialAttempts,
   latestNote,
+  noteAuthorLabel,
   safeTime,
 } from "./cells";
 
@@ -367,7 +368,11 @@ export function LeadCard({
           {note && note.body !== lastDetail && (
             <LatestNoteLine
               note={note}
-              author={users?.find((u) => u.id === note.authorId)?.name}
+              author={noteAuthorLabel(
+                lead,
+                note,
+                (id) => users?.find((u) => u.id === id)?.name,
+              )}
               className="mt-1 text-sm"
             />
           )}
