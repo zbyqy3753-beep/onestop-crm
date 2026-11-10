@@ -365,7 +365,11 @@ export function LeadCard({
             </p>
           )}
           {note && note.body !== lastDetail && (
-            <LatestNoteLine note={note} className="mt-1 text-sm" />
+            <LatestNoteLine
+              note={note}
+              author={users?.find((u) => u.id === note.authorId)?.name}
+              className="mt-1 text-sm"
+            />
           )}
         </div>
 

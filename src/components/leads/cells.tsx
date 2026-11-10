@@ -50,18 +50,18 @@ export function safeTime(iso: string | null | undefined): number | null {
  * הן אינן מגיעות ממוינות, ולכן הבחירה לפי `createdAt` ולא לפי מיקום.
  */
 export function latestNote(
-  notes: readonly { body: string; createdAt: string }[],
-): { body: string; count: number } | null {
-  let best: { body: string; t: number } | null = null;
+  notes: readonly { body: string; createdAt: string; authorId: string }[],
+): { body: string; count: number; authorId: string } | null {
+  let best: { body: string; t: number; authorId: string } | null = null;
   let count = 0;
   for (const n of notes) {
     const body = n.body.trim();
     if (!body) continue;
     count++;
     const t = safeTime(n.createdAt) ?? 0;
-    if (!best || t >= best.t) best = { body, t };
+    if (!best || t >= best.t) best = { body, t, authorId: n.authorId };
   }
-  return best ? { body: best.body, count } : null;
+  return best ? { body: best.body, count, authorId: best.authorId } : null;
 }
 
 /**
@@ -70,17 +70,23 @@ export function latestNote(
  */
 export function LatestNoteLine({
   note,
+  author,
   className = "",
 }: {
   note: { body: string; count: number };
+  /** מי כתב — חסר כשהכותב אינו ברשימת המשתמשים (למשל עובד שהושבת). */
+  author?: string;
   className?: string;
 }) {
   return (
     <p
       className={`flex min-w-0 items-center gap-1.5 text-ink-2 ${className}`}
-      title={note.body}
+      title={author ? `${author}: ${note.body}` : note.body}
     >
       <Icon name="note" size={14} className="shrink-0 text-ink-4" />
+      {author && (
+        <span className="shrink-0 font-medium text-ink-1">{author}:</span>
+      )}
       <span className="min-w-0 truncate">{note.body}</span>
       {note.count > 1 && (
         <span className="nums shrink-0 text-ink-4">+{note.count - 1}</span>

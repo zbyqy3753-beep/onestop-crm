@@ -195,7 +195,11 @@ export function LeadRow({
               </p>
             )}
             {note && note.body !== lastDetail && (
-              <LatestNoteLine note={note} className="mt-1 max-w-[320px] text-xs" />
+              <LatestNoteLine
+                note={note}
+                author={userById.get(note.authorId)?.name}
+                className="mt-1 max-w-[320px] text-xs"
+              />
             )}
           </>
         );
