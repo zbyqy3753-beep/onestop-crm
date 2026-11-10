@@ -42,6 +42,53 @@ export function safeTime(iso: string | null | undefined): number | null {
   return Number.isNaN(t) ? null : t;
 }
 
+/**
+ * ההערה האחרונה של הליד, וכמה הערות יש בסך הכול.
+ *
+ * ⚠️ ההערות נטענות ממילא עם הרשימה (`prismaLeadRepository.list`), אבל
+ * עד עכשיו נראו רק במגירה — והסוכן פתח ליד רק כדי לקרוא מה נכתב עליו.
+ * הן אינן מגיעות ממוינות, ולכן הבחירה לפי `createdAt` ולא לפי מיקום.
+ */
+export function latestNote(
+  notes: readonly { body: string; createdAt: string }[],
+): { body: string; count: number } | null {
+  let best: { body: string; t: number } | null = null;
+  let count = 0;
+  for (const n of notes) {
+    const body = n.body.trim();
+    if (!body) continue;
+    count++;
+    const t = safeTime(n.createdAt) ?? 0;
+    if (!best || t >= best.t) best = { body, t };
+  }
+  return best ? { body: best.body, count } : null;
+}
+
+/**
+ * שורת ההערה האחרונה ברשימה — אייקון, הטקסט בשורה אחת, ומונה כשיש עוד.
+ * הטקסט המלא ב-`title`; כל ההערות במגירה.
+ */
+export function LatestNoteLine({
+  note,
+  className = "",
+}: {
+  note: { body: string; count: number };
+  className?: string;
+}) {
+  return (
+    <p
+      className={`flex min-w-0 items-center gap-1.5 text-ink-2 ${className}`}
+      title={note.body}
+    >
+      <Icon name="note" size={14} className="shrink-0 text-ink-4" />
+      <span className="min-w-0 truncate">{note.body}</span>
+      {note.count > 1 && (
+        <span className="nums shrink-0 text-ink-4">+{note.count - 1}</span>
+      )}
+    </p>
+  );
+}
+
 /** "יום אחד" / "יומיים" / "5 ימים" — ספירת ימים בעברית תקינה. */
 export function dayCount(n: number): string {
   if (n === 1) return "יום אחד";

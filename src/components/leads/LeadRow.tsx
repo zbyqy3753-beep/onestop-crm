@@ -27,9 +27,11 @@ import {
   CostCell,
   FollowUpCell,
   InlinePicker,
+  LatestNoteLine,
   RowActions,
   StarToggle,
   StatusPicker,
+  latestNote,
   safeTime,
 } from "./cells";
 import { buildTimeline } from "./ActivityFeed";
@@ -108,6 +110,8 @@ export function LeadRow({
 
   /** הפירוט האחרון שהסוכן הזין — מה שהוא באמת צריך לראות לפני חיוג. */
   const lastDetail = [...lead.history].reverse().find((h) => h.detail)?.detail;
+  /** ההערה האחרונה — גלויה בשורה, בלי לפתוח את המגירה. */
+  const note = latestNote(lead.notes);
 
   /**
    * שתי שורות הפעילות שמוצגות בטבלה.
@@ -189,6 +193,9 @@ export function LeadRow({
               >
                 {lastDetail}
               </p>
+            )}
+            {note && note.body !== lastDetail && (
+              <LatestNoteLine note={note} className="mt-1 max-w-[320px] text-xs" />
             )}
           </>
         );

@@ -24,9 +24,11 @@ import {
   FollowUpCell,
   HotBadge,
   InlinePicker,
+  LatestNoteLine,
   StarToggle,
   StatusPicker,
   dialAttempts,
+  latestNote,
   safeTime,
 } from "./cells";
 
@@ -133,6 +135,8 @@ export function LeadCard({
 
   /** הפירוט האחרון שהסוכן הזין — אותה נגזרת כמו ב-`LeadRow`. */
   const lastDetail = [...lead.history].reverse().find((h) => h.detail)?.detail;
+  /** ההערה האחרונה — כדי לקרוא מה נכתב בלי לפתוח את המגירה. */
+  const note = latestNote(lead.notes);
 
   const attempts = dialAttempts(lead);
   // ⚠️ `safeTime` לפני כל פורמט תאריך — ראה `cells.tsx`. ליד אחד עם
@@ -359,6 +363,9 @@ export function LeadCard({
             <p className="mt-1 truncate text-sm text-ink-3" title={lastDetail}>
               {lastDetail}
             </p>
+          )}
+          {note && note.body !== lastDetail && (
+            <LatestNoteLine note={note} className="mt-1 text-sm" />
           )}
         </div>
 
