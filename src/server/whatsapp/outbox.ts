@@ -318,7 +318,7 @@ async function cancelSuperseded(): Promise<number> {
           followUpAt: true,
           status: true,
           assigneeId: true,
-          assignee: { select: { active: true, phone: true } },
+          assignee: { select: { active: true, phone: true, extraPhones: true } },
         },
       },
     },
@@ -334,7 +334,22 @@ async function cancelSuperseded(): Promise<number> {
       !lead.assigneeId ||
       !lead.assignee?.active ||
       !lead.assignee.phone ||
-      dedupeKeyFor(lead.id, lead.followUpAt) !== msg.dedupeKey;
+      /*
+       * ⚠️⚠️ **המפתח של מספר נוסף מסתיים ב-`:<מספר>`** (`phoneTargets`).
+       * השוואה מדויקת למפתח הבסיס ביטלה כאן כל תזכורת למספר הנוסף
+       * בכל תקתוק; ההחייאה הקימה אותה, והביטול הפיל אותה שוב. מה
+       * שיצא, יצא רק כשהניקוז הספיק לתבוע את השורה בין השניים —
+       * באיחור של כ-40 דקות ובנוסח "תזכורת באיחור", או בכלל לא.
+       */
+      !(
+        msg.dedupeKey === dedupeKeyFor(lead.id, lead.followUpAt) ||
+        phoneTargets(lead.assignee).some(
+          (t) =>
+            t.keySuffix !== "" &&
+            msg.dedupeKey ===
+              `${dedupeKeyFor(lead.id, lead.followUpAt!)}${t.keySuffix}`,
+        )
+      );
 
     if (invalid) stale.push(msg.id);
   }
