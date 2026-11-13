@@ -85,7 +85,19 @@ export default async function ServicePage({ params }: PageProps<"/lp/[service]">
           {disclosed > 0 && (
             <div>
               <dt className="nums text-2xl font-bold text-lp-brand-bright">{disclosed}</dt>
-              <dd className="text-xs text-lp-on-navy-3">מציגות מחיר אחרי ההטבה</dd>
+              {/*
+                ⚠️ "מצהירות על מה שקורה" ולא "מציגות מחיר".
+                `disclosedRiseCount` מתועדת בעצמה כ"האם נאמר לגולש
+                משהו", ולכן היא סופרת גם רשומה שכל מה שיש לה הוא נוסח
+                מילולי — ושם המשטח שמדפיס דווקא **אינו** נוקב במחיר:
+                `promoNoteRises` מחליף את התווית ל-"נוסח המבצע:"
+                ומצטיט במרכאות כשאסור לייחס את הנוסח למחיר שאחרי.
+                הכיתוב הקודם הבטיח מחיר מכל אחת מהן: ב-`/internet-tv`
+                הוא הצהיר על 17 בזמן ש-10 מדפיסות מספר (ב-`/cellular`
+                17 מול 13). הכיתוב החדש נכון על כל 17, והמונה עצמו
+                אינו זז.
+              */}
+              <dd className="text-xs text-lp-on-navy-3">מצהירות על מה שקורה בתום ההטבה</dd>
             </div>
           )}
         </dl>

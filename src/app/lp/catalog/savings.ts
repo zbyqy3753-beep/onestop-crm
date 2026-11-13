@@ -880,6 +880,50 @@ export function monthlySurchargePerLine(p: Package): boolean {
 }
 
 /**
+ * חיוב חודשי שהמחיר אינו מכיל, **בלי** סמן "לקו".
+ *
+ * ⚠️ המשפחה שלא היה לה שער בענף הסלולרי. `monthlySurchargePerLine`
+ * דורש בכל אחת משלוש חלופותיו סמן כמות (`PER_LINE_UNIT`) — וזו הדרישה
+ * הנכונה שם, כי שמו מצהיר עליה. אבל התאום שההערות שם מפנות אליו,
+ * `routerPricedSeparately`, תופס דווקא חיוב חודשי **שטוח**: דמי נתב
+ * אינם "לקו", והם נפסלים בענף הבית. בענף הסלולרי — זה שמוכפל בכמות
+ * הקווים ולכן החמור מהשניים — לא נשאר לצורה הזו שום קורא.
+ *
+ * הרשומה החיה: id 53 (`תכנית כשרה Extra Large`, price 33) כותבת
+ * "דמי טיפול בהוראת קבע חדש פעמי 40 ועלות חודשית של 7.9" — ₪40 חד-פעמי
+ * ו**₪7.90 בכל חודש** על הוראת הקבע, כלומר ₪94.80 בשנה שאינם בשום
+ * מספר על המסך. חד-פעמי אינו נפסל כאן במכוון (ההסתייגות על עלויות
+ * חיבור והתקנה מכסה אותו); חיוב חודשי הוא בדיוק מה שהכותרת מבטיחה
+ * שאינו קיים.
+ *
+ * ⚠️ הסכום נלכד ומושווה לכותרת, כמו בשני השערים השכנים: `עלות חודשית`
+ * הוא גם נוסח שבו רשומה מציגה את מחיר החבילה עצמה, וסכום ששווה
+ * ל-`price` או ל-`priceAfterPromo` הוא החשבון ולא תוספת עליו.
+ *
+ * ⚠️ ו**לא** הורחב ל-`דמי שימוש`/`תשלום חודשי` בלי סמן כמות: ids 23/27
+ * כותבות "יעמדו דמי השימוש הקבועים על סך של 98 ₪ לחודש לקו" — שם זה
+ * המחיר שאחרי ההטבה ולא תוספת עליו, והשער היה אומר עליהן דבר שאינו
+ * נכון. נמדד על כל הקטלוג: id 53 היא ההתאמה **היחידה**, אפס התאמות
+ * שגויות, והיא נפסלת ממילא בשער הכשרות — כלומר הבריכה (11 סלולר,
+ * 2 בית) והבחירה בכל מסלול וכמות אינן זזות. השער הוא לרענון הבא.
+ */
+const FLAT_MONTHLY_FEE = new RegExp(
+  String.raw`עלות\s+חודשית\s+(?:של\s*)?${SHEKEL}?\s*(\d[\d.,]*)`,
+  "g",
+);
+
+export function flatMonthlyFeeNotInPrice(p: Package): boolean {
+  if (p.priceModel !== "monthly") return false;
+  for (const m of gateText(p).matchAll(FLAT_MONTHLY_FEE)) {
+    const amount = Number(String(m[1] ?? "").replace(/,/g, ""));
+    if (!Number.isFinite(amount) || amount <= 0) continue;
+    if (amount === p.price || amount === p.priceAfterPromo) continue;
+    return true;
+  }
+  return false;
+}
+
+/**
  * הרשומה מצהירה שקו הטלפון הביתי עולה **תוספת** מעל המחיר.
  *
  * ⚠️ שער צר בכוונה, ולא אח של `monthlySurchargePerLine`. זה אינו
@@ -1295,6 +1339,9 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
   // ⚠️ חיוב חודשי לקו שהמחיר אינו מכיל — אותה משפחה של
   // `routerPricedSeparately`, בשני המסלולים. ראה `monthlySurchargePerLine`.
   if (monthlySurchargePerLine(p)) return false;
+  // ⚠️ וחיוב חודשי שטוח, בלי סמן "לקו" — זו הצורה שלא היה לה
+  // שער בענף הסלולרי. ראה `flatMonthlyFeeNotInPrice`.
+  if (flatMonthlyFeeNotInPrice(p)) return false;
   // ⚠️ מחיר שמותנה בכך שהגולש כבר לקוח של אותה חברה. ראה
   // `priceForExistingCustomers`.
   if (priceForExistingCustomers(p)) return false;

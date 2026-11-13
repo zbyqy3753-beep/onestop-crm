@@ -185,11 +185,26 @@ export function CompareTray({
   onRemove,
   onClear,
   max,
+  fallbackFocusId,
 }: {
   items: Package[];
   onRemove: (pkg: Package) => void;
   onClear: () => void;
   max: number;
+  /**
+   * פקד בדף שתמיד מרונדר, כנקודת אחיזה אחרונה להחזרת הפוקוס.
+   *
+   * ⚠️ בלעדיו החוזה שכל ההערות כאן מצהירות עליו — "פוקוס שנופל
+   * ל-`<body>` מחזיר את משתמש המקלדת לראש הדף" — נשבר בדיוק במצב
+   * שבגללו מסלול "נקה" מנסה את ה-ids **בלופ**: הבחירה שורדת סינון
+   * (`hiddenCompare` ב-`CatalogBrowser`), ולכן הכרטיס של חבילה שנבחרה
+   * אינו מרונדר כלל ותיבת הסימון שלה אינה ב-DOM. כשזו הבחירה
+   * ה**אחרונה**, הסרתה מפרקת את המגש כולו: אין שבב הבא, `clearRef`
+   * כבר `null`, ו-`getElementById` מחזיר `null` — הפוקוס נפל לראש
+   * הדף אחרי כל הקטלוג. אותו חור קיים במסלול "נקה" כשכל הבחירות
+   * מוסתרות בסינון, ושני המסלולים נסגרים מאותה נקודה.
+   */
+  fallbackFocusId?: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -247,6 +262,11 @@ export function CompareTray({
   const removedBoxId = useRef<string | null>(null);
   const clearedIds = useRef<string[] | null>(null);
 
+  const fallback = useCallback(
+    () => (fallbackFocusId != null ? document.getElementById(fallbackFocusId) : null),
+    [fallbackFocusId],
+  );
+
   useEffect(() => {
     const cleared = clearedIds.current;
     clearedIds.current = null;
@@ -259,6 +279,8 @@ export function CompareTray({
           return;
         }
       }
+      // ⚠️ ואם כל הבחירה הוסתרה בסינון — ראה `fallbackFocusId`.
+      if (cleared != null) fallback()?.focus();
       return;
     }
     focusAfterRemove.current = null;
@@ -267,8 +289,11 @@ export function CompareTray({
     const buttons = listRef.current?.querySelectorAll<HTMLElement>("[data-lp-chip-remove]");
     const next = buttons?.length ? buttons[Math.min(index, buttons.length - 1)] : undefined;
     const inTray = clearRef.current ?? (id != null ? document.getElementById(id) : null);
-    (next ?? inTray)?.focus();
-  }, [items]);
+    // ⚠️ נקודת אחיזה אחרונה — ראה `fallbackFocusId`.
+    (next ?? inTray ?? fallback())?.focus();
+    // ⚠️ `fallback` יציב (`useCallback` על `fallbackFocusId`) ולכן אינו
+    // מריץ את ה-effect מחדש; הוא ברשימה כדי שהשער לא יתיישן.
+  }, [items, fallback]);
 
   const close = useCallback(() => {
     setOpen(false);

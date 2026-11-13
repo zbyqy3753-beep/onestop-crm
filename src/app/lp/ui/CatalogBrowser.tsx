@@ -589,6 +589,8 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
    * הוא הפקד שנשאר עם מחרוזת כתובה.
    */
   const panelId = useId();
+  /** ראה ההערה על ה-`select` של המיון ועל `fallbackFocusId` ב-`CompareTray`. */
+  const sortId = useId();
   /*
    * ⚠️ הכרטיס כולו יורד כשאין בו אף פקד. ראה `hasAnyFilterControl`.
    */
@@ -612,10 +614,21 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
   const countLabel = (n: number) =>
     `${n} ${(isElectric ? PLANS_CAPTION : PACKAGES_CAPTION)(n)}`;
 
+  /*
+   * ⚠️ גם הרשת וגם ה-`aside` מגודרים ב-`showFilterCard`, ולא הכרטיס
+   * לבדו. `hasAnyFilterControl` הורידה את הכרטיס כשאין בו פקד, אבל
+   * העמודה של 16rem וה-`aside` שהחזיקו אותו נשארו — כלומר
+   * `/lp/provider/bezeq-energy`, המקרה היחיד בקטלוג של היום (שלוש
+   * רשומות חשמל, ספק אחד, סוג אחד, בלי מחוון), רינדר `aside` ריק
+   * כפריט הרשת הראשון: בדסקטופ שלושת הכרטיסים מתחילים 16rem אחרי
+   * הקצה עם רצועה ריקה לצידם, ובנייד נשארת שורת רשת בגובה 0 ועוד
+   * `gap-6` מעל התוצאות. אותה הכרעה בדיוק ("מה שאין בו פקד — יורד"),
+   * רק רמה אחת מעל.
+   */
   return (
-    <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
+    <div className={showFilterCard ? "grid gap-6 lg:grid-cols-[16rem_1fr]" : "grid gap-6"}>
+      {showFilterCard && (
       <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-        {showFilterCard && (
         <Card className="p-4">
           <div className="flex items-center justify-between gap-2 lg:mb-3">
             {/*
@@ -878,8 +891,8 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
             )}
           </div>
         </Card>
-        )}
       </aside>
+      )}
 
       {/*
         הריפוד שמפנה מקום למגש ההשוואה עבר לשורש הדף (`lp-tray-open`
@@ -916,7 +929,14 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
           </p>
           <label className="flex min-w-0 items-center gap-2 text-sm">
             <span className="text-lp-ink-2">מיון</span>
+            {/*
+              ⚠️ ה-`id` קיים בשביל `CompareTray`: הוא הפקד שתמיד מרונדר
+              בשורת התוצאות, ולכן נקודת האחיזה האחרונה להחזרת הפוקוס
+              כשהמגש מתפרק והכרטיס של הבחירה האחרונה מוסתר בסינון.
+              ראה `fallbackFocusId` שם.
+            */}
             <select
+              id={sortId}
               value={effectiveSort}
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="max-w-full min-w-0 rounded-lg border border-lp-line bg-lp-surface px-2 py-1.5 text-sm transition focus:border-lp-brand"
@@ -978,7 +998,13 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
         )}
       </div>
 
-      <CompareTray items={compare} onRemove={toggleCompare} onClear={() => setCompare([])} max={MAX_COMPARE} />
+      <CompareTray
+        items={compare}
+        onRemove={toggleCompare}
+        onClear={() => setCompare([])}
+        max={MAX_COMPARE}
+        fallbackFocusId={sortId}
+      />
     </div>
   );
 }
