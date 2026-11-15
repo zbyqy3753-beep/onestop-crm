@@ -6,8 +6,8 @@ import {
   compareRows,
   discountIsCapped,
   headlineValue,
-  PROMO_NOTE_QUOTE_LABEL,
   PROMO_PERIOD_TEXT,
+  promoNoteLabel,
   promoNoteRises,
   promoNoteText,
   promoRise,
@@ -727,10 +727,23 @@ export function CompareSheet({
  * בשורה של חבילה ב-₪99), כלומר הטבלה הודיעה שהמחיר יורד. התווית
  * נאמרת בתוך התא ולא נשענת על כותרת השורה, מפני שכותרת השורה היא
  * בדיוק הייחוס שאסור כאן.
+ *
+ * ⚠️ והחוזה הזה נאכף רק בחצי. ענף ה**עלייה** החזיר את הנוסח עירום,
+ * כלומר בדיוק נשען על כותרת השורה שההערה שמעל אוסרת להישען עליה —
+ * ושם יושבת id 23, שהנוסח שלה פותח ב-"25 ש\"ח ... ל-12 חודשים
+ * ראשונים" לפני ש-"לאחר מכן ... 59 ₪". בשורה אחת לצד id 1
+ * (`₪49.9`) ו-id 48 (`לא דווח שינוי`) התא הגיש `25` כתשובה ל-"אחרי
+ * ההטבה" על רשומה שמצהירה 59: הגולש קורא 25 < 49.9 ומסיק הפוך
+ * מהרשומה. `promoNoteRises` כן מנטרל את ה-25 החוזר — אבל בסריקה,
+ * לא במחרוזת שמודפסת.
+ *
+ * `promoNoteLabel` הוא בדיוק אותו שער על שתי התוויות, ולכן התא אומר
+ * עכשיו מילה במילה את מה שהכרטיס (`PackageCard`, ענף `note`) ופס
+ * ההירו (`heroRiseLine`) אומרים — "בתום ההטבה:" בענף העלייה
+ * ו-"נוסח המבצע:" בענף הציטוט. אין בכך תזוזה באף מספר שהרשומה מסרה.
  */
 export function afterPromoNote(pkg: Package, note: string): string {
-  if (promoNoteRises(pkg, note)) return note;
-  return `${PROMO_NOTE_QUOTE_LABEL} ${promoNoteText(pkg, note)}`;
+  return `${promoNoteLabel(pkg, note)} ${promoNoteText(pkg, note)}`;
 }
 
 function AfterPromoCell({ pkg }: { pkg: Package }) {
