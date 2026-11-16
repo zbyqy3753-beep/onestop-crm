@@ -1417,6 +1417,8 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
   // ⚠️ מחיר שמותנה בכך שהגולש כבר לקוח של אותה חברה. ראה
   // `priceForExistingCustomers`.
   if (priceForExistingCustomers(p)) return false;
+  // ⚠️ ומחיר שהרשומה מצהירה עליו כהתחלתי אינו מחיר. ראה `priceIsFloor`.
+  if (priceIsFloor(p)) return false;
 
   if (track === "cellular") {
     const spec = p.spec as CellularSpec;
@@ -1547,6 +1549,67 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
  * הקריאה יושבת כאן ולא ב-`format.ts` כדי ששני הקוראים — המנוע
  * והאריח — יחלקו מקור אחד; `format.ts` כבר מייבא מכאן שלושה שערים.
  */
+/**
+ * האם הרשומה מצהירה על המחיר הזה כעל **רצפה** ("מ-100 ₪ לחודש").
+ *
+ * ⚠️ המקבילה של `proseCapsAt` בכיוון ההפוך, וזו שחסרה דווקא לשדה
+ * היחיד שהכרטיס מדפיס בגודל 3xl. id 85 (`Partner Fiber`) אומר
+ * פעמיים "מ-69 ₪ לחודש לחודשיים ראשונים לאחר מכן **מ-100 ₪ לחודש**",
+ * ו-`price` שלו הוא 100 — כלומר הכרטיס הדפיס "₪100 לחודש" כמחיר
+ * אחיד בזמן שההערה **שעל אותו כרטיס** (`priceAfterPromoNote`) מצטטת
+ * "מ-100 ₪". שתי אמירות על אותו מספר, זו מעל זו, והעליונה היא
+ * הגורפת מהן. אותו כלל של `discountIsCapped`: לא יודעים — לא
+ * מבטיחים.
+ *
+ * ⚠️ נדרשת התאמה **לאותו מספר** ולא עצם קיום התבנית, מאותו טעם שם:
+ * כך השער מצמצם הבטחה ולא מרחיב אותה. `מ` חייבת לבוא אחרי גבול
+ * ולא אחרי אות עברית, אחרת "**מ**חודש 4 99 ש"ח" (ids 73, 153, 159)
+ * ייקרא כרצפה; ו-`ומעלה`/`ויותר` שאחרי הסכום נדחה, כי "מ-300 ₪
+ * ומעלה" (id 135) הוא מדרגת **צריכה** ולא מחיר התוכנית.
+ *
+ * ⚠️ יושב כאן ולא ב-`format.ts`, מאותו טעם מילה במילה של `tierCapsAt`
+ * שמתחת: הוא נכתב בשביל הכרטיס, והקורא השני שלו הוא **המנוע**. ראה
+ * `priceIsFloor`.
+ */
+export function proseFloorsAt(pkg: Package, value: number): boolean {
+  const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
+  for (const m of prose.matchAll(
+    /(?<![א-ת])מ-?\s*(\d[\d,]*(?:\.\d+)?)\s*(?:₪|ש"ח|שח|ש''ח)\s*(ומעלה|ויותר)?/g,
+  )) {
+    if (m[2]) continue;
+    if (Number(String(m[1]).replace(/,/g, "")) === value) return true;
+  }
+  return false;
+}
+
+/**
+ * מחיר שהרשומה עצמה מצהירה עליו כעל מחיר **התחלתי** אינו מחיר שהמנוע
+ * מתמחר בו חיסכון.
+ *
+ * ⚠️ זו המחצית שלא נסגרה כשהכרטיס קיבל את ההסתייגות. `proseFloorsAt`
+ * נכתב כדי שהכרטיס יודה "המחיר הוא מחיר התחלתי ולא מחיר אחיד", ובאותו
+ * זמן `isComparable` המשיכה להתייחס לאותו ₪100 של id 85 כמחיר חודשי
+ * מוצק ו-`perLinePrice` הייתה מפרסמת אותו. כלומר אותו עמוד היה אומר
+ * על אותו מספר שתי אמירות סותרות, וההבטחה המספרית — "אפשר לחסוך עד
+ * ₪3,000 בשנה" — נבנתה דווקא על זו הגורפת.
+ *
+ * ⚠️ נבדקים **שני** המחירים שהמנוע מפרסם (`price` ו-`afterPrice`),
+ * ולא `price` לבדו, מאותו טעם של `headlineIsLineTierPrice`: המספר
+ * שמגיע לכותרת הוא מה ש-`perLinePrice` מחזירה, והוא יכול להיות כל
+ * אחד מהשניים.
+ *
+ * נמדד על כל 109 הרשומות: id 85 היא ההתאמה היחידה, והיא נפסלת היום
+ * בארבעה שערים אחרים (`hasKnownAfterPrice`, `declaresRiseInText`,
+ * `routerPricedSeparately` וענף ה-`hasTv`) — ולכן אפס תזוזה בבריכה
+ * ובבחירות. זה שער לרענון הבא, לא מספר שעל המסך.
+ */
+function priceIsFloor(p: Package): boolean {
+  for (const value of [p.price, afterPrice(p)]) {
+    if (typeof value === "number" && Number.isFinite(value) && proseFloorsAt(p, value)) return true;
+  }
+  return false;
+}
+
 export function tierCapsAt(pkg: Package, lines: number): boolean {
   /*
    * ⚠️ `gateText` ולא צירוף מקומי של שלושה שדות.

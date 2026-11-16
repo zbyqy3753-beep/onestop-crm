@@ -3,6 +3,7 @@ import {
   addonFreeThenPaid,
   declaresRiseInText,
   familyPriceOnly,
+  proseFloorsAt,
   requiresMultipleLines,
   tierCapsAt,
 } from "./savings";
@@ -770,6 +771,49 @@ const ROUTER_INCLUDED_BARE = new RegExp(
   String.raw`(?<!(?:לא|אינו|אינה|אינם|ללא)\s{0,3})כולל(?:ת|ים)?\s*(?:ה)?${ROUTER_WORD}`,
 );
 
+/*
+ * ⚠️ אותה הצהרה **על מגדיל הטווח**, שלתווית שלו לא היה קורא פרוזה כלל.
+ *
+ * `detailRows` מגישה את הנתב דרך `routerDetail` ואת ההתקנה דרך
+ * `installationDetail`, ואת מגדיל הטווח — הציוד השלישי באותה שורת
+ * טבלה — דרך `included(s.extenderIncluded)` לבדו. ולכן `null`, הצורה
+ * שהמחלץ מייצר לשדה שלא קרא, הפיל את השורה כולה: id 115 נושאת בשם
+ * עצמו "סיבים 1000/100 תשתית+ ספק בזק **כולל נתב+מגדיל טווח**", ובטבלת
+ * ההשוואה מול id 70 השורה הדפיסה "כלול במחיר ‖ **—**" — כלומר הטבלה
+ * הכחישה עובדה שכותרת אותה עמודה מבטיחה. זו בדיוק אמת-המידה שההערה
+ * על `ROUTER_EXCLUDED_PRICE` מגדירה ("ה-`—` מכחיש עובדה שהרשומה כן
+ * מסרה"), על הציוד שהשורה שמתחתיה מתמחרת ב-₪14.9 לחודש.
+ *
+ * ⚠️ והנתב מותר **בתוך** ההצהרה. `ROUTER_INCLUDED_BARE` דורש שהמילה
+ * תהיה צמודה ל"כולל", ועל הצורה שבקטלוג ("כולל נתב+מגדיל טווח") מגדיל
+ * הטווח הוא הפריט השני ברשימה — כלומר שער בנוסח התאום היה מפספס
+ * בדיוק את הרשומה היחידה שיש לה מה לומר.
+ *
+ * נמדד על כל 33 חבילות הבית: id 115 היא ההתאמה **היחידה**, והיא
+ * מוסיפה שורה אחת בלי לגעת באף שורה או מספר קיימים. ids 157 ו-3 —
+ * שתי הרשומות שתוספת מגדיל הטווח שלהן היא הכרעה פתוחה (ראה סבב 51)
+ * — אינן נתפסות, מפני שהן כותבות "מגדיל טווח **בתוספת**" ולא "כולל".
+ */
+const EXTENDER_WORD = String.raw`(?:מגדיל|מרחיב|מגביר)\s*(?:ה)?טווח`;
+const EXTENDER_INCLUDED_BARE = new RegExp(
+  String.raw`(?<!(?:לא|אינו|אינה|אינם|ללא)\s{0,3})כולל(?:ת|ים)?\s*(?:(?:ה)?${ROUTER_WORD}\s*[+ו]?\s*)?(?:ה)?${EXTENDER_WORD}`,
+);
+
+/**
+ * האם הרשומה מצהירה בפרוזה שמגדיל הטווח כלול במחיר.
+ *
+ * ⚠️ נקרא רק כש-`extenderIncluded` הוא `null` — ולא `!== true` כמו
+ * ב-`routerDetail`. שם הפרוזה מוסרת **תוספת מחיר**, כלומר נתון מדויק
+ * יותר מהדגל, ולכן מותר לה לגבור עליו; כאן היא מוסרת הכללה, והכללה
+ * שגוברת על `false` מצהיר הייתה הופכת שלילה מפורשת של הרשומה
+ * לחיוב — הכיוון היחיד שאסור. בקטלוג של היום אין ולו `false` אחד
+ * (4 פעמים `true`, 29 פעמים `null`), ולכן אין כאן הבדל במספר מוצג;
+ * זה שער לרענון הבא.
+ */
+export function extenderIncludedInProse(pkg: Package): boolean {
+  return EXTENDER_INCLUDED_BARE.test(installationProse(pkg));
+}
+
 export function routerDetail(pkg: Package): string | null {
   const prose = installationProse(pkg);
   const cost = prose.match(ROUTER_COST);
@@ -976,34 +1020,16 @@ function tierPricePeriod(pkg: Package, price: number): string | null {
   return m ? m[1].replace(/\s+/g, " ") : null;
 }
 
-/**
- * האם הרשומה מצהירה על המחיר הזה כעל **רצפה** ("מ-100 ₪ לחודש").
+/*
+ * ⚠️ `proseFloorsAt` עבר ל-`savings.ts` ומיובא מכאן.
  *
- * ⚠️ המקבילה של `proseCapsAt` בכיוון ההפוך, וזו שחסרה דווקא לשדה
- * היחיד שהכרטיס מדפיס בגודל 3xl. id 85 (`Partner Fiber`) אומר
- * פעמיים "מ-69 ₪ לחודש לחודשיים ראשונים לאחר מכן **מ-100 ₪ לחודש**",
- * ו-`price` שלו הוא 100 — כלומר הכרטיס הדפיס "₪100 לחודש" כמחיר
- * אחיד בזמן שההערה **שעל אותו כרטיס** (`priceAfterPromoNote`) מצטטת
- * "מ-100 ₪". שתי אמירות על אותו מספר, זו מעל זו, והעליונה היא
- * הגורפת מהן. אותו כלל של `discountIsCapped`: לא יודעים — לא
- * מבטיחים.
- *
- * ⚠️ נדרשת התאמה **לאותו מספר** ולא עצם קיום התבנית, מאותו טעם שם:
- * כך השער מצמצם הבטחה ולא מרחיב אותה. `מ` חייבת לבוא אחרי גבול
- * ולא אחרי אות עברית, אחרת "**מ**חודש 4 99 ש"ח" (ids 73, 153, 159)
- * ייקרא כרצפה; ו-`ומעלה`/`ויותר` שאחרי הסכום נדחה, כי "מ-300 ₪
- * ומעלה" (id 135) הוא מדרגת **צריכה** ולא מחיר התוכנית.
+ * הוא נכתב בשביל הכרטיס לבדו, ואז התברר שהוא השער שחסר **למנוע**:
+ * `isComparable` התייחסה ל-₪100 של id 85 כמחיר חודשי מוצק בזמן
+ * שהכרטיס שמעליה הודה באותו עמוד ש"המחיר הוא מחיר התחלתי ולא מחיר
+ * אחיד". זו בדיוק האסימטריה ש-`tierCapsAt` מתעדת בכיוון ההפוך
+ * ("הקריאה יושבת כאן ולא ב-`format.ts` כדי ששני הקוראים — המנוע
+ * והאריח — יחלקו מקור אחד"), ולכן הקריאה עברה לאותו צד.
  */
-function proseFloorsAt(pkg: Package, value: number): boolean {
-  const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
-  for (const m of prose.matchAll(
-    /(?<![א-ת])מ-?\s*(\d[\d,]*(?:\.\d+)?)\s*(?:₪|ש"ח|שח|ש''ח)\s*(ומעלה|ויותר)?/g,
-  )) {
-    if (m[2]) continue;
-    if (Number(String(m[1]).replace(/,/g, "")) === value) return true;
-  }
-  return false;
-}
 
 /**
  * המספר הגדול שבכרטיס — מחיר חודשי או אחוז הנחה — כמחרוזת.
@@ -1765,7 +1791,16 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     } else {
       included("נתב", s.routerIncluded);
     }
-    included("מגדיל טווח", s.extenderIncluded);
+    /*
+     * ⚠️ קורא פרוזה גם למגדיל הטווח, מאותו טעם שהנתב שמעליו עובר דרך
+     * `routerDetail`: `null` אינו "אין מה לקרוא". ראה
+     * `extenderIncludedInProse`.
+     */
+    if (s.extenderIncluded == null && extenderIncludedInProse(pkg)) {
+      rows.push({ label: "מגדיל טווח", value: "כלול במחיר" });
+    } else {
+      included("מגדיל טווח", s.extenderIncluded);
+    }
     fee("ממיר נוסף", s.extraConverterCost);
     fee("מגדיל טווח נוסף", s.extraExtenderCost);
     included("VOD", s.vodIncluded);

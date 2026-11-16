@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Card } from "./Card";
 import { LeadForm } from "./LeadForm";
 import { shekels, typedShekels } from "../catalog/format";
@@ -145,6 +145,27 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
    * מתפרק וחוזר עם טופס נקי.
    */
   const [confirming, setConfirming] = useState(false);
+  /*
+   * ⚠️ `useId` ולא מזהים קבועים (`calc-spend`, `calc-units`).
+   *
+   * זה אותו תיקון מילה במילה ש-`LeadForm` כבר קיבל ("שני טפסים ללא
+   * `pkg` חיים על אותו דף… לחיצה על התווית 'שם מלא' בטופס התחתון
+   * הקפיצה את הפוקוס לשדה של המחשבון"), והוא לא הוחל על המשטח שעליו
+   * נכתב. לדף יש היום קורא אחד ל-`SavingsCalculator` (`page.tsx`),
+   * ולכן אין כפילות — אבל קורא שני באותו עמוד (מחשבון בראש עמוד ספק
+   * ועוד אחד בתחתיתו) היה יוצר שני מזהי `calc-spend` זהים: לחיצה על
+   * התווית במחשבון השני מקפיצה את הפוקוס לשדה של הראשון, ושני
+   * ה-`aria-describedby` מצביעים על אותה פסקה — כלומר קורא מסך שומע
+   * את הודעת השגיאה של המחשבון האחר.
+   *
+   * ארבעת המזהים אינם מופיעים באף עוגן או סלקטור חיצוני (נסרק על כל
+   * `src/`), ולכן ההחלפה אינה שוברת קישור.
+   */
+  const uid = useId();
+  const spendId = `calc-spend-${uid}`;
+  const hintId = `calc-spend-hint-${uid}`;
+  const noteId = `calc-spend-note-${uid}`;
+  const unitsId = `calc-units-${uid}`;
   /*
    * ⚠️ האיפוס נעשה ב**כניסה** לשלב 2, ולא ביציאה ממנו.
    *
@@ -516,11 +537,11 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-lp-ink-2" htmlFor="calc-spend">
+              <label className="mb-1 block text-xs font-medium text-lp-ink-2" htmlFor={spendId}>
                 תשלום חודשי כולל (₪)
               </label>
               <input
-                id="calc-spend"
+                id={spendId}
                 value={spend}
                 /*
                   ⚠️ השדה שומר את מה שהוקלד, בלי לכתוב לתוכו ערך מקוטע.
@@ -602,7 +623,7 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 className={`ltr-num text-end ${fieldClass.replace("text-sm", "text-lg")}`}
                 /* קורא מסך שמע את ההודעה אבל לא ידע שהשדה עצמו שגוי. */
                 aria-invalid={invalidSpend || absurdHint || undefined}
-                aria-describedby="calc-spend-hint calc-spend-note"
+                aria-describedby={`${hintId} ${noteId}`}
               />
               {/*
                 ⚠️ הנוסח הניטרלי חי **מחוץ** לאזור החי. קודם אותה פסקה
@@ -622,11 +643,11 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 החי מחזיק **רק** את ההודעה, ולכן כיבוי שלה מרוקן אותו —
                 ומחרוזת ריקה אינה הכרזה.
               */}
-              <p id="calc-spend-hint" className="sr-only">
+              <p id={hintId} className="sr-only">
                 הזינו את הסכום שאתם משלמים היום בחודש, בשקלים.
               </p>
               <p
-                id="calc-spend-note"
+                id={noteId}
                 aria-live="polite"
                 /*
                   ⚠️ צבע שגיאה כשהשדה שגוי. הפסקה מחזיקה גם את הודעת
@@ -663,11 +684,11 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
             </div>
             {track === "cellular" && (
               <div>
-                <label className="mb-1 block text-xs font-medium text-lp-ink-2" htmlFor="calc-units">
+                <label className="mb-1 block text-xs font-medium text-lp-ink-2" htmlFor={unitsId}>
                   כמה קווים?
                 </label>
                 <select
-                  id="calc-units"
+                  id={unitsId}
                   value={units}
                   onChange={(e) => setUnits(Number(e.target.value))}
                   /*
@@ -743,11 +764,11 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
                 ⚠️ הקישור קבוע ולא מותנה ב-`spendHint`. בכניסה לשלב
                 הכפתור כבר מכריז על עצמו כמושבת אבל ההסבר עוד לא נכתב,
                 כלומר קורא מסך שמע "לחצן, מושבת" בלי סיבה — בדיוק המצב
-                שההערה למעלה מבטיחה שלא יקרה. `calc-spend-hint` קיימת
-                תמיד ב-DOM ונושאת את הנוסח הניטרלי; `calc-spend-note` היא
+                שההערה למעלה מבטיחה שלא יקרה. פסקת הנוסח הניטרלי
+                (`hintId`) קיימת תמיד ב-DOM; פסקת ההודעה (`noteId`) היא
                 האזור החי ונושאת את ההודעה בלבד (ראה ההערה שם).
               */
-              aria-describedby="calc-spend-hint calc-spend-note"
+              aria-describedby={`${hintId} ${noteId}`}
               onClick={submitSpend}
               /*
                 ⚠️ מצב מושבת בטוקנים ולא ב-`opacity-40`. העמעום מצייר
@@ -1043,8 +1064,15 @@ export function SavingsCalculator({ packages }: { packages: Package[] }) {
 
               המסלול שבשבילו הנוסח הזה נכתב — יציאה לשלב 1 וחזרה, שמפרקת
               את `LeadForm` ומחזירה טופס נקי — ממשיך לעבוד: `confirming`
-              מתאפס בשני הכפתורים שמשנים שלב, ו-`sent` נשאר דלוק ולכן
-              הנוסח המעודכן מופיע בדיוק שם.
+              מתאפס ב**כניסה** לשלב 2, שהיא המסלול היחיד לשלב הזה
+              (`submitSpend`), ו-`sent` נשאר דלוק ולכן הנוסח המעודכן
+              מופיע בדיוק שם.
+
+              ⚠️ הנוסח הקודם כאן תלה את זה באיפוס שקורה **ביציאה**
+              מהשלב, בשני הכפתורים — איפוס שאינו קיים: `setConfirming`
+              נקרא ממקום אחד בלבד, כפי שההערה על ההצהרה עצמה מתעדת
+              נכון. ההתנהגות הייתה ונשארה תקינה; שתי ההערות סתרו זו
+              את זו על אותו דגל.
             */}
             {!confirming && (
               <>

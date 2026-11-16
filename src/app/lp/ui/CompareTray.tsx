@@ -6,6 +6,7 @@ import {
   compareRows,
   discountIsCapped,
   headlineValue,
+  priceNote,
   PROMO_PERIOD_TEXT,
   promoNoteLabel,
   promoNoteRises,
@@ -669,20 +670,57 @@ export function CompareSheet({
                 כבר מחזיר "—" לחשמל, כלומר הטבלה הוסיפה שורה שלמה של
                 מקפים מתחת לכותרת שמבטיחה את הנתון המרכזי של הדף.
               */}
-              {!allElectric && (
-                <Row label="אחרי ההטבה">
-                  {items.map((p) => (
-                    <AfterPromoCell key={p.id} pkg={p} />
-                  ))}
-                </Row>
-              )}
-              {compareRows(items).map((row) => (
-                <Row key={`fact-${row.label}`} label={row.label}>
-                  {row.values.map((v, i) => (
-                    <Cell key={items[i].id}>{v}</Cell>
-                  ))}
-                </Row>
-              ))}
+              {/*
+                ⚠️ ההסתייגות על המחיר נדפסת **לפני** שורת "אחרי ההטבה",
+                ולא אחריה.
+
+                `compareRows` מצהירה במפורש למה היא מחזירה אותה ראשונה:
+                "היא מתייחסת לשורת המחיר שהטבלה מדפיסה מעל השורות האלה
+                (`CompareTray`), ולכן מקומה צמוד אליה". הטבלה דחפה בין
+                השתיים שורה שלמה, ובכך ניתקה את ההסתייגות מהמספר שהיא
+                מסייגת: גולש שמשווה id 110 (₪35) ל-id 48 ראה "מחיר
+                לחודש: ₪35", מתחתיה "אחרי ההטבה: לא דווח שינוי",
+                ורק מתחתיה "תנאי המחיר: המחיר מותנה בכמות המנויים
+                בחבילה" — הסתייגות שנראית כאילו היא חלה על המחיר-שאחרי.
+                בכרטיס של אותה חבילה (`PackageCard`) הסדר הפוך וההסתייגות
+                צמודה ל-₪35, וגם בלשונית החשמל — שבה שורת "אחרי ההטבה"
+                יורדת — הצמידות נשמרת. כלומר הכוונה המתועדת התקיימה
+                בענף אחד מתוך שניים.
+
+                ⚠️ הפיצול נעשה לפי `priceNote` ולא לפי מספר השורות
+                ("הראשונה"): `compareRows` מחזירה הסתייגות רק כשיש
+                כזו, ובחשמל התווית שונה לגמרי ("מה ההנחה כוללת").
+                שאילתה של אותו שער שבנה את השורה היא הדבר היחיד
+                שאינו נשבר כשהסדר שם ישתנה.
+              */}
+              {(() => {
+                const rows = compareRows(items);
+                const caveatLabels = new Set(
+                  items.map((p) => priceNote(p)?.label).filter((l): l is string => l != null),
+                );
+                const caveats = rows.filter((r) => caveatLabels.has(r.label));
+                const facts = rows.filter((r) => !caveatLabels.has(r.label));
+                const factRow = (row: (typeof rows)[number]) => (
+                  <Row key={`fact-${row.label}`} label={row.label}>
+                    {row.values.map((v, i) => (
+                      <Cell key={items[i].id}>{v}</Cell>
+                    ))}
+                  </Row>
+                );
+                return (
+                  <>
+                    {caveats.map(factRow)}
+                    {!allElectric && (
+                      <Row label="אחרי ההטבה">
+                        {items.map((p) => (
+                          <AfterPromoCell key={p.id} pkg={p} />
+                        ))}
+                      </Row>
+                    )}
+                    {facts.map(factRow)}
+                  </>
+                );
+              })()}
             </tbody>
           </table>
         </div>
