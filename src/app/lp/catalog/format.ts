@@ -229,6 +229,38 @@ function intlMinutesAreOptional(pkg: Package, value: number): boolean {
 const intlExtra = (pkg: Package, value: number) =>
   intlMinutesAreOptional(pkg, value) ? " · בתוספת תשלום" : "";
 
+/**
+ * האם הרשומה מצהירה על המספר הזה כעל מאגר **משותף** לדקות ול-SMS.
+ *
+ * ⚠️ "עד 5,000 **יחידות שימוש מכל סוג**" הוא מאגר אחד, לא שניים.
+ * `proseCapsAt` אכן קורא את ה-"עד" ומדפיס אותו על שני האריחים — אבל
+ * `CAP_UNITS` אינו מכיר את היחידה `יחידות שימוש`, ולכן זיהוי היחידה
+ * מחזיר `undefined` והתקרה נקשרת לכל שדה שערכו זהה. התוצאה על id 21:
+ * "עד 5,000" מתחת ל"דקות שיחה" ו-"עד 5,000" מתחת ל"הודעות SMS" —
+ * כלומר הכרטיס מבטיח 10,000 יחידות על רשומה שחוסמת 5,000.
+ *
+ * שהקטלוג **כן** מבדיל בין שתי הצורות מוכיחה id 17, שכותבת שתי
+ * תקרות נפרדות באמת ("עד 5,000 דקות זמן אוויר" + "עד 5,000 הודעות")
+ * ומתקבלת היום בדיוק באותו פלט.
+ *
+ * ⚠️ הסייג מודפס ולא נמחק מספר, מאותו כלל של `dataSharedAcrossLines`
+ * (`" · לכל הקווים יחד"`): הרשומה מסרה 5,000, והתיקון הוא לומר שזה
+ * מאגר אחד — לא להסתיר את המספר שהיא מסרה.
+ *
+ * נמדד: ids 19 ו-21 הן היחידות בקטלוג עם הצורה הזו. ב-id 19
+ * (`sms: null`) מודפס אריח אחד בלבד ולכן אין שני מאגרים לאחד, והסייג
+ * אינו נדלק — הוא מותנה בכך ש**שני** האריחים נושאים את אותו מספר.
+ */
+const SHARED_USAGE_CAP = /(?<![א-ת])ו?עד\s*(\d[\d,]*)\s*יחידות\s*שימוש/g;
+
+function sharedUsageCapAt(pkg: Package, value: number): boolean {
+  const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
+  for (const m of prose.matchAll(SHARED_USAGE_CAP)) {
+    if (Number(String(m[1]).replace(/,/g, "")) === value) return true;
+  }
+  return false;
+}
+
 /** `"עד "` כשהרשומה מצהירה על המספר הזה כתקרה, אחרת מחרוזת ריקה. */
 const upTo = (pkg: Package, kind: CapKind, ...values: (number | null | undefined)[]) =>
   values.some((v) => typeof v === "number" && proseCapsAt(pkg, v, kind)) ? "עד " : "";
@@ -814,6 +846,38 @@ export function extenderIncludedInProse(pkg: Package): boolean {
   return EXTENDER_INCLUDED_BARE.test(installationProse(pkg));
 }
 
+/**
+ * האם הרשומה מצהירה בפרוזה על VOD — לכאן או לכאן.
+ *
+ * ⚠️ `vodIncluded` היה השדה ה**שלישי** באותה שורת טבלה שנשאר בלי
+ * קורא פרוזה, לא חיובי ולא שלילי: הנתב עובר דרך `routerDetail`
+ * ומגדיל הטווח דרך `extenderIncludedInProse`, ו-VOD לבדו נשאר עם
+ * `null` ששותק. id 72 מצהירה על המצב השלילי **בשם עצמה** —
+ * `"1000/100 ללא VOD"` — ובכל זאת `vodIncluded: null`, ולכן השורה
+ * נעלמה מהכרטיס ובטבלת ההשוואה היא קיבלה `—`. הגולש שמשווה אותה
+ * (₪169) מול id 71 (`"1000/100 כולל VOD"`, ₪199) — הפרש ששני השמות
+ * אומרים שהוא בדיוק ה-VOD — קרא "כלול במחיר ‖ **לא ידוע**", כלומר
+ * הטבלה הכחישה עובדה שכותרת אותה עמודה מוסרת. אותה אמת-מידה בדיוק
+ * שההערה על `ROUTER_EXCLUDED_PRICE` מגדירה.
+ *
+ * ⚠️ השלילה נבדקת **לפני** החיוב, מפני ש-`ללא VOD` מכיל את המילה
+ * `VOD` ושער חיובי רופף היה קורא אותו כהכללה — ההיפוך המדויק של מה
+ * שהרשומה אמרה. אותו `(?<!ללא\s{0,3})` של `EXTENDER_INCLUDED_BARE`.
+ *
+ * ⚠️ ונקרא רק כש-`vodIncluded` הוא `null`, כמו `extenderIncludedInProse`
+ * ולא כמו `routerDetail`: כאן הפרוזה מוסרת הכללה ולא סכום, והכללה
+ * שגוברת על `false` מוצהר הופכת שלילה מפורשת לחיוב.
+ */
+const VOD_EXCLUDED = /(?:ללא|בלי|לא\s+כולל(?:ת|ים)?)\s*VOD/i;
+const VOD_INCLUDED = /(?<!(?:לא|אינו|אינה|אינם|ללא)\s{0,3})כולל(?:ת|ים)?\s*VOD/i;
+
+export function vodInProse(pkg: Package): boolean | null {
+  const prose = installationProse(pkg);
+  if (VOD_EXCLUDED.test(prose)) return false;
+  if (VOD_INCLUDED.test(prose)) return true;
+  return null;
+}
+
 export function routerDetail(pkg: Package): string | null {
   const prose = installationProse(pkg);
   const cost = prose.match(ROUTER_COST);
@@ -1014,7 +1078,7 @@ function tierPricePeriod(pkg: Package, price: number): string | null {
   const amount = Number.isInteger(price) ? `${digits}(?:[.,]0{1,2})?` : `${digits}0?`;
   const m = prose.match(
     new RegExp(
-      String.raw`(?<![\d.,])${amount}(?![\d.,])\s*(?:₪|ש"ח|ש״ח|שח)[^|]{0,20}?למשך\s+(שנה|\d+\s*(?:מחזורי\s+החיוב(?:\s+הראשונים)?|חודשים?))`,
+      String.raw`(?<![\d.,])${amount}(?![\d.,])\s*(?:₪|ש"ח|ש״ח|שח)[^|]{0,20}?למשך\s+(שנה|\d+\s*(?:מחזורי\s+ה?חיוב(?:\s+הראשונים)?|חודשים?))`,
     ),
   );
   return m ? m[1].replace(/\s+/g, " ") : null;
@@ -1196,7 +1260,7 @@ export function promoNoteRises(pkg: Package, note: string): boolean {
    * ולכן אין בהן סיכון להצהרה חדשה על רשומה שלא הצהירה. סריקה על
    * כל 11 הרשומות שנושאות נוסח: id 23 היא היחידה שזזה.
    */
-  const nums = (note.match(/\d+(?:\.\d+)?(?:\s*(?:חודשים?|מחזורי\s+חיוב|שנים))?/g) ?? [])
+  const nums = (note.match(/\d+(?:\.\d+)?(?:\s*(?:חודשים?|מחזורי\s+ה?חיוב|שנים))?/g) ?? [])
     .filter((raw) => !/(?:חודשים?|מחזורי|שנים)\s*$/.test(raw))
     .map((raw) => Number(raw))
     .filter((n) => n >= 10 && Math.abs(n - price) >= 0.005);
@@ -1477,10 +1541,19 @@ export function cardStats(pkg: Package): Stat[] {
     // "עד 5,000 דקות" בפרוזה, והאריח הדפיס 5,000 כעובדה.
     // ⚠️ `isCount` ולא `typeof === "number"`: `NaN` **הוא** number, ולכן
     // השער הקודם הדפיס אריח "NaN" מתחת ל-"דקות שיחה". ראה `isCount`.
+    // ⚠️ מאגר משותף לדקות ול-SMS מסומן ככזה על שני האריחים, אחרת
+    // אותם 5,000 נקראים פעמיים כשני מאגרים. ראה `sharedUsageCapAt`.
+    const shared =
+      isCount(spec.minutes) &&
+      isCount(spec.sms) &&
+      spec.minutes === spec.sms &&
+      sharedUsageCapAt(pkg, spec.minutes)
+        ? " · לדקות ול-SMS יחד"
+        : "";
     if (isCount(spec.minutes))
-      out.push({ value: `${upTo(pkg, "minutes", spec.minutes)}${nf.format(spec.minutes)}`, caption: MINUTES_CAPTION(spec.minutes) });
+      out.push({ value: `${upTo(pkg, "minutes", spec.minutes)}${nf.format(spec.minutes)}${shared}`, caption: MINUTES_CAPTION(spec.minutes) });
     if (isCount(spec.sms))
-      out.push({ value: `${upTo(pkg, "sms", spec.sms)}${nf.format(spec.sms)}`, caption: SMS_CAPTION(spec.sms) });
+      out.push({ value: `${upTo(pkg, "sms", spec.sms)}${nf.format(spec.sms)}${shared}`, caption: SMS_CAPTION(spec.sms) });
     // ⚠️ גם דקות לחו״ל. זה היה השדה היחיד שנשאר בלי השער: id 110
     // אומר "עד 100 דקות שיחה מישראל ל-27 יעדים בחו\"ל (אופציונלי)"
     // והאריח הדפיס "100" כעובדה, וכך גם ids 42, 54, 64, 65, 66 ו-69.
@@ -1803,7 +1876,8 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
     }
     fee("ממיר נוסף", s.extraConverterCost);
     fee("מגדיל טווח נוסף", s.extraExtenderCost);
-    included("VOD", s.vodIncluded);
+    // ⚠️ `null` אינו "אין מה לקרוא" — ראה `vodInProse`.
+    included("VOD", s.vodIncluded ?? vodInProse(pkg));
   }
 
   if (pkg.category === "electricity") {

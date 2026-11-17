@@ -144,6 +144,14 @@ const MONEY_NONZERO = String.raw`(?:${SHEKEL}\s?[1-9]\d*(?:\.\d+)?|[1-9]\d*(?:\.
 const AHKAZ = String.raw`אח\s?${QUOTES}{0,2}\s?כ`;
 
 /**
+ * רווחים שהעין רואה כרווח והרגקס לא.
+ *
+ * ⚠️ `U+00A0` ואחיו אינם מתאימים לרווח ליטרלי, והטוקנים של כל שערי
+ * הנוסח כתובים ברווח ליטרלי. ראה `gateText`.
+ */
+const GATE_SPACE = /[  -   　]/g;
+
+/**
  * כמות קווים שנכתבה **במילה**, בקבוע אחד לכל שערי הכמות.
  *
  * ⚠️ שלושת שערי הכמות (`REQUIRES_MULTIPLE_LINES`, `headlineIsLineTierPrice`,
@@ -344,7 +352,23 @@ const RISE_IN_TEXT =
  * נפרד שהצהיר על עצמו בשדה שאף שער לא קרא.
  */
 function gateText(p: Package): string {
-  return `${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""} ${p.priceAfterPromoNote ?? ""}`;
+  /*
+   * ⚠️ הרווחים מנורמלים לפני שהטקסט מגיע לשער, ולא אחריו.
+   *
+   * בכל ארבעת הרגקסים שקוראים מכאן יש כעשרים טוקנים עם רווח
+   * **ליטרלי** — `לאחר מכן`, `אחר כך`, `למשך שנה`, `מחיר רגיל`,
+   * `(?:מובטח|תקף|קבוע) ל`, `הנחה ל` — ו-`U+00A0` אינו מתאים לרווח
+   * ליטרלי. הקובץ כבר מנרמל תווים בלתי-נראים, אבל רק על הקלט של
+   * **הגולש** (`INVISIBLE` ב-`parseSpendRaw`), ולא על הטקסט של
+   * **הקטלוג** — אף שהקטלוג נושא NBSP היום (ids 21, 125).
+   *
+   * הכיוון שמרני: רווח שמנורמל רק **מדליק** שערים, כלומר מוציא
+   * חבילות מהבריכה, ולעולם לא מכניס. נמדד על הקטלוג של היום — אף
+   * אחת משתי הרשומות אינה נושאת NBSP בתוך משפט הצהרה, ולכן הבריכה
+   * והבחירות אינן זזות באף כמות ובאף מסלול. זה שער לרענון הבא.
+   */
+  const raw = `${logicName(p)} ${p.description ?? ""} ${p.benefits ?? ""} ${p.priceAfterPromoNote ?? ""}`;
+  return raw.replace(INVISIBLE, "").replace(GATE_SPACE, " ");
 }
 
 /**
@@ -1567,17 +1591,40 @@ export function isComparable(p: Package, track: Track): p is MonthlyPackage {
  * ייקרא כרצפה; ו-`ומעלה`/`ויותר` שאחרי הסכום נדחה, כי "מ-300 ₪
  * ומעלה" (id 135) הוא מדרגת **צריכה** ולא מחיר התוכנית.
  *
+ * ⚠️ ו-`ואילך` שלישית ברשימה הזו, לא שתיים. זו בדיוק ההשמטה
+ * ש-`REQUIRES_MULTIPLE_LINES` כבר תיקן ("ואילך" ליד "ומעלה"),
+ * וה**היפוך** של כל שער אחר כאן: בלעדיה "מ-300 ₪ ואילך" — מדרגת
+ * צריכה — נקראה כמחיר התוכנית, כלומר השער אמר על רשומה בריאה דבר
+ * שהרשומה לא אמרה והוציא אותה מהבריכה. המילה חיה בקטלוג (id 42).
+ *
+ * ⚠️ והשער קורא `gateText` ואת `SHEKEL`/`[-–־]` המשותפים, ולא
+ * רשימת מטבע ומקף משלו. זה היה השער היחיד בקובץ שכתב לעצמו
+ * `(?:₪|ש"ח|שח|ש''ח)` ו-`מ-?`, ולכן הכיר צורה אחת מתוך חמש
+ * שהקטלוג כותב בפועל: `מ-₪100` (סדר המטבע הפוך, 13 מופעים),
+ * `מ-100 שקלים` (המילה המלאה, 3 מופעים), `מ–100 ₪` (en-dash) —
+ * וקודם כול `priceAfterPromoNote`, השדה שבו id 85 **באמת** נושא
+ * את המשפט שבשבילו השער הזה נכתב. ההצמדה ל-`gateText` מדליקה את
+ * השער על כל חמש הצורות; הכיוון שמרני (מוציא מהבריכה), והבריכה
+ * והבחירות של היום אינן זזות באף כמות ובאף מסלול.
+ *
  * ⚠️ יושב כאן ולא ב-`format.ts`, מאותו טעם מילה במילה של `tierCapsAt`
  * שמתחת: הוא נכתב בשביל הכרטיס, והקורא השני שלו הוא **המנוע**. ראה
  * `priceIsFloor`.
  */
+const PROSE_FLOOR = new RegExp(
+  String.raw`(?<![א-ת])מ[-–־]?\s*(?:(\d[\d,]*(?:\.\d+)?)\s*` +
+    SHEKEL +
+    String.raw`|` +
+    SHEKEL +
+    String.raw`\s*(\d[\d,]*(?:\.\d+)?))\s*(ומעלה|ויותר|ואילך)?`,
+  "g",
+);
+
 export function proseFloorsAt(pkg: Package, value: number): boolean {
-  const prose = [logicName(pkg), pkg.description, pkg.benefits].filter(Boolean).join(" ");
-  for (const m of prose.matchAll(
-    /(?<![א-ת])מ-?\s*(\d[\d,]*(?:\.\d+)?)\s*(?:₪|ש"ח|שח|ש''ח)\s*(ומעלה|ויותר)?/g,
-  )) {
-    if (m[2]) continue;
-    if (Number(String(m[1]).replace(/,/g, "")) === value) return true;
+  for (const m of gateText(pkg).matchAll(PROSE_FLOOR)) {
+    if (m[3]) continue;
+    const raw = m[1] ?? m[2];
+    if (raw != null && Number(String(raw).replace(/,/g, "")) === value) return true;
   }
   return false;
 }
