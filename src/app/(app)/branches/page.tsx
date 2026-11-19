@@ -1,7 +1,8 @@
 import QRCode from "qrcode";
 import { prisma } from "@/server/db/client";
 import { requireRouteAccess } from "@/server/auth/session";
-import { BRANCHES, branchUrl } from "@/lib/domain/branches";
+import { BRANCHES, REP_SEPARATOR, branchUrl } from "@/lib/domain/branches";
+import { branchReps } from "@/server/leads/branchRep";
 import { BranchesClient, type BranchRow } from "@/components/branches/BranchesClient";
 
 /**
@@ -12,20 +13,36 @@ import { BranchesClient, type BranchRow } from "@/components/branches/BranchesCl
  *
  * הספירה היא לפי `sourceDetail` שמסתיים בשם הסניף — זה בדיוק מה שמסלול
  * ה-API כותב (`branchSourceDetail`), ולכן אין עמודה נפרדת ב-DB.
+ *
+ * `?rep=<תג>` מחליף את כל ה-QR ל-QR האישי של הנציג (ראה
+ * `server/leads/branchRep.ts`), והספירה הופכת ללידים שלו בלבד.
  */
-export default async function BranchesPage() {
+export default async function BranchesPage({
+  searchParams,
+}: {
+  // ⚠️ Promise — ב-Next 16 `searchParams` א-סינכרוני
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireRouteAccess("/branches");
+
+  const { rep: repParam } = await searchParams;
+  const reps = await branchReps();
+  const rep = reps.find((r) => r.tag === repParam);
 
   const since = thirtyDaysAgo();
   const grouped = await prisma.lead.groupBy({
     by: ["sourceDetail"],
-    where: { createdAt: { gte: since }, sourceDetail: { contains: " – " } },
+    where: {
+      createdAt: { gte: since },
+      sourceDetail: { contains: " – " },
+      ...(rep ? { assigneeId: rep.id } : {}),
+    },
     _count: { _all: true },
   });
 
   const rows: BranchRow[] = await Promise.all(
     BRANCHES.map(async (branch) => {
-      const url = branchUrl(branch);
+      const url = branchUrl(branch, rep?.tag);
       const svg = await QRCode.toString(url, {
         type: "svg",
         errorCorrectionLevel: "M",
@@ -35,7 +52,7 @@ export default async function BranchesPage() {
         .filter((g) => g.sourceDetail?.endsWith(` – ${branch.name}`))
         .reduce((sum, g) => sum + g._count._all, 0);
       return {
-        code: branch.code,
+        code: rep ? `${branch.code}${REP_SEPARATOR}${rep.tag}` : branch.code,
         name: branch.name,
         url,
         svg,
@@ -45,7 +62,13 @@ export default async function BranchesPage() {
     }),
   );
 
-  return <BranchesClient rows={rows} />;
+  return (
+    <BranchesClient
+      rows={rows}
+      reps={reps.map((r) => ({ tag: r.tag, name: r.name }))}
+      repTag={rep?.tag ?? ""}
+    />
+  );
 }
 
 /** פונקציה ולא שורה ברכיב: `react-hooks/purity` אוסר `Date.now()` ברינדור. */

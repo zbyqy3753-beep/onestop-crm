@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { REP_SEPARATOR } from "@/lib/domain/branches";
 
 export type BranchRow = {
   code: string;
@@ -13,19 +15,35 @@ export type BranchRow = {
   whatsapp: boolean;
 };
 
+export type RepOption = { tag: string; name: string };
+
 /** גודל ה-PNG שיורד להדפסה — מספיק למדבקה של 10 ס"מ ב-300dpi. */
 const PNG_SIZE = 1200;
 
 /**
  * מסך סניפי מוביסל: כרטיס לכל סניף עם QR, קישור, העתקה והורדה.
+ *
+ * בחירת נציג מחליפה את כל ה-QR ל-QR האישי שלו (`?rep=<תג>`): ליד שמגיע
+ * ממנו משויך אליו אוטומטית. ה-QR נוצר בשרת, ולכן הבחירה היא ניווט.
  */
-export function BranchesClient({ rows }: { rows: BranchRow[] }) {
+export function BranchesClient({
+  rows,
+  reps,
+  repTag,
+}: {
+  rows: BranchRow[];
+  reps: RepOption[];
+  /** הנציג שנבחר, או "" ל-QR הכללי של הסניף. */
+  repTag: string;
+}) {
+  const router = useRouter();
+  const repName = reps.find((r) => r.tag === repTag)?.name;
   const [query, setQuery] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
 
   const shown = useMemo(() => {
     const q = query.trim();
-    return q ? rows.filter((r) => r.name.includes(q) || r.code.includes(q.toLowerCase())) : rows;
+    return q ? rows.filter((r) => r.name.includes(q) || r.code.split(REP_SEPARATOR)[0].includes(q.toLowerCase())) : rows;
   }, [rows, query]);
 
   const total = rows.reduce((sum, r) => sum + r.leads30d, 0);
@@ -68,11 +86,38 @@ export function BranchesClient({ rows }: { rows: BranchRow[] }) {
         <div>
           <h1 className="text-xl font-bold text-ink-1">סניפי מוביסל</h1>
           <p className="mt-1 text-sm text-ink-3">
-            QR לכל סניף. לקוח שסורק נכנס לאתר, וכל ליד שהוא משאיר מגיע לכאן עם שם הסניף.
-            {" "}
-            <span className="nums">{total}</span> לידים מסניפים ב-30 הימים האחרונים.
+            {repName ? (
+              <>
+                QR אישי של {repName}. ליד מסריקה שלו נכנס משויך אליו, עם התראת ליד חם.
+                {" "}
+                <span className="nums">{total}</span> לידים שלו מסניפים ב-30 הימים האחרונים.
+              </>
+            ) : (
+              <>
+                QR לכל סניף. לקוח שסורק נכנס לאתר, וכל ליד שהוא משאיר מגיע לכאן עם שם הסניף.
+                {" "}
+                <span className="nums">{total}</span> לידים מסניפים ב-30 הימים האחרונים.
+              </>
+            )}
           </p>
         </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+        <select
+          value={repTag}
+          onChange={(e) => {
+            const tag = e.target.value;
+            router.push(tag ? `/branches?rep=${tag}` : "/branches");
+          }}
+          aria-label="QR של"
+          className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink-1 sm:w-56"
+        >
+          <option value="">QR כללי של הסניף (בלי שיוך)</option>
+          {reps.map((r) => (
+            <option key={r.tag} value={r.tag}>
+              QR אישי: {r.name}
+            </option>
+          ))}
+        </select>
         <input
           type="search"
           value={query}
@@ -80,6 +125,7 @@ export function BranchesClient({ rows }: { rows: BranchRow[] }) {
           placeholder="חיפוש סניף"
           className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink-1 sm:w-64"
         />
+        </div>
       </header>
 
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

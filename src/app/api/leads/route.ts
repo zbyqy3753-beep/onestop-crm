@@ -16,7 +16,8 @@ import {
   parseInterest,
 } from "@/lib/domain/interest";
 import { notifyHotLeadAssigned } from "@/server/leads/hotLeadAlert";
-import { branchByCode, branchSourceDetail } from "@/lib/domain/branches";
+import { parseBranchRef, branchSourceDetail } from "@/lib/domain/branches";
+import { repByTag } from "@/server/leads/branchRep";
 import { notifyBranchLead } from "@/server/leads/branchLeadAlert";
 
 /**
@@ -418,7 +419,10 @@ export async function POST(request: NextRequest): Promise<Response> {
    * שם סניף שמכיל מילת שירות ("מוביסל בר סלולר גן שמואל") ומוחק אותו
    * מהמקור. קוד לא מוכר אינו סיבה לדחות ליד — הוא פשוט נקלט בלי סניף.
    */
-  const branch = branchByCode(body.branch);
+  const branchRef = parseBranchRef(body.branch);
+  const branch = branchRef?.branch;
+  // QR אישי של נציג (`<סניף>--<תג>`): הליד הולך אליו, לפני כל חלוקה אחרת
+  const rep = branchRef?.repTag ? await repByTag(branchRef.repTag) : undefined;
   const sourceDetail = branch
     ? branchSourceDetail(partner.name, branch)
     : consumedSource
@@ -426,12 +430,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       : rawSource || partner.name;
   const note = [
     buildNote(body, currentProvider),
-    branch ? `הגיע מסריקת QR בסניף ${branch.name}` : "",
+    branch
+      ? rep
+        ? `הגיע מסריקת ה-QR האישי של ${rep.name} בסניף ${branch.name}`
+        : `הגיע מסריקת QR בסניף ${branch.name}`
+      : "",
   ]
     .filter(Boolean)
     .join("\n");
 
-  const assigneeId = await nextAssignee(partner);
+  const assigneeId = rep?.id ?? (await nextAssignee(partner));
 
   const lead = await db.leads.create({
     name,

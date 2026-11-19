@@ -79,9 +79,38 @@ export function branchByCode(code: unknown): Branch | undefined {
   return BRANCHES.find((b) => b.code === key);
 }
 
-/** הקישור שמודפס ב-QR של הסניף. */
-export function branchUrl(branch: Branch): string {
-  return `${BRANCH_SITE_ORIGIN}/s/${branch.code}`;
+/**
+ * ── QR אישי לנציג ───────────────────────────────────────────────────
+ *
+ * QR אישי נושא קוד `<סניף>--<תג נציג>` (למשל `ashdod--3fa91c0e`), וליד
+ * שמגיע ממנו משויך אוטומטית לנציג ומקבל התראת ליד חם.
+ *
+ * ⚠️ האתר לא יודע על זה כלום: הוא מעביר כל קוד שעונה ל-
+ * `^[a-z0-9-]{2,40}$` כמו שהוא. לכן אין צורך לשנות או לפרוס את האתר,
+ * אבל הקוד המלא חייב להישאר בתוך הביטוי הזה: אותיות קטנות, ספרות
+ * ומקף, עד 40 תווים. סניף ארוך (15) + מפריד (2) + תג (8) = 25.
+ *
+ * `--` בטוח כמפריד כי אף קוד סניף לא מכיל מקף כפול. התג עצמו נגזר
+ * ממזהה המשתמש (`server/leads/branchRep.ts`), כך שהוא יציב ואין עמודה
+ * ב-DB. תג שלא מתאים לאף עובד פעיל: הליד נקלט עם הסניף, בלי שיוך.
+ */
+export const REP_SEPARATOR = "--";
+
+/** הסניף ותג הנציג (אם יש) מתוך קוד ה-QR, או `undefined` לסניף לא מוכר. */
+export function parseBranchRef(
+  code: unknown,
+): { branch: Branch; repTag?: string } | undefined {
+  if (typeof code !== "string") return undefined;
+  const [branchCode, repTag] = code.trim().toLowerCase().split(REP_SEPARATOR, 2);
+  const branch = branchByCode(branchCode);
+  if (!branch) return undefined;
+  return repTag ? { branch, repTag } : { branch };
+}
+
+/** הקישור שמודפס ב-QR של הסניף; עם `repTag` — ה-QR האישי של הנציג. */
+export function branchUrl(branch: Branch, repTag?: string): string {
+  const code = repTag ? `${branch.code}${REP_SEPARATOR}${repTag}` : branch.code;
+  return `${BRANCH_SITE_ORIGIN}/s/${code}`;
 }
 
 /** ה"מקור" שנרשם על ליד מהסניף, כפי שהוא מוצג בטבלת הלידים. */
