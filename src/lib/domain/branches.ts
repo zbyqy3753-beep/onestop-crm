@@ -164,7 +164,27 @@ export function mobicellCreditMarker(worker: Pick<MobicellWorker, "id">): string
   return `#${worker.id}`;
 }
 
-/** ה"מקור" שנרשם על ליד מהסניף, כפי שהוא מוצג בטבלת הלידים. */
-export function branchSourceDetail(partnerName: string, branch: Branch): string {
-  return `${partnerName} – ${branch.name}`;
+/**
+ * ה"מקור" שנרשם על ליד מהסניף, כפי שהוא מוצג בטבלת הלידים:
+ * `אתר ONE STOP – מוביסל אשדוד`, ועם עובד מוביסל `… – מוביסל אשדוד – שוהם`.
+ *
+ * ⚠️ מי שסופר לידים לסניף צריך להכיר את שתי הצורות — ראה `isBranchSource`.
+ */
+export function branchSourceDetail(
+  partnerName: string,
+  branch: Branch,
+  worker?: MobicellWorker,
+): string {
+  const base = `${partnerName} – ${branch.name}`;
+  return worker ? `${base} – ${worker.name}` : base;
+}
+
+/**
+ * האם ה"מקור" שייך לסניף. ⚠️ לא `includes(שם)`: "מוביסל מודיעין" הוא סיומת
+ * של "מוביסל בוכמן מודיעין", ולכן בודקים את השם כמקטע שלם בין מפרידים.
+ */
+export function isBranchSource(sourceDetail: string | null | undefined, branch: Branch): boolean {
+  if (!sourceDetail) return false;
+  const parts = sourceDetail.split(" – ");
+  return parts.slice(1).includes(branch.name);
 }

@@ -7,6 +7,7 @@ import {
   branchByCode,
   branchUrl,
   branchWorkers,
+  isBranchSource,
   mobicellCreditMarker,
   workerTag,
 } from "@/lib/domain/branches";
@@ -23,7 +24,7 @@ import {
  * ה-QR נוצר כאן בשרת כ-SVG. הכפתור "הורדה" בצד הלקוח ממיר אותו ל-PNG
  * גדול להדפסה, כך שאין צורך בשירות חיצוני ואין תלות ברשת בזמן ההדפסה.
  *
- * הספירה היא לפי `sourceDetail` שמסתיים בשם הסניף — זה בדיוק מה שמסלול
+ * הספירה היא לפי `sourceDetail` שמכיל את שם הסניף כמקטע (`isBranchSource`) — זה בדיוק מה שמסלול
  * ה-API כותב (`branchSourceDetail`), ולכן אין עמודה נפרדת ב-DB.
  *
  * ⚠️ QR אישי לעובד CRM (`?rep=`) הוסר מהמסך ב-19.11.2026, לבקשת המשתמש.
@@ -60,7 +61,7 @@ export default async function BranchesPage({
       where: {
         createdAt: { gte: since },
         body: { contains: `(עובד מוביסל #` },
-        lead: { sourceDetail: { endsWith: ` – ${workerBranch.name}` } },
+        lead: { sourceDetail: { contains: ` – ${workerBranch.name}` } },
       },
       select: { leadId: true, body: true },
       distinct: ["leadId"],
@@ -103,7 +104,7 @@ export default async function BranchesPage({
     BRANCHES.map(async (branch) => {
       const url = branchUrl(branch);
       const leads30d = grouped
-        .filter((g) => g.sourceDetail?.endsWith(` – ${branch.name}`))
+        .filter((g) => isBranchSource(g.sourceDetail, branch))
         .reduce((sum, g) => sum + g._count._all, 0);
       return {
         code: branch.code,

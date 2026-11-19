@@ -437,7 +437,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const rep =
     branchRef?.repTag && !worker ? await repByTag(branchRef.repTag) : undefined;
   const sourceDetail = branch
-    ? branchSourceDetail(partner.name, branch)
+    ? branchSourceDetail(partner.name, branch, worker)
     : consumedSource
       ? partner.name
       : rawSource || partner.name;
