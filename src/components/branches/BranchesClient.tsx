@@ -17,7 +17,7 @@ export type BranchRow = {
   workers: number;
 };
 
-export type RepOption = { tag: string; name: string };
+export type WorkerOption = { id: number; name: string; branchName: string };
 
 /** גודל ה-PNG שיורד להדפסה — מספיק למדבקה של 10 ס"מ ב-300dpi. */
 const PNG_SIZE = 1200;
@@ -25,24 +25,25 @@ const PNG_SIZE = 1200;
 /**
  * מסך סניפי מוביסל: כרטיס לכל סניף עם QR, קישור, העתקה והורדה.
  *
- * בחירת נציג מחליפה את כל ה-QR ל-QR האישי שלו (`?rep=<תג>`): ליד שמגיע
- * ממנו משויך אליו אוטומטית. ה-QR נוצר בשרת, ולכן הבחירה היא ניווט.
+ * "עובדים" פותח את עובדי המוביסל של הסניף (`?branch=<קוד>`), QR אישי לכל
+ * אחד. תפריט "QR אישי" מציג עובד מוביסל אחד (`?worker=<id>`). ⚠️ רק עובדי
+ * מוביסל: משתמשי ה-CRM לא שייכים למסך הזה. ה-QR נוצר בשרת, ולכן הבחירה
+ * היא ניווט.
  */
 export function BranchesClient({
   rows,
-  reps,
-  repTag,
   workerBranch,
+  workerOptions,
+  workerId,
 }: {
   rows: BranchRow[];
-  reps: RepOption[];
-  /** הנציג שנבחר, או "" ל-QR הכללי של הסניף. */
-  repTag: string;
+  workerOptions: WorkerOption[];
+  /** העובד שנבחר בתפריט, אם נבחר. */
+  workerId?: number;
   /** במסך עובדי המוביסל של סניף: הסניף. אחרת `undefined`. */
   workerBranch?: { code: string; name: string };
 }) {
   const router = useRouter();
-  const repName = reps.find((r) => r.tag === repTag)?.name;
   const [query, setQuery] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -114,20 +115,19 @@ export function BranchesClient({
             </button>
           ) : null}
           <h1 className="text-xl font-bold text-ink-1">
-            {workerBranch ? `עובדי ${workerBranch.name}` : "סניפי מוביסל"}
+            {workerBranch
+              ? workerId
+                ? `${rows[0]?.name ?? ""} · ${workerBranch.name}`
+                : `עובדי ${workerBranch.name}`
+              : "סניפי מוביסל"}
           </h1>
           <p className="mt-1 text-sm text-ink-3">
             {workerBranch ? (
               <>
-                QR אישי לכל עובד. ליד מסריקה שלו נכנס לחלוקה הרגילה, ועליו רשום שהעובד הביא אותו.
+                {workerId ? "QR אישי של העובד." : "QR אישי לכל עובד."} ליד מסריקה שלו נכנס לחלוקה הרגילה, ועליו רשום שהעובד הביא אותו.
                 {" "}
-                <span className="nums">{total}</span> לידים מעובדי הסניף ב-30 הימים האחרונים.
-              </>
-            ) : repName ? (
-              <>
-                QR אישי של {repName}. ליד מסריקה שלו נכנס משויך אליו, עם התראת ליד חם.
-                {" "}
-                <span className="nums">{total}</span> לידים שלו מסניפים ב-30 הימים האחרונים.
+                <span className="nums">{total}</span>{" "}
+                {workerId ? "לידים שלו" : "לידים מעובדי הסניף"} ב-30 הימים האחרונים.
               </>
             ) : (
               <>
@@ -145,24 +145,26 @@ export function BranchesClient({
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-        {workerBranch ? null : (
         <select
-          value={repTag}
+          value={workerId ?? ""}
           onChange={(e) => {
-            const tag = e.target.value;
-            router.push(tag ? `/branches?rep=${tag}` : "/branches");
+            const id = e.target.value;
+            router.push(id ? `/branches?worker=${id}` : "/branches");
           }}
-          aria-label="QR של"
-          className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink-1 sm:w-56"
+          aria-label="QR אישי של עובד מוביסל"
+          className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink-1 sm:w-64"
         >
-          <option value="">QR כללי של הסניף (בלי שיוך)</option>
-          {reps.map((r) => (
-            <option key={r.tag} value={r.tag}>
-              QR אישי: {r.name}
-            </option>
+          <option value="">QR כללי של הסניף</option>
+          {groupByBranch(workerOptions).map(([branchName, workers]) => (
+            <optgroup key={branchName} label={branchName}>
+              {workers.map((w) => (
+                <option key={w.id} value={w.id}>
+                  QR אישי: {w.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
-        )}
         <input
           type="search"
           value={query}
@@ -223,4 +225,11 @@ export function BranchesClient({
       </ul>
     </div>
   );
+}
+
+/** העובדים לפי סניף, בסדר שבו הסניפים הגיעו. */
+function groupByBranch(options: WorkerOption[]): [string, WorkerOption[]][] {
+  const groups = new Map<string, WorkerOption[]>();
+  for (const o of options) groups.set(o.branchName, [...(groups.get(o.branchName) ?? []), o]);
+  return [...groups];
 }

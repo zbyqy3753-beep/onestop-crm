@@ -10,8 +10,12 @@ import {
   mobicellCreditMarker,
   workerTag,
 } from "@/lib/domain/branches";
-import { branchReps } from "@/server/leads/branchRep";
-import { BranchesClient, type BranchRow } from "@/components/branches/BranchesClient";
+import { MOBICELL_WORKERS } from "@/lib/domain/mobicellWorkers";
+import {
+  BranchesClient,
+  type BranchRow,
+  type WorkerOption,
+} from "@/components/branches/BranchesClient";
 
 /**
  * סניפי מוביסל: קישור ו-QR לכל סניף, וכמה לידים כל אחד הביא.
@@ -22,8 +26,8 @@ import { BranchesClient, type BranchRow } from "@/components/branches/BranchesCl
  * הספירה היא לפי `sourceDetail` שמסתיים בשם הסניף — זה בדיוק מה שמסלול
  * ה-API כותב (`branchSourceDetail`), ולכן אין עמודה נפרדת ב-DB.
  *
- * `?rep=<תג>` מחליף את כל ה-QR ל-QR האישי של עובד CRM (ראה
- * `server/leads/branchRep.ts`), והספירה הופכת ללידים שלו בלבד.
+ * ⚠️ QR אישי לעובד CRM (`?rep=`) הוסר מהמסך ב-19.11.2026, לבקשת המשתמש.
+ * מסלול ה-API עדיין מכבד תג כזה, כדי שמדבקה שכבר הודפסה תמשיך לעבוד.
  *
  * `?branch=<קוד>` מציג את עובדי המוביסל של הסניף, QR לכל אחד. הספירה
  * שלהם היא לפי הסימון `#<id>` בהערת הליד (`mobicellCreditLine`), כי
@@ -37,13 +41,20 @@ export default async function BranchesPage({
 }) {
   await requireRouteAccess("/branches");
 
-  const { rep: repParam, branch: branchParam } = await searchParams;
+  const { branch: branchParam, worker: workerParam } = await searchParams;
   const since = thirtyDaysAgo();
-  const reps = await branchReps();
 
-  const workerBranch = branchByCode(branchParam);
+  // תפריט "QR אישי": עובדי מוביסל בלבד, לפי סדר הסניפים
+  const workerOptions: WorkerOption[] = BRANCHES.flatMap((b) =>
+    branchWorkers(b).map((w) => ({ id: w.id, name: w.name, branchName: b.name })),
+  );
+  const picked = MOBICELL_WORKERS.find(
+    (w) => w.active && String(w.id) === workerParam,
+  );
+
+  const workerBranch = branchByCode(picked?.branch ?? branchParam);
   if (workerBranch) {
-    const workers = branchWorkers(workerBranch);
+    const workers = picked ? [picked] : branchWorkers(workerBranch);
     // ההערה הראשונה של הליד היא זו שמסלול ה-API כותב (`LeadNote`)
     const credited = await prisma.leadNote.findMany({
       where: {
@@ -72,49 +83,42 @@ export default async function BranchesPage({
     return (
       <BranchesClient
         rows={rows}
-        reps={[]}
-        repTag=""
         workerBranch={{ code: workerBranch.code, name: workerBranch.name }}
+        workerOptions={workerOptions}
+        workerId={picked?.id}
       />
     );
   }
 
-  const rep = reps.find((r) => r.tag === repParam);
   const grouped = await prisma.lead.groupBy({
     by: ["sourceDetail"],
     where: {
       createdAt: { gte: since },
       sourceDetail: { contains: " – " },
-      ...(rep ? { assigneeId: rep.id } : {}),
     },
     _count: { _all: true },
   });
 
   const rows: BranchRow[] = await Promise.all(
     BRANCHES.map(async (branch) => {
-      const url = branchUrl(branch, rep?.tag);
+      const url = branchUrl(branch);
       const leads30d = grouped
         .filter((g) => g.sourceDetail?.endsWith(` – ${branch.name}`))
         .reduce((sum, g) => sum + g._count._all, 0);
       return {
-        code: rep ? `${branch.code}${REP_SEPARATOR}${rep.tag}` : branch.code,
+        code: branch.code,
         name: branch.name,
         url,
         svg: await qrSvg(url),
         leads30d,
         whatsapp: Boolean(branch.whatsapp),
-        // QR של עובדי מוביסל רלוונטי רק במסך הכללי, לא ב-QR של עובד CRM
-        workers: rep ? 0 : branchWorkers(branch).length,
+        workers: branchWorkers(branch).length,
       };
     }),
   );
 
   return (
-    <BranchesClient
-      rows={rows}
-      reps={reps.map((r) => ({ tag: r.tag, name: r.name }))}
-      repTag={rep?.tag ?? ""}
-    />
+    <BranchesClient rows={rows} workerOptions={workerOptions} />
   );
 }
 
