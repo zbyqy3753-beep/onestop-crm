@@ -16,7 +16,12 @@ import {
   parseInterest,
 } from "@/lib/domain/interest";
 import { notifyHotLeadAssigned } from "@/server/leads/hotLeadAlert";
-import { parseBranchRef, branchSourceDetail } from "@/lib/domain/branches";
+import {
+  parseBranchRef,
+  branchSourceDetail,
+  workerByTag,
+  mobicellCreditLine,
+} from "@/lib/domain/branches";
 import { repByTag } from "@/server/leads/branchRep";
 import { notifyBranchLead } from "@/server/leads/branchLeadAlert";
 
@@ -421,8 +426,16 @@ export async function POST(request: NextRequest): Promise<Response> {
    */
   const branchRef = parseBranchRef(body.branch);
   const branch = branchRef?.branch;
-  // QR אישי של נציג (`<סניף>--<תג>`): הליד הולך אליו, לפני כל חלוקה אחרת
-  const rep = branchRef?.repTag ? await repByTag(branchRef.repTag) : undefined;
+  /*
+   * QR אישי (`<סניף>--<תג>`) יכול להיות של אחד משניים:
+   *  • עובד מוביסל (`w<id>`): קרדיט בלבד. הליד נכנס לחלוקה הרגילה, כי
+   *    עובד מוביסל לא נכנס ל-CRM וליד ששויך אליו היה נתקע.
+   *  • עובד CRM: הליד הולך אליו, לפני כל חלוקה אחרת.
+   */
+  const worker =
+    branch && branchRef?.repTag ? workerByTag(branch, branchRef.repTag) : undefined;
+  const rep =
+    branchRef?.repTag && !worker ? await repByTag(branchRef.repTag) : undefined;
   const sourceDetail = branch
     ? branchSourceDetail(partner.name, branch)
     : consumedSource
@@ -431,9 +444,11 @@ export async function POST(request: NextRequest): Promise<Response> {
   const note = [
     buildNote(body, currentProvider),
     branch
-      ? rep
-        ? `הגיע מסריקת ה-QR האישי של ${rep.name} בסניף ${branch.name}`
-        : `הגיע מסריקת QR בסניף ${branch.name}`
+      ? worker
+        ? mobicellCreditLine(worker, branch)
+        : rep
+          ? `הגיע מסריקת ה-QR האישי של ${rep.name} בסניף ${branch.name}`
+          : `הגיע מסריקת QR בסניף ${branch.name}`
       : "",
   ]
     .filter(Boolean)

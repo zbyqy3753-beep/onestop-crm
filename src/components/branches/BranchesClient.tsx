@@ -13,6 +13,8 @@ export type BranchRow = {
   leads30d: number;
   /** האם לסניף מוגדר מספר וואטסאפ להתראות. */
   whatsapp: boolean;
+  /** כמה עובדי מוביסל פעילים יש לסניף (0 בכרטיס של עובד). */
+  workers: number;
 };
 
 export type RepOption = { tag: string; name: string };
@@ -30,11 +32,14 @@ export function BranchesClient({
   rows,
   reps,
   repTag,
+  workerBranch,
 }: {
   rows: BranchRow[];
   reps: RepOption[];
   /** הנציג שנבחר, או "" ל-QR הכללי של הסניף. */
   repTag: string;
+  /** במסך עובדי המוביסל של סניף: הסניף. אחרת `undefined`. */
+  workerBranch?: { code: string; name: string };
 }) {
   const router = useRouter();
   const repName = reps.find((r) => r.tag === repTag)?.name;
@@ -45,6 +50,8 @@ export function BranchesClient({
     const q = query.trim();
     return q ? rows.filter((r) => r.name.includes(q) || r.code.split(REP_SEPARATOR)[0].includes(q.toLowerCase())) : rows;
   }, [rows, query]);
+
+  const totalWorkers = rows.reduce((sum, r) => sum + r.workers, 0);
 
   const total = rows.reduce((sum, r) => sum + r.leads30d, 0);
 
@@ -61,16 +68,29 @@ export function BranchesClient({
   function download(row: BranchRow) {
     const img = new Image();
     const blobUrl = URL.createObjectURL(new Blob([row.svg], { type: "image/svg+xml" }));
+    // QR של עובד יוצא עם השם שלו מתחתיו: מדבקות של כמה עובדים באותה
+    // חנות נראות זהות, ובלי השם אי אפשר לדעת של מי כל אחת.
+    const label = workerBranch ? [row.name, workerBranch.name] : null;
+    const height = label ? PNG_SIZE + 220 : PNG_SIZE;
     img.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = PNG_SIZE;
-      canvas.height = PNG_SIZE;
+      canvas.height = height;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, PNG_SIZE, PNG_SIZE);
+      ctx.fillRect(0, 0, PNG_SIZE, height);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(img, 0, 0, PNG_SIZE, PNG_SIZE);
+      if (label) {
+        ctx.fillStyle = "#111";
+        ctx.textAlign = "center";
+        ctx.direction = "rtl";
+        ctx.font = "bold 96px Heebo, Arial, sans-serif";
+        ctx.fillText(label[0], PNG_SIZE / 2, PNG_SIZE + 90, PNG_SIZE - 80);
+        ctx.font = "56px Heebo, Arial, sans-serif";
+        ctx.fillText(label[1], PNG_SIZE / 2, PNG_SIZE + 180, PNG_SIZE - 80);
+      }
       URL.revokeObjectURL(blobUrl);
       const a = document.createElement("a");
       a.href = canvas.toDataURL("image/png");
@@ -84,9 +104,26 @@ export function BranchesClient({
     <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-ink-1">סניפי מוביסל</h1>
+          {workerBranch ? (
+            <button
+              type="button"
+              onClick={() => router.push("/branches")}
+              className="mb-1 text-xs text-ink-3 hover:text-ink-1"
+            >
+              → כל הסניפים
+            </button>
+          ) : null}
+          <h1 className="text-xl font-bold text-ink-1">
+            {workerBranch ? `עובדי ${workerBranch.name}` : "סניפי מוביסל"}
+          </h1>
           <p className="mt-1 text-sm text-ink-3">
-            {repName ? (
+            {workerBranch ? (
+              <>
+                QR אישי לכל עובד. ליד מסריקה שלו נכנס לחלוקה הרגילה, ועליו רשום שהעובד הביא אותו.
+                {" "}
+                <span className="nums">{total}</span> לידים מעובדי הסניף ב-30 הימים האחרונים.
+              </>
+            ) : repName ? (
               <>
                 QR אישי של {repName}. ליד מסריקה שלו נכנס משויך אליו, עם התראת ליד חם.
                 {" "}
@@ -97,11 +134,18 @@ export function BranchesClient({
                 QR לכל סניף. לקוח שסורק נכנס לאתר, וכל ליד שהוא משאיר מגיע לכאן עם שם הסניף.
                 {" "}
                 <span className="nums">{total}</span> לידים מסניפים ב-30 הימים האחרונים.
+                {totalWorkers > 0 ? (
+                  <>
+                    {" "}
+                    <span className="nums">{totalWorkers}</span> עובדי מוביסל עם QR אישי.
+                  </>
+                ) : null}
               </>
             )}
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+        {workerBranch ? null : (
         <select
           value={repTag}
           onChange={(e) => {
@@ -118,11 +162,12 @@ export function BranchesClient({
             </option>
           ))}
         </select>
+        )}
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="חיפוש סניף"
+          placeholder={workerBranch ? "חיפוש עובד" : "חיפוש סניף"}
           className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink-1 sm:w-64"
         />
         </div>
@@ -162,6 +207,15 @@ export function BranchesClient({
                 >
                   {copied === row.code ? "הועתק" : "העתקת קישור"}
                 </button>
+                {row.workers > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/branches?branch=${row.code}`)}
+                    className="h-8 rounded-lg border border-line px-3 text-xs text-ink-2 hover:bg-surface-2"
+                  >
+                    עובדים (<span className="nums">{row.workers}</span>)
+                  </button>
+                ) : null}
               </div>
             </div>
           </li>

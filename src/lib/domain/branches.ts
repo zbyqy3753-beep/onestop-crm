@@ -18,8 +18,11 @@
  * `whatsapp`: מספר שמקבל הודעה על כל ליד מהסניף (במקבץ של חמש דקות,
  * כמו התראת ליד חם לעובד). ריק = אין הודעה. הוספת מספר היא כל מה שצריך.
  *
- * ⚠️ מודול טהור, בלי ייבוא: משמש גם את מסלול ה-API וגם את המסך.
+ * ⚠️ מודול טהור: משמש גם את מסלול ה-API וגם את המסך. הייבוא היחיד הוא
+ * `mobicellWorkers.ts`, שגם הוא נתונים בלבד.
  */
+
+import { MOBICELL_WORKERS, type MobicellWorker } from "./mobicellWorkers";
 
 export type Branch = {
   code: string;
@@ -111,6 +114,54 @@ export function parseBranchRef(
 export function branchUrl(branch: Branch, repTag?: string): string {
   const code = repTag ? `${branch.code}${REP_SEPARATOR}${repTag}` : branch.code;
   return `${BRANCH_SITE_ORIGIN}/s/${code}`;
+}
+
+/**
+ * ── QR אישי לעובד מוביסל ────────────────────────────────────────────
+ *
+ * עובד מוביסל (`mobicellWorkers.ts`) מקבל תג `w<id>`, כאשר `id` הוא מזהה
+ * הנציג ב-CallUp: `ashdod--w46`. בשונה מתג של עובד CRM, ליד מהתג הזה **לא**
+ * משויך לנציג. עובד מוביסל לא נכנס ל-CRM, וליד ששויך אליו היה נתקע. הליד
+ * נכנס לחלוקה הרגילה, והקרדיט נרשם בהערה (`mobicellCreditLine`).
+ *
+ * `w` + ספרות לא יכול להתנגש בתג של עובד CRM, שהוא תמיד שמונה תווי hex.
+ */
+export const WORKER_TAG_PREFIX = "w";
+
+export function workerTag(worker: MobicellWorker): string {
+  return `${WORKER_TAG_PREFIX}${worker.id}`;
+}
+
+/**
+ * עובד המוביסל שהתג שלו, ורק אם הוא רשום **באותו סניף** שבקוד.
+ *
+ * ⚠️ עובד שכבר לא פעיל עדיין מוחזר: המדבקה שלו תלויה בחנות, והקרדיט
+ * שלו לא אמור להיעלם רק כי הוא עזב את רשימת CallUp.
+ */
+export function workerByTag(branch: Branch, tag: string): MobicellWorker | undefined {
+  const m = /^w(\d{1,9})$/.exec(tag);
+  if (!m) return undefined;
+  const id = Number(m[1]);
+  return MOBICELL_WORKERS.find((w) => w.id === id && w.branch === branch.code);
+}
+
+/** העובדים הפעילים של סניף, לפי שם. */
+export function branchWorkers(branch: Branch): MobicellWorker[] {
+  return MOBICELL_WORKERS.filter((w) => w.active && w.branch === branch.code).sort((a, b) =>
+    a.name.localeCompare(b.name, "he"),
+  );
+}
+
+/**
+ * השורה שנכתבת בהערת הליד. היא גם מה שהמסך סופר לפיו: `#<id>` יציב גם
+ * כשהשם משתנה ב-CallUp.
+ */
+export function mobicellCreditLine(worker: MobicellWorker, branch: Branch): string {
+  return `הגיע מסריקת ה-QR האישי של ${worker.name} (עובד מוביסל ${mobicellCreditMarker(worker)}) בסניף ${branch.name}`;
+}
+
+export function mobicellCreditMarker(worker: Pick<MobicellWorker, "id">): string {
+  return `#${worker.id}`;
 }
 
 /** ה"מקור" שנרשם על ליד מהסניף, כפי שהוא מוצג בטבלת הלידים. */

@@ -1,0 +1,557 @@
+[
+ {
+  "callupWorkerId": 46,
+  "callupStoreId": 149,
+  "name": "שוהם"
+ },
+ {
+  "callupWorkerId": 47,
+  "callupStoreId": 150,
+  "name": "אלה שלמה"
+ },
+ {
+  "callupWorkerId": 48,
+  "callupStoreId": 150,
+  "name": "איתי אלבז"
+ },
+ {
+  "callupWorkerId": 49,
+  "callupStoreId": 149,
+  "name": "ויקטור"
+ },
+ {
+  "callupWorkerId": 50,
+  "callupStoreId": 149,
+  "name": "רון"
+ },
+ {
+  "callupWorkerId": 51,
+  "callupStoreId": 155,
+  "name": "אדם אסולין"
+ },
+ {
+  "callupWorkerId": 52,
+  "callupStoreId": 155,
+  "name": "ירין"
+ },
+ {
+  "callupWorkerId": 53,
+  "callupStoreId": 155,
+  "name": "שנאל"
+ },
+ {
+  "callupWorkerId": 54,
+  "callupStoreId": 155,
+  "name": "שגיא"
+ },
+ {
+  "callupWorkerId": 55,
+  "callupStoreId": 155,
+  "name": "סתיו סלע"
+ },
+ {
+  "callupWorkerId": 56,
+  "callupStoreId": 155,
+  "name": "דין הראל"
+ },
+ {
+  "callupWorkerId": 57,
+  "callupStoreId": 155,
+  "name": "יאיר נפתלי"
+ },
+ {
+  "callupWorkerId": 58,
+  "callupStoreId": 155,
+  "name": "אלעד שרון"
+ },
+ {
+  "callupWorkerId": 59,
+  "callupStoreId": 155,
+  "name": "גל מסיקה"
+ },
+ {
+  "callupWorkerId": 60,
+  "callupStoreId": 155,
+  "name": "אביאל בר"
+ },
+ {
+  "callupWorkerId": 61,
+  "callupStoreId": 155,
+  "name": "מייקל בריגה"
+ },
+ {
+  "callupWorkerId": 62,
+  "callupStoreId": 155,
+  "name": "איתן"
+ },
+ {
+  "callupWorkerId": 63,
+  "callupStoreId": 155,
+  "name": "הארי לוי"
+ },
+ {
+  "callupWorkerId": 64,
+  "callupStoreId": 155,
+  "name": "אוריאל דוידוב"
+ },
+ {
+  "callupWorkerId": 65,
+  "callupStoreId": 159,
+  "name": "סתיו"
+ },
+ {
+  "callupWorkerId": 66,
+  "callupStoreId": 160,
+  "name": "לליאן"
+ },
+ {
+  "callupWorkerId": 67,
+  "callupStoreId": 160,
+  "name": "אדי"
+ },
+ {
+  "callupWorkerId": 68,
+  "callupStoreId": 160,
+  "name": "אמיר"
+ },
+ {
+  "callupWorkerId": 69,
+  "callupStoreId": 160,
+  "name": "טייבה"
+ },
+ {
+  "callupWorkerId": 70,
+  "callupStoreId": 150,
+  "name": "ענת ולדימירסקי"
+ },
+ {
+  "callupWorkerId": 71,
+  "callupStoreId": 159,
+  "name": "אוריאל"
+ },
+ {
+  "callupWorkerId": 72,
+  "callupStoreId": 159,
+  "name": "איתמר"
+ },
+ {
+  "callupWorkerId": 73,
+  "callupStoreId": 155,
+  "name": "שלמה אסולין"
+ },
+ {
+  "callupWorkerId": 74,
+  "callupStoreId": 155,
+  "name": "איאן גייסמן"
+ },
+ {
+  "callupWorkerId": 75,
+  "callupStoreId": 167,
+  "name": "עמית בונפיל"
+ },
+ {
+  "callupWorkerId": 76,
+  "callupStoreId": 167,
+  "name": "מיכאל חצקביץ"
+ },
+ {
+  "callupWorkerId": 77,
+  "callupStoreId": 167,
+  "name": "שוהם זרגרוב"
+ },
+ {
+  "callupWorkerId": 78,
+  "callupStoreId": 167,
+  "name": "ינון שרווה"
+ },
+ {
+  "callupWorkerId": 79,
+  "callupStoreId": 155,
+  "name": "אדיב מארגיה"
+ },
+ {
+  "callupWorkerId": 81,
+  "callupStoreId": 150,
+  "name": "עמית בונפיל"
+ },
+ {
+  "callupWorkerId": 82,
+  "callupStoreId": 159,
+  "name": "דין"
+ },
+ {
+  "callupWorkerId": 83,
+  "callupStoreId": 182,
+  "name": "אחמד טהבוב"
+ },
+ {
+  "callupWorkerId": 84,
+  "callupStoreId": 182,
+  "name": "מוחמד טהבוב"
+ },
+ {
+  "callupWorkerId": 85,
+  "callupStoreId": 182,
+  "name": "מוחמד מסוודי"
+ },
+ {
+  "callupWorkerId": 86,
+  "callupStoreId": 182,
+  "name": "מחמוד חמד"
+ },
+ {
+  "callupWorkerId": 87,
+  "callupStoreId": 182,
+  "name": "מחמוד מעתוק"
+ },
+ {
+  "callupWorkerId": 88,
+  "callupStoreId": 183,
+  "name": "דור אמין"
+ },
+ {
+  "callupWorkerId": 89,
+  "callupStoreId": 183,
+  "name": "צחי גלנטי"
+ },
+ {
+  "callupWorkerId": 90,
+  "callupStoreId": 184,
+  "name": "ליאור בגה"
+ },
+ {
+  "callupWorkerId": 91,
+  "callupStoreId": 184,
+  "name": "מאור"
+ },
+ {
+  "callupWorkerId": 92,
+  "callupStoreId": 187,
+  "name": "גילי"
+ },
+ {
+  "callupWorkerId": 93,
+  "callupStoreId": 182,
+  "name": "עבד זיתון"
+ },
+ {
+  "callupWorkerId": 94,
+  "callupStoreId": 182,
+  "name": "בוסימה רמדאן"
+ },
+ {
+  "callupWorkerId": 95,
+  "callupStoreId": 186,
+  "name": "רם"
+ },
+ {
+  "callupWorkerId": 96,
+  "callupStoreId": 184,
+  "name": "רעות דבורה"
+ },
+ {
+  "callupWorkerId": 97,
+  "callupStoreId": 184,
+  "name": "נעמה"
+ },
+ {
+  "callupWorkerId": 99,
+  "callupStoreId": 191,
+  "name": "גריס"
+ },
+ {
+  "callupWorkerId": 100,
+  "callupStoreId": 193,
+  "name": "רומן טיישידלר"
+ },
+ {
+  "callupWorkerId": 101,
+  "callupStoreId": 194,
+  "name": "אביגיל"
+ },
+ {
+  "callupWorkerId": 102,
+  "callupStoreId": 194,
+  "name": "אביגיל"
+ },
+ {
+  "callupWorkerId": 103,
+  "callupStoreId": 194,
+  "name": "ליאם"
+ },
+ {
+  "callupWorkerId": 104,
+  "callupStoreId": 194,
+  "name": "אפרת"
+ },
+ {
+  "callupWorkerId": 105,
+  "callupStoreId": 194,
+  "name": "נעה"
+ },
+ {
+  "callupWorkerId": 106,
+  "callupStoreId": 188,
+  "name": "הדסה"
+ },
+ {
+  "callupWorkerId": 107,
+  "callupStoreId": 191,
+  "name": "אלירן ברקוב"
+ },
+ {
+  "callupWorkerId": 108,
+  "callupStoreId": 191,
+  "name": "ננסי"
+ },
+ {
+  "callupWorkerId": 109,
+  "callupStoreId": 191,
+  "name": "סארי"
+ },
+ {
+  "callupWorkerId": 110,
+  "callupStoreId": 196,
+  "name": "ליחי חיים טוסון"
+ },
+ {
+  "callupWorkerId": 111,
+  "callupStoreId": 192,
+  "name": ""
+ },
+ {
+  "callupWorkerId": 112,
+  "callupStoreId": 192,
+  "name": "avi choma"
+ },
+ {
+  "callupWorkerId": 113,
+  "callupStoreId": 192,
+  "name": "ella Ohayon"
+ },
+ {
+  "callupWorkerId": 114,
+  "callupStoreId": 198,
+  "name": "אסלאם אבו פרח"
+ },
+ {
+  "callupWorkerId": 115,
+  "callupStoreId": 198,
+  "name": "דור צמח"
+ },
+ {
+  "callupWorkerId": 116,
+  "callupStoreId": 201,
+  "name": "ליאם בן עמי"
+ },
+ {
+  "callupWorkerId": 117,
+  "callupStoreId": 150,
+  "name": "ינון עזרן"
+ },
+ {
+  "callupWorkerId": 119,
+  "callupStoreId": 185,
+  "name": "אדיר בידרמן"
+ },
+ {
+  "callupWorkerId": 120,
+  "callupStoreId": 185,
+  "name": "אוראל בני"
+ },
+ {
+  "callupWorkerId": 122,
+  "callupStoreId": 159,
+  "name": "סתיו סלע"
+ },
+ {
+  "callupWorkerId": 123,
+  "callupStoreId": 201,
+  "name": "מטילדה"
+ },
+ {
+  "callupWorkerId": 124,
+  "callupStoreId": 188,
+  "name": "נהוראי"
+ },
+ {
+  "callupWorkerId": 125,
+  "callupStoreId": 188,
+  "name": "אביב"
+ },
+ {
+  "callupWorkerId": 128,
+  "callupStoreId": 219,
+  "name": "אבי"
+ },
+ {
+  "callupWorkerId": 129,
+  "callupStoreId": 219,
+  "name": "גדי מחטייב"
+ },
+ {
+  "callupWorkerId": 130,
+  "callupStoreId": 155,
+  "name": "אביעד זרו"
+ },
+ {
+  "callupWorkerId": 132,
+  "callupStoreId": 188,
+  "name": "מיכאל"
+ },
+ {
+  "callupWorkerId": 133,
+  "callupStoreId": 188,
+  "name": "איתמר"
+ },
+ {
+  "callupWorkerId": 134,
+  "callupStoreId": 220,
+  "name": "ירון"
+ },
+ {
+  "callupWorkerId": 135,
+  "callupStoreId": 182,
+  "name": "רומיו זאיד"
+ },
+ {
+  "callupWorkerId": 136,
+  "callupStoreId": 166,
+  "name": "ניל ולדמן"
+ },
+ {
+  "callupWorkerId": 137,
+  "callupStoreId": 167,
+  "name": "מיכאל גרישין"
+ },
+ {
+  "callupWorkerId": 138,
+  "callupStoreId": 195,
+  "name": "לינוי אלשיך"
+ },
+ {
+  "callupWorkerId": 139,
+  "callupStoreId": 195,
+  "name": "שי מדלסי"
+ },
+ {
+  "callupWorkerId": 140,
+  "callupStoreId": 195,
+  "name": "שירז ברוידו"
+ },
+ {
+  "callupWorkerId": 141,
+  "callupStoreId": 201,
+  "name": "רובי קצר"
+ },
+ {
+  "callupWorkerId": 146,
+  "callupStoreId": 192,
+  "name": "lidor heftzi"
+ },
+ {
+  "callupWorkerId": 147,
+  "callupStoreId": 155,
+  "name": "אריק ברמן"
+ },
+ {
+  "callupWorkerId": 148,
+  "callupStoreId": 186,
+  "name": "גיא ימיני"
+ },
+ {
+  "callupWorkerId": 149,
+  "callupStoreId": 155,
+  "name": "אלירן שמח"
+ },
+ {
+  "callupWorkerId": 150,
+  "callupStoreId": 159,
+  "name": "צפריר שורץ"
+ },
+ {
+  "callupWorkerId": 155,
+  "callupStoreId": 150,
+  "name": "מיכאל"
+ },
+ {
+  "callupWorkerId": 157,
+  "callupStoreId": 167,
+  "name": "עידו עוזרי"
+ },
+ {
+  "callupWorkerId": 159,
+  "callupStoreId": 190,
+  "name": "איציק בן ורון"
+ },
+ {
+  "callupWorkerId": 160,
+  "callupStoreId": 223,
+  "name": "איציק יעקב"
+ },
+ {
+  "callupWorkerId": 161,
+  "callupStoreId": 223,
+  "name": "גבריאל יפרח"
+ },
+ {
+  "callupWorkerId": 164,
+  "callupStoreId": 155,
+  "name": "בן ישכרוב"
+ },
+ {
+  "callupWorkerId": 165,
+  "callupStoreId": 155,
+  "name": "בן אבשלום"
+ },
+ {
+  "callupWorkerId": 166,
+  "callupStoreId": 190,
+  "name": "טטיאנה בראוז"
+ },
+ {
+  "callupWorkerId": 168,
+  "callupStoreId": 195,
+  "name": "ליאם בן דוד"
+ },
+ {
+  "callupWorkerId": 169,
+  "callupStoreId": 159,
+  "name": "אופיר"
+ },
+ {
+  "callupWorkerId": 171,
+  "callupStoreId": 159,
+  "name": "תומר ישר"
+ },
+ {
+  "callupWorkerId": 173,
+  "callupStoreId": 185,
+  "name": "אבישי דהן"
+ },
+ {
+  "callupWorkerId": 175,
+  "callupStoreId": 187,
+  "name": "רוני"
+ },
+ {
+  "callupWorkerId": 183,
+  "callupStoreId": 195,
+  "name": "נועם ברוידו"
+ },
+ {
+  "callupWorkerId": 184,
+  "callupStoreId": 194,
+  "name": "שני שושן"
+ },
+ {
+  "callupWorkerId": 185,
+  "callupStoreId": 294,
+  "name": "מוחמד טהבוב"
+ },
+ {
+  "callupWorkerId": 186,
+  "callupStoreId": 149,
+  "name": "עמיר בדלוב"
+ }
+]
