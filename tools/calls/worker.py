@@ -17,6 +17,7 @@
 מעביר ל-av.open פרמטר שהוסר בגרסה 14, והתמלול נופל בשגיאת TypeError.
 """
 
+import json
 import os
 import subprocess
 import sys
@@ -130,7 +131,14 @@ def process(base: str, headers: dict, rec: dict) -> None:
         if len(transcript) < 20:
             body = {"status": "failed", "error": "לא נשמע דיבור בהקלטה", "transcript": transcript}
         else:
-            body = {"status": "done", "transcript": transcript, "analysis": analyze(transcript, rec)}
+            try:
+                body = {"status": "done", "transcript": transcript, "analysis": analyze(transcript, rec)}
+            except Exception as e:  # noqa: BLE001
+                # ⚠️ ה-CLI לא מחובר (או נפל): התמליל עובר לתיבה, ומשימה
+                # מתוזמנת באפליקציית Claude, שמחוברת בחשבון שלה, תנתח אותו.
+                log(f"  claude -p לא זמין, התמליל עובר לתיבה: {str(e)[:120]}")
+                to_inbox(rec, transcript)
+                return
     except Exception as e:  # noqa: BLE001 — כל כישלון חוזר לאפליקציה כהסבר
         log(f"  נכשל: {e}")
         body = {"status": "failed", "error": str(e)[:900]}
@@ -141,16 +149,49 @@ def process(base: str, headers: dict, rec: dict) -> None:
     log(f"  הוחזר: {body['status']} ({r.status_code})")
 
 
+INBOX = HERE / "inbox"
+
+
+def to_inbox(rec: dict, transcript: str) -> None:
+    INBOX.mkdir(exist_ok=True)
+    data = {**rec, "transcript": transcript}
+    (INBOX / f"{rec['id']}.json").write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def submit(base: str, headers: dict, rid: str, analysis_file: str) -> None:
+    """`--submit <id> <קובץ>`: מחזיר לשרת ניתוח שנכתב לקובץ, ומנקה את התיבה."""
+    item = INBOX / f"{rid}.json"
+    data = json.loads(item.read_text(encoding="utf-8"))
+    analysis = Path(analysis_file).read_text(encoding="utf-8").strip()
+    if not analysis:
+        sys.exit("קובץ הניתוח ריק")
+    body = {"status": "done", "transcript": data["transcript"], "analysis": analysis}
+    r = requests.patch(f"{base}/api/calls/{rid}", json=body, headers=headers, timeout=60)
+    log(f"הוגש ניתוח מהתיבה ל-{rid}: {r.status_code}")
+    if r.status_code in (200, 404):
+        item.unlink()
+        Path(analysis_file).unlink(missing_ok=True)
+    print(r.status_code)
+
+
 def tick(base: str, headers: dict) -> None:
     r = requests.get(f"{base}/api/calls/queue", headers=headers, timeout=60)
     r.raise_for_status()
     for rec in r.json().get("recordings", []):
+        # הקלטה שכבר בתיבה עדיין `pending` בשרת. בלי הדילוג היא הייתה
+        # מתומללת מחדש בכל דקה עד שהמשימה המתוזמנת תגיע אליה.
+        if (INBOX / f"{rec['id']}.json").exists():
+            continue
         process(base, headers, rec)
 
 
 def main() -> None:
     base, key = load_config()
     headers = {"authorization": f"Bearer {key}"}
+    if "--submit" in sys.argv:
+        i = sys.argv.index("--submit")
+        submit(base, headers, sys.argv[i + 1], sys.argv[i + 2])
+        return
     once = "--once" in sys.argv
     log(f"התחיל ({base})")
     while True:
