@@ -8,7 +8,7 @@ plugins {
  * Actions) ולא נשמרים בגיט. בנייה בלי המפתח עדיין עוברת, והאפליקציה
  * מציגה "חסר מפתח" במקום לשלוח.
  */
-val callsBaseUrl = System.getenv("CALLS_BASE_URL") ?: "https://onestop-crm.vercel.app"
+val callsBaseUrl = System.getenv("CALLS_BASE_URL") ?: "https://onestop-crm-demo.vercel.app"
 val callsPhoneKey = System.getenv("CALLS_PHONE_KEY") ?: ""
 
 android {
