@@ -1,4 +1,3 @@
-import { EliranMark } from "./EliranMark";
 import { CATEGORY_META } from "../catalog/catalog";
 import { SERVICE_PAGES } from "../site";
 
@@ -30,9 +29,9 @@ export function SubpageHeader({
             ל-`/lp`, ובאפליקציה עצמה `/` הוא עמוד אחר (הפניה ל-`/leads`).
             ניווט צד-לקוח היה מבקש את ה-RSC של `/` של המערכת.
           */}
+          {/* שם המותג כטקסט, בלי סמל: ראה ההערה על הלוגו ב-`page.tsx`. */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a href="/" className="flex items-center gap-2.5">
-            <EliranMark size="sm" />
+          <a href="/" className="flex min-h-11 items-center">
             <span className="text-xl leading-none font-extrabold text-white">אלירן תקשורת</span>
           </a>
           <nav aria-label="שירותים">

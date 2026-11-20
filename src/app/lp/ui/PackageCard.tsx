@@ -307,7 +307,7 @@ export function PackageCard({
               */
               aria-label={
                 compareFull && !compareChecked
-                  ? `הוסף את ${label} להשוואה — לא זמין, ניתן להשוות עד ${compareMax} ${compareNoun}`
+                  ? `הוסף את ${label} להשוואה, לא זמין: ניתן להשוות עד ${compareMax} ${compareNoun}`
                   : `${compareChecked ? "הסר את" : "הוסף את"} ${label} ${compareChecked ? "מההשוואה" : "להשוואה"}`
               }
             />

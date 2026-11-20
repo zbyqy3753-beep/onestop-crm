@@ -45,7 +45,7 @@ export default function LandingError({
       <div className="w-full max-w-sm rounded-lp-card border border-lp-line bg-lp-surface-2 p-6 text-center">
         <p className="text-lg font-bold text-lp-ink">משהו השתבש בטעינת הדף</p>
         <p className="mt-2 text-sm text-lp-ink-2">
-          נסו שוב — ואם זה חוזר, חייגו אלינו ונשמח לבדוק את החשבון שלכם ידנית.
+          נסו שוב, ואם זה חוזר, חייגו אלינו ונשמח לבדוק את החשבון שלכם ידנית.
         </p>
         <button type="button" onClick={unstable_retry} className={`${btnPrimary} mt-4 w-full py-3`}>
           לנסות שוב

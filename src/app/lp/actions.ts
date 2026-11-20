@@ -226,7 +226,7 @@ export async function submitLandingLead(
   if (name.length > MAX_NAME) return fail("השם ארוך מדי");
 
   const phone = normalizePhone(text(formData.get("phone")));
-  if (!phone) return fail("מספר טלפון לא תקין — נדרש מספר ישראלי");
+  if (!phone) return fail("מספר טלפון לא תקין, נדרש מספר ישראלי");
 
   const category = parseCategory(text(formData.get("category")));
   if (!category) return fail("נא לבחור מה מעניין אותך");

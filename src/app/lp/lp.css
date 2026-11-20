@@ -108,6 +108,34 @@ body.lp-tray-open .lp-root {
   opacity: 1;
 }
 
+/*
+ * ⚠️ סמן יד על כל פקד. Tailwind v4 מאפס את `cursor` של `<button>` ל-
+ * `default`, ולכן כפתור "שיחזרו אליי" הציג חץ רגיל בדסקטופ — פקד שלא
+ * נראה לחיץ (antislop R-39). כלל אחד כאן במקום `cursor-pointer` על כל פקד.
+ */
+.lp-root :is(a[href], button, summary, select, label[for], [role="button"], [role="tab"], input[type="checkbox"], input[type="radio"]) {
+  cursor: pointer;
+}
+
+.lp-root :is(button, select, input):disabled,
+.lp-root [aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/*
+ * ⚠️ טבעת המיקוד על משטח כהה. הכלל הגלובלי (`globals.css`) צובע אותה
+ * בנייבי, וזה בדיוק צבע ההירו והכותרת: בניווט מקלדת לא ראו על איזה
+ * כפתור עומדים (antislop R-32). על נייבי היא לבנה, ובתוך כרטיס לבן
+ * שיושב על נייבי היא חוזרת לצבע הרגיל.
+ */
+.lp-root :is(.bg-lp-navy-deep, .bg-lp-navy) :focus-visible {
+  outline-color: #ffffff;
+}
+
+.lp-root :is(.bg-lp-navy-deep, .bg-lp-navy) .bg-lp-surface :focus-visible {
+  outline-color: var(--c-focus);
+}
+
 /* ── הירו ─────────────────────────────────────────────────────────────── */
 
 /*

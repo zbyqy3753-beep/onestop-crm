@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { CatalogTabs } from "./ui/CatalogTabs";
-import { EliranMark } from "./ui/EliranMark";
 import { Faq, HOME_FAQ } from "./ui/Faq";
 import { LeadForm } from "./ui/LeadForm";
 import { PackageCard } from "./ui/PackageCard";
@@ -55,7 +54,7 @@ export const metadata: Metadata = {
   // הדף מוגש ב-eliran.onestopil.co.il (ראה `proxy.ts`), ולכן הלשונית נושאת את השם של אלירן.
   title: "אלירן תקשורת | השוואת חבילות סלולר, סיבים, טלוויזיה וחשמל",
   description:
-    "כל החבילות של כל החברות במקום אחד — כולל המחיר אחרי תום ההטבה. משאירים פרטים ומקבלים הצעה אישית.",
+    "כל החבילות של כל החברות במקום אחד, כולל המחיר אחרי תום ההטבה. משאירים פרטים ומקבלים הצעה אישית.",
   // ⚠️ דורס במפורש את `index: false` של `app/layout.tsx` — בלי השורה הזו הדף יורש אותו.
   robots: { index: true, follow: true },
   alternates: { canonical: "https://eliran.onestopil.co.il/" },
@@ -63,30 +62,6 @@ export const metadata: Metadata = {
   // הסרת התג מבטלת את האימות — גם אחרי שעבר.
   verification: { google: "KQ3F3qhgUXCR1MfVdJ8DkuK1kPzQDo_JvNvWBCwa8hg" },
 };
-
-/**
- * ⚠️ אייקוני קו משורטטים ולא אמוג׳י.
- *
- * אמוג׳י נראה שונה בכל מערכת הפעלה, לא מקבל את צבע המותג, ומוסיף
- * לעמוד השוואת מחירים מראה של הודעת וואטסאפ. חמשת הגליפים כאן חולקים
- * עובי קו אחד (1.6) ו-viewBox אחד, ולכן נקראים כסט.
- */
-function Glyph({ children }: { children: React.ReactNode }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="size-7"
-      aria-hidden
-    >
-      {children}
-    </svg>
-  );
-}
 
 /*
  * ⚠️ `phone` מורכב כאן ולא מוחזר מ-`serviceCounts`, כדי שהצורה שאותה
@@ -121,7 +96,6 @@ const SERVICES: {
   title: string;
   blurb: string;
   hash: string;
-  icon: React.ReactNode;
   /*
    * ⚠️ המונה מופרד לערך ולכיתוב, ולא מוחזר כמחרוזת אחת: רק כך הרצועה
    * יכולה **להשמיט** אריח שאין מאחוריו חבילה. אריח עם "0 חבילות"
@@ -134,76 +108,43 @@ const SERVICES: {
 }[] = [
   {
     title: "קווי סלולר",
-    blurb: "קו בודד או חבילה משפחתית, מכל החברות — כולל ניוד וסים.",
+    blurb: "קו בודד או חבילה משפחתית מכל החברות, כולל ניוד וסים.",
     hash: "#cellular",
-    icon: (
-      <Glyph>
-        <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
-        <path d="M10.5 5.5h3M12 18.5h.01" />
-      </Glyph>
-    ),
     n: (c) => c.cellular,
     caption: PACKAGES_CAPTION,
   },
   {
     title: "אינטרנט וסיבים",
-    blurb: "תשתית סיבים ואינטרנט ביתי — מהירות, ראוטר ועלות התקנה.",
+    blurb: "סיבים ואינטרנט ביתי: מהירות, ראוטר ועלות התקנה.",
     hash: "#home",
-    icon: (
-      <Glyph>
-        <path d="M2.5 8.5a14 14 0 0 1 19 0M5.5 12a10 10 0 0 1 13 0M8.5 15.5a6 6 0 0 1 7 0M12 19h.01" />
-      </Glyph>
-    ),
     n: (c) => c.internet,
     caption: PACKAGES_CAPTION,
   },
   {
     title: "חבילות טלוויזיה",
-    blurb: "yes, HOT, סטינג TV ועוד — ערוצים, ממירים ו-VOD.",
+    blurb: "yes, HOT, סטינג TV ועוד. ערוצים, ממירים ו-VOD.",
     hash: "#home",
-    icon: (
-      <Glyph>
-        <rect x="2.5" y="5.5" width="19" height="13" rx="2" />
-        <path d="M8.5 21.5h7M10 10.5l4 2.5-4 2.5z" />
-      </Glyph>
-    ),
     n: (c) => c.tv,
     caption: PACKAGES_CAPTION,
   },
   {
     title: "טלוויזיה + אינטרנט",
-    blurb: "חבילות משולבות וטריפל — הכול בחשבון אחד ובמחיר אחד.",
+    blurb: "חבילות משולבות וטריפל, הכול בחשבון אחד ובמחיר אחד.",
     hash: "#home",
-    icon: (
-      <Glyph>
-        <rect x="2.5" y="5.5" width="19" height="13" rx="2" />
-        <path d="M8.5 21.5h7M8.5 13.5a5 5 0 0 1 7 0M10.5 10.8a8.5 8.5 0 0 1 3 0M12 15.8h.01" />
-      </Glyph>
-    ),
     n: (c) => c.bundle,
     caption: PACKAGES_CAPTION,
   },
   {
     title: "קו טלפון ביתי",
-    blurb: "קו בזק או קו על גבי הסיבים — דקות שיחה, בנפרד או בתוך החבילה.",
+    blurb: "קו בזק או קו על גבי הסיבים. דקות שיחה, בנפרד או בתוך החבילה.",
     hash: "#home",
-    icon: (
-      <Glyph>
-        <path d="M5.5 3.5h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a1.5 1.5 0 0 1-1.7 1.5C10.9 17.8 6.2 13.1 4 6.7A1.5 1.5 0 0 1 5.5 3.5z" />
-      </Glyph>
-    ),
     n: (c) => c.phone,
     caption: PACKAGES_CAPTION,
   },
   {
     title: "הנחה בחשמל",
-    blurb: "אחוז הנחה על חשבון החשמל, לבית ולעסק — בלי להחליף ספק תשתית.",
+    blurb: "אחוז הנחה על חשבון החשמל, לבית ולעסק, בלי להחליף ספק תשתית.",
     hash: "#electricity",
-    icon: (
-      <Glyph>
-        <path d="M13.5 2.5 5 13.5h6l-.5 8L19 10.5h-6z" />
-      </Glyph>
-    ),
     n: (c) => c.electricity,
     caption: PLANS_CAPTION,
   },
@@ -333,10 +274,11 @@ export default function LandingPage() {
             (ראה `proxy.ts`). ONE STOP נשאר רק במקומות שמזהים את הגוף
             המשפטי — הגילוי הנאות והשאלות. הסכמת הטופס היא לפנייה של
             אלירן (החלטת בעל המערכת, 24.10.2026).
-            הסמל: `ui/EliranMark.tsx` (ושם למה הוא שטוח).
+            ⚠️ שם המותג כטקסט, בלי סמל. לאלירן אין לוגו רשמי: הסמל הקודם (אריח
+            Wi-Fi מבריק) נפסל ב-11.2026 כ-AI slop, ולפי antislop R-23 לא
+            ממציאים לוגו במקומו בלי אישור. כשיהיה לוגו אמיתי, הוא נכנס כאן.
           */}
-          <div className="mb-8 flex items-center gap-3">
-            <EliranMark />
+          <div className="mb-8">
             <div className="leading-none">
               <div className="text-2xl font-extrabold text-white">אלירן תקשורת</div>
               <div className="mt-1.5 text-xs font-medium text-white/70">ייעוץ תקשורת סלולרית וביתית</div>
@@ -371,12 +313,12 @@ export default function LandingPage() {
             {lead && isMoney(lead.price) && (
               <a
                 href="#cellular"
-                className="group mt-7 inline-flex max-w-full flex-wrap items-baseline gap-x-2 gap-y-1 border-s-2 border-lp-brand-bright ps-4 transition"
+                className="group mt-7 inline-flex max-w-full flex-wrap items-baseline gap-x-2 gap-y-1"
               >
                 {/*
-                  ⚠️ שורת מחיר ולא כפתור. עד 11.2026 זה היה "כפתור" ענק בגרדיאנט
-                  כחול עם צל, שלישי בשורה של שלושה כפתורים — המשתמש פסל אותו
-                  כ"AI slop". המספר נשאר הדבר הבולט; הקופסה ירדה.
+                  ⚠️ שורת מחיר ולא כפתור, ובלי פס צבעוני בצד. עד 11.2026 זה היה
+                  "כפתור" בגרדיאנט עם צל, ואחר כך שורה עם פס כחול; שניהם נפסלו
+                  כ-AI slop. המספר הגדול הוא הדבר הבולט, ולא צריך יותר מזה.
                 */}
                 <span className="text-base font-semibold text-white/80 sm:text-lg">סלולר החל מ־</span>
                 <span dir="ltr" className="nums text-3xl leading-none font-extrabold text-white sm:text-4xl">
@@ -479,37 +421,32 @@ export default function LandingPage() {
         ⚠️ **בלי שוליים שליליים.** ההירו נגמר ברצועת הלוגואים, ומשיכה
         כלפי מעלה פשוט מכסה אותה.
       */}
-      <section className="relative border-b border-lp-line bg-lp-surface-2">
+      <section className="relative border-b border-lp-line bg-lp-surface">
         <nav aria-labelledby="services-heading" className="mx-auto max-w-6xl px-4 py-12">
-          <h2 id="services-heading" className="sr-only">
-            מה אנחנו משווקים
+          <h2 id="services-heading" className="text-xl font-bold text-lp-ink sm:text-2xl">
+            מה אני משווה
           </h2>
-          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
+          <ul className="mt-4 grid border-t border-lp-line sm:grid-cols-2 sm:gap-x-10 lg:grid-cols-3">
+            {/*
+              ⚠️ רשימה ולא שישה כרטיסים זהים עם אייקון. הכרטיסים (אריח אייקון,
+              צל, "קפיצה" בריחוף, חץ בכל אחד) נפסלו ב-11.2026 כ-AI slop.
+              המידע כאן הוא שם, שורה ומונה, ורשימה מראה אותו בלי שש קופסאות.
+              המונה בצבע המותג הוא מה שמסמן שהשורה לחיצה.
+            */}
             {shownServices.map((s) => (
-              <li key={s.title}>
+              <li key={s.title} className="border-b border-lp-line">
                 <a
                   href={s.hash}
-                  className="group flex h-full flex-col rounded-lp-card border border-lp-line bg-lp-surface p-4 transition hover:border-lp-brand sm:p-5"
+                  className="group flex min-h-11 items-baseline justify-between gap-4 py-4"
                 >
-                  {/*
-                    ⚠️ אייקון בקו, בצבע המותג, בלי אריח מלא, בלי זוהר ובלי
-                    "קפיצה" בריחוף. אריח כחול זוהר עם אייקון לבן בכל כרטיס הוא
-                    החתימה הכי מוכרת של עיצוב גנרי (נפסל ב-11.2026).
-                  */}
-                  <span className="text-lp-brand [&_svg]:size-6">{s.icon}</span>
-                  <span className="mt-3 text-base leading-snug font-extrabold text-lp-ink sm:text-lg">
-                    {s.title}
-                  </span>
-                  <span className="mt-1.5 flex-1 text-xs leading-relaxed text-lp-ink-2 sm:text-sm">
-                    {s.blurb}
-                  </span>
-                  <span className="mt-4 flex items-center gap-1.5 text-sm font-bold text-lp-brand">
-                    <span className="nums">
-                      {s.n(services)} {s.caption(s.n(services))}
+                  <span className="min-w-0">
+                    <span className="block text-base font-extrabold text-lp-ink transition group-hover:text-lp-brand sm:text-lg">
+                      {s.title}
                     </span>
-                    <span aria-hidden className="transition group-hover:-translate-x-1">
-                      ←
-                    </span>
+                    <span className="mt-1 block text-sm leading-relaxed text-lp-ink-2">{s.blurb}</span>
+                  </span>
+                  <span className="nums shrink-0 text-sm font-bold text-lp-brand group-hover:underline">
+                    {s.n(services)} {s.caption(s.n(services))}
                   </span>
                 </a>
               </li>
@@ -551,7 +488,7 @@ export default function LandingPage() {
                 href={servicePath(category)}
                 className="rounded-lg border border-lp-line bg-lp-surface px-4 py-2 text-sm font-medium text-lp-brand transition hover:border-lp-brand"
               >
-                לכל החבילות ←
+                לכל החבילות
               </a>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -606,7 +543,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-2xl px-4 py-14">
           <h2 className="text-xl font-bold text-lp-ink">לא בטוחים מה מתאים?</h2>
           <p className="mt-2 mb-5 text-sm text-lp-ink-2">
-            השאירו פרטים ונחזור אליכם עם ההצעה המשתלמת ביותר עבורכם — בלי עלות ובלי התחייבות.
+            השאירו פרטים ונחזור אליכם עם ההצעה המשתלמת ביותר עבורכם, בלי עלות ובלי התחייבות.
           </p>
 
           <div className="rounded-lp-card border border-lp-line bg-lp-surface p-5 shadow-lp-card">
@@ -614,9 +551,7 @@ export default function LandingPage() {
           </div>
 
           <div className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-lp-ink-3">
-            <span>✓ ללא עלות</span>
-            <span>✓ ללא התחייבות</span>
-            <span>✓ מענה מהיר</span>
+            <span>ללא עלות · ללא התחייבות · מענה מהיר</span>
           </div>
         </div>
       </section>

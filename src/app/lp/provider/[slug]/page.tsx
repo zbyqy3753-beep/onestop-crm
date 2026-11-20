@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: PageProps<"/lp/provider/[slug
     .map((c) => CATEGORY_META[c].he)
     .join(", ");
   return {
-    title: `חבילות ${company.name} — השוואת מחירים | אלירן תקשורת`,
+    title: `חבילות ${company.name}: השוואת מחירים | אלירן תקשורת`,
     description: `כל חבילות ${company.name} (${cats}) במקום אחד: מחיר, מפרט והמחיר אחרי תום ההטבה, מול שאר החברות. ייעוץ אישי ללא עלות.`,
     robots: INDEXABLE,
     alternates: { canonical: `${SITE_ORIGIN}${providerPath(company.slug)}` },
@@ -91,7 +91,7 @@ export default async function ProviderPage({ params }: PageProps<"/lp/provider/[
       />
       <SubpageHeader
         title={`חבילות ${company.name}`}
-        blurb={`${sections.map((s) => CATEGORY_META[s.category].he).join(" · ")} — כל החבילות של ${company.name} שאני משווה, עם המחיר אחרי תום ההטבה.`}
+        blurb={`${sections.map((s) => CATEGORY_META[s.category].he).join(" · ")}. כל החבילות של ${company.name} שאני משווה, עם המחיר אחרי תום ההטבה.`}
       >
         <div className="mt-6 inline-flex rounded-lp-card bg-lp-surface p-3 shadow-lp-pop">
           <ProviderLogo logo={company.logo} name={company.name} size={40} />
@@ -124,7 +124,7 @@ export default async function ProviderPage({ params }: PageProps<"/lp/provider/[
                 href={servicePath(s.category)}
                 className="rounded-lg border border-lp-line bg-lp-surface px-4 py-2 text-sm font-medium text-lp-brand transition hover:border-lp-brand"
               >
-                להשוואה מול כל החברות ←
+                להשוואה מול כל החברות
               </a>
             </div>
             <CatalogBrowser packages={s.packages} category={s.category} />
@@ -155,7 +155,7 @@ export default async function ProviderPage({ params }: PageProps<"/lp/provider/[
         <div className="mx-auto max-w-2xl px-4 py-14">
           <h2 className="text-xl font-bold text-lp-ink">רוצים חבילה של {company.name}?</h2>
           <p className="mt-2 mb-5 text-sm text-lp-ink-2">
-            השאירו פרטים ואבדוק לכם את ההצעה המשתלמת ביותר — גם מול החברות האחרות. בלי עלות ובלי
+            השאירו פרטים ואבדוק לכם את ההצעה המשתלמת ביותר, גם מול החברות האחרות. בלי עלות ובלי
             התחייבות.
           </p>
           <div className="rounded-lp-card border border-lp-line bg-lp-surface p-5 shadow-lp-card">

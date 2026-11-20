@@ -776,7 +776,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                       type="checkbox"
                       checked={selectedProviders.includes(o.slug)}
                       onChange={() => toggle(selectedProviders, o.slug, setSelectedProviders)}
-                      aria-label={`${o.name} — ${countLabel(o.count)}`}
+                      aria-label={`${o.name}, ${countLabel(o.count)}`}
                       className="h-4 w-4 accent-lp-brand"
                     />
                     <span className="flex-1 text-lp-ink">{o.name}</span>
@@ -807,7 +807,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                         key={type}
                         type="button"
                         aria-pressed={active}
-                        aria-label={`${type} — ${countLabel(count)}`}
+                        aria-label={`${type}, ${countLabel(count)}`}
                         onClick={() => toggle(selectedTypes, type, setSelectedTypes)}
                         className={`inline-flex min-h-9 items-center rounded-full border px-3 py-1 text-xs transition ${
                           active

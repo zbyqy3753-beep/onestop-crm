@@ -635,7 +635,7 @@ test("נגישות: המונה על תיבת החברה ועל שבב הסוג �
     const unit = cat === "electricity" ? "מסלול" : "חביל";
 
     for (const o of providerFacets(pkgs, NONE)) {
-      const expected = `${o.name} — ${o.count} `;
+      const expected = `${o.name}, ${o.count} `;
       assert.ok(
         html.includes(`aria-label="${escapeAttr(expected)}`),
         `${cat}: לתיבת ${o.name} אין שם נגיש שמפריד את המונה`,
@@ -643,7 +643,7 @@ test("נגישות: המונה על תיבת החברה ועל שבב הסוג �
     }
     for (const [type, count] of typeFacets(pkgs, NONE)) {
       assert.ok(
-        html.includes(`aria-label="${escapeAttr(`${type} — ${count} `)}`),
+        html.includes(`aria-label="${escapeAttr(`${type}, ${count} `)}`),
         `${cat}: לשבב ${type} אין שם נגיש שמפריד את המונה`,
       );
     }
@@ -659,12 +659,12 @@ test("נגישות: הלשונית מכריזה את הקטגוריה והמונ
   const html = renderToStaticMarkup(React.createElement(CatalogTabs, { packages: ALL }));
   // שלוש הלשוניות ראשונות ב-DOM; מה שאחריהן הוא שבבי הסוג של הקטלוג.
   const names = accessibleNames(html, "button")
-    .filter((n) => n.includes("—"))
+    .filter((n) => /, \d/.test(n))
     .slice(0, 3);
   assert.deepEqual(names, [
-    `סלולר — ${byCategory(ALL, "cellular").length} חבילות`,
-    `אינטרנט וטלוויזיה — ${byCategory(ALL, "home").length} חבילות`,
-    `חשמל — ${byCategory(ALL, "electricity").length} מסלולים`,
+    `סלולר, ${byCategory(ALL, "cellular").length} חבילות`,
+    `אינטרנט וטלוויזיה, ${byCategory(ALL, "home").length} חבילות`,
+    `חשמל, ${byCategory(ALL, "electricity").length} מסלולים`,
   ]);
 });
 
@@ -673,7 +673,7 @@ test("נגישות: צורת היחיד נשמרת גם בשם הנגיש", () =
     React.createElement(CatalogTabs, { packages: [byCategory(ALL, "cellular")[0]] }),
   );
   assert.ok(
-    accessibleNames(html, "button").includes("סלולר — 1 חבילה"),
+    accessibleNames(html, "button").includes("סלולר, 1 חבילה"),
     "לשונית עם חבילה אחת הכריזה 'חבילות'",
   );
 });

@@ -157,7 +157,7 @@ export default async function ServicePage({ params }: PageProps<"/lp/[service]">
         <div className="mx-auto max-w-2xl px-4 py-14">
           <h2 className="text-xl font-bold text-lp-ink">רוצים שאבדוק לכם?</h2>
           <p className="mt-2 mb-5 text-sm text-lp-ink-2">
-            השאירו פרטים ואחזור אליכם עם ההצעה המשתלמת ביותר ב{meta.he} — בלי עלות ובלי התחייבות.
+            השאירו פרטים ואחזור אליכם עם ההצעה המשתלמת ביותר ב{meta.he}, בלי עלות ובלי התחייבות.
           </p>
           <div className="rounded-lp-card border border-lp-line bg-lp-surface p-5 shadow-lp-card">
             <LeadForm category={page.lead} />

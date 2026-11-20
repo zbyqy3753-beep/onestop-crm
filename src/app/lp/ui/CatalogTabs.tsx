@@ -145,7 +145,7 @@ export function CatalogTabs({ packages }: { packages: Package[] }) {
                 מאותם `PACKAGES_CAPTION`/`PLANS_CAPTION` שהקטלוג שמתחת
                 משתמש בהם, כולל צורת היחיד.
               */
-              aria-label={`${CATEGORY_META[key].he} — ${count} ${
+              aria-label={`${CATEGORY_META[key].he}, ${count} ${
                 (key === "electricity" ? PLANS_CAPTION : PACKAGES_CAPTION)(count)
               }`}
               tabIndex={active ? 0 : -1}
