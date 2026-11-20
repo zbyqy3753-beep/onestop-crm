@@ -12,6 +12,8 @@ import {
   promoNoteRises,
   promoNoteText,
   promoRise,
+  PACKAGES_CAPTION,
+  PLANS_CAPTION,
   shekels,
 } from "../catalog/format";
 import {
@@ -207,6 +209,19 @@ export function CompareTray({
    */
   fallbackFocusId?: string;
 }) {
+  /*
+   * ⚠️ ובחשמל אלה **מסלולים**, כמו בשורת התוצאות שמעליו.
+   * המגש הכריז "בחרו עוד חבילה" מתחת למסך שספר "18
+   * מסלולים" — שני שמות לאותן הרשומות באותו מסך. `items`
+   * הוא המקור היחיד לקטגוריה כאן, והמגש מרונדר רק כשהוא לא ריק —
+   * התנאי על האורך הוא שער לקורא הבא, כדי ש-`every` על ריק
+   * לא יחזיר "חשמל".
+   */
+  const trayNoun = (n: number) =>
+    (items.length > 0 && items.every((p) => p.category === "electricity")
+      ? PLANS_CAPTION
+      : PACKAGES_CAPTION)(n);
+
   const [open, setOpen] = useState(false);
 
   /*
@@ -506,7 +521,7 @@ export function CompareTray({
                 : "bg-lp-brand text-lp-ink-invert hover:bg-lp-brand-bright"
             }`}
           >
-            {items.length < 2 ? "בחרו עוד חבילה" : "השוו"}
+            {items.length < 2 ? `בחרו עוד ${trayNoun(1)}` : "השוו"}
           </button>
         </div>
       </div>
@@ -537,13 +552,20 @@ export function CompareSheet({
 }) {
   /* כל פריטי ההשוואה הם מקטגוריה אחת — ראה ההערה על שורת המחיר. */
   const allElectric = items.every((p) => p.category === "electricity");
+  /*
+   * ⚠️ והכותרת נוקבת באותו שם — ה-`h2` וה-`aria-label` של
+   * ה-`dialog` אמרו "השוואת חבילות" גם על שני מסלולי חשמל,
+   * בזמן שהשורה הראשונה בטבלה שמתחת כבר מבחינה לפי
+   * `allElectric`. קורא המסך שומע את שם הדיאלוג לפני כל שורה בו.
+   */
+  const sheetHeading = `השוואת ${(allElectric ? PLANS_CAPTION : PACKAGES_CAPTION)(items.length)}`;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-lp-navy/60 p-0 sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
-      aria-label="השוואת חבילות"
+      aria-label={sheetHeading}
       /*
        * ⚠️ `onClick` על האוברליי סגר את החלון גם כשהלחיצה התחילה
        * *בתוך* הפאנל: אירוע `click` נורה על האב המשותף של ה-mousedown
@@ -571,7 +593,7 @@ export function CompareSheet({
         className="animate-lp-rise max-h-[90dvh] w-full max-w-4xl overflow-auto rounded-t-lp-card bg-lp-surface p-5 shadow-lp-pop max-sm:pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-lp-card"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-lp-ink">השוואת חבילות</h2>
+          <h2 className="text-lg font-bold text-lp-ink">{sheetHeading}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -791,7 +813,7 @@ function AfterPromoCell({ pkg }: { pkg: Package }) {
    * ⚠️ טון ה-"עלייה" רק ל-`amount`, בדיוק כמו בכרטיס. `PackageCard`
    * צובע `bg-lp-rise-soft text-lp-rise` על `amount` לבדו ומשאיר
    * `note` ו-`period` נייטרליים — כי `PromoRise` ב-`format.ts` קובע
-   * ש-`period` **אינו** אומר שהמחיר עולה, ובעשר מ-19 הרשומות המחיר
+   * ש-`period` **אינו** אומר שהמחיר עולה, ובאחת-עשרה מ-20 הרשומות המחיר
    * שבכרטיס הוא כבר מחיר הקבע וההצהרה היא על מבצע זול בהתחלה.
    * הטון על שלושת הענפים אמר בצבע מה שהטיפוס אוסר לומר במילים.
    */

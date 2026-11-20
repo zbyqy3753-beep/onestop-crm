@@ -10,6 +10,8 @@ import {
   detailRows,
   discountIsCapped,
   headlineValue,
+  PACKAGES_CAPTION,
+  PLANS_CAPTION,
   priceNote,
   promoNoteLabel,
   promoNoteRises,
@@ -97,6 +99,14 @@ export function PackageCard({
   const stats = cardStats(pkg);
   const rows = detailRows(pkg);
   const isElectric = pkg.category === "electricity";
+  /*
+   * ⚠️ ובחשמל אלה **מסלולים** — אותה הכרעה ששורת התוצאות
+   * ב-`CatalogBrowser` ורצועת השירותים ב-`page.tsx` כבר עושות. משטחי
+   * ההשוואה נשארו מאחור: בלשונית החשמל המסך מדפיס באותה
+   * נשימה "18 מסלולים" ו"ניתן להשוות עד 4 חבילות" — שתי
+   * תצוגות של אותן הרשומות, בשני שמות, באותו מסך.
+   */
+  const compareNoun = (isElectric ? PLANS_CAPTION : PACKAGES_CAPTION)(compareMax);
 
   // The whole point of the site: when the price jumps after the promo, say so
   // on the card rather than in the small print.
@@ -250,7 +260,7 @@ export function PackageCard({
             className={`flex shrink-0 flex-col items-center gap-1 text-lp-2xs ${
               compareFull && !compareChecked ? "cursor-not-allowed text-lp-ink-3 opacity-50" : "cursor-pointer text-lp-ink-2"
             }`}
-            title={compareFull && !compareChecked ? `ניתן להשוות עד ${compareMax} חבילות` : undefined}
+            title={compareFull && !compareChecked ? `ניתן להשוות עד ${compareMax} ${compareNoun}` : undefined}
           >
             <input
               type="checkbox"
@@ -297,7 +307,7 @@ export function PackageCard({
               */
               aria-label={
                 compareFull && !compareChecked
-                  ? `הוסף את ${label} להשוואה — לא זמין, ניתן להשוות עד ${compareMax} חבילות`
+                  ? `הוסף את ${label} להשוואה — לא זמין, ניתן להשוות עד ${compareMax} ${compareNoun}`
                   : `${compareChecked ? "הסר את" : "הוסף את"} ${label} ${compareChecked ? "מההשוואה" : "להשוואה"}`
               }
             />
@@ -392,7 +402,7 @@ export function PackageCard({
             </p>
           )}
           {/*
-           * הכרטיס שתק לגמרי על 19 חבילות שהתיאור שלהן מצהיר על תקופת
+           * הכרטיס שתק לגמרי על 20 חבילות שהתיאור שלהן מצהיר על תקופת
            * מבצע בלי שהמספר הגיע לשדה. הנוסח אינו מצהיר על עלייה —
            * ראה `PromoRise` ב-`format.ts`.
            */}
