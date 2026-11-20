@@ -26,9 +26,17 @@ object Recordings {
      *   "0541234567_20241120143005.m4a"
      * מה שבין הקידומת לתאריך הוא הצד השני: מספר, או שם כשהוא באנשי הקשר.
      */
-    private val PREFIXES = listOf("Call recording ", "הקלטת שיחה ", "Recording ")
+    private val PREFIXES = listOf("Call recording ", "הקלטת שיחה ", "שיחה ", "Recording ")
     private val PARTY_AND_DATE = Regex("""^(.*?)[_ ]\d{6,8}[_ ]?\d{4,6}$""")
     private val PHONE_LIKE = Regex("""^[+\d][\d\s\-]{5,}$""")
+
+    /*
+     * ⚠️ מספר בסוף הצד השני, אחרי מילה כלשהי. הסמסונג של אלירן קורא לקבצים
+     * "שיחה 0587900058_261120_114651.m4a", וקידומת שלא הכרנו גרמה לכל
+     * ההקלטות להיראות כמו שם של איש קשר ולהידלג בשקט. שם של איש קשר הוא
+     * מילים בלי מספר של 6 ספרות בסופו, ולכן הוא עדיין מזוהה כאיש קשר.
+     */
+    private val TRAILING_PHONE = Regex("""(?:^|\s)(\+?\d[\d\-]{5,})$""")
 
     /** הצד השני של השיחה, כפי שמופיע בשם הקובץ. */
     fun partyOf(fileName: String): String {
@@ -38,8 +46,11 @@ object Recordings {
     }
 
     /** מספר טלפון בספרות בלבד, או null כשהצד השני מופיע בשם (כלומר איש קשר). */
-    fun phoneOf(party: String): String? =
-        if (PHONE_LIKE.matches(party)) party.filter { it.isDigit() || it == '+' } else null
+    fun phoneOf(party: String): String? {
+        val raw = if (PHONE_LIKE.matches(party)) party
+        else TRAILING_PHONE.find(party)?.groupValues?.get(1) ?: return null
+        return raw.filter { it.isDigit() || it == '+' }
+    }
 
     fun isContact(context: Context, phone: String): Boolean {
         val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(phone))
