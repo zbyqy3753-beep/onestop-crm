@@ -229,3 +229,13 @@ export const PostRequestStatus = {
 } as const
 
 export type PostRequestStatus = (typeof PostRequestStatus)[keyof typeof PostRequestStatus]
+
+
+export const CallRecordingStatus = {
+  uploading: 'uploading',
+  pending: 'pending',
+  done: 'done',
+  failed: 'failed'
+} as const
+
+export type CallRecordingStatus = (typeof CallRecordingStatus)[keyof typeof CallRecordingStatus]

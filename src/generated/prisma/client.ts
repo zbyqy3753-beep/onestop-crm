@@ -267,3 +267,13 @@ export type WaCampaign = Prisma.WaCampaignModel
  * 
  */
 export type PostRequest = Prisma.PostRequestModel
+/**
+ * Model CallRecording
+ * 
+ */
+export type CallRecording = Prisma.CallRecordingModel
+/**
+ * Model CallAudioChunk
+ * 
+ */
+export type CallAudioChunk = Prisma.CallAudioChunkModel

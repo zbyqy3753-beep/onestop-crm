@@ -77,7 +77,9 @@ export const ModelName = {
   EmailOptOut: 'EmailOptOut',
   MailerSettings: 'MailerSettings',
   WaCampaign: 'WaCampaign',
-  PostRequest: 'PostRequest'
+  PostRequest: 'PostRequest',
+  CallRecording: 'CallRecording',
+  CallAudioChunk: 'CallAudioChunk'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -499,6 +501,33 @@ export const PostRequestScalarFieldEnum = {
 } as const
 
 export type PostRequestScalarFieldEnum = (typeof PostRequestScalarFieldEnum)[keyof typeof PostRequestScalarFieldEnum]
+
+
+export const CallRecordingScalarFieldEnum = {
+  id: 'id',
+  fileName: 'fileName',
+  phone: 'phone',
+  recordedAt: 'recordedAt',
+  durationSec: 'durationSec',
+  chunkCount: 'chunkCount',
+  status: 'status',
+  transcript: 'transcript',
+  analysis: 'analysis',
+  error: 'error',
+  createdAt: 'createdAt',
+  handledAt: 'handledAt'
+} as const
+
+export type CallRecordingScalarFieldEnum = (typeof CallRecordingScalarFieldEnum)[keyof typeof CallRecordingScalarFieldEnum]
+
+
+export const CallAudioChunkScalarFieldEnum = {
+  recordingId: 'recordingId',
+  index: 'index',
+  data: 'data'
+} as const
+
+export type CallAudioChunkScalarFieldEnum = (typeof CallAudioChunkScalarFieldEnum)[keyof typeof CallAudioChunkScalarFieldEnum]
 
 
 export const SortOrder = {

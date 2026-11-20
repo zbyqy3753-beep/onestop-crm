@@ -410,7 +410,9 @@ export const ModelName = {
   EmailOptOut: 'EmailOptOut',
   MailerSettings: 'MailerSettings',
   WaCampaign: 'WaCampaign',
-  PostRequest: 'PostRequest'
+  PostRequest: 'PostRequest',
+  CallRecording: 'CallRecording',
+  CallAudioChunk: 'CallAudioChunk'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -426,7 +428,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "session" | "passwordReset" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "renewalContact" | "renewalOptOut" | "whatsAppInbound" | "botSettings" | "loginAttempt" | "emailCampaign" | "emailMessage" | "emailOptOut" | "mailerSettings" | "waCampaign" | "postRequest"
+    modelProps: "user" | "session" | "passwordReset" | "lead" | "leadNote" | "leadActivity" | "leadStatusEvent" | "package" | "deal" | "dealPackage" | "dealStageEvent" | "leadCost" | "registration" | "whatsAppMessage" | "botHeartbeat" | "renewalDocument" | "renewalContact" | "renewalOptOut" | "whatsAppInbound" | "botSettings" | "loginAttempt" | "emailCampaign" | "emailMessage" | "emailOptOut" | "mailerSettings" | "waCampaign" | "postRequest" | "callRecording" | "callAudioChunk"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2428,6 +2430,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    CallRecording: {
+      payload: Prisma.$CallRecordingPayload<ExtArgs>
+      fields: Prisma.CallRecordingFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CallRecordingFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallRecordingPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CallRecordingFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallRecordingPayload>
+        }
+        findFirst: {
+          args: Prisma.CallRecordingFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallRecordingPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CallRecordingFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallRecordingPayload>
+        }
+        findMany: {
+          args: Prisma.CallRecordingFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallRecordingPayload>[]
+        }
+        create: {
+          args: Prisma.CallRecordingCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallRecordingPayload>
+        }
+        createMany: {
+          args: Prisma.CallRecordingCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CallRecordingCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallRecordingPayload>[]
+        }
+        delete: {
+          args: Prisma.CallRecordingDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallRecordingPayload>
+        }
+        update: {
+          args: Prisma.CallRecordingUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallRecordingPayload>
+        }
+        deleteMany: {
+          args: Prisma.CallRecordingDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CallRecordingUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CallRecordingUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallRecordingPayload>[]
+        }
+        upsert: {
+          args: Prisma.CallRecordingUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallRecordingPayload>
+        }
+        aggregate: {
+          args: Prisma.CallRecordingAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCallRecording>
+        }
+        groupBy: {
+          args: Prisma.CallRecordingGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CallRecordingGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CallRecordingCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CallRecordingCountAggregateOutputType> | number
+        }
+      }
+    }
+    CallAudioChunk: {
+      payload: Prisma.$CallAudioChunkPayload<ExtArgs>
+      fields: Prisma.CallAudioChunkFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CallAudioChunkFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallAudioChunkPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CallAudioChunkFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallAudioChunkPayload>
+        }
+        findFirst: {
+          args: Prisma.CallAudioChunkFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallAudioChunkPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CallAudioChunkFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallAudioChunkPayload>
+        }
+        findMany: {
+          args: Prisma.CallAudioChunkFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallAudioChunkPayload>[]
+        }
+        create: {
+          args: Prisma.CallAudioChunkCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallAudioChunkPayload>
+        }
+        createMany: {
+          args: Prisma.CallAudioChunkCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CallAudioChunkCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallAudioChunkPayload>[]
+        }
+        delete: {
+          args: Prisma.CallAudioChunkDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallAudioChunkPayload>
+        }
+        update: {
+          args: Prisma.CallAudioChunkUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallAudioChunkPayload>
+        }
+        deleteMany: {
+          args: Prisma.CallAudioChunkDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CallAudioChunkUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CallAudioChunkUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallAudioChunkPayload>[]
+        }
+        upsert: {
+          args: Prisma.CallAudioChunkUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallAudioChunkPayload>
+        }
+        aggregate: {
+          args: Prisma.CallAudioChunkAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCallAudioChunk>
+        }
+        groupBy: {
+          args: Prisma.CallAudioChunkGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CallAudioChunkGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CallAudioChunkCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CallAudioChunkCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2872,6 +3022,33 @@ export const PostRequestScalarFieldEnum = {
 export type PostRequestScalarFieldEnum = (typeof PostRequestScalarFieldEnum)[keyof typeof PostRequestScalarFieldEnum]
 
 
+export const CallRecordingScalarFieldEnum = {
+  id: 'id',
+  fileName: 'fileName',
+  phone: 'phone',
+  recordedAt: 'recordedAt',
+  durationSec: 'durationSec',
+  chunkCount: 'chunkCount',
+  status: 'status',
+  transcript: 'transcript',
+  analysis: 'analysis',
+  error: 'error',
+  createdAt: 'createdAt',
+  handledAt: 'handledAt'
+} as const
+
+export type CallRecordingScalarFieldEnum = (typeof CallRecordingScalarFieldEnum)[keyof typeof CallRecordingScalarFieldEnum]
+
+
+export const CallAudioChunkScalarFieldEnum = {
+  recordingId: 'recordingId',
+  index: 'index',
+  data: 'data'
+} as const
+
+export type CallAudioChunkScalarFieldEnum = (typeof CallAudioChunkScalarFieldEnum)[keyof typeof CallAudioChunkScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -3248,6 +3425,34 @@ export type ListEnumPostRequestStatusFieldRefInput<$PrismaModel> = FieldRefInput
 
 
 /**
+ * Reference to a field of type 'CallRecordingStatus'
+ */
+export type EnumCallRecordingStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CallRecordingStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'CallRecordingStatus[]'
+ */
+export type ListEnumCallRecordingStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CallRecordingStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Bytes'
+ */
+export type BytesFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Bytes'>
+    
+
+
+/**
+ * Reference to a field of type 'Bytes[]'
+ */
+export type ListBytesFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Bytes[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -3397,6 +3602,8 @@ export type GlobalOmitConfig = {
   mailerSettings?: Prisma.MailerSettingsOmit
   waCampaign?: Prisma.WaCampaignOmit
   postRequest?: Prisma.PostRequestOmit
+  callRecording?: Prisma.CallRecordingOmit
+  callAudioChunk?: Prisma.CallAudioChunkOmit
 }
 
 /* Types for Logging */
