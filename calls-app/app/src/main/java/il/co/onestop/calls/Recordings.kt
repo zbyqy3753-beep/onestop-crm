@@ -40,7 +40,15 @@ object Recordings {
 
     /** הצד השני של השיחה, כפי שמופיע בשם הקובץ. */
     fun partyOf(fileName: String): String {
+        /*
+         * ⚠️ סמסונג עוטפת את המספר בתווי כיווניות בלתי נראים (LRM ודומיו,
+         * קטגוריה Cf), כדי שיוצג נכון בשם קובץ עברי. על המסך רואים
+         * "0587900058", אבל ה-regex רואה תו נוסף ולא מזהה מספר. מנקים
+         * אותם, וגם רווח קשיח, לפני כל ניתוח.
+         */
         var base = fileName.substringBeforeLast('.')
+            .replace(Regex("""\p{Cf}"""), "")
+            .replace(' ', ' ')
         PREFIXES.firstOrNull { base.startsWith(it) }?.let { base = base.removePrefix(it) }
         return PARTY_AND_DATE.find(base)?.groupValues?.get(1)?.trim() ?: base.trim()
     }
