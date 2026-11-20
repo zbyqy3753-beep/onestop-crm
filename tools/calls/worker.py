@@ -33,6 +33,12 @@ CLAUDE_TIMEOUT = 300
 
 _model = None
 
+# ⚠️ קונסולת Windows היא cp1252 כברירת מחדל, ו-print של שורה בעברית נופל
+# ב-UnicodeEncodeError לפני שהיא נכתבת ללוג.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 
 def log(msg: str) -> None:
     line = f"{time.strftime('%Y-%m-%d %H:%M:%S')}  {msg}"
