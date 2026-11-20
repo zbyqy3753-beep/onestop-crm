@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { CatalogTabs } from "./ui/CatalogTabs";
+import { EliranMark } from "./ui/EliranMark";
 import { Faq, HOME_FAQ } from "./ui/Faq";
 import { LeadForm } from "./ui/LeadForm";
 import { PackageCard } from "./ui/PackageCard";
@@ -332,22 +333,13 @@ export default function LandingPage() {
             (ראה `proxy.ts`). ONE STOP נשאר רק במקומות שמזהים את הגוף
             המשפטי — הגילוי הנאות והשאלות. הסכמת הטופס היא לפנייה של
             אלירן (החלטת בעל המערכת, 24.10.2026).
-            הסמל הוא `public/brand/eliran/icon.png` (מקור: `Desktop\eliran-instagram\logo`).
+            הסמל: `ui/EliranMark.tsx` (ושם למה הוא שטוח).
           */}
-          <div className="mb-7 flex items-center gap-3">
-            <Image
-              src="/brand/eliran/icon.png"
-              alt=""
-              width={48}
-              height={48}
-              priority
-              className="size-12 drop-shadow-[0_4px_12px_rgb(3_8_16/0.45)]"
-            />
-            <div className="leading-none [text-shadow:0_2px_12px_rgb(3_8_16/0.6)]">
-              <div className="text-2xl font-extrabold text-white">
-                אלירן <span className="text-lp-brand-bright">תקשורת</span>
-              </div>
-              <div className="mt-1.5 text-xs font-semibold text-white/80">ייעוץ תקשורת סלולרית וביתית</div>
+          <div className="mb-8 flex items-center gap-3">
+            <EliranMark />
+            <div className="leading-none">
+              <div className="text-2xl font-extrabold text-white">אלירן תקשורת</div>
+              <div className="mt-1.5 text-xs font-medium text-white/70">ייעוץ תקשורת סלולרית וביתית</div>
             </div>
           </div>
 
@@ -379,13 +371,18 @@ export default function LandingPage() {
             {lead && isMoney(lead.price) && (
               <a
                 href="#cellular"
-                className="group mt-7 inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl bg-gradient-to-b from-lp-brand-bright to-lp-brand px-6 py-4 shadow-lp-pop transition hover:from-lp-brand-glow sm:px-9 sm:py-5"
+                className="group mt-7 inline-flex max-w-full flex-wrap items-baseline gap-x-2 gap-y-1 border-s-2 border-lp-brand-bright ps-4 transition"
               >
-                <span className="text-lg font-extrabold text-white sm:text-2xl">סלולר — החל מ־</span>
-                <span dir="ltr" className="nums text-2xl leading-none font-extrabold text-white sm:text-4xl">
+                {/*
+                  ⚠️ שורת מחיר ולא כפתור. עד 11.2026 זה היה "כפתור" ענק בגרדיאנט
+                  כחול עם צל, שלישי בשורה של שלושה כפתורים — המשתמש פסל אותו
+                  כ"AI slop". המספר נשאר הדבר הבולט; הקופסה ירדה.
+                */}
+                <span className="text-base font-semibold text-white/80 sm:text-lg">סלולר החל מ־</span>
+                <span dir="ltr" className="nums text-3xl leading-none font-extrabold text-white sm:text-4xl">
                   {shekels(lead.price)}
                 </span>
-                <span className="text-lg font-extrabold text-white sm:text-2xl">לחודש</span>
+                <span className="text-base font-semibold text-white/80 group-hover:text-white sm:text-lg">לחודש</span>
                 {/*
                   ⚠️ המחיר שאחרי ההטבה נמצא כאן כי הפסקה שלוש שורות מעליו
                   מבטיחה במפורש "ומציגים גם את המחיר שאחרי תקופת המבצע".
@@ -399,31 +396,32 @@ export default function LandingPage() {
                   ולכן הספירה כאן חייבת לכלול את שתיהן.
                 */}
                 {leadNote && (
-                  <span className="basis-full text-center text-xs font-semibold text-white/80 sm:text-sm">
+                  <span className="basis-full text-xs font-medium text-white/70 sm:text-sm">
                     {leadNote.value}
                   </span>
                 )}
                 {riseLine && (
-                  <span className="basis-full text-center text-xs font-semibold text-white/80 sm:text-sm">
+                  <span className="basis-full text-xs font-medium text-white/70 sm:text-sm">
                     {riseLine}
                   </span>
                 )}
               </a>
             )}
 
-            <div className="mt-7 flex flex-wrap items-center gap-3">
+            {/*
+              ⚠️ אותה צורה כמו `btnPrimary` בשאר הדף (פינות `rounded-lg`, בלי
+              צל), ולא "גלולות". כפתור אחד מלא ואחד מתאר — לא שני ראשיים.
+            */}
+            <div className="mt-8 flex flex-wrap items-center gap-3">
               <a
                 href="#catalog"
-                className="group inline-flex h-13 items-center gap-1 rounded-full bg-white px-7 text-base font-bold text-lp-ink shadow-lp-lift transition hover:bg-lp-surface-2"
+                className="inline-flex h-12 items-center rounded-lg bg-white px-6 text-base font-bold text-lp-ink transition hover:bg-lp-surface-3"
               >
                 בואו נשווה
-                <span aria-hidden className="transition group-hover:-translate-x-1">
-                  ←
-                </span>
               </a>
               <a
                 href="#lead"
-                className="inline-flex h-13 items-center rounded-full border-[1.5px] border-white/55 px-6 text-base font-bold text-white transition hover:bg-white/10"
+                className="inline-flex h-12 items-center rounded-lg border border-white/40 px-6 text-base font-bold text-white transition hover:border-white hover:bg-white/5"
               >
                 שיחזרו אליי
               </a>
@@ -455,16 +453,14 @@ export default function LandingPage() {
         */}
         <div className="relative border-t border-white/15 bg-lp-navy-deep/70 backdrop-blur">
           <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
-            <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/35 bg-lp-navy-deep/60 px-4 py-2 text-xs font-bold text-white">
-              <span aria-hidden className="size-1.5 rounded-full bg-lp-brand-bright shadow-lp-glow" />
-              משווקים מורשים
-            </span>
+            {/* תווית שקטה ולא "תג" עם נקודה זוהרת. */}
+            <span className="shrink-0 text-xs font-semibold text-white/70">משווקים מורשים</span>
             <ul className="flex flex-1 flex-wrap items-center gap-3 sm:flex-nowrap sm:overflow-x-auto">
               {providers(packages).map((p) => (
                 <li key={p.slug} className="shrink-0">
                   <span
                     title={`חבילות ${p.name}`}
-                    className="flex size-11 items-center justify-center rounded-full bg-white"
+                    className="flex size-11 items-center justify-center rounded-lg bg-white"
                   >
                     <ProviderLogo logo={p.logo} name={p.name} size={18} />
                   </span>
@@ -493,12 +489,15 @@ export default function LandingPage() {
               <li key={s.title}>
                 <a
                   href={s.hash}
-                  className="group flex h-full flex-col rounded-lp-card border border-lp-line bg-lp-surface p-4 shadow-lp-lift transition hover:-translate-y-0.5 hover:border-lp-brand hover:shadow-lp-pop sm:p-5"
+                  className="group flex h-full flex-col rounded-lp-card border border-lp-line bg-lp-surface p-4 transition hover:border-lp-brand sm:p-5"
                 >
-                  <span className="flex size-12 items-center justify-center rounded-xl bg-lp-brand text-lp-ink-invert shadow-lp-glow transition group-hover:bg-lp-brand-bright">
-                    {s.icon}
-                  </span>
-                  <span className="mt-4 text-base leading-snug font-extrabold text-lp-ink sm:text-lg">
+                  {/*
+                    ⚠️ אייקון בקו, בצבע המותג, בלי אריח מלא, בלי זוהר ובלי
+                    "קפיצה" בריחוף. אריח כחול זוהר עם אייקון לבן בכל כרטיס הוא
+                    החתימה הכי מוכרת של עיצוב גנרי (נפסל ב-11.2026).
+                  */}
+                  <span className="text-lp-brand [&_svg]:size-6">{s.icon}</span>
+                  <span className="mt-3 text-base leading-snug font-extrabold text-lp-ink sm:text-lg">
                     {s.title}
                   </span>
                   <span className="mt-1.5 flex-1 text-xs leading-relaxed text-lp-ink-2 sm:text-sm">

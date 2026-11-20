@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { EliranMark } from "./EliranMark";
 import { CATEGORY_META } from "../catalog/catalog";
 import { SERVICE_PAGES } from "../site";
 
@@ -32,10 +32,8 @@ export function SubpageHeader({
           */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/" className="flex items-center gap-2.5">
-            <Image src="/brand/eliran/icon.png" alt="" width={36} height={36} className="size-9" />
-            <span className="text-xl leading-none font-extrabold text-white">
-              אלירן <span className="text-lp-brand-bright">תקשורת</span>
-            </span>
+            <EliranMark size="sm" />
+            <span className="text-xl leading-none font-extrabold text-white">אלירן תקשורת</span>
           </a>
           <nav aria-label="שירותים">
             <ul className="flex flex-wrap gap-2 text-sm">
@@ -44,7 +42,7 @@ export function SubpageHeader({
                   <a
                     href={`/${s.slug}`}
                     aria-current={s.slug === active ? "page" : undefined}
-                    className={`inline-flex rounded-full px-3.5 py-1.5 font-semibold transition ${
+                    className={`inline-flex rounded-lg px-3.5 py-1.5 font-semibold transition ${
                       s.slug === active
                         ? "bg-white text-lp-ink"
                         : "border border-white/30 text-white hover:bg-white/10"
