@@ -1099,3 +1099,56 @@ model PostRequest {
 
   @@index([status, createdAt])
 }
+
+/**
+ * ── הקלטות שיחה של אלירן ─────────────────────────────────────────────
+ * אפליקציית האנדרואיד שבטלפון של אלירן מעלה כל הקלטה של שיחה עם מספר
+ * שאינו באנשי הקשר. מחשב במשרד מושך את התור, מתמלל מקומית, מנתח עם
+ * Claude ומחזיר סיכום והערות לשיפור — והאפליקציה מציגה אותם.
+ *
+ * ⚠️ השמע נשמר בחתיכות של עד 3MB, כי גוף בקשה ותשובה ב-Vercel מוגבלים
+ * ל-4.5MB. החתיכות נמחקות ברגע שהניתוח חוזר: השמע הוא נתון רגיש של
+ * לקוח, ואין שום סיבה להחזיק אותו אחרי שתומלל.
+ */
+
+enum CallRecordingStatus {
+  uploading
+  pending
+  done
+  failed
+}
+
+model CallRecording {
+  id String @id @default(cuid())
+
+  /// שם הקובץ בטלפון. ייחודי, כדי שהעלאה חוזרת של אותה הקלטה לא תיצור כפילות.
+  fileName    String   @unique
+  phone       String?
+  recordedAt  DateTime
+  durationSec Int?
+  chunkCount  Int
+
+  status CallRecordingStatus @default(uploading)
+
+  transcript String?
+  /// הסיכום וההערות לשיפור, כטקסט מוכן להצגה.
+  analysis   String?
+  error      String?
+
+  chunks CallAudioChunk[]
+
+  createdAt DateTime  @default(now())
+  handledAt DateTime?
+
+  @@index([status, createdAt])
+}
+
+model CallAudioChunk {
+  recordingId String
+  index       Int
+  data        Bytes
+
+  recording CallRecording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+
+  @@id([recordingId, index])
+}

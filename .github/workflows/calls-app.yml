@@ -1,0 +1,54 @@
+# בניית אפליקציית "מאמן שיחות" לאנדרואיד (calls-app/), לטלפון של אלירן.
+#
+# אין במחשב במשרד JDK ו-Android SDK, ולכן ה-APK נבנה כאן ומועלה
+# כ-artifact של הריצה. מורידים אותו מדף הריצה ומתקינים בטלפון.
+#
+# ⚠️ סודות (Settings → Secrets → Actions):
+#   CALLS_PHONE_KEY          — אותו ערך כמו ב-Vercel; נאפה לתוך ה-APK
+#   CALLS_KEYSTORE_B64       — מפתח חתימה PKCS12 ב-base64. קבוע, כדי שעדכון יותקן מעל הגרסה הקודמת
+#   CALLS_KEYSTORE_PASSWORD  — הסיסמה שלו
+
+name: Calls app
+
+on:
+  push:
+    paths:
+      - "calls-app/**"
+      - ".github/workflows/calls-app.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Keystore
+        env:
+          KS: ${{ secrets.CALLS_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/calls.p12"
+            echo "CALLS_KEYSTORE_PATH=$RUNNER_TEMP/calls.p12" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build APK
+        working-directory: calls-app
+        env:
+          CALLS_PHONE_KEY: ${{ secrets.CALLS_PHONE_KEY }}
+          CALLS_KEYSTORE_PASSWORD: ${{ secrets.CALLS_KEYSTORE_PASSWORD }}
+        run: gradle assembleRelease --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: calls-app-${{ github.run_number }}
+          path: calls-app/app/build/outputs/apk/release/*.apk
