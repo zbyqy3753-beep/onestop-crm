@@ -53,6 +53,61 @@ object Recordings {
     }
 
     /**
+     * מה האפליקציה רואה ולמה היא מדלגת, להצגה במסך.
+     *
+     * ⚠️ קיים כי כשהקלטה לא מגיעה לשרת אין שום עקבה בצד השרת: הסיבה
+     * (תיקייה אחרת, שם קובץ בפורמט לא מוכר, איש קשר, הקלטה ישנה) נראית
+     * רק בטלפון.
+     */
+    fun diagnose(context: Context, sinceSec: Long): String = try {
+        val sb = StringBuilder()
+        val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val proj = arrayOf(
+            MediaStore.Audio.Media.DISPLAY_NAME,
+            MediaStore.Audio.Media.RELATIVE_PATH,
+            MediaStore.Audio.Media.DATE_ADDED,
+        )
+        var callCount = 0
+        context.contentResolver.query(
+            uri, proj, "${MediaStore.Audio.Media.RELATIVE_PATH} LIKE ?", arrayOf("%Call%"),
+            "${MediaStore.Audio.Media.DATE_ADDED} DESC",
+        )?.use { c ->
+            callCount = c.count
+            sb.append("הקלטות שיחה בטלפון: ${c.count}\n")
+            var n = 0
+            while (c.moveToNext() && n < 5) {
+                n++
+                val name = c.getString(0) ?: ""
+                val party = partyOf(name)
+                val phone = phoneOf(party)
+                val why = when {
+                    c.getLong(2) < sinceSec -> "דילוג: לפני ההתקנה"
+                    phone == null -> "דילוג: \"$party\" לא מספר (איש קשר?)"
+                    isContact(context, phone) -> "דילוג: $phone באנשי הקשר"
+                    else -> "נשלחת ($phone)"
+                }
+                sb.append("• $name\n   ${c.getString(1)} · $why\n")
+            }
+        }
+        if (callCount == 0) {
+            sb.append("קבצי שמע אחרונים בטלפון (לאיתור התיקייה):\n")
+            context.contentResolver.query(
+                uri, proj, null, null, "${MediaStore.Audio.Media.DATE_ADDED} DESC",
+            )?.use { c ->
+                var n = 0
+                while (c.moveToNext() && n < 5) {
+                    n++
+                    sb.append("• ${c.getString(1)}${c.getString(0)}\n")
+                }
+                if (c.count == 0) sb.append("אין גישה לקבצי שמע, או שאין כאלה.\n")
+            }
+        }
+        sb.toString().trimEnd()
+    } catch (e: Exception) {
+        "אבחון נכשל: ${e.message}"
+    }
+
+    /**
      * הקלטות שיחה שנוספו מאז [sinceSec], רק עם מספרים שאינם באנשי הקשר.
      *
      * ⚠️ רק מאז ההתקנה ולא כל ההיסטוריה: שיחות ישנות הן של לקוחות שכבר

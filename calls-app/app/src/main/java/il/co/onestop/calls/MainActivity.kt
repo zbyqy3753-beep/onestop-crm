@@ -30,6 +30,7 @@ class MainActivity : Activity() {
 
     private lateinit var list: LinearLayout
     private lateinit var status: TextView
+    private lateinit var diag: TextView
     private lateinit var permButton: Button
 
     private val needed: Array<String>
@@ -77,6 +78,12 @@ class MainActivity : Activity() {
         list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         root.addView(list)
 
+        diag = text("", 11f, muted).apply {
+            setPadding(0, dp(16), 0, 0)
+            setTextIsSelectable(true)
+        }
+        root.addView(diag)
+
         setContentView(ScrollView(this).apply {
             setBackgroundColor(Color.parseColor("#F8FAFC"))
             addView(root)
@@ -112,6 +119,8 @@ class MainActivity : Activity() {
                 store.lastError?.let { append("\nשגיאה אחרונה: $it") }
             }
         }
+
+        diag.text = if (miss.isEmpty()) "אבחון\n" + Recordings.diagnose(this, store.sinceSec) else ""
 
         list.removeAllViews()
         val items = JSONArray(store.cachedList)
