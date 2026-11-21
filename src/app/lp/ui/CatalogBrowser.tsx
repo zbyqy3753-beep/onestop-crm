@@ -4,7 +4,14 @@ import { useId, useMemo, useState } from "react";
 import { Card } from "./Card";
 import { PackageCard } from "./PackageCard";
 import { CompareTray, MAX_COMPARE } from "./CompareTray";
-import { PACKAGES_CAPTION, PLANS_CAPTION, promoRise, shekels } from "../catalog/format";
+import {
+  CUSTOMER_TYPE_HE,
+  PACKAGES_CAPTION,
+  PLANS_CAPTION,
+  promoRise,
+  shekels,
+  specOf,
+} from "../catalog/format";
 import {
   afterPrice,
   byPrice,
@@ -16,7 +23,7 @@ import {
   providerName,
   providerSlug,
 } from "../catalog/catalog";
-import type { Package } from "../catalog/types";
+import type { ElectricitySpec, Package } from "../catalog/types";
 
 export type SortKey = "price-asc" | "price-desc" | "after-asc" | "recommended";
 
@@ -316,7 +323,46 @@ export function providerFacets(packages: Package[], f: CatalogFilters) {
  * ערך בלי פקד, במקום פקד שנעלם.
  */
 const UNTYPED_LABEL = "אחר";
+
+/*
+ * ⚠️ בחשמל הציר נקרא מ-`spec.customerType` ולא מ-`p.type`, כי בחשמל
+ * `p.type` אינו ציר אחד אלא שלושה מעורבים: שם הקטגוריה (`"חשמל"`,
+ * 12 רשומות), סוג לקוח (`"עסקי"` 3, `"וועדי בתים"` 2) ו-`null` אחד.
+ * שתי תקלות נראות יצאו מזה, ושתיהן תקלות של תווית שמתארת קבוצה אחרת:
+ *
+ * 1. השבב הראשון נקרא **"חשמל"** — שם הלשונית שהגולש כבר נמצא בה,
+ *    ליד שורה שמכריזה "18 מסלולים". סימון שלו נקרא כאל-פעולה, ובפועל
+ *    הוריד 6 מסלולים והשורה הפכה ל-"12 מסלולים מתוך 18".
+ * 2. id 147 ו-id 150 הם אותו מסלול בכל מה שהכרטיס מדפיס — אותו שם
+ *    ("חוסכים בלילה 20%"), אותם 20%, אותו חלון (`23:00 עד 7:00`)
+ *    ושני הכרטיסים מצהירים `מיועד ל: לקוח פרטי` — ונפלו לשני שבבים
+ *    שונים (150 ב-"חשמל", 147 לבדו ב-"אחר"), כי `type` של 147 הוא
+ *    `null`. מי שסימן "חשמל" כדי לצמצם ללקוח פרטי איבד בשקט את התאום.
+ *
+ * `customerType` מחלק את כל 18 במדויק (פרטי 13, עסקי 3, ועד בית 2),
+ * וזה **אותו** מקור שהאריח "מיועד ל" שעל הכרטיס כבר מדפיס דרך
+ * `CUSTOMER_TYPE_HE` — כלומר המסנן והכרטיס אומרים סוף סוף אותו דבר.
+ * השער על `Object.hasOwn` הוא אותו שער שב-`format.ts`: `customerType`
+ * מגיע מנתונים ואינו מובטח להיות אחד מהשלושה.
+ *
+ * ⚠️ בסלולר ובבית `p.type` **כן** ציר נקי (`5G`/`4G`/`כשר`/`בסיס`
+ * מחלקים 55, ו-`טריפל`/`סיבים`/`TV`/`נחושת`/`קו ביתי` מחלקים 33),
+ * ולכן השינוי מגודר לחשמל בלבד ו-`UNTYPED_LABEL` נשאר בשבילם.
+ *
+ * ⚠️ תוצאה מכוונת: `/lp/provider/hot-energy` מאבד את כרטיס הסינון.
+ * ארבע הרשומות שלו היו `["חשמל", 3]` ו-`["אחר", 1]` — בדיוק הפיצול
+ * המדומה — וכולן לקוח פרטי, ולכן `typeFacets` יורד לאורך 1 ו-
+ * `hasAnyFilterControl` מכבה את הכרטיס. זה הכיוון שההערה על
+ * `hasAnyFilterControl` מצהירה עליו ("תווית שמבטיחה מסנן שאינו
+ * קיים"): כשאין במה לסנן, אין פקד. `bezeq-energy` כבר היה שם.
+ */
 function typeKey(p: Package): string {
+  if (p.category === "electricity") {
+    const { customerType } = specOf<Partial<ElectricitySpec>>(p);
+    if (typeof customerType === "string" && Object.hasOwn(CUSTOMER_TYPE_HE, customerType)) {
+      return CUSTOMER_TYPE_HE[customerType as ElectricitySpec["customerType"]];
+    }
+  }
   return freeText(p.type) ?? UNTYPED_LABEL;
 }
 

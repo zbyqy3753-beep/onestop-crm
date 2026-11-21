@@ -59,13 +59,17 @@ test("סבב 46: סקשן שאין בו אף פקד סינון אינו מצהי
 });
 
 test("סבב 46: סקשן שיש בו פקד אמיתי כן מצהיר על כרטיס סינון", () => {
-  // hot-energy הוא החשמלי השני, ונושא שני סוגים — ולכן ניצל מהפגם.
-  const hot = sectionsOf("hot-energy").find((g) => g[0].category === "electricity");
-  assert.ok(hot, "hot-energy מרנדר סקשן חשמל");
-  assert.ok(typeFacets(hot, NO_FILTERS).length > 1, "שני סוגים ומעלה");
-  assert.equal(hasAnyFilterControl(hot, NO_FILTERS), true);
-
-  // וסקשן סלולר רגיל, שבו המחוון לבדו מצדיק את הכרטיס.
+  /*
+   * ⚠️ hot-energy היה העדות כאן עד סבב 62, כשני סוגים — אלא ששני
+   * הסוגים האלה היו `["חשמל", 3]` ו-`["אחר", 1]`, כלומר בדיוק
+   * הפיצול המדומה שסבב 62 הסיר: ארבע רשומות החשמל שלו הן כולן
+   * לקוח פרטי. מאז `typeFacets` שלו באורך 1 והכרטיס יורד — אותו
+   * כלל בדיוק שהבדיקה שמעל אוכפת על bezeq-energy. ראה הבדיקה
+   * "אין בקטלוג סקשן נוסף" שמתחת.
+   *
+   * העדות לכיוון החיובי היא עכשיו הסקשן הסלולרי של cellcom, שבו
+   * המחוון לבדו מצדיק את הכרטיס.
+   */
   const cell = sectionsOf("cellcom").find((g) => g[0].category === "cellular");
   assert.ok(cell);
   assert.equal(hasAnyFilterControl(cell, NO_FILTERS), true);
@@ -78,7 +82,11 @@ test("סבב 46: אין בקטלוג סקשן נוסף שנפרס עם כרטי�
       if (!hasAnyFilterControl(g, NO_FILTERS)) empty.push(`${pr.slug}/${g[0].category}`);
     }
   }
-  // bezeq-energy/electricity הוא המקרה היחיד בנתוני הקטלוג של היום,
-  // והשער למעלה מוריד ממנו את הכרטיס.
-  assert.deepEqual(empty, ["bezeq-energy/electricity"]);
+  /*
+   * ⚠️ hot-energy/electricity נוסף בסבב 62, ובכוונה: ארבע רשומות
+   * החשמל שלו הן כולן לקוח פרטי, ולכן אחרי שציר הסוג עבר ל-
+   * `spec.customerType` אין בסקשן הזה במה לסנן. השבבים שהיו שם,
+   * "חשמל" ו-"אחר", חילקו קבוצה שאינה מחולקת.
+   */
+  assert.deepEqual(empty.sort(), ["bezeq-energy/electricity", "hot-energy/electricity"]);
 });

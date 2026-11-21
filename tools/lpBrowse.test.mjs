@@ -496,7 +496,14 @@ test("מסננים: המונה על כל אפשרות הוא בדיוק מה ש�
     const pkgs = byCategory(ALL, cat);
     const bounds = priceBoundsOf(pkgs);
     const prices = bounds ? [null, bounds.min, Math.round((bounds.min + bounds.max) / 2)] : [null];
-    const types = [...new Set(pkgs.map((p) => p.type).filter(Boolean))];
+    /*
+     * ⚠️ השבבים שהמסך באמת מציע (`typeFacets`) ולא ערכי `p.type`
+     * הגולמיים. מסבב 62 ציר הסוג בחשמל נקרא מ-`spec.customerType`,
+     * ולכן `"חשמל"` הוא ערך שאין לו שבב — וסימון שלו אינו מצב שהגולש
+     * יכול להגיע אליו. האינווריאנט לא נחלש: הוא נבדק עכשיו בדיוק על
+     * מה שאפשר ללחוץ עליו.
+     */
+    const types = typeFacets(pkgs, NONE).map(([t]) => t);
 
     for (const maxPrice of prices) {
       for (const seedTypes of [[], types.slice(0, 1)]) {
@@ -552,7 +559,14 @@ test("מסננים: אפשרות מסומנת נשארת ברשימה גם כש�
     const pkgs = byCategory(ALL, cat);
     const bounds = priceBoundsOf(pkgs);
     const providerSlugs = [...new Set(pkgs.map((p) => p.provider.slug))];
-    const types = [...new Set(pkgs.map((p) => p.type).filter(Boolean))];
+    /*
+     * ⚠️ השבבים שהמסך באמת מציע (`typeFacets`) ולא ערכי `p.type`
+     * הגולמיים. מסבב 62 ציר הסוג בחשמל נקרא מ-`spec.customerType`,
+     * ולכן `"חשמל"` הוא ערך שאין לו שבב — וסימון שלו אינו מצב שהגולש
+     * יכול להגיע אליו. האינווריאנט לא נחלש: הוא נבדק עכשיו בדיוק על
+     * מה שאפשר ללחוץ עליו.
+     */
+    const types = typeFacets(pkgs, NONE).map(([t]) => t);
     const prices = bounds ? [null, bounds.min, bounds.max] : [null];
 
     for (const maxPrice of prices) {
@@ -601,9 +615,25 @@ test("מסננים: סימון כל שבבי הסוג אינו מסתיר אף �
     const shown = pkgs.filter((p) => matchesFilters(p, { ...NONE, types }));
     assert.equal(shown.length, pkgs.length, `${cat}: ${types.join(", ")}`);
   }
+  /*
+   * ⚠️ מסבב 62 id 147 אינו עוד ב-"אחר" אלא ב-"לקוח פרטי", יחד עם
+   * התאום שלו id 150: ציר הסוג בחשמל נקרא מ-`spec.customerType`
+   * ולא מ-`p.type` הגולמי (שם 147 הוא `null`). הדרישה נשמרת במלואה
+   * — לרשומה הזו יש פקד שמחזיר אותה — רק ששם הפקד השתנה, והוא
+   * עכשיו אותו שם שהאריח "מיועד ל" על הכרטיס שלה כבר מדפיס.
+   */
   const elec = byCategory(ALL, "electricity");
+  assert.deepEqual(
+    typeFacets(elec, NONE)
+      .map(([t]) => t)
+      .sort(),
+    ["ועד בית", "לקוח עסקי", "לקוח פרטי"],
+    "שלושת סוגי הלקוח, ובלי שבב שנקרא בשם הלשונית עצמה",
+  );
   assert.ok(
-    typeFacets(elec, NONE).some(([t]) => t === "אחר"),
+    elec
+      .filter((p) => matchesFilters(p, { ...NONE, types: ["לקוח פרטי"] }))
+      .some((p) => String(p.id) === "147"),
     "מסלול בלי סוג קריא (id 147) חייב פקד שמחזיר אותו",
   );
 });

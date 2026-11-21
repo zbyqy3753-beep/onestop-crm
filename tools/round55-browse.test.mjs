@@ -50,7 +50,13 @@ test("והראיה: `/lp/provider/bezeq-energy` הוא המקטע היחיד ב�
       if (!hasAnyFilterControl(pkgs, noFilters)) empty.push(`${provider.slug}/${category}`);
     }
   }
-  assert.deepEqual(empty, ["bezeq-energy/electricity"]);
+  /*
+   * ⚠️ hot-energy/electricity נוסף בסבב 62 — ראה סבב 46. ארבע
+   * רשומות החשמל שלו הן כולן לקוח פרטי, ולכן ציר הסוג החדש אינו
+   * מחלק אותן ואין בסקשן פקד סינון אחד. הראיה שהבדיקה הזו נועדה
+   * להביא — יש בקטלוג מקטע בלי פקד, ולכן השער דרוש — נשארת בתוקפה.
+   */
+  assert.deepEqual(empty.sort(), ["bezeq-energy/electricity", "hot-energy/electricity"]);
 });
 
 /* ── 2. הפוקוס אינו נופל לראש הדף כשהמגש מתפרק ─────────────────── */
