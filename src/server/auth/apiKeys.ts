@@ -69,12 +69,26 @@ export function partnerFromKey(provided: string | null): ApiPartner | null {
   /*
    * ⚠️ `LEADS_API_KEYS_EXTRA` קיים כי `LEADS_API_KEYS` מוגדר ב-Vercel
    * כמשתנה Sensitive — אי אפשר לקרוא אותו בחזרה, ולכן אי אפשר להוסיף
-   * לו זוג בלי לדרוס את המפתחות הקיימים. שותף חדש נרשם כאן. שני
-   * הרישומים נבדקים תמיד, כדי שזמן התשובה לא יסגיר באיזה מהם המפתח.
+   * לו זוג בלי לדרוס את המפתחות הקיימים. ומאותה סיבה גם ל-EXTRA אי
+   * אפשר להוסיף, ולכן כל משתנה בשם `LEADS_API_KEYS_<משהו>` הוא רישום
+   * בפני עצמו: שותף חדש מקבל משתנה משלו (`LEADS_API_KEYS_DIMA`) בלי
+   * לגעת בקיימים. כל הרישומים נבדקים תמיד, כדי שזמן התשובה לא יסגיר
+   * באיזה מהם המפתח.
    */
-  const primary = fromKey(provided, "LEADS_API_KEYS");
-  const extra = fromKey(provided, "LEADS_API_KEYS_EXTRA");
-  return primary ?? extra;
+  let match: ApiPartner | null = null;
+  for (const envVar of partnerRegistries()) {
+    const found = fromKey(provided, envVar);
+    if (!match) match = found;
+  }
+  return match;
+}
+
+/** `LEADS_API_KEYS` ראשון, ואחריו כל `LEADS_API_KEYS_*` בסדר קבוע. */
+function partnerRegistries(): string[] {
+  const extras = Object.keys(process.env)
+    .filter((name) => /^LEADS_API_KEYS_[A-Z0-9_]+$/.test(name))
+    .sort();
+  return ["LEADS_API_KEYS", ...extras];
 }
 
 /** שם השדה/הפרמטר שנושא את המפתח מחוץ לכותרת. */
