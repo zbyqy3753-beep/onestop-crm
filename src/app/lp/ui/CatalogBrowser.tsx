@@ -565,7 +565,38 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
     [selectedProviders, selectedTypes, maxPrice],
   );
 
-  const priceBounds = useMemo(() => priceBoundsOf(packages), [packages]);
+  /*
+   * ⚠️ הקצוות נמדדים על הרשימה **אחרי** שאר המסננים, עם אותו שער
+   * `except` שבו `providerFacets` ו-`typeFacets` נמדדות (ה-SmartCut
+   * שמתועד שם). זה היה `priceBoundsOf(packages)` — הרשימה הלא מסוננת —
+   * ולכן שלוש התצוגות של המחוון המשיכו לצטט את הקטגוריה כולה אחרי
+   * שבב חברה או סוג, בניגוד מילולי לחוזה שהן מצהירות עליו
+   * ("התווית חייבת מחיר שחבילה אחת באמת נושאת", "זה הטווח שבקטלוג"):
+   * סימון "כשר" בסלולר השאיר שמונה חבילות בטווח ₪25–₪39, והמחוון
+   * המשיך להכריז `מחיר עד ₪129` עם תוויות קצה ₪21.9 ו-₪129 — תשעים
+   * צעדים של גרירה שאינם מסירים דבר, בזמן שרשימת החברות לידו כבר
+   * הצטמצמה. במקרה הקיצוני (`בית` + `קו ביתי`, id 83 לבדו ב-₪19.9)
+   * כל 215 הצעדים מתים והתווית נוקבת במחיר של חבילה שהשבב הסתיר.
+   *
+   * ⚠️ `except: "maxPrice"` ולא הרשימה המסוננת הסופית — אחרת הקצוות
+   * היו נגזרים מהחיתוך שהמחוון עצמו יצר, והמחוון היה מכווץ את עצמו
+   * לתוך עצמו בכל גרירה.
+   */
+  const priceBounds = useMemo(
+    () => priceBoundsOf(packages.filter((p) => matchesFilters(p, filters, "maxPrice"))),
+    [packages, filters],
+  );
+  /*
+   * ⚠️ ותקרה שנפלה מחוץ לטווח החדש נקראת כ"בלי תקרה".
+   *
+   * `maxPrice` נבחר לפני השבב, ולכן הוא יכול לשבת מעל `max` החדש:
+   * גרירה ל-₪40 בסלולר ואחריה סימון "כשר" (קצה חדש ₪39) השאירה
+   * `value` מעל ה-`max` של הפקד — הדפדפן מקצץ את הצגת הידית בעוד
+   * הכותרת מדפיסה את המספר הישן, ושוב שני מספרים שאינם מסכימים.
+   * תקרה שאינה חותכת דבר שקולה לאין-תקרה, ולכן מודפס הקצה.
+   */
+  const priceCap =
+    priceBounds != null && maxPrice != null && maxPrice < priceBounds.max ? maxPrice : null;
   const providerOptions = useMemo(() => providerFacets(packages, filters), [packages, filters]);
   const typeOptions = useMemo(() => typeFacets(packages, filters), [packages, filters]);
   /*
@@ -844,7 +875,18 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
             */}
             {(typeOptions.length > 1 || selectedTypes.length > 0) && (
               <fieldset className="mb-4">
-                <legend className="mb-2 text-xs font-medium text-lp-ink-2">סוג</legend>
+                {/*
+                  ⚠️ הכותרת נגזרת מהקטגוריה, כמו `typeKey` עצמה.
+                  היא הייתה "סוג" תמיד, אבל בחשמל הפרדיקט קורא
+                  `spec.customerType` והשבבים הם "לקוח פרטי / לקוח עסקי /
+                  ועד בית" — כלומר הכותרת נקבה בציר אחד (סוג החבילה)
+                  בזמן שהאפשרויות שמתחתיה הן ציר אחר, זה שהכרטיס
+                  וטבלת ההשוואה מכנים "מיועד ל". לקורא מסך זה נשמע
+                  "קבוצה, סוג" ואחריו שלושה סוגי לקוח.
+                */}
+                <legend className="mb-2 text-xs font-medium text-lp-ink-2">
+                  {isElectric ? "מיועד ל" : "סוג"}
+                </legend>
                 <div className="flex flex-wrap gap-1.5">
                   {typeOptions.map(([type, count]) => {
                     const active = selectedTypes.includes(type);
@@ -877,7 +919,15 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
               </fieldset>
             )}
 
-            {priceBounds && !isElectric && (
+            {/*
+              ⚠️ ו-`max > min`: מחוון שקצהו התחתון שווה לעליון הוא
+              הפקד שההערה על `hasAnyFilterControl` מצהירה נגדו
+              ("כשאין במה לסנן, אין פקד"), והוא נעשה נגיש ברגע
+              שהקצוות נמדדים על הרשימה המסוננת: `בית` + `קו ביתי`
+              משאיר את id 83 לבדו ב-₪19.9, כלומר קצה 20 משני הצדדים —
+              ידית שאינה זזה מעל תווית שמבטיחה טווח.
+            */}
+            {priceBounds && priceBounds.max > priceBounds.min && !isElectric && (
               <fieldset>
                 {/*
                   ⚠️ `highest` ולא `max` — אותו נימוק שהתוויות שמתחת
@@ -897,7 +947,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                 <legend className="mb-2 text-xs font-medium text-lp-ink-2">
                   מחיר עד{" "}
                   <span className="nums font-semibold text-lp-ink">
-                    {shekels(maxPrice ?? priceBounds.highest)}
+                    {shekels(priceCap ?? priceBounds.highest)}
                   </span>
                 </legend>
                 <input
@@ -905,7 +955,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                   min={priceBounds.min}
                   max={priceBounds.max}
                   step={1}
-                  value={maxPrice ?? priceBounds.max}
+                  value={priceCap ?? priceBounds.max}
                   onChange={(e) => {
                     const v = Number(e.target.value);
                     setMaxPrice(v >= priceBounds.max ? null : v);
@@ -922,7 +972,7 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
                     הוא השדה היחיד שמחליף את ההכרזה המספרית, והוא נגזר
                     מאותו `shekels` כדי שהנאמר והנראה לא ייפרדו.
                   */
-                  aria-valuetext={shekels(maxPrice ?? priceBounds.highest)}
+                  aria-valuetext={shekels(priceCap ?? priceBounds.highest)}
                 />
                 <div className="nums mt-1 flex justify-between text-lp-2xs text-lp-ink-2">
                   {/*

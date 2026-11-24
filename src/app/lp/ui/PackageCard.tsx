@@ -7,6 +7,7 @@ import { LeadForm } from "./LeadForm";
 import { compareCheckboxId, compareLabel, MAX_COMPARE } from "./CompareTray";
 import {
   cardStats,
+  CUSTOMER_TYPE_HE,
   detailRows,
   discountIsCapped,
   headlineValue,
@@ -19,6 +20,7 @@ import {
   promoRise,
   PROMO_PERIOD_TEXT,
   shekels,
+  specOf,
 } from "../catalog/format";
 import {
   freeText,
@@ -27,7 +29,7 @@ import {
   providerLogo,
   providerName,
 } from "../catalog/catalog";
-import type { Package } from "../catalog/types";
+import type { ElectricitySpec, Package } from "../catalog/types";
 
 /*
  * ⚠️ שני דברים ירדו מהעותק של האתר הציבורי, ושניהם לא "ניקוי":
@@ -173,7 +175,30 @@ export function PackageCard({
    * פגומים הפילו את הפאנל בלחיצה — כשדווקא `benefits` הוא אחד
    * משלושת התנאים שמציירים את הכפתור.
    */
-  const type = freeText(pkg.type);
+  /*
+   * ⚠️ בחשמל השבב נגזר מ-`customerType`, לא מ-`pkg.type`.
+   *
+   * `typeKey` ב-`CatalogBrowser` הפסיקה לקרוא את `p.type` בחשמל בדיוק
+   * מהסיבה הזו — שם הוא לא ציר נקי אלא שם הקטגוריה, סוג הלקוח, או
+   * כלום — והמשטח שמדפיס נשאר השכן שנשכח: 12 מתוך 18 הכרטיסים הדפיסו
+   * שבב "חשמל", כלומר את שם הלשונית שהגולש עומד בה, ושלושה נוספים
+   * הדפיסו "עסקי" ושניים "וועדי בתים" בזמן ששורת "מיועד ל" באותו
+   * כרטיס **ושבב המסנן שהחזיר אותם** אומרים "לקוח עסקי" ו"ועד בית" —
+   * שלושה איותים לעובדה אחת, שניים מהם על אותו כרטיס. ו-id 147
+   * (תאום-נתונים של 150, `type: null`) נשאר בלי שבב בכלל, כך ששתי
+   * רשומות זהות הופיעו זו לצד זו אחת מתוייגת ואחת חשופה.
+   *
+   * `customerType` קיים בכל 18 הרשומות, ולכן זה אינו פגם נתונים אלא
+   * שדה שנקרא מהמקום הלא נכון. בסלולר ובבית `p.type` כן ציר נקי
+   * (`5G`/`כשר`, `טריפל`/`סיבים`) והוא נשאר כפי שהיה.
+   */
+  const electricType = specOf<Partial<ElectricitySpec>>(pkg).customerType;
+  const type =
+    pkg.category === "electricity"
+      ? typeof electricType === "string" && Object.hasOwn(CUSTOMER_TYPE_HE, electricType)
+        ? CUSTOMER_TYPE_HE[electricType as ElectricitySpec["customerType"]]
+        : null
+      : freeText(pkg.type);
   const description = freeText(pkg.description);
   const benefits = freeText(pkg.benefits);
 

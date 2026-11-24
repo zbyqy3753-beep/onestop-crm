@@ -77,11 +77,17 @@ test("סבב 48: הכותרת ו-`aria-valuetext` קוראות את הקצה ה�
     new URL("../src/app/lp/ui/CatalogBrowser.tsx", import.meta.url),
     "utf8",
   );
-  // שתי התצוגות שמדפיסות סכום לגולש — הקצה המדויק.
-  assert.match(src, /\{shekels\(maxPrice \?\? priceBounds\.highest\)\}/);
-  assert.match(src, /aria-valuetext=\{shekels\(maxPrice \?\? priceBounds\.highest\)\}/);
+  /*
+   * ⚠️ `priceCap` ולא `maxPrice` — סבב 63. החוזה שהבדיקה הזו מקבעת
+   * (הקצה המדויק בשתי התצוגות, הקצה המעוגל בפקד) לא השתנה; מה
+   * שהשתנה הוא שהתקרה עוברת דרך `priceCap`, שקורא תקרה שנפלה מחוץ
+   * לטווח המסונן כ"בלי תקרה". בלעדיו הכותרת הדפיסה מספר שהידית
+   * אינה יכולה לעמוד בו אחרי סימון שבב שמצמצם את הקצה.
+   */
+  assert.match(src, /\{shekels\(priceCap \?\? priceBounds\.highest\)\}/);
+  assert.match(src, /aria-valuetext=\{shekels\(priceCap \?\? priceBounds\.highest\)\}/);
   // והפקד עצמו נשאר על הקצה המעוגל — ראה `priceBoundsOf`.
   assert.match(src, /max=\{priceBounds\.max\}/);
-  assert.match(src, /value=\{maxPrice \?\? priceBounds\.max\}/);
-  assert.ok(!/\{shekels\(maxPrice \?\? priceBounds\.max\)\}/.test(src));
+  assert.match(src, /value=\{priceCap \?\? priceBounds\.max\}/);
+  assert.ok(!/\{shekels\(priceCap \?\? priceBounds\.max\)\}/.test(src));
 });
