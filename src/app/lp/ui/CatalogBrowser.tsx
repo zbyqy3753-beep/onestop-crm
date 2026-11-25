@@ -560,7 +560,13 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
 
   const isElectric = category === "electricity";
 
-  const filters = useMemo<CatalogFilters>(
+  /*
+   * ⚠️ התקרה ה**גולמית**, ורק כדי למדוד ממנה את הקצוות. הציר הזה
+   * מנוטרל ב-`except: "maxPrice"` שמתחת, ולכן הערך שיושב כאן אינו
+   * משפיע על `priceBounds` — וזה מה שמאפשר ל-`filters` שמתחת להיגזר
+   * מהקצוות בלי מעגל.
+   */
+  const rawFilters = useMemo<CatalogFilters>(
     () => ({ providers: selectedProviders, types: selectedTypes, maxPrice }),
     [selectedProviders, selectedTypes, maxPrice],
   );
@@ -583,8 +589,8 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
    * לתוך עצמו בכל גרירה.
    */
   const priceBounds = useMemo(
-    () => priceBoundsOf(packages.filter((p) => matchesFilters(p, filters, "maxPrice"))),
-    [packages, filters],
+    () => priceBoundsOf(packages.filter((p) => matchesFilters(p, rawFilters, "maxPrice"))),
+    [packages, rawFilters],
   );
   /*
    * ⚠️ ותקרה שנפלה מחוץ לטווח החדש נקראת כ"בלי תקרה".
@@ -595,8 +601,58 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
    * הכותרת מדפיסה את המספר הישן, ושוב שני מספרים שאינם מסכימים.
    * תקרה שאינה חותכת דבר שקולה לאין-תקרה, ולכן מודפס הקצה.
    */
-  const priceCap =
-    priceBounds != null && maxPrice != null && maxPrice < priceBounds.max ? maxPrice : null;
+  /*
+   * ⚠️ ו**שני** הצדדים, ועל הסינון עצמו ולא רק על תצוגת הפקד.
+   *
+   * ההערה שמעל סגרה את הצד העליון בלבד, והיא סגרה אותו ב-`priceCap` —
+   * משתנה שמוזן רק ל-JSX של המחוון. `filters` המשיך לשאת את המספר
+   * הגולמי, ולכן הצד **התחתון** (תקרה שנפלה מתחת ל-`min` החדש) הכה
+   * בשתי צורות, שתיהן בארבע לחיצות מהמסך הנקי ושתיהן גומרות ב-0
+   * תוצאות — כלומר בדף ריק שהגולש אינו יכול לתקן:
+   *
+   *   • הידית נצמדת למינימום. `בית` + שבב "HOT" (קצוות ₪99–₪199) עם
+   *     תקרה ₪59 שנבחרה לפני השבב: המחוון **מרונדר**, `min` הוא 99,
+   *     ו-`value` 59 — הדפדפן מצמיד את הידית ל-99, כלומר למקום
+   *     שנקרא "התקרה בקצה, לא חותכת כלום", בזמן שהכותרת ו-
+   *     `aria-valuetext` מכריזים ₪59 ושתי תוויות הקצה מתחת מדפיסות
+   *     ₪99 ו-₪199. שלושה מספרים שאינם מסכימים על אותו פקד, ומתחתם
+   *     "אין חבילות שמתאימות לסינון" — ונגיעה אחת בידית מתקנת.
+   *   • הפקד נעלם והתקרה חותכת. `סלולר` + שבב "בסיס" משאיר את id 15
+   *     לבדה ב-₪29, כלומר `max === min` והמחוון כולו יורד (ראה השער
+   *     שמתחת) — ואילוץ פעיל נשאר על הדף **בלי שום פקד לבטל אותו**,
+   *     עם תג סינון שמראה 2 ואפס תוצאות. זו מילה במילה המחלקה
+   *     שההערות על שבב החברה ועל שבב הסוג מצהירות שנסגרה ("מסנן
+   *     פעיל חייב להיות ניתן לביטול"), בציר שלא קיבל שער מקביל.
+   *
+   * ולכן התקרה מוצמדת לטווח שנמדד ממש מעליה, **ואחר כך** נבדקת:
+   * `clamped` הוא הכוונה שנשמרה (הגולש ביקש "זול", והקצה התחתון הוא
+   * הזול שנותר — `min` מעוגל כלפי מעלה ולכן תמיד יש לו חבילה אחת),
+   * ותקרה שאחרי ההצמדה אינה חותכת דבר היא "בלי תקרה". הגזירה אינה
+   * מאפסת את `maxPrice` עצמו: הסרת השבב מחזירה את התקרה המקורית.
+   *
+   * ⚠️ והתג נספר מהתקרה ה**מיושבת**. תקרה שאינה חותכת דבר אינה מסנן,
+   * ולספור אותה בתג פירושו להבטיח לגולש פקד שאין מה לבטל בו — אותה
+   * הפרה, מהצד השני. זה המספר היחיד שזז כאן: במצב `maxPrice` מעל
+   * הקצה החדש התג יורד מ-2 ל-1.
+   */
+  /*
+   * ⚠️ ו-`priceBounds == null` היא הצורה **השלישית**, שהבדיקה
+   * המתוקנת העלתה: כשאין אף חבילה שעומדת בשאר המסננים
+   * (`סלולר` + "הוט מובייל" + "בסיס" — אפס רשומות) אין טווח למדוד
+   * ממנו, הפקד אינו מרונדר, ובכל זאת התקרה הגולמית נשארה בסינון
+   * ובתג. אין ציר מחיר על המסך — אין תקרה.
+   */
+  const effectiveMaxPrice = useMemo(() => {
+    if (maxPrice == null) return null;
+    if (priceBounds == null) return null;
+    const clamped = Math.max(maxPrice, priceBounds.min);
+    return clamped >= priceBounds.max ? null : clamped;
+  }, [priceBounds, maxPrice]);
+  const filters = useMemo<CatalogFilters>(
+    () => ({ providers: selectedProviders, types: selectedTypes, maxPrice: effectiveMaxPrice }),
+    [selectedProviders, selectedTypes, effectiveMaxPrice],
+  );
+  const priceCap = effectiveMaxPrice;
   const providerOptions = useMemo(() => providerFacets(packages, filters), [packages, filters]);
   const typeOptions = useMemo(() => typeFacets(packages, filters), [packages, filters]);
   /*
@@ -651,8 +707,10 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
    */
   const hiddenCompare = compare.filter((p) => !results.some((r) => r.id === p.id)).length;
 
+  /* ⚠️ `effectiveMaxPrice` ולא `maxPrice` — ראה שם: תקרה שאינה חותכת
+     דבר אינה מסנן, ותג שסופר אותה מבטיח פקד שאין מה לבטל בו. */
   const activeFilters =
-    selectedProviders.length + selectedTypes.length + (maxPrice != null ? 1 : 0);
+    selectedProviders.length + selectedTypes.length + (effectiveMaxPrice != null ? 1 : 0);
   const hasFilters = activeFilters > 0;
   /*
    * ⚠️ `useId` ולא המחרוזת `"lp-filters"`. `provider/[slug]/page.tsx`

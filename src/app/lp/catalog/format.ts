@@ -498,6 +498,21 @@ function installationProse(pkg: Package): string {
 }
 
 /**
+ * יחידת המטבע, **בקבוע אחד** — כל ארבע האיותים שהמחלץ מייצר.
+ *
+ * ⚠️ האלטרנציה הזו הייתה כתובה חמש פעמים, ושתי גרסאות הסתובבו זו
+ * לצד זו: `ROUTER_MONEY` ו-`tierPricePeriod` מכירות את הגרש העברי
+ * (`ש״ח`, U+05F4), בזמן ש-`privateHomeInstallation` ו-
+ * `includedRouterSurcharge` הכירו `ש"ח|שח|₪` לבדן. זה בדיוק הדפוס
+ * שהקובץ מתעד שוב ושוב — אותה הצהרה, נוסח שכן, ותיקון שהוחל על
+ * עותק אחד ולא על אחיו. הקטלוג של היום אינו נושא את הגרש העברי
+ * ולכן אף מספר אינו זז; קבוע אחד הוא מה שמונע מהעותק הבא להתיישן.
+ * (ב-`savings.ts` זה `SHEKEL`, שם גם `שקל`/`שקלים` נכנסים — כאן
+ * השערים קוראים סכומים שהמחלץ כתב ביחידה מקוצרת.)
+ */
+const SHEKEL_UNIT = String.raw`(?:₪|ש"ח|ש״ח|שח)`;
+
+/**
  * מחיר ההתקנה **בבניין** כפי שהרשומה הצהירה אותו במילה ולא בספרה.
  *
  * ⚠️ אותה הצהרה, נוסח שכן — הדפוס החוזר בקובץ הזה. id 82 כותבת
@@ -510,16 +525,36 @@ function installationProse(pkg: Package): string {
  * והכרטיס לא אמר מילה על כך שבבניין ההתקנה חינם. זו הסתרה של
  * הטבה, לא של עלות — ולכן התיקון קורא את המילה ואינו נוגע ב-`spec`.
  */
+/*
+ * ⚠️ `בבניין` עם יו"ד, ובשני סדרי המילים — אותה הצהרה, נוסח שכן.
+ *
+ * `בבנין\s*(חינם|…)` הכיר צורה אחת מתוך ארבע שהמחלץ מייצר. שלוש
+ * רשומות כותבות "התקנה **ללא עלות בבניין**" (ids 3, 158, 104): גם
+ * האיות המלא וגם הסדר ההפוך, ושתי הסטיות יחד הפכו את השער לעיוור
+ * עליהן. הוא צדק בפועל רק מפני שענפים אחרים ב-`installationDetail`
+ * חוטפים את שלושתן קודם — 158 ו-104 דרך `fiberConditionedInstallation`
+ * ו-id 3 דרך `priv !== cost` — כלומר התוצאה נכונה והראיה מקרית,
+ * ובדיוק כזו מתיישנת ברענון הבא. אומת על כל הקטלוג: אחרי ההרחבה
+ * השער נדלק על 82 (כמו קודם) ועל 3, 158, 104 — ואף שורת התקנה
+ * מרונדרת אינה משתנה, כי בשלושתן הוא עדיין אינו נקרא.
+ */
 function buildingInstallation(pkg: Package): number | null {
-  const m = installationProse(pkg).match(/בבנין\s*(חינם|ללא עלות|בחינם)/);
+  const free = String.raw`(?:חינם|ללא עלות|בחינם)`;
+  const m = installationProse(pkg).match(
+    new RegExp(String.raw`בבני?ין\s*${free}|${free}\s*בבני?ין`),
+  );
   return m ? 0 : null;
 }
 
 function privateHomeInstallation(pkg: Package): number | null {
   const prose = installationProse(pkg);
-  const before = prose.match(/(\d[\d,]*(?:\.\d+)?)\s*(?:ש"ח|שח|₪)\s*לבית\s*פרטי/);
+  const before = prose.match(
+    new RegExp(String.raw`(\d[\d,]*(?:\.\d+)?)\s*${SHEKEL_UNIT}\s*לבית\s*פרטי`),
+  );
   if (before) return Number(before[1].replace(/,/g, ""));
-  const after = prose.match(/בית\s*פרטי[^\d%]{0,40}?(\d[\d,]*(?:\.\d+)?)\s*(?:ש"ח|שח|₪)/);
+  const after = prose.match(
+    new RegExp(String.raw`בית\s*פרטי[^\d%]{0,40}?(\d[\d,]*(?:\.\d+)?)\s*${SHEKEL_UNIT}`),
+  );
   if (after) return Number(after[1].replace(/,/g, ""));
   /*
    * ⚠️ וסימן המטבע **אינו** חובה כשהמספר צמוד ל-"בית פרטי".
@@ -691,7 +726,7 @@ function installationDetail(pkg: Package, cost: number): string {
  * שום כותרת היום, אבל זה החור שנותר.
  */
 const ROUTER_WORD = String.raw`(?:נתב|ראוטר|ראווטר)`;
-const ROUTER_MONEY = String.raw`(\d[\d,]*(?:\.\d+)?)\s*(?:ש"ח|ש״ח|שח|₪)`;
+const ROUTER_MONEY = String.raw`(\d[\d,]*(?:\.\d+)?)\s*${SHEKEL_UNIT}`;
 /*
  * ⚠️ `ב?תוספת` ולא `בתוספת` — האסימטריה שהשער התאום במנוע קיבל בסבב 47
  * ולא הוחלה כאן. `ROUTER_PRICED_SEPARATELY` ב-`savings.ts` מאיית
@@ -989,7 +1024,9 @@ export function routerDetail(pkg: Package): string | null {
  */
 function includedRouterSurcharge(pkg: Package): number | null {
   const m = installationProse(pkg).match(
-    /שבהן\s*ה?נתב\s*כלול\s*במחיר[^.•]{0,40}?תתווסף\s*עלות[^.•\d]{0,30}?(\d[\d,]*(?:\.\d+)?)\s*(?:ש"ח|שח|₪)/,
+    new RegExp(
+      String.raw`שבהן\s*ה?נתב\s*כלול\s*במחיר[^.•]{0,40}?תתווסף\s*עלות[^.•\d]{0,30}?(\d[\d,]*(?:\.\d+)?)\s*${SHEKEL_UNIT}`,
+    ),
   );
   if (!m) return null;
   const amount = Number(m[1].replace(/,/g, ""));
@@ -1099,7 +1136,7 @@ function tierPricePeriod(pkg: Package, price: number): string | null {
   const amount = Number.isInteger(price) ? `${digits}(?:[.,]0{1,2})?` : `${digits}0?`;
   const m = prose.match(
     new RegExp(
-      String.raw`(?<![\d.,])${amount}(?![\d.,])\s*(?:₪|ש"ח|ש״ח|שח)[^|]{0,20}?למשך\s+(שנה|\d+\s*(?:מחזורי\s+ה?חיוב(?:\s+הראשונים)?|חודשים?))`,
+      String.raw`(?<![\d.,])${amount}(?![\d.,])\s*${SHEKEL_UNIT}[^|]{0,20}?למשך\s+(שנה|\d+\s*(?:מחזורי\s+ה?חיוב(?:\s+הראשונים)?|חודשים?))`,
     ),
   );
   return m ? m[1].replace(/\s+/g, " ") : null;

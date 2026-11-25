@@ -798,14 +798,33 @@ test("מסננים: אין מסלול לחיצות שנתקע", () => {
     const bounds = priceBoundsOf(pkgs);
     const total = catalogResults(pkgs, NONE, "recommended").length;
 
-    /* מה שהעמודה הצדדית מרנדרת בפועל עבור מצב המסננים הנתון. */
+    /*
+     * מה שהעמודה הצדדית מרנדרת בפועל עבור מצב המסננים הנתון.
+     *
+     * ⚠️ מודל המחוון היה `bounds != null && cat !== "electricity"` על
+     * ה-`bounds` ה**לא מסוננים** — והוא התיישן מול ה-JSX בשני דברים:
+     * הקצוות נמדדים על הרשימה המסוננת (תיקון סבב 63) ויש שער
+     * `max > min`. כלומר האינווריאנטה שבשורות שמתחת ("מחוון פעיל
+     * ואינו על המסך") לא נאכפה בכלל, והמסלול שבו שבב מוריד את הפקד
+     * ומשאיר תקרה חותכת עבר בירוק. ראה `effectiveMaxPrice`.
+     */
+    const boundsFor = (f) => priceBoundsOf(pkgs.filter((p) => matchesFilters(p, f, "maxPrice")));
+    /* אותה גזירה שב-`CatalogBrowser`: הצמדה לטווח ואז "תקרה שאינה חותכת = אין תקרה". */
+    const effective = (f) => {
+      if (f.maxPrice == null) return null;
+      const b = boundsFor(f);
+      if (b == null) return null;
+      const clamped = Math.max(f.maxPrice, b.min);
+      return clamped >= b.max ? null : clamped;
+    };
     const visible = (f) => {
       const types = typeFacets(pkgs, f);
+      const b = boundsFor(f);
       return {
         providers: providerFacets(pkgs, f).map((o) => o.slug),
         // ⚠️ אותו שער כמו ב-JSX: `length > 1 || יש סוג מסומן`.
         types: types.length > 1 || f.types.length > 0 ? types.map(([t]) => t) : [],
-        slider: bounds != null && cat !== "electricity",
+        slider: b != null && b.max > b.min && cat !== "electricity",
       };
     };
 
@@ -842,20 +861,28 @@ test("מסננים: אין מסלול לחיצות שנתקע", () => {
         for (const type of f.types) {
           assert.ok(after.types.includes(type), `${where}: הסוג ${type} פעיל ואינו על המסך`);
         }
-        if (f.maxPrice != null) assert.ok(after.slider, `${where}: מחוון פעיל ואינו על המסך`);
+        /*
+         * ⚠️ התקרה ה**מיושבת** היא זו שמסננת, ולכן היא זו שנבדקת —
+         * גם באינווריאנטה, גם בתוצאות וגם בתג. ראה `effectiveMaxPrice`.
+         */
+        const cap = effective(f);
+        const applied = { ...f, maxPrice: cap };
+        if (cap != null) assert.ok(after.slider, `${where}: מחוון פעיל ואינו על המסך`);
 
-        const results = catalogResults(pkgs, f, "recommended").length;
-        const badge = f.providers.length + f.types.length + (f.maxPrice != null ? 1 : 0);
+        const results = catalogResults(pkgs, applied, "recommended").length;
+        const badge = f.providers.length + f.types.length + (cap != null ? 1 : 0);
         if (badge === 0) assert.equal(results, total, `${where}: אין מסננים והתוצאות צומצמו`);
         if (results !== 0) continue;
 
         const undos = [
           ...f.providers.map((x) => ({ ...f, providers: f.providers.filter((y) => y !== x) })),
           ...f.types.map((x) => ({ ...f, types: f.types.filter((y) => y !== x) })),
-          ...(f.maxPrice != null ? [{ ...f, maxPrice: null }] : []),
+          ...(cap != null ? [{ ...f, maxPrice: null }] : []),
         ];
         assert.ok(
-          undos.some((g) => catalogResults(pkgs, g, "recommended").length > 0),
+          undos.some(
+            (g) => catalogResults(pkgs, { ...g, maxPrice: effective(g) }, "recommended").length > 0,
+          ),
           `${where}: אפס תוצאות ואין ביטול בודד שמחזיר תוצאה`,
         );
       }
