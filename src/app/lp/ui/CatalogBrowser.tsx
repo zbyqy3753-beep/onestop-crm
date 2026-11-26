@@ -391,13 +391,86 @@ function typeKey(p: Package): string {
  * `hot-energy`, החשמלי השני, נושא `typeFacets` באורך 2 ולכן ניצל;
  * `bezeq-energy` הוא המקרה היחיד בנתוני הקטלוג של היום.
  */
+/**
+ * התקרה כפי שהיא נקראת מול טווח נתון: תקרה שאינה חותכת דבר היא אין-תקרה.
+ *
+ * ⚠️ הכלל הזה היה כתוב פעם אחת, בתוך `useMemo` של הרכיב, ולכן הציר
+ * שנמדד ממנו היה היחיד שקיבל אותו. הוא נקרא עכשיו משלושה מקומות
+ * (הרשימה, שבבי החברה, שבבי הסוג) ולכן הוא פונקציה — ראה `facetMaxPrice`.
+ */
+export function resolveMaxPrice(
+  bounds: { min: number; max: number } | null,
+  maxPrice: number | null,
+): number | null {
+  if (maxPrice == null) return null;
+  if (bounds == null) return null;
+  const clamped = Math.max(maxPrice, bounds.min);
+  return clamped >= bounds.max ? null : clamped;
+}
+
+/**
+ * התקרה שהמונה על שבב בציר `axis` נספר בה.
+ *
+ * ⚠️ המונה נספר בציר שלו **מנוטרל** (ה-SmartCut שמתועד ב-`providerFacets`),
+ * והתקרה שנמסרה לו נמדדה מול הרשימה שהציר הזה כן מסנן — כלומר שני
+ * מספרים על אותו שבב שנגזרו משתי רשימות שונות. הקצוות עולים ברגע
+ * שהציר מנוטרל, ולכן תקרה שהייתה **רדומה** במצב הנוכחי ("אינה חותכת
+ * דבר", הכלל שמעל) חוזרת לחתוך במצב שהלחיצה מייצרת — והמונה הובטח
+ * בלעדיה. בשלוש לחיצות מהמסך הנקי בלשונית `בית`:
+ *
+ *   גרירה ל-₪59 (3 תוצאות: 132, 83, 4) → שבב `קו ביתי`, שהמונה שלו
+ *   הראה 1 ונותן 1 — ושם id 83 נשאר לבדו ב-₪19.9, כלומר
+ *   `min === max` והמחוון כולו יורד מהמסך, התקרה נעשית רדומה
+ *   והשבבים חוזרים להכריז על הקטגוריה כולה: `סיבים 16`. לחיצה על
+ *   `סיבים` מחזירה את ₪59 לחיים (הקצה העליון של בית הוא ₪209),
+ *   והתוצאה היא **id 83 לבדו** — אפס מ-16 חבילות הסיבים שהובטחו
+ *   (73 ב-₪109, 82 ב-₪139, 153 ב-₪99, 92 ב-₪109, 115 ב-₪144 ועוד
+ *   אחת-עשרה), והשבב שנלחץ נקרא מיד אחר כך `סיבים 0`. אין על המסך
+ *   בצעד ההוא שום פקד מחיר לקשר אליו את הצמצום.
+ *
+ * ולכן הקצוות נמדדים עם **אותו** ציר מנוטרל שבו המונה נספר. זו מילה
+ * במילה ההצהרה שמעל `priceBounds` ("עם אותו שער `except` שבו
+ * `providerFacets` ו-`typeFacets` נמדדות"), שיושמה שם על ציר המחיר
+ * בלבד ולא על הציר של השבב עצמו.
+ *
+ * ⚠️ ההכרעה ש`maxPrice` הגולמי **נשמר** אינה נוגעת בזה: הסרת השבב
+ * עדיין מחזירה את התקרה המקורית. מה שזז הוא המונה בלבד, והוא זז
+ * לכיוון מה שהלחיצה באמת מחזירה.
+ */
+export function facetMaxPrice(
+  packages: Package[],
+  f: CatalogFilters,
+  axis: "providers" | "types",
+): number | null {
+  if (f.maxPrice == null) return null;
+  const widened: CatalogFilters =
+    axis === "providers" ? { ...f, providers: [] } : { ...f, types: [] };
+  return resolveMaxPrice(
+    priceBoundsOf(packages.filter((p) => matchesFilters(p, widened, "maxPrice"))),
+    f.maxPrice,
+  );
+}
+
+/** שני הצירים, עם התקרה שכל אחד מהם נספר בה. */
+export function facetOptions(packages: Package[], f: CatalogFilters) {
+  return {
+    providers: providerFacets(packages, {
+      ...f,
+      maxPrice: facetMaxPrice(packages, f, "providers"),
+    }),
+    types: typeFacets(packages, { ...f, maxPrice: facetMaxPrice(packages, f, "types") }),
+  };
+}
+
 export function hasAnyFilterControl(packages: Package[], f: CatalogFilters): boolean {
   const isElectric = packages[0]?.category === "electricity";
   const bounds = priceBoundsOf(packages);
+  /* אותם מונים שהכרטיס מרנדר, ולכן אותה תקרה — ראה `facetMaxPrice`. */
+  const facets = facetOptions(packages, f);
   return (
-    providerFacets(packages, f).length > 1 ||
+    facets.providers.length > 1 ||
     f.providers.length > 0 ||
-    typeFacets(packages, f).length > 1 ||
+    facets.types.length > 1 ||
     f.types.length > 0 ||
     (bounds != null && !isElectric)
   );
@@ -642,19 +715,25 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
    * ממנו, הפקד אינו מרונדר, ובכל זאת התקרה הגולמית נשארה בסינון
    * ובתג. אין ציר מחיר על המסך — אין תקרה.
    */
-  const effectiveMaxPrice = useMemo(() => {
-    if (maxPrice == null) return null;
-    if (priceBounds == null) return null;
-    const clamped = Math.max(maxPrice, priceBounds.min);
-    return clamped >= priceBounds.max ? null : clamped;
-  }, [priceBounds, maxPrice]);
+  const effectiveMaxPrice = useMemo(
+    () => resolveMaxPrice(priceBounds, maxPrice),
+    [priceBounds, maxPrice],
+  );
   const filters = useMemo<CatalogFilters>(
     () => ({ providers: selectedProviders, types: selectedTypes, maxPrice: effectiveMaxPrice }),
     [selectedProviders, selectedTypes, effectiveMaxPrice],
   );
   const priceCap = effectiveMaxPrice;
-  const providerOptions = useMemo(() => providerFacets(packages, filters), [packages, filters]);
-  const typeOptions = useMemo(() => typeFacets(packages, filters), [packages, filters]);
+  /*
+   * ⚠️ `rawFilters` ולא `filters` — התקרה ה**גולמית**, מאותו נימוק
+   * שבגללו `priceBounds` נמדד ממנה. `facetMaxPrice` מודד את הקצוות
+   * בעצמו (עם ציר השבב מנוטרל) וקורא את התקרה מולם, ולכן מסירת
+   * התקרה ה**מיושבת** הייתה מאפסת אותו בדיוק במצב שהוא נבנה בשבילו:
+   * תקרה רדומה היא `null` ב-`filters`, ואז אין מה להחזיר לחיים.
+   */
+  const facets = useMemo(() => facetOptions(packages, rawFilters), [packages, rawFilters]);
+  const providerOptions = facets.providers;
+  const typeOptions = facets.types;
   /*
    * ⚠️ הרשימה המסוננת נגזרת לפני המיון, כי תפריט המיון נשאל עליה.
    * `sortsFor` הוצהרה כשער על "האם הנתון שהתווית מבטיחה קיים
@@ -729,9 +808,10 @@ export function CatalogBrowser({ packages, category }: { packages: Package[]; ca
   /*
    * ⚠️ הכרטיס כולו יורד כשאין בו אף פקד. ראה `hasAnyFilterControl`.
    */
+  /* `rawFilters` כמו ב-`facets` — הכרטיס נשאל על אותם מונים שהוא מרנדר. */
   const showFilterCard = useMemo(
-    () => hasAnyFilterControl(packages, filters),
-    [packages, filters],
+    () => hasAnyFilterControl(packages, rawFilters),
+    [packages, rawFilters],
   );
 
   /*
