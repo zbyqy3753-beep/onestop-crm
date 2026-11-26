@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { handleInbound } from "@/server/renewals/campaign";
 import { markDelivered, markUndeliverable } from "@/server/whatsapp/outbox";
 import { drainOutbox } from "@/server/whatsapp/drain";
+import { coachWhatsAppPhone, queueCoachWhatsApp } from "@/server/calls/whatsapp";
 
 /**
  * ה-webhook של WhatsApp Cloud API.
@@ -254,6 +255,25 @@ export async function POST(request: Request) {
    * כישלון בניקוז לא הופך את ה-webhook לכושל: ההודעה הנכנסת כבר
    * נשמרה, והתור ינוקז בהזדמנות הבאה.
    */
+  /*
+   * ⚠️ הודעה מאלירן פותחת את חלון השירות שלו, וזה הרגע שבו ניתוחי
+   * מאמן השיחות שחיכו מותרים לצאת בחינם. לפני הניקוז, כדי שייצאו
+   * באותה בקשה.
+   */
+  const coach = coachWhatsAppPhone();
+  if (
+    coach &&
+    changes.some((c) =>
+      (c.value?.messages ?? []).some((m) => m.from?.replace(/\D/g, "") === coach),
+    )
+  ) {
+    try {
+      await queueCoachWhatsApp();
+    } catch {
+      // הניתוחים נשארים באפליקציה, וייצאו בהודעה הבאה שלו
+    }
+  }
+
   try {
     await drainOutbox(new URL(request.url).origin);
   } catch {

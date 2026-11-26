@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/client";
 import { callsAuthorized, callsUnauthorized } from "@/server/calls/auth";
+import { queueCoachWhatsApp } from "@/server/calls/whatsapp";
+import { drainOutbox } from "@/server/whatsapp/drain";
 
 /**
  * המחשב מחזיר תוצאה להקלטה: `done` עם תמליל וניתוח, או `failed` עם סיבה.
@@ -44,5 +46,14 @@ export async function PATCH(request: Request, ctx: Ctx) {
   }
 
   await prisma.callAudioChunk.deleteMany({ where: { recordingId: id } });
+
+  // ⚠️ כישלון בוואטסאפ לא מכשיל את ההחזרה: הניתוח כבר נשמר ומוצג באפליקציה
+  if (status === "done") {
+    try {
+      if ((await queueCoachWhatsApp()) > 0) await drainOutbox(new URL(request.url).origin);
+    } catch {
+      // ייצא בניקוז הבא, או כשאלירן יכתוב
+    }
+  }
   return NextResponse.json({ success: true });
 }
