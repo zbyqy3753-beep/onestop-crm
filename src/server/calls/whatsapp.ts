@@ -25,6 +25,30 @@ const BACKLOG_MS = 3 * 24 * 60 * 60 * 1000;
 /** תקרת טקסט של וואטסאפ היא 4096 תווים. */
 const MAX_BODY = 3900;
 
+/**
+ * השורה שמזכירה לאלירן לפתוח את החלון. מתווספת באפליקציה לניתוח העליון
+ * בלבד, וכשהחלון סגור בלבד: שורה בכל כרטיס הייתה עומס.
+ *
+ * ⚠️ המספר הוא המספר השולח של ה-WABA (`One Stop`, phone id
+ * 1257118410820972). אם המספר השולח מוחלף, צריך לעדכן גם כאן.
+ */
+const WINDOW_HINT =
+  "💬 רוצה לקבל את הניתוחים גם בוואטסאפ? שלח הודעה כלשהי (למשל \"בוקר טוב\") ל-050-714-1099, ובמשך 24 שעות כל ניתוח יגיע אליך לשם.";
+
+/** מוסיף את התזכורת לניתוח הראשון שמוכן, אם החלון של אלירן סגור. */
+export async function withWindowHint<T extends { status: string; analysis: string | null }>(
+  rows: T[],
+): Promise<T[]> {
+  const to = coachWhatsAppPhone();
+  if (!to) return rows;
+  const first = rows.findIndex((r) => r.status === "done" && r.analysis?.trim());
+  if (first < 0) return rows;
+  if (await hasOpenServiceWindow(to)) return rows;
+  return rows.map((r, i) =>
+    i === first ? { ...r, analysis: `${r.analysis!.trim()}\n\n${WINDOW_HINT}` } : r,
+  );
+}
+
 /** המספר של אלירן כ-972…, או `null` כשלא הוגדר. */
 export function coachWhatsAppPhone(): string | null {
   const raw = (process.env.CALLS_COACH_WHATSAPP ?? "").replace(/\D/g, "");

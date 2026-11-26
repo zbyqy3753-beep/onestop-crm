@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/client";
 import { MAX_CHUNKS, callsAuthorized, callsUnauthorized } from "@/server/calls/auth";
+import { withWindowHint } from "@/server/calls/whatsapp";
 
 /**
  * הצד של הטלפון בתור ההקלטות.
@@ -76,9 +77,12 @@ export async function GET(request: Request) {
     },
   });
 
+  // ⚠️ כישלון בבדיקת החלון לא מפיל את הרשימה: התזכורת היא תוספת
+  const shown = await withWindowHint(recordings).catch(() => recordings);
+
   return NextResponse.json({
     success: true,
-    recordings: recordings.map((r) => ({
+    recordings: shown.map((r) => ({
       ...r,
       recordedAt: r.recordedAt.toISOString(),
       handledAt: r.handledAt?.toISOString() ?? null,
