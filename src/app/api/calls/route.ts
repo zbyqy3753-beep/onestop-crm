@@ -58,7 +58,10 @@ export async function GET(request: Request) {
   if (!callsAuthorized(request, "phone")) return callsUnauthorized();
 
   const recordings = await prisma.callRecording.findMany({
-    orderBy: { recordedAt: "desc" },
+    // ⚠️ מה שכבר נותח עולה לראש, האחרון שטופל ראשון. האפליקציה מציגה
+    // בסדר הזה, ומיון לפי זמן השיחה בלבד קבר ניתוחים של שיחות ישנות
+    // מתחת לכרטיסי "ממתין" כשתור התמלול התעכב.
+    orderBy: [{ handledAt: { sort: "desc", nulls: "last" } }, { recordedAt: "desc" }],
     take: 50,
     select: {
       id: true,
