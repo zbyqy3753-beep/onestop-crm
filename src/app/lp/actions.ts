@@ -86,6 +86,10 @@ const hits = new Map<string, number[]>();
  * ⚠️ הבדיקה רצה **אחרי** הוולידציה (ראה `submitLanding`), ולכן שליחה
  * שנדחתה על שם או טלפון אינה נספרת — המגבלה חלה רק על פניות שנוגעות
  * במסד.
+ *
+ * ⚠️ ועל פניות ש**נשמרו**, לא על כל פנייה שנגעה במסד: כשל שמירה מזכה
+ * את החותמת ב-`refundRateHit`. ראה שם למה כשל שלנו שנספר במכסה שלו
+ * הוא אבחון הפוך.
  */
 function overRateLimit(ip: string): boolean {
   const now = Date.now();
@@ -118,6 +122,33 @@ function overRateLimit(ip: string): boolean {
   }
 
   return false;
+}
+
+/**
+ * ביטול החותמת שהניסיון הזה דחף, כשהשמירה **נכשלה בצד שלנו**.
+ *
+ * ⚠️ בלעדיה כשל שרת נספר במכסה של הגולש. `overRateLimit` נקרא לפני
+ * המסד, וההערה שלו מגדרת רק את הכיוון האחר ("שליחה שנדחתה על שם או
+ * טלפון אינה נספרת"); כשל שמירה — ה-`catch` שבסוף, או `createdById`
+ * חסר כשאין אף משתמש פעיל — שרף חותמת וחזר לגולש עם "שגיאה זמנית
+ * בשמירת הפנייה. נסו שוב בעוד רגע." כלומר הדף הזמין אותו לנסות שוב
+ * שמונה פעמים, ואז החליף את ההודעה ל-"נשלחו יותר מדי פניות מהמכשיר
+ * הזה" — אבחון הפוך לחלוטין: תקלה אצלנו הוצגה כהתנהגות חשודה שלו,
+ * והוא נחסם ל-10 דקות בדיוק על כך שעשה מה שהטופס ביקש. בענף
+ * `createdById` זה חמור במיוחד, כי שם התנאי קבוע ולא "זמני".
+ *
+ * ⚠️ הכפילות (אותו טלפון באותו חלון) **כן** נספרת: זו פנייה שהגיעה
+ * ליעדה, לא כשל. מה שמוחזר כאן הוא רק ניסיון שאיש לא קיבל.
+ *
+ * ⚠️ חותמת אחת מהסוף, ולא `recent.pop()` על מערך מסונן: המונה חי
+ * בזיכרון התהליך ובמקביליות אין כאן נעילה, ולכן הזיכוי חייב להסיר
+ * חותמת אחת ולא לדרוס את הרשימה בעותק מיושן של עצמה.
+ */
+function refundRateHit(ip: string): void {
+  const recent = hits.get(ip);
+  if (!recent?.length) return;
+  recent.pop();
+  if (recent.length === 0) hits.delete(ip);
 }
 
 /**
@@ -255,7 +286,9 @@ export async function submitLandingLead(
    */
   const packageName = text(formData.get("packageName")).slice(0, MAX_PACKAGE);
 
-  if (overRateLimit(await clientIp())) {
+  /* ⚠️ נשמר כדי שכשל שמירה יוכל לזכות את החותמת — ראה `refundRateHit`. */
+  const ip = await clientIp();
+  if (overRateLimit(ip)) {
     return fail("נשלחו יותר מדי פניות מהמכשיר הזה. נסו שוב מאוחר יותר.");
   }
 
@@ -383,6 +416,7 @@ export async function submitLandingLead(
       createdById = (users.find((u) => u.role === "owner") ?? users[0])?.id;
     }
     if (!createdById) {
+      refundRateHit(ip);
       return fail("שגיאה זמנית בשמירת הפנייה. נסו שוב בעוד רגע.");
     }
 
@@ -440,6 +474,7 @@ export async function submitLandingLead(
     return { status: "sent" };
   } catch (err) {
     console.error("[lp] שמירת הליד נכשלה", err);
+    refundRateHit(ip);
     return fail("שגיאה זמנית בשמירת הפנייה. נסו שוב בעוד רגע.");
   }
 }
