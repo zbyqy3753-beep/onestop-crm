@@ -302,7 +302,12 @@ export function providerFacets(packages: Package[], f: CatalogFilters) {
     // אינה יכולה להיות אפשרות בתפריט החברות — ראה `providerSlug`.
     const slug = providerSlug(p);
     if (slug == null) continue;
-    const passes = matchesFilters(p, f, "providers");
+    // ⚠️ התקרה נשאלת **לכל ערך בנפרד** — ראה `valueMaxPrice`.
+    const passes = matchesFilters(
+      p,
+      { ...f, maxPrice: valueMaxPrice(packages, f, "providers", slug) },
+      "providers",
+    );
     if (!passes && !f.providers.includes(slug)) continue;
     const entry = map.get(slug) ?? { slug, name: providerName(p), count: 0 };
     if (passes) entry.count++;
@@ -437,6 +442,10 @@ export function resolveMaxPrice(
  * עדיין מחזירה את התקרה המקורית. מה שזז הוא המונה בלבד, והוא זז
  * לכיוון מה שהלחיצה באמת מחזירה.
  */
+/**
+ * ⚠️ אינה נקראת יותר במונים — `valueMaxPrice` החליפה אותה (ראה שם).
+ * נשארת כהצהרת ה-SmartCut על הציר כולו, וכחוזה ה-`null` שסבב 65 מקבע.
+ */
 export function facetMaxPrice(
   packages: Package[],
   f: CatalogFilters,
@@ -445,20 +454,98 @@ export function facetMaxPrice(
   if (f.maxPrice == null) return null;
   const widened: CatalogFilters =
     axis === "providers" ? { ...f, providers: [] } : { ...f, types: [] };
-  return resolveMaxPrice(
+  const onWidened = resolveMaxPrice(
     priceBoundsOf(packages.filter((p) => matchesFilters(p, widened, "maxPrice"))),
+    f.maxPrice,
+  );
+  /*
+   * ⚠️ והתקרה לעולם אינה **נמוכה** מזו שהרשימה המוצגת נחתכת בה.
+   *
+   * ההצמדה כלפי מעלה ב-`resolveMaxPrice` (`Math.max(maxPrice,
+   * bounds.min)`) נמדדת כאן מול הרשימה המורחבת ובמשטח הרשימה מול
+   * הרשימה המסוננת — ושני ה-`min` האלה שונים. כשהתקרה הגולמית נפלה
+   * **מתחת** ל-`min` של הרשימה המסוננת, המונה נספר בתקרה הגולמית
+   * בזמן שהתוצאות נחתכו בתקרה המוצמדת, והשבב הכריז 0 מעל כרטיס
+   * שמרונדר מתחתיו: בלשונית `סלולר` עם `types: ["5G"]` ותקרה ₪22
+   * מודפס `5G 0` (ולקורא מסך `"5G, 0 חבילות"`) בזמן ששורת התוצאות
+   * אומרת "1 חבילה" ו-id 121 ב-₪34 מצויר למטה. אותו מצב נגיש בציר
+   * החברה.
+   *
+   * ההצמדה היא "הגולש ביקש זול יותר מכל מה שיש כאן, ולכן מוצגת
+   * המדרגה הזולה שנותרה" — ולכן המונה חייב להיספר באותה מדרגה.
+   * זו הצמדה כלפי מעלה בשני המשטחים, ולכן שמרנית באותו כיוון.
+   *
+   * ⚠️ הרצפה נלקחת מה**הצמדה** של הרשימה המסוננת ולא מהתקרה
+   * המיושבת שלה. תקרה שאינה חותכת את הרשימה המסוננת מוחזרת שם
+   * כ-`null`, ו-`null` כ"אין תקרה" היה מחזיר בדיוק את מה שסבב 64
+   * סגר: במצב `בית` + `קו ביתי` (id 83 לבדה, `min === max`) התקרה
+   * רדומה ברשימה המוצגת וחיה ברשימה המורחבת, והשבבים חזרו להכריז
+   * על הקטגוריה כולה (`סיבים 16`) בזמן שהלחיצה מחזירה 0. הרצפה
+   * היא `max(maxPrice, min)` של הרשימה המסוננת — המדרגה שהתוצאות
+   * באמת נחתכות בה — ובמצב ההוא היא ₪59 כשהייתה, ואינה זזה.
+   *
+   * ⚠️ מה ש**לא** נסגר כאן: לחיצה על שבב נוסף באותו ציר (הרחבת OR)
+   * יכולה עדיין להוריד חבילה מהמסך, כי ה-`min` של הרשימה המסוננת
+   * יורד והתקרה המוצמדת יורדת איתו. זה גוף ההצמדה עצמה — תקרה
+   * שתהיה יציבה לכל הלשונית מחזירה את הדף הריק עם הידית הנעוצה
+   * שההערה על `effectiveMaxPrice` מתעדת שנסגר, ולכן זו הכרעת מוצר
+   * ולא תיקון נוסח.
+   */
+  return onWidened;
+}
+
+/**
+ * התקרה שהמונה על **ערך בודד** נספר בה: התקרה שהמצב שהלחיצה עליו
+ * מייצרת נחתך בה.
+ *
+ * ⚠️ `facetMaxPrice` מודד תקרה אחת לכל הציר (עם הציר מנוטרל), והיא
+ * אינה התקרה של אף אחד משני סוגי השבבים:
+ *
+ *   • **שבב דלוק** מצהיר על מה שעל המסך עכשיו, והמסך נחתך בהצמדה
+ *     של הרשימה ה**מסוננת**. כשהתקרה הגולמית נפלה מתחת ל-`min`
+ *     שלה, המונה נספר בתקרה הגולמית בזמן שהתוצאות נחתכו במוצמדת,
+ *     והשבב הכריז 0 מעל כרטיס שמרונדר מתחתיו: בלשונית `סלולר` עם
+ *     `types: ["5G"]` ותקרה ₪22 מודפס `5G 0` (ולקורא מסך
+ *     `"5G, 0 חבילות"`) בזמן ששורת התוצאות אומרת "1 חבילה" ו-id 121
+ *     ב-₪34 מצויר למטה. אותו מצב נגיש בציר החברה.
+ *   • **שבב כבוי** מצהיר על מה שהלחיצה תראה, ולכן התקרה שלו היא זו
+ *     של המצב `f + הערך` — לא של הציר המנוטרל. השניים שווים בכל מצב
+ *     שבו ההצמדה אינה נוגסת, וזה בדיוק מה שסבב 65 מדד: הסחיפה שם
+ *     רצה על `raw` מ-`bounds.min` ומעלה, כלומר על הטווח שהפקד מגיש
+ *     במצב הנקי, ולא על תקרה שנבחרה **לפני** שבב שהעלה את ה-`min`.
+ *     ההצמדה מודדת מהרשימה של הלחיצה, ולכן האינווריאנט של סבב 65
+ *     ("המונה שווה למה שרואים אחרי הלחיצה") מתקיים כאן בבנייה ולא
+ *     במדידה.
+ *
+ * ולכן כל ערך נשאל על התקרה שלו. זה אותו כלל אחד בשתי הצורות:
+ * המונה נספר במדרגה שהמסך באמת נחתך בה.
+ */
+function valueMaxPrice(
+  packages: Package[],
+  f: CatalogFilters,
+  axis: "providers" | "types",
+  value: string,
+): number | null {
+  if (f.maxPrice == null) return null;
+  const selected = f[axis].includes(value);
+  /* דלוק — המצב הנוכחי; כבוי — המצב שהלחיצה מייצרת (ציר OR). */
+  const state: CatalogFilters = selected ? f : { ...f, [axis]: [...f[axis], value] };
+  return resolveMaxPrice(
+    priceBoundsOf(packages.filter((p) => matchesFilters(p, state, "maxPrice"))),
     f.maxPrice,
   );
 }
 
 /** שני הצירים, עם התקרה שכל אחד מהם נספר בה. */
 export function facetOptions(packages: Package[], f: CatalogFilters) {
+  /*
+   * ⚠️ התקרה ה**גולמית** מועברת הלאה, ולא תקרה אחת לכל ציר: כל ערך
+   * נשאל על התקרה שלו בתוך `providerFacets`/`typeFacets`. ראה
+   * `valueMaxPrice`.
+   */
   return {
-    providers: providerFacets(packages, {
-      ...f,
-      maxPrice: facetMaxPrice(packages, f, "providers"),
-    }),
-    types: typeFacets(packages, { ...f, maxPrice: facetMaxPrice(packages, f, "types") }),
+    providers: providerFacets(packages, f),
+    types: typeFacets(packages, f),
   };
 }
 
@@ -480,7 +567,12 @@ export function typeFacets(packages: Package[], f: CatalogFilters): [string, num
   const map = new Map<string, number>();
   for (const p of packages) {
     const type = typeKey(p);
-    const passes = matchesFilters(p, f, "types");
+    // ⚠️ התקרה נשאלת **לכל ערך בנפרד** — ראה `valueMaxPrice`.
+    const passes = matchesFilters(
+      p,
+      { ...f, maxPrice: valueMaxPrice(packages, f, "types", type) },
+      "types",
+    );
     if (!passes && !f.types.includes(type)) continue;
     map.set(type, (map.get(type) ?? 0) + (passes ? 1 : 0));
   }

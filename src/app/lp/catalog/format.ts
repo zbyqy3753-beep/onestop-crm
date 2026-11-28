@@ -691,6 +691,62 @@ function fiberConditionedInstallation(pkg: Package): boolean {
 }
 
 /**
+ * שני צדי ההתקנה כשהרשומה מסרה אותם **בפרוזה בלבד**, בניסוח
+ * מדרגות הדירות של פרטנר.
+ *
+ * ⚠️ זו האסימטריה האחרונה בבלוק הציוד: `detailRows` קרא פרוזת
+ * התקנה רק מתוך `if (isCount(s.installationCost))`, כלומר שדה
+ * `null` דילג על כל ענף הפרוזה. כל שדה ציוד אחר באותו בלוק **כן**
+ * קורא פרוזה כשהדגל `null` — `routerDetail`, `extenderIncludedInProse`,
+ * `vodInProse`, `extraConverterCost ?? extraUnitCostInProse` —
+ * וההתקנה לבדה נשארה תלויה במספר. ids 85, 86, 98, 99 (כולן Partner,
+ * בית) נושאות את שני הצדדים במפורש:
+ *
+ *   `דמי פריסת סיב לדירה במבנה מגורים הכולל 5 דירות ומעלה 0 ש"ח,
+ *    לדירה במבנה מגורים הכולל 1-4 דירות 499 ש"ח ב-36 תשלומים`
+ *
+ * ו-`installationCost` שלהן הוא `null`, ולכן לא הודפסה שורה ולא
+ * אריח. בטבלת ההשוואה זה נקרא `עלות התקנה: —` מול
+ * `₪200 בבניין · ₪499 לבית פרטי` של id 112 — כלומר ה-`—` מכחיש
+ * תשלום חד-פעמי של ₪499 שהרשומה כן מסרה, בדיוק אמת-המידה
+ * ש-`ROUTER_EXCLUDED_PRICE` מגדירה כ"השוואה מטעה".
+ *
+ * ⚠️ והניסוח נקרא **מהטקסט**, לא מושלם: `housingQualifiers` מכיר
+ * `מעל N דירות … ללא עלות` (סדר מילים הפוך ל-`5 דירות ומעלה 0 ש"ח`)
+ * ו-`privateHomeInstallation` דורש את המילים `בית פרטי` שאינן כאן,
+ * ולכן שני הקוראים הקיימים מחזירים `null` על הרשומות האלה. מודפסים
+ * שני המספרים שהרשומה מסרה, כל אחד עם טווח הדירות שלו.
+ *
+ * ⚠️ **שני הצדדים או כלום.** בלי צד משלם מהטקסט זה היה נקרא
+ * "ללא עלות" גורף — בדיוק מה ש-`installationIsConditional` נכתב
+ * נגדו — ולכן הדרישה היא שתי ההתאמות יחד.
+ *
+ * ⚠️ מה שלא מודפס: אותה פסקה מוסיפה `במקרה בו קיימת תשתית סיבים
+ * תקינה … 0 ש"ח (ייקבע במעמד התקנת הטכנאי)`. זה תנאי שנקבע בשטח
+ * ולא לפי סוג המבנה, והכיוון השמרני בשורת **עלות** הוא לומר את
+ * המספר ולא להבטיח את הפטור — אותו כלל שבו `privateHomeInstallation`
+ * מעדיפה לומר ₪499 מאשר לשתוק.
+ */
+function apartmentTierInstallation(pkg: Package): string | null {
+  const prose = installationProse(pkg);
+  const free = prose.match(
+    new RegExp(String.raw`(\d+)\s*דירות\s*ומעלה\s*(\d[\d,]*(?:\.\d+)?)\s*${SHEKEL_UNIT}`),
+  );
+  const paying = prose.match(
+    new RegExp(
+      String.raw`(\d+)\s*[-–־]\s*(\d+)\s*דירות\s*(\d[\d,]*(?:\.\d+)?)\s*${SHEKEL_UNIT}`,
+    ),
+  );
+  if (!free || !paying) return null;
+  const freeCost = Number(free[2].replace(/,/g, ""));
+  const payCost = Number(paying[3].replace(/,/g, ""));
+  return [
+    `${freeCost === 0 ? "ללא עלות" : shekels(freeCost)} בבניין מ-${free[1]} דירות`,
+    `${shekels(payCost)} בבניין ${paying[1]}-${paying[2]} דירות`,
+  ].join(" · ");
+}
+
+/**
  * שורת הפירוט: שני הצדדים, כל אחד עם מי שהוא חל עליו.
  *
  * ⚠️ כששני המספרים זהים, המפרט החזיק את מחיר הבית הפרטי ולא את זה של
@@ -1706,17 +1762,37 @@ export function cardStats(pkg: Package): Stat[] {
     // השער הקודם הדפיס אריח "NaN" מתחת ל-"דקות שיחה". ראה `isCount`.
     // ⚠️ מאגר משותף לדקות ול-SMS מסומן ככזה על שני האריחים, אחרת
     // אותם 5,000 נקראים פעמיים כשני מאגרים. ראה `sharedUsageCapAt`.
-    const shared =
-      isCount(spec.minutes) &&
-      isCount(spec.sms) &&
-      spec.minutes === spec.sms &&
-      sharedUsageCapAt(pkg, spec.minutes)
-        ? " · לדקות ול-SMS יחד"
-        : "";
+    /*
+     * ⚠️ והסייג **אינו** מותנה בקיום שני האריחים. ההערה על
+     * `sharedUsageCapAt` נימקה את התנאי על `spec.sms` ב"אין שני
+     * מאגרים לאחד" — נימוק לא לכתוב `יחד` על אריח שאינו מרונדר,
+     * אבל לא נימוק להשתיק את האריח שכן מרונדר. id 19
+     * (`WecomGlobal 5G`, ₪59.9) מצהירה מילה במילה את מה שid 21
+     * מצהירה — `עד 3,000 יחידות שימוש מכל סוג לכל מחזור חיוב` —
+     * אבל `sms: null`, ולכן האריח הדפיס `עד 3,000 דקות שיחה` כמאגר
+     * דקות משלה, בזמן שהרשומה חוסמת 3,000 שיחות **והודעות יחד**.
+     * השער עצמו קורא את הפרוזה של id 19 נכון (אומת בשיבוט עם
+     * `sms: 3000`): מה שחסם אותו הוא התנאי על השדה, לא הנתון.
+     *
+     * ⚠️ ומספר ה-SMS **אינו** מושלם מהמאגר. הרשומה מסרה 3,000
+     * יחידות מכל סוג, ולכן גזירת `sms: 3000` היא מספר שהיא לא
+     * מסרה בשדה — אותו כלל של "לא יודעים, לא מבטיחים". השורה
+     * `הודעות SMS: —` בטבלת ההשוואה נשארת אפוא שתיקה, והסייג על
+     * אריח הדקות הוא מה שמונע את ההבטחה השגויה.
+     */
+    /*
+     * ⚠️ וכל אריח נשאל על **המספר שלו**. `shared` חושב פעם אחת מ-
+     * `spec.minutes` והודבק לשני האריחים, מה שהיה בטוח רק בזכות
+     * התנאי `minutes === sms` שהוסר כאן: בלעדיו רשומה עם מאגר
+     * משותף של 3,000 דקות ו-`sms: 500` נפרד הייתה מקבלת `יחד` גם
+     * על אריח ה-SMS, כלומר קושרת מספר לא קשור למאגר.
+     */
+    const sharedAt = (value: number | null | undefined) =>
+      isCount(value) && sharedUsageCapAt(pkg, value) ? " · לדקות ול-SMS יחד" : "";
     if (isCount(spec.minutes))
-      out.push({ value: `${upTo(pkg, "minutes", spec.minutes)}${nf.format(spec.minutes)}${shared}`, caption: MINUTES_CAPTION(spec.minutes) });
+      out.push({ value: `${upTo(pkg, "minutes", spec.minutes)}${nf.format(spec.minutes)}${sharedAt(spec.minutes)}`, caption: MINUTES_CAPTION(spec.minutes) });
     if (isCount(spec.sms))
-      out.push({ value: `${upTo(pkg, "sms", spec.sms)}${nf.format(spec.sms)}${shared}`, caption: SMS_CAPTION(spec.sms) });
+      out.push({ value: `${upTo(pkg, "sms", spec.sms)}${nf.format(spec.sms)}${sharedAt(spec.sms)}`, caption: SMS_CAPTION(spec.sms) });
     // ⚠️ גם דקות לחו״ל. זה היה השדה היחיד שנשאר בלי השער: id 110
     // אומר "עד 100 דקות שיחה מישראל ל-27 יעדים בחו\"ל (אופציונלי)"
     // והאריח הדפיס "100" כעובדה, וכך גם ids 42, 54, 64, 65, 66 ו-69.
@@ -1986,7 +2062,11 @@ export function detailRows(pkg: Package): { label: string; value: string }[] {
       if (isCount(s.installationCost)) {
         rows.push({ label: "עלות התקנה", value: installationDetail(pkg, s.installationCost) });
       } else {
-        fee("עלות התקנה", s.installationCost);
+        // ⚠️ והפרוזה נקראת גם כאן, לא רק בענף שיש בו מספר.
+        // ראה `apartmentTierInstallation`.
+        const tiered = apartmentTierInstallation(pkg);
+        if (tiered) rows.push({ label: "עלות התקנה", value: tiered });
+        else fee("עלות התקנה", s.installationCost);
       }
     }
     /*

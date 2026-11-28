@@ -45,9 +45,28 @@ const {
   matchesFilters,
   priceBoundsOf,
   providerFacets,
+  resolveMaxPrice,
   sortCatalog,
   typeFacets,
 } = await import("../src/app/lp/ui/CatalogBrowser.tsx");
+
+/*
+ * ⚠️ התקרה ה**מיושבת**, כמו ברכיב (`effectiveMaxPrice`) — ולא
+ * הגולמית. שני המונים שמתחת מודדים "מה הלחיצה מחזירה", ולחיצה
+ * מרנדרת את הרשימה אחרי ההצמדה `Math.max(maxPrice, bounds.min)`
+ * שנוספה בסבב 64; קריאה בתקרה הגולמית מודדת רשימה שהמסך אינו
+ * מציג. התיקון הזה נדרש בסבב 67, כשהמונים עברו להיספר במדרגה
+ * שהמסך נחתך בה (`valueMaxPrice`): `cellular` בתקרה ₪21.9 עם
+ * `partner` הצהיר 1 — החבילה שהלחיצה באמת מציגה — בזמן
+ * שהמדידה הגולמית החזירה 0.
+ */
+function shownResults(pkgs, f, sort) {
+  const eff = resolveMaxPrice(
+    priceBoundsOf(pkgs.filter((p) => matchesFilters(p, f, "maxPrice"))),
+    f.maxPrice,
+  );
+  return catalogResults(pkgs, { ...f, maxPrice: eff }, sort);
+}
 const { CatalogTabs } = await import("../src/app/lp/ui/CatalogTabs.tsx");
 const { CompareSheet, compareCheckboxId } = await import("../src/app/lp/ui/CompareTray.tsx");
 const { PackageCard } = await import("../src/app/lp/ui/PackageCard.tsx");
@@ -510,18 +529,38 @@ test("מסננים: המונה על כל אפשרות הוא בדיוק מה ש�
         const base = { providers: [], types: seedTypes, maxPrice };
         const before = catalogResults(pkgs, base, "recommended").length;
         for (const o of providerFacets(pkgs, base)) {
-          const after = catalogResults(pkgs, { ...base, providers: [o.slug] }, "recommended").length;
+          const after = shownResults(pkgs, { ...base, providers: [o.slug] }, "recommended").length;
           assert.equal(after, o.count, `${cat}: חברה ${o.slug} הצהירה ${o.count} והחזירה ${after}`);
         }
-        // שתי חברות הן איחוד: הסכום של שני המונים.
+        /*
+         * שתי חברות הן איחוד: הסכום של שני המונים.
+         *
+         * ⚠️ **רק כשההצמדה אינה נוגסת.** זו בדיוק הזהות שסבב 65
+         * מתעד שאין לקבע ("ולא 'המונה שווה למה שהלחיצה מוסיפה' —
+         * האינווריאנט הזה אינו נכון בתכנון הזה"): ציר החברה הוא OR,
+         * וההצמדה `Math.max(maxPrice, bounds.min)` מודדת את מצב
+         * האיחוד — שה-`min` שלו יכול להיות **נמוך** משל כל אחד
+         * מהשניים — ולכן התקרה יורדת והאיחוד מציג פחות מהסכום.
+         * מסבב 67 כל מונה נספר בתקרה של המצב שלו (`valueMaxPrice`),
+         * ולכן שלוש תקרות שונות נפגשות כאן. במצב שבו התקרה הגולמית
+         * יושבת בתוך הטווח של מצב האיחוד — כלומר ההצמדה אינה
+         * משנה דבר — הזהות נשארת במלואה, וזה מה שנבדק.
+         */
         const two = providerFacets(pkgs, base).slice(0, 2);
         if (two.length === 2) {
-          const after = catalogResults(
-            pkgs,
-            { ...base, providers: two.map((o) => o.slug) },
-            "recommended",
-          ).length;
-          assert.equal(after, two[0].count + two[1].count, `${cat}: איחוד שתי חברות`);
+          const union = { ...base, providers: two.map((o) => o.slug) };
+          /* ההצמדה אינה נוגסת באף אחד משלושת המצבים שנפגשים כאן. */
+          const clampBites = [union, ...two.map((o) => ({ ...base, providers: [o.slug] }))].some(
+            (state) => {
+              if (base.maxPrice == null) return false;
+              const b = priceBoundsOf(pkgs.filter((p) => matchesFilters(p, state, "maxPrice")));
+              return b != null && base.maxPrice < b.min;
+            },
+          );
+          if (!clampBites) {
+            const after = shownResults(pkgs, union, "recommended").length;
+            assert.equal(after, two[0].count + two[1].count, `${cat}: איחוד שתי חברות`);
+          }
         }
         assert.ok(before >= 0);
       }
